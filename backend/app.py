@@ -2,7 +2,13 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from mininode_api.api.auth_check import router as auth_router
+#from mininode_api.api.auth_check import router as auth_router
+from fastapi import Depends
+from mininode_api.core.auth import require_api_key
+
+@app.get("/auth/check", tags=["auth"], dependencies=[Depends(require_api_key)])
+def auth_check():
+    return {"ok": True}
 
 app = FastAPI(title="Mininode API", version="0.1.0")
 
@@ -20,5 +26,5 @@ app.add_middleware(
     max_age=600,
 )
 
-app.include_router(auth_router, prefix="", tags=["auth"])
+#app.include_router(auth_router, prefix="", tags=["auth"])
 
