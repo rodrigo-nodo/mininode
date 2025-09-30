@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
+
 from mininode_api.core.auth import require_api_key
 
 def _llm_client():
@@ -19,9 +20,6 @@ class RedaccionResponse(BaseModel):
 
 @router.get("/ping")
 async def ping():
-    """
-    Prueba mínima de conexión a OpenAI y devuelve el error si ocurre.
-    """
     try:
         llm, ChatMessage = _llm_client()
         sys = ChatMessage(role="system", content="Eres un ping tester.")
@@ -29,7 +27,6 @@ async def ping():
         text = await llm.chat([sys, usr])
         return {"ok": True, "text": text[:80]}
     except Exception as e:
-        # devolvemos el tipo de error y el mensaje (sin exponer secretos)
         return {"ok": False, "error": f"{e.__class__.__name__}: {e}"}
 
 @router.post("/draft", response_model=RedaccionResponse, dependencies=[Depends(require_api_key)])
@@ -42,7 +39,5 @@ async def draft(req: RedaccionRequest, debug: int = Query(0, description="Set 1 
         return RedaccionResponse(text=text)
     except Exception as e:
         if debug == 1:
-            # En modo debug devolvemos 500 con detalle
             raise HTTPException(status_code=500, detail=f"LLM error: {e.__class__.__name__}: {e}")
-        # fallback stub en modo normal
         return RedaccionResponse(text=f"[STUB] Redacción para: {req.prompt[:120]}...")
