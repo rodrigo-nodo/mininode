@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# Venv
+.venv/
+venv/
+
+# Env
+.env
+backend/.env
+
+# Logs
+*.log
+backend/uvicorn.log
+
+# Node
+node_modules/
+.next/
+dist/
+out/
