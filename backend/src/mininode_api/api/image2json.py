@@ -1,9 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import base64
 
 from mininode_api.services.image2json.pipeline import run_image2json
+from mininode_api.core.auth import require_api_key
 
 router = APIRouter()
 
@@ -13,7 +14,7 @@ class Image2JsonResp(BaseModel):
     confidences: Dict[str, float] = {}
     notes: Optional[str] = None
 
-@router.post("/parse", response_model=Image2JsonResp)
+@router.post("/parse", response_model=Image2JsonResp, dependencies=[Depends(require_api_key)])
 async def parse_image(
     background: BackgroundTasks,
     file: UploadFile | None = File(default=None),

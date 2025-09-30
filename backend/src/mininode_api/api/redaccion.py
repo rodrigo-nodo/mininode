@@ -1,7 +1,8 @@
 import os
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
+from mininode_api.core.auth import require_api_key
 
 def _llm_client():
     from mininode_api.core.llm import LLMClient, ChatMessage
@@ -31,7 +32,7 @@ async def ping():
         # devolvemos el tipo de error y el mensaje (sin exponer secretos)
         return {"ok": False, "error": f"{e.__class__.__name__}: {e}"}
 
-@router.post("/draft", response_model=RedaccionResponse)
+@router.post("/draft", response_model=RedaccionResponse, dependencies=[Depends(require_api_key)])
 async def draft(req: RedaccionRequest, debug: int = Query(0, description="Set 1 to return errors")):
     try:
         llm, ChatMessage = _llm_client()
