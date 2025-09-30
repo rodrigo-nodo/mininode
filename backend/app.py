@@ -1,18 +1,20 @@
+# app.py
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from mininode_api.api.health import router as health_router
-from mininode_api.api.redaccion import router as redaccion_router
-from mininode_api.api.image2json import router as image2json_router
-
 app = FastAPI(title="Mininode API", version="0.1.0")
+
+# Lee origins coma-separados desde env
+raw = os.getenv("FRONTEND_ORIGINS", "*")
+origins = [o.strip() for o in raw.split(",")] if raw != "*" else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=origins,                 # p.ej. ["https://mininode.io", "https://www.mininode.io"]
+    allow_credentials=False,               # déjalo en False si no usas cookies/sesiones
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Api-Key"],
+    expose_headers=["*"],
+    max_age=600,
 )
-
-app.include_router(health_router, prefix="", tags=["health"])
-app.include_router(redaccion_router, prefix="/redaccion", tags=["redaccion"])
-app.include_router(image2json_router, prefix="/image2json", tags=["image2json"])
