@@ -1,38 +1,172 @@
 <!doctype html>
 <html lang="es">
+<!-- landing agentes -->
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agentes IA — Mininode</title>
-  <meta name="description" content="Agentes de IA minimalistas para tareas específicas.">
-  <meta name="theme-color" content="#005AD6">
-  <meta property="og:title" content="Agentes IA — Mininode">
-  <meta property="og:description" content="Agentes de IA minimalistas para tareas específicas.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="/assets/og-image.png">
-  <link rel="icon" href="/assets/favicon.ico" sizes="any">
-  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/include.js" defer></script>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agentes · Mininode</title>
+  <!-- global -->
+  <link rel="stylesheet" href="/frontend/styles.css" />
+  <!-- page-specific -->
+  <link rel="stylesheet" href="/frontend/assets/css/agents.page.css" />
 </head>
 <body>
-<div data-include="/partials/header-nav.html"></div>
-<main>
-  <section class="page-hero container center">
-    <h1>Agentes IA</h1>
-    <p class="lead">Un agente por objetivo. Empieza simple.</p>
-  </section>
+  <!-- Header (si ya se inyecta globalmente, puedes quitar este DIV) -->
+  <div id="site-header" data-include="/frontend/partials/header-nav.html"></div>
 
-  <section class="container grid1">
-    <article class="card">
-      <h2>Escritura</h2>
-      <p>Redacta descripciones, correos o publicaciones con tono claro y profesional.</p>
-      <a class="btn btn--primary" href="/contact/index.html">Quiero este agente</a>
-    </article>
-  </section>
-</main>
-<div data-include="/partials/footer.html"></div>
+  <main id="agents-landing" class="ag-container">
+    <!-- Hero -->
+    <!-- 
+    <section class="ag-hero ag-bordered">
+    -->
+      <div class="ag-hero__inner">
+        <h1>Construye más rápido con agentes minimalistas</h1>
+        <p class="ag-muted">Empieza en segundos: elige un agente y genera valor sin configuración. Luego podrás profundizar.</p>
+      </div>
+    </section>
+
+    <!-- Agentes -->
+    <section  id="agentes" class="ag-section">
+      <div class="ag-section__head">
+        <div>
+          <h2>Agentes</h2>
+          <p class="ag-muted">Elige un agente y comienza.</p>
+        </div>
+      </div>
+
+      <div class="ag-grid">
+        <!-- Redacción -->
+        <article class="ag-card">
+          <header class="ag-card__head">
+            <div class="ag-icon ag-dot"><span>✎</span></div>
+            <div class="ag-card__titles">
+              <h3>Redacción</h3>
+              <p class="ag-muted">Convierte ideas sueltas en piezas claras y listas para publicar.</p>
+            </div>
+          </header>
+          <div class="ag-card__body">
+            <div class="ag-row">
+              <span class="ag-muted ag-small">En desarrollo</span>
+              <button class="ag-btn ag-btn--primary" data-go="/frontend/agents/redaccion">Abrir</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Contable -->
+        <article class="ag-card">
+          <header class="ag-card__head">
+            <div class="ag-icon ag-dot"><span>∑</span></div>
+            <div class="ag-card__titles">
+              <h3>Contable</h3>
+              <p class="ag-muted">Automatiza asientos, clasifica gastos y prepara reportes simples.</p>
+            </div>
+          </header>
+          <div class="ag-card__body">
+            <div class="ag-row">
+              <span class="ag-muted ag-small">Próximamente</span>
+              <button class="ag-btn ag-btn--primary" data-go="/frontend/agents/contable">Abrir</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Legal -->
+        <article class="ag-card">
+          <header class="ag-card__head">
+            <div class="ag-icon ag-dot"><span>§</span></div>
+            <div class="ag-card__titles">
+              <h3>Legal</h3>
+              <p class="ag-muted">Genera borradores legales y resúmenes de contratos en lenguaje simple.</p>
+            </div>
+          </header>
+          <div class="ag-card__body">
+            <div class="ag-row">
+              <span class="ag-muted ag-small">Próximamente</span>
+              <button class="ag-btn ag-btn--primary" data-go="/frontend/agents/legal">Abrir</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Planes (colapsable, cerrado por defecto) -->
+    <section class="ag-section" id="planes">
+      <details class="ag-bordered ag-details">
+        <summary class="ag-details__summary">
+          <span class="ag-details__title">Planes</span>
+          <span class="ag-details__hint">(clic para ver)</span>
+        </summary>
+
+        <div class="ag-plans">
+          <!-- Gratis -->
+          <article class="ag-card">
+            <header class="ag-card__head">
+              <h3>Gratis</h3>
+              <p class="ag-muted">Hasta <b>10 ejecuciones/mes</b>.</p>
+            </header>
+            <div class="ag-card__body">
+              <ul class="ag-list">
+                <li>Plantillas base del agente</li>
+                <li>Exportación básica (si aplica)</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- Modular -->
+          <article class="ag-card ag-card--accent">
+            <header class="ag-card__head">
+              <h3>Modular</h3>
+              <p class="ag-muted"><b>US$9</b> / agente / mes. Activa solo los agentes que necesites.</p>
+            </header>
+            <div class="ag-card__body">
+              <ul class="ag-list">
+                <li>Ejecuciones ilimitadas del agente</li>
+                <li>Plantillas avanzadas y personalizables</li>
+                <li>Exportación sin marca (si aplica)</li>
+                <li>Historial e inicio rápido</li>
+                <li>Integraciones básicas</li>
+              </ul>
+              <div class="ag-row">
+                <button class="ag-btn ag-btn--primary" data-go="/signup">Activar agentes</button>
+                <button class="ag-btn">Ver detalles</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Suite -->
+          <article class="ag-card ag-card--strong">
+            <header class="ag-card__head">
+              <div class="ag-row">
+                <h3>Suite</h3>
+                <span class="ag-pill">Recomendado</span>
+              </div>
+              <p class="ag-muted"><b>US$25</b> / usuario / mes. <b>Todos los agentes</b> + <b>Orquestador</b> (input genérico que decide agente/LLM).</p>
+            </header>
+            <div class="ag-card__body">
+              <ul class="ag-list">
+                <li>Incluye todos los agentes actuales y futuros</li>
+                <li>Orquestación automática (agentes y/o LLM general)</li>
+                <li>Integraciones avanzadas</li>
+                <li>Colaboración (espacios y permisos)</li>
+                <li>Prioridad de cómputo y soporte</li>
+              </ul>
+              <div class="ag-row">
+                <button class="ag-btn ag-btn--primary" data-go="/signup">Probar Suite</button>
+                <button class="ag-btn">Ver detalles</button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <p class="ag-muted ag-tiny ag-note">* Algunas funciones dependen del agente (p. ej., exportación de documentos, validadores de cumplimiento, etc.).</p>
+      </details>
+    </section>
+  </main>
+
+  <!-- Footer (inyectado) -->
+  <div id="site-footer" data-include="/frontend/partials/footer.html"></div>
+
+  <!-- JS: compartidos + página -->
+  <script type="module" src="/frontend/assets/js/agents.page.js"></script>
 </body>
 </html>
+
