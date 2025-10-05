@@ -3,6 +3,7 @@ import { attachGoNavigation } from '/assets/js/core-go-nav.js';
 
 const ENABLE_AGENT_PAGES = true; // ⬅️ cuando existan las páginas, ponlo en true
 
+
 (async function init() {
   await injectPartials();
   attachGoNavigation(document); // OK si además respeta aria-disabled/disabled
