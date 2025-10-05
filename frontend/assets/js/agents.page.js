@@ -1,7 +1,7 @@
-import { injectPartials } from '/frontend/assets/js/core-partials.js';
-import { attachGoNavigation } from '/frontend/assets/js/core-go-nav.js';
+import { injectPartials } from '/assets/js/core-partials.js';
+import { attachGoNavigation } from '/assets/js/core-go-nav.js';
 
-const ENABLE_AGENT_PAGES = false; // ⬅️ cuando existan las páginas, ponlo en true
+const ENABLE_AGENT_PAGES = true; // ⬅️ cuando existan las páginas, ponlo en true
 
 (async function init() {
   await injectPartials();
