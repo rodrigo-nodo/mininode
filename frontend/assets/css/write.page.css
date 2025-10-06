@@ -52,13 +52,3 @@
 .wr-textarea, .wr-select, .wr-result { background: #ffffff; border-color: var(--border); color: var(--text); }
 .wr-btn { color: var(--text); border-color: var(--border); background: #ffffff; }
 
-/* Si quieres modo oscuro automático */
-@media (prefers-color-scheme: dark) {
-  #write-app {
-    --border:#222428;
-    --muted:#9aa1ab;
-    --text:#eaeef5;
-  }
-  .wr-bordered { background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent); }
-  .wr-panel, .wr-textarea, .wr-select, .wr-result, .wr-btn { background: rgba(255,255,255,0.02); }
-}
