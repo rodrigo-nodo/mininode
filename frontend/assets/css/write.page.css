@@ -59,3 +59,22 @@
   background:#005ad6;
   color:#eaeef5
 }
+
+/* token de marca */
+:root { --brand:#005AD6; }
+
+/* Badge “Mininode Write” con fondo azul y letra blanca */
+.wr-badge {
+  display:inline-block;
+  font-size:12px;
+  font-weight:600;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid transparent;
+  margin-bottom:8px;
+}
+.wr-badge--brand {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}

@@ -43,6 +43,12 @@ async function init() {
   $tone.value = prefs.tono;
   $lang.value = prefs.idioma;
 
+  
+  // Asegurar UI limpia al cargar
+  if ($err) { $err.textContent = ''; $err.classList.add('wr-hidden'); }
+  if ($resBox) { $resBox.classList.add('wr-hidden'); }
+  if ($res) { $res.textContent = ''; }
+
   $size.addEventListener('change', () => { prefs.tamaño = $size.value; savePrefs(prefs); });
   $tone.addEventListener('change', () => { prefs.tono = $tone.value; savePrefs(prefs); });
   $lang.addEventListener('change', () => { prefs.idioma = $lang.value; savePrefs(prefs); });
@@ -109,13 +115,8 @@ async function init() {
   $gen.disabled = true; $gen.textContent = 'Generando…';
 
   try {
-    const resp = await fetch('/api/write/draft', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: composedPrompt, tone }),
-    });
-
-    const text = await resp.text();               // leemos texto para mejor debug
+    const resp = await fetch('/api/write/draft', { /* ... */ });
+    const text = await resp.text();
     if (!resp.ok) throw new Error(`Error ${resp.status}: ${text}`);
 
     let data; try { data = JSON.parse(text); } catch { data = { text }; }
@@ -123,13 +124,13 @@ async function init() {
     $res.textContent = draft || '[sin contenido]';
     $resBox.classList.remove('wr-hidden');
   } catch (e) {
-    console.error(e);
     $err.textContent = String(e.message || e);
     $err.classList.remove('wr-hidden');
   } finally {
-    $gen.disabled = false; $gen.textContent = 'Generar borrador';
+    $gen.disabled = false; 
+    $gen.textContent = 'Generar borrador';
   }
-});
+  });
 
 
   // bloqueo UI durante la llamada
