@@ -2,7 +2,7 @@ export const onRequest = async (ctx) => {
   const { request, env } = ctx;
   const url = new URL(request.url);
 
-  // Responder preflight (por si el navegador hace OPTIONS)
+  // OPTIONS (CORS preflight)
   if (request.method.toUpperCase() === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -14,13 +14,10 @@ export const onRequest = async (ctx) => {
     });
   }
 
-  // Ruta pública después de /api/
   const destPathPublic = url.pathname.replace(/^\/api\/?/, '');
 
-  // Whitelist MVP (evita open-proxy)
-  const ALLOWED = new Set([
-    'write/draft',
-  ]);
+  // Whitelist MVP
+  const ALLOWED = new Set(['write/draft']);
   if (!ALLOWED.has(destPathPublic)) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
@@ -28,49 +25,63 @@ export const onRequest = async (ctx) => {
     });
   }
 
-  // Mapeo público -> backend legacy
-  const ROUTE_MAP = {
-    'write/draft': 'redaccion/draft',
-  };
+  // Map público -> backend (hoy tu backend es /redaccion/draft)
+  const ROUTE_MAP = { 'write/draft': 'redaccion/draft' };
   const destPathBackend = ROUTE_MAP[destPathPublic] || destPathPublic;
 
-  // Validar Secrets/Vars
-  const apiKey  = env.MININODE_API_KEY; // SECRET
   const apiBase = env.MININODE_API_BASE || 'https://api.mininode.io';
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY en env (Pages Secrets)' }), {
+  const target = new URL(`${apiBase}/${destPathBackend}`);
+  target.search = url.search;
+
+  const method = request.method.toUpperCase();
+
+  // --- LECTURA Y NORMALIZACIÓN DEL BODY ---
+  let bodyText = '';
+  let contentType = request.headers.get('Content-Type') || 'application/json';
+  if (!['GET', 'HEAD'].includes(method)) {
+    bodyText = await request.text(); // leer como texto
+
+    // Si es JSON, valida y re-serializa
+    if (contentType.includes('application/json')) {
+      try {
+        const obj = bodyText ? JSON.parse(bodyText) : {};
+        // TIP: asegúrate de que prompt y tone viajen
+        bodyText = JSON.stringify(obj);
+      } catch (e) {
+        return new Response(JSON.stringify({ error: 'JSON inválido', detail: String(e), body: bodyText }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+  }
+
+  // Headers hacia backend
+  const headers = new Headers();
+  headers.set('Content-Type', contentType);
+  headers.set('Accept', 'application/json');
+  headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+
+  if (!env.MININODE_API_KEY) {
+    return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY (Pages Secret)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
 
-  // Construir URL destino
-  const target = new URL(`${apiBase}/${destPathBackend}`);
-  target.search = url.search;
-
-  // Leer body como TEXTO (más compatible con FastAPI)
-  const method = request.method.toUpperCase();
-  const hasBody = !['GET', 'HEAD'].includes(method);
-  const bodyText = hasBody ? await request.text() : undefined;
-
-  // Headers hacia backend
-  const headers = new Headers();
-  headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
-  headers.set('X-Api-Key', apiKey);
-
   try {
     const upstream = await fetch(target.toString(), {
       method,
       headers,
-      body: bodyText,
+      body: ['GET', 'HEAD'].includes(method) ? undefined : bodyText,
     });
 
-    // Pasar status y body tal cual; preservar Content-Type
+    const upstreamBody = await upstream.text();
     const outHeaders = new Headers();
     outHeaders.set('Content-Type', upstream.headers.get('Content-Type') || 'application/json');
     outHeaders.set('Access-Control-Allow-Origin', '*');
 
-    const upstreamBody = await upstream.text();
+    // Pasa tal cual la respuesta del backend (incluido el detalle de 4xx/5xx)
     return new Response(upstreamBody, { status: upstream.status, headers: outHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Proxy error', detail: String(e) }), {
