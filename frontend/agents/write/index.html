@@ -1,42 +1,113 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mininode Write — Clear text, fast.</title>
-  <meta name="description" content="Redacción clara y en tu tono en minutos.">
-  <meta name="theme-color" content="#005AD6">
-  <meta property="og:title" content="Mininode Write — Clear text, fast.">
-  <meta property="og:description" content="Redacción clara y en tu tono en minutos.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="/assets/og-image.png">
-  <link rel="icon" href="/assets/favicon.ico" sizes="any">
-  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/include.js" defer></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mininode Write</title>
 
+  <!-- global -->
+  <link rel="stylesheet" href="/styles.css" />
+  <!-- page-specific -->
+  <link rel="stylesheet" href="/assets/css/write.page.css" />
 </head>
 <body>
-<div data-include="/partials/header-nav.html"></div>
-<main>
-  <section class="page-hero container">
-    <h1>Mininode Write</h1>
-    <p class="lead">Clear text, fast.</p>
-  </section>
-  <section class="container grid1">
-    <article class="card">
-      <h2>Alcance (MVP)</h2>
-      <ul>
-        <li>Emails, descripciones y posts en tu tono.</li>
-        <li>Plantillas listas (ventas, soporte, RRSS).</li>
-        <li>Corrección y pulido de textos existentes.</li>
-        <li>Exporta y pega donde quieras.</li>
-      </ul>
-      <a class="btn btn--primary" href="/contact/index.html">Empezar con Write</a>
-    </article>
-  </section>
-</main>
-<div data-include="/partials/footer.html"></div>
+  <!-- Header (inyectado) -->
+  <div id="site-header" data-include="/partials/header-nav.html"></div>
+
+  <main id="write-app" class="wr-container">
+    <!-- Hero -->
+    <section class="wr-hero wr-bordered">
+      <div class="wr-hero__inner">
+        <h1>Escribe mejor, más rápido</h1>
+        <p class="wr-muted">Comparte esbozos o conceptos y obtén un borrador limpio.</p>
+      </div>
+    </section>
+
+    <!-- Panel -->
+    <section class="wr-panel">
+      <div class="wr-field">
+        <label for="wr-texto">Input</label>
+        <textarea id="wr-texto" class="wr-textarea" placeholder="Escribe tus esbozos o conceptos…"></textarea>
+      </div>
+
+      <div class="wr-grid">
+        <div class="wr-field">
+          <label for="wr-size">Tamaño</label>
+          <select id="wr-size" class="wr-select">
+            <option value="micro">Micro</option>
+            <option value="medio">Medio</option>
+            <option value="largo">Largo</option>
+          </select>
+        </div>
+
+        <div class="wr-field">
+          <label for="wr-tone">Tono</label>
+          <select id="wr-tone" class="wr-select">
+            <option value="simple">Simple</option>
+            <option value="formal">Formal</option>
+            <option value="inspirador">Inspirador</option>
+            <option value="técnico">Técnico</option>
+          </select>
+        </div>
+
+        <!-- Idioma listo pero oculto en v1 -->
+        <div class="wr-field wr-hidden">
+          <label for="wr-lang">Idioma</label>
+          <select id="wr-lang" class="wr-select">
+            <option value="es" selected>Español</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wr-actions">
+        <div class="wr-hint">
+          <span class="wr-dot"></span>
+          <span class="wr-muted small">Listo para usar</span>
+        </div>
+        <div class="wr-row">
+          <button id="wr-generate" class="wr-btn wr-btn--primary">Generar borrador</button>
+          <!-- Avanzadas ocultas en v1 -->
+          <button id="wr-advanced" class="wr-btn wr-hidden">Opciones avanzadas</button>
+        </div>
+      </div>
+
+      <!-- Resultado -->
+      <div id="wr-result-box" class="wr-result wr-hidden">
+        <div class="wr-result__bar">
+          <span class="wr-label">Resultado</span>
+          <div class="wr-row">
+            <button id="wr-copy" class="wr-btn">Copiar</button>
+            <div class="wr-dropdown">
+              <button id="wr-export" class="wr-btn">Exportar</button>
+              <div class="wr-menu">
+                <button data-export="txt">TXT (.txt)</button>
+                <button data-export="md">Markdown (.md)</button>
+                <!-- Hooks para futuro (DOCX/PDF nativos) -->
+                <!-- <button data-export="docx">Word (.docx)</button>
+                <button data-export="pdf">PDF (.pdf)</button> -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <pre id="wr-result" class="wr-pre"></pre>
+      </div>
+
+      <!-- Errores -->
+      <p id="wr-error" class="wr-error wr-hidden"></p>
+    </section>
+  </main>
+
+  <!-- Footer (inyectado) -->
+  <div id="site-footer" data-include="/partials/footer.html"></div>
+
+  <!-- Env (dev/stg). En prod, usa env vars de Pages o Workers. -->
+  <script>
+    // Para DEV rápido: sobreescribe con secret real en deploy/staging (no comitees a público).
+    window.__MININODE_API_KEY__ = ""; // p.ej. "8b910aafe8f84a70af548e509657abde"
+  </script>
+
+  <!-- JS (módulos reutilizables + página) -->
+  <script type="module" src="/assets/js/write.page.js"></script>
 </body>
-</html]
+</html>
