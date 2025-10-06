@@ -38,3 +38,27 @@
 .wr-menu button { width: 100%; text-align: left; padding: 8px 10px; border:none; background: transparent; color: inherit; border-radius: 8px; cursor:pointer; }
 .wr-menu button:hover { background: rgba(255,255,255,0.05); }
 .wr-dropdown.open .wr-menu { display:block; }
+
+/* Modo claro por defecto */
+#write-app {
+  --brand: #005ad6;
+  --border: #e5e7eb;
+  --muted: #475569;
+  --text: #0f172a; /* slate-900 */
+}
+#write-app.wr-container { color: var(--text); }
+.wr-bordered { border-color: var(--border); background: #ffffff; }
+.wr-panel { background: #ffffff; border-color: var(--border); }
+.wr-textarea, .wr-select, .wr-result { background: #ffffff; border-color: var(--border); color: var(--text); }
+.wr-btn { color: var(--text); border-color: var(--border); background: #ffffff; }
+
+/* Si quieres modo oscuro automático */
+@media (prefers-color-scheme: dark) {
+  #write-app {
+    --border:#222428;
+    --muted:#9aa1ab;
+    --text:#eaeef5;
+  }
+  .wr-bordered { background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent); }
+  .wr-panel, .wr-textarea, .wr-select, .wr-result, .wr-btn { background: rgba(255,255,255,0.02); }
+}

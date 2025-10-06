@@ -132,45 +132,45 @@ async function init() {
 });
 
 
-    // bloqueo UI durante la llamada
-    $gen.disabled = true; $gen.textContent = 'Generando…';
+  // bloqueo UI durante la llamada
+  $gen.disabled = true; $gen.textContent = 'Generando…';
 
-    try {
-      const resp = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': getApiKey(),
-        },
-        body: JSON.stringify({
-          prompt,
-          tone: $tone.value || 'simple',
-          // Campos listos para futuro
-          size: $size.value || 'micro',
-          lang: $lang.value || 'es',
-          seo: false, // v1: manual oculto
-        }),
-      });
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': getApiKey(),
+      },
+      body: JSON.stringify({
+        prompt,
+        tone: $tone.value || 'simple',
+        // Campos listos para futuro
+        size: $size.value || 'micro',
+        lang: $lang.value || 'es',
+        seo: false, // v1: manual oculto
+      }),
+    });
 
-      if (!resp.ok) {
-        const t = await resp.text();
-        throw new Error(`Error ${resp.status}: ${t}`);
-      }
-
-      // intenta detectar el campo con texto
-      const data = await resp.json();
-      const draft = data?.text || data?.draft || data?.result || '';
-      $res.textContent = draft || '[vacío]';
-
-      $resBox.classList.remove('wr-hidden');
-    } catch (err) {
-      console.error(err);
-      $err.textContent = 'No se pudo generar el borrador. Revisa tu conexión o la API Key.';
-      $err.classList.remove('wr-hidden');
-    } finally {
-      $gen.disabled = false; $gen.textContent = 'Generar borrador';
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`Error ${resp.status}: ${t}`);
     }
-  };
+
+    // intenta detectar el campo con texto
+    const data = await resp.json();
+    const draft = data?.text || data?.draft || data?.result || '';
+    $res.textContent = draft || '[vacío]';
+
+    $resBox.classList.remove('wr-hidden');
+  } catch (err) {
+    console.error(err);
+    $err.textContent = 'No se pudo generar el borrador. Revisa tu conexión o la API Key.';
+    $err.classList.remove('wr-hidden');
+  } finally {
+    $gen.disabled = false; $gen.textContent = 'Generar borrador';
+  }
+};
 
 
 init();
