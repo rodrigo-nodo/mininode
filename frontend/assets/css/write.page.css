@@ -22,7 +22,7 @@
 .wr-hint { display:flex; align-items:center; gap: 8px; }
 .wr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px rgba(0,90,214,0.25); }
 
-.wr-btn { appearance:none; border:1px solid var(--border); background: transparent; color: inherit; border-radius: 10px; padding: 9px 14px; cursor:pointer; }
+.wr-btn { appearance:none; border:1px solid var(--border); background: transparent; color: inherit; border-radius: 10px; padding: 9px 14px; cursor:pointer;  }
 .wr-btn:hover { border-color: #2b2f36; }
 .wr-btn--primary { background: var(--brand); border-color: var(--brand); color: white; }
 .wr-btn--primary[disabled] { opacity: .6; cursor:not-allowed; }
@@ -50,5 +50,12 @@
 .wr-bordered { border-color: var(--border); background: #ffffff; }
 .wr-panel { background: #ffffff; border-color: var(--border); }
 .wr-textarea, .wr-select, .wr-result { background: #ffffff; border-color: var(--border); color: var(--text); }
-.wr-btn { color: var(--text); border-color: var(--border); background: #ffffff; }
 
+
+.wr-badge {
+  display:inline-block; font-size:12px; font-weight:600;
+  border:1px solid var(--border); color:var(--muted);
+  padding:4px 8px; border-radius:999px; margin-bottom:8px;
+  background:#005ad6;
+  color:#eaeef5
+}
