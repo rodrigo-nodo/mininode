@@ -78,9 +78,12 @@ async function init() {
   });
 
   // Generate
-  $gen.addEventListener('click', async () => {
-  $err.classList.add('wr-hidden'); $err.textContent = '';
-  $resBox.classList.add('wr-hidden'); $res.textContent = '';
+$gen.addEventListener('click', async () => {
+  // Oculta error y resultado al empezar
+  $err.classList.add('wr-hidden'); 
+  $err.textContent = '';
+  $resBox.classList.add('wr-hidden'); 
+  $res.textContent = '';
 
   const raw = ($txt.value || '').trim();
   if (!raw) {
@@ -106,16 +109,27 @@ async function init() {
     'técnico': 'tono técnico y específico cuando corresponda. ',
   }[tone];
 
+  //const guardrails =
+  //  'Importante: “Mininode Write” es una herramienta de redacción. ' +
+  //  'NO hables de blockchain ni criptomonedas. ';
+
   const composedPrompt =
     `Escribe un borrador en español con ${sizeGuide}${toneGuide}` +
+  //  `${guardrails}` +
     `Transforma estas ideas en un texto coherente y útil. ` +
-    `Evita saludos genéricos. ` +
+    `Evita saludos genéricos.\n` +
     `Contenido base:\n` + raw;
 
-  $gen.disabled = true; $gen.textContent = 'Generando…';
+  $gen.disabled = true; 
+  $gen.textContent = 'Generando…';
 
   try {
-    const resp = await fetch('/api/write/draft', { /* ... */ });
+    const resp = await fetch('/api/write/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: composedPrompt, tone }), // ← AQUÍ va prompt
+    });
+
     const text = await resp.text();
     if (!resp.ok) throw new Error(`Error ${resp.status}: ${text}`);
 
@@ -130,7 +144,8 @@ async function init() {
     $gen.disabled = false; 
     $gen.textContent = 'Generar borrador';
   }
-  });
+});
+
 
 
   // bloqueo UI durante la llamada
