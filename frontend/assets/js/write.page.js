@@ -73,15 +73,64 @@ async function init() {
 
   // Generate
   $gen.addEventListener('click', async () => {
-    $err.classList.add('wr-hidden'); $err.textContent = '';
-    $resBox.classList.add('wr-hidden'); $res.textContent = '';
+  $err.classList.add('wr-hidden'); $err.textContent = '';
+  $resBox.classList.add('wr-hidden'); $res.textContent = '';
 
-    const prompt = ($txt.value || '').trim();
-    if (!prompt) {
-      $err.textContent = 'Por favor escribe algo en el input.';
-      $err.classList.remove('wr-hidden');
-      return;
-    }
+  const raw = ($txt.value || '').trim();
+  if (!raw) {
+    $err.textContent = 'Por favor escribe algo en el input.';
+    $err.classList.remove('wr-hidden');
+    return;
+  }
+
+  // guías por tamaño/tono
+  const size = $size.value || 'micro';
+  const tone = $tone.value || 'simple';
+
+  const sizeGuide = {
+    micro: '120–180 palabras, 1–2 párrafos. ',
+    medio: '300–500 palabras, secciones cortas (H2). ',
+    largo: '600–800 palabras, estructura clara con H2/H3. ',
+  }[size];
+
+  const toneGuide = {
+    simple: 'tono claro y directo, sin jergas. ',
+    formal: 'tono formal y preciso. ',
+    inspirador: 'tono motivador con lenguaje positivo. ',
+    'técnico': 'tono técnico y específico cuando corresponda. ',
+  }[tone];
+
+  const composedPrompt =
+    `Escribe un borrador en español con ${sizeGuide}${toneGuide}` +
+    `Transforma estas ideas en un texto coherente y útil. ` +
+    `Evita saludos genéricos. ` +
+    `Contenido base:\n` + raw;
+
+  $gen.disabled = true; $gen.textContent = 'Generando…';
+
+  try {
+    const resp = await fetch('/api/write/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: composedPrompt, tone }),
+    });
+
+    const text = await resp.text();               // leemos texto para mejor debug
+    if (!resp.ok) throw new Error(`Error ${resp.status}: ${text}`);
+
+    let data; try { data = JSON.parse(text); } catch { data = { text }; }
+    const draft = data?.text || data?.draft || data?.result || '';
+    $res.textContent = draft || '[sin contenido]';
+    $resBox.classList.remove('wr-hidden');
+  } catch (e) {
+    console.error(e);
+    $err.textContent = String(e.message || e);
+    $err.classList.remove('wr-hidden');
+  } finally {
+    $gen.disabled = false; $gen.textContent = 'Generar borrador';
+  }
+});
+
 
     // bloqueo UI durante la llamada
     $gen.disabled = true; $gen.textContent = 'Generando…';
