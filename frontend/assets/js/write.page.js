@@ -170,7 +170,7 @@ async function init() {
     } finally {
       $gen.disabled = false; $gen.textContent = 'Generar borrador';
     }
-  });
-}
+  };
+
 
 init();
