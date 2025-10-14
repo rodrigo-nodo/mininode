@@ -4,6 +4,25 @@ import * as Ex from '/assets/js/util-export.js';
 
 const LS_KEY = 'mininode_write_prefs_v1';
 const API_URL = '/api/write/draft'; // proxy en Cloudflare Pages
+const ANALYZE_URL = 'https://api.mininode.io/analisis/summary';
+const analyzeToggle = document.getElementById('analyzeToggle');
+const urlInfo = document.getElementById('urlInfo');
+
+let userTouchedToggle = false;
+analyzeToggle.addEventListener('change', () => { userTouchedToggle = true; });
+
+function extractUrls(text) {
+  const re = /\bhttps?:\/\/[^\s)]+/gi;
+  const found = text.match(re) || [];
+  return Array.from(new Set(found.map(u => u.trim()))).slice(0, 3);
+}
+
+// AUTO-ON cuando se escribe el prompt
+promptInput.addEventListener('input', () => {
+  const urls = extractUrls(promptInput.value);
+  urlInfo.textContent = `URLs detectadas: ${urls.length}`;
+  if (!userTouchedToggle) analyzeToggle.checked = urls.length > 0;
+});
 
 function loadPrefs() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
@@ -134,9 +153,6 @@ async function init() {
     }
   });
 
-  // ⚠️ IMPORTANTE:
-  // NO más fetches aquí. Se quita el bloque heredado que hacía POST en init()
-  // Ese bloque era el que disparaba el error al cargar.
 }
 
 init();
