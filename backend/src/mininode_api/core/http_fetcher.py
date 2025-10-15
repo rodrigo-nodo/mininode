@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # mininode_api/core/http_fetcher.py
-# Decisión: httpx + headers tipo navegador y detección de challenge Cloudflare. Minimalista.
-
 from __future__ import annotations
 import httpx
 
@@ -27,7 +25,6 @@ CF_PATTERNS = (
 def _looks_like_cf_challenge(text: str, status: int, headers: dict) -> bool:
     if status in (403, 503):
         return True
-    # Heurística simple; no agrega dependencia extra.
     if any(pat.lower() in (text or "").lower() for pat in CF_PATTERNS):
         return True
     return False

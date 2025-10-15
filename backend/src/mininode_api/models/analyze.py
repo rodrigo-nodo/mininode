@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 # mininode_api/core/models/analyze.py
-# Modelos + servicio "content-first" para /analisis/summary.
 from __future__ import annotations
 from typing import List, Literal
 from pydantic import BaseModel, HttpUrl
 import os
-
 from openai import AsyncOpenAI
 
 from mininode_api.core.http_fetcher import fetch_html
-from mininode_api.core.mini_nodes.extract import extract_payload
+from ..mini_nodes.extract import extract_payload
 
-# Comentario: dejamos los modelos aquí para no tocar más archivos por ahora.
+# Modelos (puedes moverlos a schemas/ si quieres)
 class SummaryIn(BaseModel):
     urls: List[HttpUrl]
     scope: Literal["page", "site"] = "page"
@@ -28,14 +26,12 @@ class SummaryOut(BaseModel):
 
 async def analisis_summary_service(body: SummaryIn) -> SummaryOut:
     """
-    Servicio content-first:
     - Descarga HTML (detecta Cloudflare/WAF).
     - Extrae título/descr./texto.
-    - Llama a LLM SOLO con ese contexto.
+    - Llama a LLM SOLO con ese contexto (no “navega”).
     """
     openai_key = os.getenv("OPENAI_API_KEY")
     if not openai_key:
-        # Evita fallas silenciosas.
         raise RuntimeError("OPENAI_API_KEY no configurada")
     client = AsyncOpenAI(api_key=openai_key)
 
@@ -70,7 +66,6 @@ async def analisis_summary_service(body: SummaryIn) -> SummaryOut:
         text = (comp.choices[0].message.content or "").strip()
         summaries.append(SiteSummary(url=url, text=text))
 
-    # Comparativa final usando solo lo ya resumido (evita inventos).
     if len(summaries) >= 2:
         cmp_prompt = (
             f"Idioma: {body.lang or 'es'}.\n"
