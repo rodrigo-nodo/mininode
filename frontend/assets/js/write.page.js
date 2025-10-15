@@ -84,7 +84,15 @@ async function init() {
   // AUTO-ON cuando se escribe el prompt (usa $txt)
   $txt?.addEventListener('input', () => {
     const urls = extractUrls($txt.value);
-    if (urlInfo) urlInfo.textContent = `URLs detectadas: ${urls.length}`;
+    if (urlInfo) {
+      if (urls.length > 0) {
+        urlInfo.textContent = `URLs detectadas: ${urls.length}`;
+        urlInfo.classList.remove('wr-hidden');
+      } else {
+        urlInfo.textContent = '';
+        urlInfo.classList.add('wr-hidden');
+      }
+    }
     if (!userTouchedToggle && analyzeToggle) analyzeToggle.checked = urls.length > 0;
   });
 
@@ -176,7 +184,8 @@ async function init() {
       // (1) Análisis previo opcional (si toggle ON y hay URLs)
       let contextMd = '';
       const urls = extractUrls(raw);
-      if (analyzeToggle?.checked && urls.length) {
+      // SIEMPRE analiza si hay URLs, independiente del checkbox
+      if (urls.length) {
         for (const u of urls) {
           // feedback mínimo al usuario
           $gen.textContent = `Analizando: ${u}`;
