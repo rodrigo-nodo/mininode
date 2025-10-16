@@ -47,9 +47,12 @@ except Exception:
 
 # Fallback de /analisis/summary si no existe router
 if not analisis_router_included:
+    # Importa solo los modelos desde models
     from mininode_api.models.analyze import (
-        SummaryIn, SummaryOut, analisis_summary_service
+        SummaryIn, SummaryOut
     )
+    # Y la lógica de servicio real desde core (o services)
+    from mininode_api.core.analyze_service import analisis_summary_service
 
     MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")
 
