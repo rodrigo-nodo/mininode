@@ -6,10 +6,10 @@ from typing import List
 from openai import AsyncOpenAI
 
 from mininode_api.core.http_fetcher import fetch_html
-from mininode_api.mini_nodes.extract import extract_payload  # <- mini_nodes está en paralelo a core
+from mininode_api.core.extract import extract_payload
 from mininode_api.models.analyze import SummaryIn, SummaryOut, SiteSummary
 
-async def analisis_summary_service(body: SummaryIn) -> SummaryOut:
+async def analyze_summary_service(body: SummaryIn) -> SummaryOut:
     openai_key = os.getenv("OPENAI_API_KEY")
     if not openai_key:
         raise RuntimeError("OPENAI_API_KEY no configurada")

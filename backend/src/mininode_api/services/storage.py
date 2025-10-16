@@ -22,7 +22,7 @@ class Storage:
     ) -> StoredPaths:
         job_id = str(uuid.uuid4())
         today = datetime.datetime.utcnow().strftime("%Y/%m/%d")
-        base = f"image2json/{today}/{job_id}"
+        base = f"capture/{today}/{job_id}"
         return StoredPaths(
             id=job_id,
             image_path=f"{base}/input.jpg",

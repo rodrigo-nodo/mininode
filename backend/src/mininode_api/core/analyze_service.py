@@ -9,7 +9,7 @@ from .http_fetcher import fetch_html
 from .extract import extract_payload
 from mininode_api.models.analyze import SummaryIn, SummaryOut, SiteSummary
 
-async def analisis_summary_service(body: SummaryIn) -> SummaryOut:
+async def analyze_summary_service(body: SummaryIn) -> SummaryOut:
     """
     - Descarga HTML (detecta Cloudflare/WAF).
     - Extrae título/descr./texto.

@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from mininode_api.core.auth import require_api_key
 from mininode_api.models.analyze import SummaryIn, SummaryOut, SiteSummary
 from mininode_api.mini_nodes.web import fetch_single_text, crawl_site
-from mininode_api.mini_nodes.llm import summarize_text, compare_summaries
+from mininode_api.core.llm import summarize_text, compare_summaries
 
-router = APIRouter(prefix="/analisis", tags=["Analyze"])
+router = APIRouter(prefix="/analyze", tags=["Analyze"])
 
 # Defaults para parámetros que no están en SummaryIn
 DEFAULT_MAX_CHARS = 12000

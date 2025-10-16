@@ -4,8 +4,8 @@ import * as Ex from '/assets/js/util-export.js';
 
 const LS_KEY = 'mininode_write_prefs_v1';
 const API_URL = '/api/write/draft';
-const ANALYZE_PROXY = '/api/analisis/summary';
-const ANALYZE_URL = 'https://api.mininode.io/analisis/summary';
+const ANALYZE_PROXY = '/api/analyze/summary';
+const ANALYZE_URL = 'https://api.mininode.io/analyze/summary';
 
 function extractUrls(text) {
   const re = /\bhttps?:\/\/[^\s)]+/gi;

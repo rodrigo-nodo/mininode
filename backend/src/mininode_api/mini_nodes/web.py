@@ -46,7 +46,7 @@ def discover_links(base_url: str, html: str) -> List[str]:
     return links
 
 async def fetch_single_text(url: str, max_chars: int) -> str:
-    from .extract import extract_text_fast as extract_text
+    from mininode_api.core.extract import extract_text_fast as extract_text
     async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, follow_redirects=True) as client:
         try:
             html = await fetch_html(url, client)
@@ -61,7 +61,7 @@ async def crawl_site(
     follow_subdomains: bool = False,
     max_chars: int = 12000
 ) -> List[Dict[str, str]]:
-    from .extract import extract_text_fast as extract_text
+    from mininode_api.core.extract import extract_text_fast as extract_text
     visited: Set[str] = set()
     queue: List[str] = [base_url]
     results: List[Dict[str, str]] = []

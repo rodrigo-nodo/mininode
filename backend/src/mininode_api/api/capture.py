@@ -6,15 +6,15 @@ import base64
 from mininode_api.core.auth import require_api_key
 from mininode_api.services.image2json.pipeline import run_image2json
 
-router = APIRouter()
+router = APIRouter(prefix="/capture", tags=["Capture"])
 
-class Image2JsonResp(BaseModel):
+class CaptureResp(BaseModel):
     id: str
     data: Dict[str, Any]
     confidences: Dict[str, float] = {}
     notes: Optional[str] = None
 
-@router.post("/parse", response_model=Image2JsonResp, dependencies=[Depends(require_api_key)])
+@router.post("/parse", response_model=CaptureResp, dependencies=[Depends(require_api_key)])
 async def parse_image(
     background: BackgroundTasks,
     file: UploadFile | None = File(default=None),
@@ -33,4 +33,5 @@ async def parse_image(
             raise HTTPException(400, "image_b64 inválido")
 
     result = await run_image2json(image_bytes=image_bytes)
-    return Image2JsonResp(**result.model_dump())
+    return CaptureResp(**result.model_dump())
+

@@ -32,27 +32,33 @@ except Exception:
     pass
 
 try:
-    from mininode_api.api.redaccion import router as redaccion_router
-    app.include_router(redaccion_router)
+    from mininode_api.api.write import router as write_router
+    app.include_router(write_router)
 except Exception:
     pass
 
-analisis_router_included = False
 try:
-    from mininode_api.api.analyze import router as analisis_router
-    app.include_router(analisis_router)
-    analisis_router_included = True
+    from mininode_api.api.capture import router as capture_router
+    app.include_router(capture_router)
 except Exception:
-    analisis_router_included = False
+    pass
 
-# Fallback de /analisis/summary si no existe router
-if not analisis_router_included:
+analyze_router_included = False
+try:
+    from mininode_api.api.analyze import router as analyze_router
+    app.include_router(analyze_router)
+    analyze_router_included = True
+except Exception:
+    analyze_router_included = False
+
+# Fallback de /analyze/summary si no existe router
+if not analyze_router_included:
     # Importa solo los modelos desde models
     from mininode_api.models.analyze import (
         SummaryIn, SummaryOut
     )
     # Y la lógica de servicio real desde core (o services)
-    from mininode_api.core.analyze_service import analisis_summary_service
+    from mininode_api.core.analyze_service import analyze_summary_service
 
     MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")
 
@@ -62,6 +68,6 @@ if not analisis_router_included:
             raise HTTPException(status_code=401, detail="Invalid X-Api-Key")
         return True
 
-    @app.post("/analisis/summary", response_model=SummaryOut, dependencies=[Depends(require_api_key)])
-    async def analisis_summary(body: SummaryIn) -> SummaryOut:
-        return await analisis_summary_service(body)
+    @app.post("/analyze/summary", response_model=SummaryOut, dependencies=[Depends(require_api_key)])
+    async def analyze_summary(body: SummaryIn) -> SummaryOut:
+        return await analyze_summary_service(body)

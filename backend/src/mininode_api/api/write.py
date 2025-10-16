@@ -3,6 +3,7 @@ from mininode_api.core.auth import require_api_key
 from mininode_api.core.llm import LLMClient, ChatMessage
 from mininode_api.models.write import DraftReq, DraftResp
 
+# English-only routes: /write/draft
 router = APIRouter(prefix="/write", tags=["Write"])
 
 @router.post("/draft", response_model=DraftResp, dependencies=[Depends(require_api_key)])
