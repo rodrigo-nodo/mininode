@@ -6,7 +6,8 @@ from pydantic import BaseModel, HttpUrl
 import os
 from openai import AsyncOpenAI
 
-from mininode_api.core.http_fetcher import fetch_html
+# from mininode_api.core.http_fetcher import fetch_html
+from ..core.http_fetcher import fetch_html
 from ..mini_nodes.extract import extract_payload
 
 # Modelos (puedes moverlos a schemas/ si quieres)
