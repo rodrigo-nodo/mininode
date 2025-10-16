@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import List, Literal
 from pydantic import BaseModel, HttpUrl
 
-# Modelos "nuevos"
 class SummaryIn(BaseModel):
     urls: List[HttpUrl]
     scope: Literal["page", "site"] = "page"
@@ -19,15 +18,12 @@ class SummaryOut(BaseModel):
     summaries: List[SiteSummary]
     compare: str
 
-# Alias "viejos" para compatibilidad
+# Aliases para compatibilidad con código viejo
 class AnalyzeReq(SummaryIn):
     pass
 
 class AnalyzeResp(SummaryOut):
     pass
 
-__all__ = [
-    "SummaryIn", "SiteSummary", "SummaryOut",
-    "AnalyzeReq", "AnalyzeResp",
-]
+__all__ = ["SummaryIn", "SiteSummary", "SummaryOut", "AnalyzeReq", "AnalyzeResp"]
 

@@ -26,20 +26,20 @@ async def health():
 
 # Intenta incluir routers existentes (si los tienes ya)
 try:
-    from mininode_api.api.routers.auth import router as auth_router
+    from mininode_api.api.auth_check import router as auth_router
     app.include_router(auth_router)
 except Exception:
     pass
 
 try:
-    from mininode_api.api.routers.redaccion import router as redaccion_router
+    from mininode_api.api.redaccion import router as redaccion_router
     app.include_router(redaccion_router)
 except Exception:
     pass
 
 analisis_router_included = False
 try:
-    from mininode_api.api.routers.analisis import router as analisis_router
+    from mininode_api.api.analyze import router as analisis_router
     app.include_router(analisis_router)
     analisis_router_included = True
 except Exception:
@@ -47,7 +47,7 @@ except Exception:
 
 # Fallback de /analisis/summary si no existe router
 if not analisis_router_included:
-    from mininode_api.core.models.analyze import (
+    from mininode_api.models.analyze import (
         SummaryIn, SummaryOut, analisis_summary_service
     )
 
