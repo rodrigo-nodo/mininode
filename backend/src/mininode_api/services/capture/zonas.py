@@ -6,6 +6,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any
+import importlib.resources as resources
 import re
 import os
 
@@ -50,14 +51,33 @@ class FieldResult:
 # -----------------------------
 # Carga config (anchors + overrides)
 # -----------------------------
-def load_anchors_yaml(path: str) -> Dict[str, Any]:
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"anchors.yml no encontrado: {path}")
+def load_anchors_yaml(path: Optional[str] = None) -> Dict[str, Any]:
+    """Carga anchors.yml desde un path explícito o desde recursos del paquete.
+
+    - Si `path` es una ruta válida en el filesystem, carga desde allí.
+    - Si `path` es None, usa el recurso empaquetado
+      `mininode_api.services.capture.templates/anchors.yml`.
+    """
     if yaml is None:
         raise RuntimeError("PyYAML no instalado. Instala 'pyyaml' o provee config dict en memoria.")
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data or {}
+
+    # Caso 1: path explícito
+    if path:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"anchors.yml no encontrado: {path}")
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return data or {}
+
+    # Caso 2: recurso del paquete
+    pkg = "mininode_api.services.capture.templates"
+    try:
+        res = resources.files(pkg).joinpath("anchors.yml")  # type: ignore[attr-defined]
+        with res.open("r", encoding="utf-8") as f:  # type: ignore[assignment]
+            data = yaml.safe_load(f)
+        return data or {}
+    except Exception as e:
+        raise FileNotFoundError("anchors.yml no encontrado en recursos del paquete") from e
 
 def merge_overrides(base_cfg: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
     """Fusión superficial: overrides pisa campos del mismo nivel."""
@@ -230,4 +250,3 @@ def extract_fields_for_doc(
             continue
         results[fname] = extract_field(ocr_words, cfg, fname)
     return results
-

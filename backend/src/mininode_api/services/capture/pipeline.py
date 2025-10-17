@@ -28,10 +28,8 @@ except Exception:
 # =========================
 # Config & costos (ajusta a tu realidad)
 # =========================
-ANCHORS_PATH = os.getenv(
-    "CAPTURE_ANCHORS_PATH",
-    "backend/src/mininode_api/services/capture/templates/anchors.yml"
-)
+# Ruta opcional vía env; si falta, se usa el recurso del paquete
+ANCHORS_PATH = os.getenv("CAPTURE_ANCHORS_PATH")
 
 TOKEN_COSTS = {
     "gpt-4o-mini": {"input": 0.00000015, "output": 0.00000060},
