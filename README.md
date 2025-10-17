@@ -1,22 +1,31 @@
-# Mininode (monorepo) — Option B (src/ layout)
+# Mininode (monorepo) – src/ layout
 
-- `frontend/`: placeholder para landing/app
-- `backend/`: FastAPI con layout `src/` → paquete `mininode_api`
+- `frontend/`: static site + functions (proxy)
+- `backend/`: FastAPI app (`mininode_api`) under `backend/src`
 
-## Backend local
+## Backend Quickstart
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate      # (Windows: .venv\Scripts\activate)
-pip install -r requirements.txt
-cp .env.example .env && nano .env                       # agrega OPENAI_API_KEY si usarás LLM real
-PYTHONPATH=./src uvicorn mininode_api.main:app --reload --app-dir backend/src
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env                   # set OPENAI_API_KEY / API_KEY as needed
+uvicorn mininode_api.main:app --app-dir backend/src --reload --port 8000
 ```
-Pruebas rápidas:
+
+Common cURL
 ```bash
-curl http://localhost:8000/health
-curl -s -X POST http://localhost:8000/write/draft   -H 'Content-Type: application/json'   -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}'
-
-curl -s -X POST http://localhost:8000/capture/parse   -H 'Content-Type: application/json'   -d '{"image_b64":"dGVzdA==","save":false}'
-
-curl -s -X POST http://localhost:8000/analyze/summary   -H 'Content-Type: application/json'   -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}'
+curl -s http://localhost:8000/health
+curl -s -X POST http://localhost:8000/write/draft \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}'
+curl -s -X POST "http://localhost:8000/capture?doc_type=boleta&usar_fallback=true" \
+  -H 'X-Api-Key: '$API_KEY \
+  -F "file=@/path/to/image.jpg"
+curl -s -X POST http://localhost:8000/analyze/summary \
+  -H 'Content-Type: application/json' \
+  -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}'
 ```
+
+See more details in `backend/README.md`.
+
+## Licencia
+MIT — ver archivo `LICENSE`. © 2025 Rodrigo.

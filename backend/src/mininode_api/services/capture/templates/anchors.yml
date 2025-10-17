@@ -1,0 +1,97 @@
+# Anchors config v1 – anclas + estrategia de ventana por tipo de documento
+# Nota:
+# - dx/dy son proporciones relativas al tamaño de página (0..1).
+# - strategy: right_of | below | left_of | above
+# - regex: validación rápida del valor. Ajusta según tus formatos.
+
+version: 1
+document_types:
+  guia:
+    fields:
+      folio:
+        anchors: ["Folio", "Nº", "Nº Folio"]
+        strategy: right_of
+        window: { dx: 0.12, dy: 0.04 }
+        regex: "^[0-9]{4,10}$"
+      rut_emisor:
+        anchors: ["RUT", "R.U.T.", "RUT Emisor"]
+        strategy: right_of
+        window: { dx: 0.18, dy: 0.05 }
+        regex: "^[0-9\\.\\-Kk]{9,12}$"
+      rut_receptor:
+        anchors: ["RUT Receptor", "RUT Cliente", "Cliente RUT"]
+        strategy: right_of
+        window: { dx: 0.22, dy: 0.05 }
+        regex: "^[0-9\\.\\-Kk]{9,12}$"
+      fecha_emision:
+        anchors: ["Fecha", "F. Emisión", "Fecha Emisión"]
+        strategy: right_of
+        window: { dx: 0.20, dy: 0.05 }
+        regex: "^(\\d{2}[\\/-]\\d{2}[\\/-]\\d{2,4})$"
+      neto:
+        anchors: ["Neto", "Valor Neto"]
+        strategy: below
+        window: { dx: 0.25, dy: 0.06 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+      iva:
+        anchors: ["IVA", "Impuesto", "IVA 19%"]
+        strategy: below
+        window: { dx: 0.25, dy: 0.06 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+      total:
+        anchors: ["Total", "Total a pagar", "TOTAL"]
+        strategy: below
+        window: { dx: 0.30, dy: 0.08 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+
+  boleta:
+    fields:
+      folio:
+        anchors: ["Folio", "Boleta Nº", "Nº"]
+        strategy: right_of
+        window: { dx: 0.15, dy: 0.05 }
+        regex: "^[0-9]{4,12}$"
+      fecha_emision:
+        anchors: ["Fecha", "Fecha Emisión"]
+        strategy: right_of
+        window: { dx: 0.20, dy: 0.05 }
+        regex: "^(\\d{2}[\\/-]\\d{2}[\\/-]\\d{2,4})$"
+      total:
+        anchors: ["Total", "Total a pagar"]
+        strategy: below
+        window: { dx: 0.30, dy: 0.08 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+
+  factura:
+    fields:
+      folio:
+        anchors: ["Factura Nº", "Nº", "Folio"]
+        strategy: right_of
+        window: { dx: 0.15, dy: 0.05 }
+        regex: "^[0-9]{4,12}$"
+      rut_emisor:
+        anchors: ["RUT", "R.U.T.", "RUT Emisor"]
+        strategy: right_of
+        window: { dx: 0.20, dy: 0.05 }
+        regex: "^[0-9\\.\\-Kk]{9,12}$"
+      fecha_emision:
+        anchors: ["Fecha Emisión", "Fecha"]
+        strategy: right_of
+        window: { dx: 0.20, dy: 0.05 }
+        regex: "^(\\d{2}[\\/-]\\d{2}[\\/-]\\d{2,4})$"
+      neto:
+        anchors: ["Neto", "Valor Neto"]
+        strategy: below
+        window: { dx: 0.25, dy: 0.06 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+      iva:
+        anchors: ["IVA", "Impuesto", "IVA 19%"]
+        strategy: below
+        window: { dx: 0.25, dy: 0.06 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+      total:
+        anchors: ["Total", "Total a pagar", "TOTAL"]
+        strategy: below
+        window: { dx: 0.30, dy: 0.08 }
+        regex: "^\\$?\\s?[0-9\\.]{3,12}(,[0-9]{2})?$"
+
