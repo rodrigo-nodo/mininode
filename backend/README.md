@@ -56,3 +56,27 @@ curl -s -X POST http://localhost:8000/write/draft \
   -H "Content-Type: application/json" -H "X-Api-Key: $API_KEY" \
   -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}' | jq .
 ```
+
+## Post‑Deploy Checks (Render)
+
+Set your service base URL, e.g.: `API_BASE="https://<your-service>.onrender.com"`
+
+```bash
+# Health
+curl -s "$API_BASE/health" | jq .
+
+# Write (requires X-Api-Key if enforced)
+curl -s -X POST "$API_BASE/write/draft" \
+  -H "Content-Type: application/json" -H "X-Api-Key: $API_KEY" \
+  -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}' | jq .
+
+# Analyze (page)
+curl -s -X POST "$API_BASE/analyze/summary" \
+  -H "Content-Type: application/json" -H "X-Api-Key: $API_KEY" \
+  -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}' | jq .
+
+# Capture (file upload)
+curl -s -X POST "$API_BASE/capture?doc_type=boleta&usar_fallback=true" \
+  -H "X-Api-Key: $API_KEY" \
+  -F "file=@/path/to/image.jpg" | jq .
+```

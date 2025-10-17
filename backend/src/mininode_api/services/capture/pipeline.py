@@ -98,7 +98,7 @@ def proceso_imagen_mini(img: Image.Image, doc_type: str) -> Dict[str, Any]:
         "fecha_emision, neto, iva, total. Valores en string; si falta, usa null."
     )
     start = time.time()
-    resp = _OPENAI.chat(completions=None).completions.create(  # type: ignore
+    resp = _OPENAI.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0.0,
         messages=[
@@ -313,4 +313,3 @@ def procesar_documento(
         cost=cost,
         timings=timings,
     )
-
