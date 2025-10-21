@@ -40,29 +40,33 @@ export const onRequest = async (ctx) => {
   const method = request.method.toUpperCase();
 
   // --- LECTURA Y NORMALIZACIÓN DEL BODY ---
-  let bodyText = '';
-  let contentType = request.headers.get('Content-Type') || 'application/json';
+  const origContentType = request.headers.get('Content-Type') || '';
+  let body = undefined;
+  let contentType = origContentType || 'application/json';
   if (!['GET', 'HEAD'].includes(method)) {
-    bodyText = await request.text(); // leer como texto
-
-    // Si es JSON, valida y re-serializa
-    if (contentType.includes('application/json')) {
+    if (origContentType.includes('multipart/form-data')) {
+      // No tocar el cuerpo; forward stream (boundary debe preservarse)
+      body = request.body;
+    } else if (origContentType.includes('application/json')) {
+      const txt = await request.text();
       try {
-        const obj = bodyText ? JSON.parse(bodyText) : {};
-        // TIP: asegúrate de que prompt y tone viajen
-        bodyText = JSON.stringify(obj);
+        const obj = txt ? JSON.parse(txt) : {};
+        body = JSON.stringify(obj);
       } catch (e) {
-        return new Response(JSON.stringify({ error: 'JSON inválido', detail: String(e), body: bodyText }), {
+        return new Response(JSON.stringify({ error: 'JSON inválido', detail: String(e) }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         });
       }
+    } else {
+      // Otros (texto simple, etc.)
+      body = await request.text();
     }
   }
 
   // Headers hacia backend
   const headers = new Headers();
-  headers.set('Content-Type', contentType);
+  if (contentType) headers.set('Content-Type', contentType);
   headers.set('Accept', 'application/json');
   headers.set('X-Api-Key', env.MININODE_API_KEY || '');
 
@@ -77,7 +81,7 @@ export const onRequest = async (ctx) => {
     const upstream = await fetch(target.toString(), {
       method,
       headers,
-      body: ['GET', 'HEAD'].includes(method) ? undefined : bodyText,
+      body: ['GET', 'HEAD'].includes(method) ? undefined : body,
     });
 
     const upstreamBody = await upstream.text();

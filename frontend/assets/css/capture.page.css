@@ -1,0 +1,9 @@
+#capture-app { --brand:#005ad6; --border:#e5e7eb; --muted:#475569; --text:#0f172a; }
+#capture-app.wr-container { max-width: 920px; margin: 0 auto; padding: 32px 16px; color: var(--text); }
+
+.wr-drop { border:2px dashed var(--border); border-radius: 16px; padding: 28px; text-align:center; background:#fff; transition: border-color .2s ease, background .2s ease; }
+.wr-drop--hover { border-color: var(--brand); background: #f8fbff; }
+.wr-drop--ready { border-color: var(--brand); background: #f0f6ff; }
+.wr-drop__title { margin: 0 0 4px; font-weight:600; }
+
+.wr-card { border:1px solid var(--border); border-radius: 12px; background: #ffffff; padding: 12px; }

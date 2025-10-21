@@ -6,20 +6,21 @@
   <title>Mininode Write</title>
 
   <!-- global -->
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="../../styles.css" />
   <!-- page-specific -->
-  <link rel="stylesheet" href="/assets/css/write.page.css" />
+  <link rel="stylesheet" href="../../assets/css/write.page.css" />
   <!-- favicons -->
-  <link rel="icon" href="/assets/favicon_2.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png?v=3">
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icon-16.png?v=3">
-  <link rel="apple-touch-icon" href="/assets/icon-180.png?v=3">
-  <link rel="icon" href="/favicon.ico?v=3">
-  <script src="/include.js" defer></script>
+  <link rel="icon" href="../../assets/favicon_2.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icon-32.png?v=3">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../assets/icon-16.png?v=3">
+  <link rel="apple-touch-icon" href="../../assets/icon-180.png?v=3">
+  <link rel="icon" href="../../favicon.ico?v=3">
+  <script src="../../assets/js/core-head.js" defer></script>
+  <script src="../../include.js" defer></script>
 </head>
 <body>
   <!-- Header (inyectado) -->
-  <div id="site-header" data-include="/partials/header-nav.html"></div>
+  <div id="site-header" data-include="../../partials/header-nav.html"></div>
 
   <main id="write-app" class="wr-container">
     <!-- Hero -->
@@ -115,7 +116,7 @@
   </main>
 
   <!-- Footer (inyectado) -->
-  <div id="site-footer" data-include="/partials/footer.html"></div>
+  <div id="site-footer" data-include="../../partials/footer.html"></div>
 
   <!-- Env (dev/stg). En prod, usa env vars de Pages o Workers. -->
   <script>
@@ -124,6 +125,6 @@
   </script>
 
   <!-- JS (módulos reutilizables + página) -->
-  <script type="module" src="/assets/js/write.page.js"></script>
+  <script type="module" src="../../assets/js/write.page.js"></script>
 </body>
 </html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mininode Capture</title>
+
+  <!-- global -->
+  <link rel="stylesheet" href="../../styles.css" />
+  <!-- reuse Write page styles for consistent look -->
+  <link rel="stylesheet" href="../../assets/css/write.page.css" />
+  <link rel="stylesheet" href="../../assets/css/capture.page.css" />
+  <!-- favicons -->
+  <link rel="icon" href="../../assets/favicon_2.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icon-32.png?v=3">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../assets/icon-16.png?v=3">
+  <link rel="apple-touch-icon" href="../../assets/icon-180.png?v=3">
+  <link rel="icon" href="../../favicon.ico?v=3">
+  <script src="../../assets/js/core-head.js" defer></script>
+  <script src="../../include.js" defer></script>
+</head>
+<body>
+  <!-- Header (inyectado) -->
+  <div id="site-header" data-include="../../partials/header-nav.html"></div>
+
+  <main id="capture-app" class="wr-container">
+    <!-- Hero -->
+    <section class="wr-hero wr-bordered">
+      <div class="wr-hero__inner">
+        <span class="wr-badge wr-badge--brand">Mininode Capture</span>
+        <h1>Convierte imágenes en JSON</h1>
+        <p class="wr-muted">Sube JPG/PNG. Sin almacenar. Resultado inmediato.</p>
+      </div>
+    </section>
+
+    <!-- Panel principal -->
+    <section class="wr-panel">
+      <div class="wr-grid">
+        <div class="wr-field">
+          <label for="doc-type">Tipo de documento</label>
+          <select id="doc-type" class="wr-select">
+            <option value="boleta">Boleta</option>
+            <option value="guia">Guía</option>
+            <option value="factura">Factura</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dropzone -->
+      <div id="dropzone" class="wr-drop">
+        <div class="wr-drop__inner">
+          <p class="wr-drop__title">Arrastra y suelta tu archivo aquí</p>
+          <p class="wr-muted">o</p>
+          <label class="wr-btn wr-btn--primary wr-btn--brand">
+            Elegir archivo
+            <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden />
+          </label>
+          <p class="small wr-muted">Máx 5 MB. Formatos: JPG/PNG. WEBP se convierte localmente. HEIC requiere convertir a JPG/PNG.</p>
+        </div>
+      </div>
+
+      <!-- Selección (feedback inmediato) -->
+      <div id="file-info" class="wr-card wr-hidden" style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+        <img id="thumb" alt="miniatura" style="width:56px; height:56px; object-fit:cover; border:1px solid var(--border); border-radius:8px;" />
+        <div>
+          <div id="file-name" style="font-weight:600;"></div>
+          <div id="file-meta" class="small wr-muted"></div>
+        </div>
+      </div>
+
+      <div class="wr-actions">
+        <div class="wr-hint">
+          <span class="wr-dot"></span>
+          <span class="wr-muted small">Listo para usar</span>
+        </div>
+        <div class="wr-row">
+          <button id="start-btn" class="wr-btn wr-btn--primary wr-btn--brand" disabled>Subir y procesar</button>
+        </div>
+      </div>
+
+      <!-- Resultado -->
+      <div id="result-box" class="wr-result wr-hidden">
+        <div class="wr-result__bar">
+          <span class="wr-label">Resultado</span>
+          <div class="wr-row">
+            <span id="perf-badge" class="wr-badge">Total —</span>
+            <button id="copy-json" class="wr-btn">Copiar JSON</button>
+            <div class="wr-dropdown">
+              <button id="export-json" class="wr-btn">Exportar</button>
+              <div class="wr-menu">
+                <button data-export="json">JSON (.json)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wr-grid">
+          <div>
+            <img id="preview" alt="preview" style="max-width:100%; border:1px solid var(--border); border-radius:8px;" />
+          </div>
+          <pre id="json-out" class="wr-pre"></pre>
+        </div>
+
+        <div id="diff-box" class="wr-card wr-hidden" style="margin-top:1rem;">
+          <div class="wr-result__bar">
+            <span class="wr-label">Diferencias detectadas</span>
+          </div>
+          <pre id="diff-out" class="wr-pre"></pre>
+        </div>
+      </div>
+
+      <!-- Errores -->
+      <p id="err" class="wr-error wr-hidden"></p>
+    </section>
+  </main>
+
+  <!-- Footer (inyectado) -->
+  <div id="site-footer" data-include="../../partials/footer.html"></div>
+
+  <!-- JS -->
+  <script type="module" src="../../assets/js/capture.page.js"></script>
+</body>
+</html>

@@ -1,24 +1,16 @@
 <!doctype html>
 <html lang="es">
-<!-- Landing Agentes -->
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contacto — Mininode</title>
   <meta name="description" content="Escríbenos para iniciar tu proyecto.">
-  <meta name="theme-color" content="#005AD6">
-  <meta property="og:title" content="Contacto — Mininode">
-  <meta property="og:description" content="Escríbenos para iniciar tu proyecto.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="/assets/og-image.png">
-  <link rel="icon" href="/assets/favicon.ico" sizes="any">
-  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/include.js" defer></script>
+  <link rel="stylesheet" href="../styles.css">
+  <script src="../assets/js/core-head.js" defer></script>
+  <script src="../include.js" defer></script>
 </head>
 <body>
-<div data-include="/partials/header-nav.html"></div>
+<div data-include="../partials/header-nav.html"></div>
 <main>
   <section class="container doc">
     <h1>Contacto</h1>
@@ -31,40 +23,39 @@
         <span>Email</span>
         <input name="email" type="email" required placeholder="tucorreo@dominio.com">
       </label>
-      </br>
       <label>
         <span>Mensaje</span>
         <textarea name="message" rows="5" required placeholder="Cuéntanos brevemente qué necesitas"></textarea>
       </label>
-      </br>
       <input type="hidden" name="_subject" value="Nuevo mensaje desde mininode.io">
       <button class="btn btn--primary" type="submit">Enviar</button>
       <p id="formStatus" class="muted" role="status" aria-live="polite"></p>
     </form>
-    <p class="muted">Al enviar aceptas nuestra <a href="/privacy/index.html">Política de Privacidad</a>.</p>
+    <p class="muted">Al enviar aceptas nuestra <a href="../privacy/index.html">Política de Privacidad</a>.</p>
   </section>
-</main>
-<div data-include="/partials/footer.html"></div>
-<script>
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwprvwrk";
-const form = document.getElementById('contactForm');
-const statusEl = document.getElementById('formStatus');
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  statusEl.textContent = "Enviando...";
-  try {
-    const data = new FormData(form);
-    const res = await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } });
-    if (res.ok) {
-      form.reset();
-      statusEl.textContent = "¡Gracias! Responderemos pronto.";
-    } else {
-      statusEl.textContent = "No se pudo enviar. Intenta nuevamente o escríbenos a contact@mininode.io.";
+  <script>
+  const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwprvwrk";
+  const form = document.getElementById('contactForm');
+  const statusEl = document.getElementById('formStatus');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusEl.textContent = "Enviando...";
+    try {
+      const data = new FormData(form);
+      const res = await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        form.reset();
+        statusEl.textContent = "¡Gracias! Responderemos pronto.";
+      } else {
+        statusEl.textContent = "No se pudo enviar. Intenta nuevamente o escríbenos a contact@mininode.io.";
+      }
+    } catch (err) {
+      statusEl.textContent = "Error de red. Intenta otra vez.";
     }
-  } catch (err) {
-    statusEl.textContent = "Error de red. Intenta otra vez.";
-  }
-});
-</script>
+  });
+  </script>
+</main>
+<div data-include="../partials/footer.html"></div>
 </body>
 </html>
+

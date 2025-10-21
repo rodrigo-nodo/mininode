@@ -1,5 +1,5 @@
-import { injectPartials } from '/assets/js/core-partials.js';
-import { attachGoNavigation } from '/assets/js/core-go-nav.js';
+import { injectPartials } from './core-partials.js';
+import { attachGoNavigation } from './core-go-nav.js';
 
 const ENABLE_AGENT_PAGES = true; // ⬅️ cuando existan las páginas, ponlo en true
 

@@ -6,20 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agentes · Mininode</title>
   <!-- global -->
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="../styles.css" />
+  <script src="../assets/js/core-head.js" defer></script>
   <!-- page-specific -->
-  <link rel="stylesheet" href="/assets/css/agents.page.css" />
+  <link rel="stylesheet" href="../assets/css/agents.page.css" />
   <!-- favicons -->
-  <link rel="icon" href="/assets/favicon_2.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png?v=3">
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icon-16.png?v=3">
-  <link rel="apple-touch-icon" href="/assets/icon-180.png?v=3">
-  <link rel="icon" href="/favicon.ico?v=3">
-  <script src="/include.js" defer></script>
+  <link rel="icon" href="../assets/favicon_2.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icon-32.png?v=3">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/icon-16.png?v=3">
+  <link rel="apple-touch-icon" href="../assets/icon-180.png?v=3">
+  <link rel="icon" href="../favicon.ico?v=3">
+  <script src="../include.js" defer></script>
 </head>
 <body>
   <!-- Header (si ya se inyecta globalmente, puedes quitar este DIV) -->
-  <div data-include="/partials/header-nav.html"></div>
+  <div data-include="../partials/header-nav.html"></div>
   <main id="agents-landing" class="ag-container">
     <!-- Hero -->
     <!-- 
@@ -53,7 +54,7 @@
           <div class="ag-card__body">
             <div class="ag-row">
               <span class="ag-muted ag-small">En desarrollo</span>
-              <a class="ag-btn ag-btn--primary" data-go="/agents/write">Abrir</a>
+              <a class="ag-btn ag-btn--primary" data-go="write/index.html">Abrir</a>
             </div>
           </div>
         </article>
@@ -70,7 +71,7 @@
           <div class="ag-card__body">
             <div class="ag-row">
               <span class="ag-muted ag-small">Próximamente</span>
-              <a class="ag-btn ag-btn--primary" data-go="/agents/finance">Abrir</a>
+              <a class="ag-btn ag-btn--primary" data-go="finance/index.html">Abrir</a>
             </div>
           </div>
         </article>
@@ -87,7 +88,7 @@
           <div class="ag-card__body">
             <div class="ag-row">
               <span class="ag-muted ag-small">Próximamente</span>
-              <a class="ag-btn ag-btn--primary" data-go="/agents/growth">Abrir</a>
+              <a class="ag-btn ag-btn--primary" data-go="growth/index.html">Abrir</a>
             </div>
           </div>
         </article>
@@ -132,7 +133,7 @@
                 <li>Integraciones básicas</li>
               </ul>
               <div class="ag-row">
-                <button class="ag-btn ag-btn--primary" data-go="/signup">Activar agentes</button>
+                <button class="ag-btn ag-btn--primary" data-go="../signup">Activar agentes</button>
                 <button class="ag-btn">Ver detalles</button>
               </div>
             </div>
@@ -156,7 +157,7 @@
                 <li>Prioridad de cómputo y soporte</li>
               </ul>
               <div class="ag-row">
-                <button class="ag-btn ag-btn--primary" data-go="/signup">Probar Suite</button>
+                <button class="ag-btn ag-btn--primary" data-go="../signup">Probar Suite</button>
                 <button class="ag-btn">Ver detalles</button>
               </div>
             </div>
@@ -169,9 +170,9 @@
   </main>
 
   <!-- Footer (inyectado) -->
-  <div id="site-footer" data-include="/partials/footer.html"></div>
+  <div id="site-footer" data-include="../partials/footer.html"></div>
 
   <!-- JS: compartidos + página -->
-  <script type="module" src="/assets/js/agents.page.js"></script>
+  <script type="module" src="../assets/js/agents.page.js"></script>
 </body>
 </html>

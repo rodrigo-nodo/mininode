@@ -1,10 +1,15 @@
-import { injectPartials } from '/assets/js/core-partials.js';
-import { attachGoNavigation } from '/assets/js/core-go-nav.js';
-import * as Ex from '/assets/js/util-export.js';
+import { injectPartials } from './core-partials.js';
+import { attachGoNavigation } from './core-go-nav.js';
+import * as Ex from './util-export.js';
 
 const LS_KEY = 'mininode_write_prefs_v1';
-const API_URL = '/api/write/draft';
-const ANALYZE_PROXY = '/api/analyze/summary';
+function apiBase(){
+  let base = (typeof window !== 'undefined' && window.MININODE_API_BASE) ? window.MININODE_API_BASE : '';
+  if (!base) base = (location.protocol === 'file:') ? 'http://127.0.0.1:8000' : '/api';
+  return String(base||'').replace(/\/$/, '');
+}
+const API_URL = apiBase() + '/write/draft';
+const ANALYZE_PROXY = apiBase() + '/analyze/summary';
 const ANALYZE_URL = 'https://api.mininode.io/analyze/summary';
 
 function extractUrls(text) {
