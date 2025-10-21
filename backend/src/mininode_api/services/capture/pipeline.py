@@ -136,7 +136,16 @@ def proceso_tesseract_mini(img: Image.Image, doc_type: str, anchors_cfg: Dict[st
     doc_cfg = anchors_cfg
     fields = extract_fields_for_doc(words, doc_cfg, doc_type=doc_type)
     out: Dict[str, Any] = {k: v.value for k, v in fields.items()}
-    return {"data": out}
+    # Meta de confianza/estado por campo (para decisiones de fallback)
+    meta = {
+        k: {
+            "confidence": (v.confidence or 0.0),
+            "uncertain": bool(v.uncertain),
+            "source": v.source,
+        }
+        for k, v in fields.items()
+    }
+    return {"data": out, "meta": meta}
 
 
 # =========================
@@ -271,20 +280,51 @@ def procesar_documento(
         if combinado.get(f) in (None, "", []):
             faltantes.append(f)
 
+    # Reglas extra de calidad para fallback
+    has_failed_checks = any(v is False for v in (consistency.checks or {}).values())
+    ocr_meta = ocr_res.get("meta") or {}
+    low_conf_crit: List[str] = []
+    for f in CRITICAL_FIELDS.get(req.doc_type, []):
+        m = ocr_meta.get(f) or {}
+        if m.get("confidence", 0.0) < 0.6:
+            low_conf_crit.append(f)
+
     uso_list = []
     if mini.get("usage"): uso_list.append(mini["usage"])
 
     fallback_tokens = None
+    adjusted_fields: List[str] = []
     if req.usar_fallback and faltantes:
         fb = fallback_con_4o(img, faltantes=faltantes, doc_type=req.doc_type)
         for k, v in (fb.get("data") or {}).items():
             if k in faltantes and v not in (None, "", []):
                 combinado[k] = v
+                adjusted_fields.append(k)
         if fb.get("usage"):
             uso_list.append(fb["usage"])
         fallback_tokens = fb.get("usage", {})
 
-    # 6) salida
+    # Fallback adicional si hubo fallas de consistencia o baja confianza en críticos
+    if req.usar_fallback and (has_failed_checks or low_conf_crit):
+        fb2 = fallback_con_4o(img, faltantes=CRITICAL_FIELDS.get(req.doc_type, []), doc_type=req.doc_type)
+        for k, v in (fb2.get("data") or {}).items():
+            if v in (None, "", []):
+                continue
+            if (k in low_conf_crit) or has_failed_checks:
+                combinado[k] = v
+                if k not in adjusted_fields:
+                    adjusted_fields.append(k)
+        if fb2.get("usage"):
+            uso_list.append(fb2["usage"])
+
+    # 6) salida (recalcular consistencia post-fallback si hubo ajustes)
+    consistency_after = None
+    if adjusted_fields:
+        t3b = time.time()
+        consistency_after = validar_consistencia(req.doc_type, combinado)
+        t_validate += int((time.time() - t3b) * 1000)
+
+    # 7) construir salida
     campos = req.return_fields or list(set(combinado.keys()))
     fields_out: Dict[str, FieldOut] = {}
     for k in campos:
@@ -308,6 +348,9 @@ def procesar_documento(
         doc_type=req.doc_type,
         fields=fields_out,
         consistency=consistency,
+        consistency_after_fallback=consistency_after,
         cost=cost,
         timings=timings,
+        fallback_applied=bool(adjusted_fields),
+        adjusted_fields=adjusted_fields,
     )

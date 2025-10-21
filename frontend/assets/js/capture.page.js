@@ -209,10 +209,20 @@ startBtn.addEventListener('click', async () => {
 
     // Differences section (if any): relies on consistency.notes or checks if delta exists in future
     // For MVP, if checks has false values, surface them
-    const badChecks = Object.entries(data.consistency?.checks || {}).filter(([,v]) => v === false);
-    if (badChecks.length) {
+    const beforeBad = Object.entries(data.consistency?.checks || {}).filter(([,v]) => v === false).map(([k])=>k);
+    const afterBad = Object.entries(data.consistency_after_fallback?.checks || {}).filter(([,v]) => v === false).map(([k])=>k);
+    const adjusted = Array.isArray(data.adjusted_fields) ? data.adjusted_fields : [];
+    const applied = !!data.fallback_applied;
+    const lines = [];
+    if (beforeBad.length) { lines.push('Checks fallidos (antes):'); beforeBad.forEach(k=>lines.push(`- ${k}`)); }
+    if (applied) {
+      lines.push('', `Fallback aplicado: ${adjusted.length ? adjusted.join(', ') : '(sin cambios reportados)'}`);
+      if (afterBad.length) { lines.push('Checks fallidos (después):'); afterBad.forEach(k=>lines.push(`- ${k}`)); }
+      else { lines.push('Checks después: OK'); }
+    }
+    if (lines.length) {
       diffBox.classList.remove('wr-hidden');
-      diffOut.textContent = `Checks fallidos: \n${badChecks.map(([k])=>`- ${k}`).join('\n')}`;
+      diffOut.textContent = lines.join('\n');
     }
 
     // Perf badge

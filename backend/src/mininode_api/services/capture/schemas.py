@@ -36,5 +36,8 @@ class CaptureResponse(BaseModel):
     doc_type: DocType
     fields: Dict[str, FieldOut]
     consistency: ConsistencyReport
+    consistency_after_fallback: Optional[ConsistencyReport] = None
     cost: CostBreakdown
     timings: TimingMs
+    fallback_applied: bool = False
+    adjusted_fields: List[str] = []
