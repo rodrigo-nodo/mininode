@@ -290,22 +290,26 @@ def procesar_documento(
             low_conf_crit.append(f)
 
     uso_list = []
-    if mini.get("usage"): uso_list.append(mini["usage"])
+    if mini.get("usage"): uso_list.append(mini["usage"]) 
 
     fallback_tokens = None
+    fallback_took_total_ms = 0
     adjusted_fields: List[str] = []
     if req.usar_fallback and faltantes:
+        _t_fb = time.time()
         fb = fallback_con_4o(img, faltantes=faltantes, doc_type=req.doc_type)
         for k, v in (fb.get("data") or {}).items():
             if k in faltantes and v not in (None, "", []):
                 combinado[k] = v
                 adjusted_fields.append(k)
         if fb.get("usage"):
-            uso_list.append(fb["usage"])
+            uso_list.append(fb["usage"]) 
         fallback_tokens = fb.get("usage", {})
+        fallback_took_total_ms += int((time.time() - _t_fb) * 1000)
 
     # Fallback adicional si hubo fallas de consistencia o baja confianza en críticos
     if req.usar_fallback and (has_failed_checks or low_conf_crit):
+        _t_fb2 = time.time()
         fb2 = fallback_con_4o(img, faltantes=CRITICAL_FIELDS.get(req.doc_type, []), doc_type=req.doc_type)
         for k, v in (fb2.get("data") or {}).items():
             if v in (None, "", []):
@@ -315,7 +319,8 @@ def procesar_documento(
                 if k not in adjusted_fields:
                     adjusted_fields.append(k)
         if fb2.get("usage"):
-            uso_list.append(fb2["usage"])
+            uso_list.append(fb2["usage"]) 
+        fallback_took_total_ms += int((time.time() - _t_fb2) * 1000)
 
     # 6) salida (recalcular consistencia post-fallback si hubo ajustes)
     consistency_after = None
@@ -339,7 +344,7 @@ def procesar_documento(
     timings = TimingMs(
         ocr=ocr_res["took_ms"],
         llm_mini=t_mini,
-        llm_fallback=int(fallback_tokens.get("took_ms", 0)) if fallback_tokens else 0,
+        llm_fallback=fallback_took_total_ms,
         validate_ms=t_validate,
         total=int((time.time() - t0) * 1000),
     )

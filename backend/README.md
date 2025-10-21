@@ -3,16 +3,23 @@
 FastAPI app packaged as `mininode_api` under `backend/src`.
 
 ## Endpoints
+- `HEAD /` → 204 (probes)
+- `GET /` → { status: "ok" }
 - `GET /health`
 - `POST /write/draft`
 - `POST /analyze/summary`
-- `POST /capture`
+- `POST /capture` (multipart)
 
 ## Requirements
 - Python 3.11+
-- Optional env vars:
-  - `OPENAI_API_KEY` for real LLM calls
-  - `API_KEY` or `API_KEYS` (comma-separated) to enforce `X-Api-Key` on endpoints
+- Tesseract OCR instalado en el sistema (para `pytesseract`)
+  - Debian/Ubuntu: `sudo apt-get install tesseract-ocr`
+  - macOS (brew): `brew install tesseract`
+  - Windows: instalar binario oficial y agregar a PATH
+- Env vars opcionales:
+  - `OPENAI_API_KEY` para llamadas reales (mini visión / fallback)
+  - `API_KEY` o `API_KEYS` (coma-separado) para exigir `X-Api-Key`
+  - `ALLOWED_ORIGINS` para CORS (coma-separado)
 
 ## Quickstart
 ```bash
@@ -49,6 +56,20 @@ curl -s -X POST "http://localhost:8000/capture?doc_type=boleta&usar_fallback=tru
   -H "X-Api-Key: $API_KEY" \
   -F "file=@/path/to/image.jpg" | jq .
 ```
+
+### Respuesta Capture (resumen de campos)
+- `fields`: diccionario de `FieldOut { value:str|null, confidence:float, source:str, uncertain:bool }`
+- `consistency`: checks/notes previas al fallback (ej.: `total>=neto`)
+- `consistency_after_fallback`: idem, recalculado tras aplicar fallback (si hubo ajustes)
+- `timings` (ms): `{ ocr, llm_mini, llm_fallback, validate_ms, total }`
+- `fallback_applied` (bool) y `adjusted_fields` (lista de críticos ajustados)
+
+### Disparo de fallback
+- Se activa si:
+  - faltan campos críticos (según `CRITICAL_FIELDS` por `doc_type`), o
+  - hay checks de consistencia fallidos, o
+  - hay baja confianza (<0.6) en críticos detectada por OCR/anclas
+- Nota: los valores del modelo se coercean a string al emitir `FieldOut`
 
 Using X-Api-Key (if enabled)
 ```bash

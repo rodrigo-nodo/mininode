@@ -3,10 +3,14 @@
 Static site + small API proxy to talk to the backend. Uses English-only routes.
 
 ## Overview
-- Key files:
-  - `frontend/index.html` and pages under `frontend/agents/*`
-  - `frontend/assets/js/write.page.js` (writer UI logic)
-  - `frontend/functions/api/[[path]].js` (proxy function)
+- Páginas clave:
+  - Home: `frontend/index.html`
+  - Agents: `frontend/agents/index.html` y `frontend/agents/write/index.html`
+  - SaaS Capture: `frontend/saas/capture/index.html`
+- Lógica UI:
+  - Escritura: `frontend/assets/js/write.page.js`
+  - Capture: `frontend/assets/js/capture.page.js`
+- Proxy Functions: `frontend/functions/api/[[path]].js`
 
 ## Local Development
 - Simple static server
@@ -14,76 +18,52 @@ Static site + small API proxy to talk to the backend. Uses English-only routes.
 - Backend
   - Start API at `http://localhost:8000` (see backend/README.md).
 
+## Head común y rutas relativas
+- `partials/head-common.html` se inyecta via `assets/js/core-head.js` (favicons/meta centralizados)
+- `include.js` normaliza rutas de `header/footer` usando atributos `data-rel` (funciona con file://)
+
 ## Environment Variables
-- `MININODE_API_BASE`: backend base URL (default `https://api.mininode.io`).
-- `MININODE_API_KEY`: API key forwarded to backend as `X-Api-Key` by the proxy.
-- On Cloudflare Pages, define them under Project â†’ Settings â†’ Environment Variables / Secrets.
+- `MININODE_API_BASE`: URL base del backend (Render). El front también la usa directamente cuando corre como file://; si no se define, usa `/api` (proxy) en producción.
+- `MININODE_API_KEY`: secret en Pages; el proxy lo reenvía como `X-Api-Key` al backend.
+- Defínelas en Cloudflare Pages ? Project ? Settings ? Environment Variables / Secrets.
 
 ## API Proxy (Functions)
-- Path: `frontend/functions/api/[[path]].js`.
-- Whitelist: update `ALLOWED` to permit public routes.
-- Mapping: update `ROUTE_MAP` for public â†’ backend paths.
-- Current allowed/mapped routes:
-  - `write/draft`
-  - `analyze/summary`
-  - `capture`
-- Handles CORS preflight and JSON pass-through.
+- Ruta: `frontend/functions/api/[[path]].js`.
+- Lista blanca: `ALLOWED`.
+- Mapping público ? backend: `ROUTE_MAP`.
+- Rutas actuales: `write/draft`, `analyze/summary`, `capture`.
+- Maneja CORS y soporta `multipart/form-data` (reenvía el stream con boundary intacto).
 
 ## Write Page
-- Location: `frontend/agents/write/index.html` with logic in `frontend/assets/js/write.page.js`.
-- Endpoints used:
-  - Draft: `POST /api/write/draft`
-  - Analyze (proxy first): `POST /api/analyze/summary`
-  - Analyze (direct fallback URL): `https://api.mininode.io/analyze/summary`
-- Notes:
-  - Local draft fallback works without backend.
-  - URL analysis is best-effort; requires backend/API key for real output.
+- Location: `frontend/agents/write/index.html` con lógica en `frontend/assets/js/write.page.js`.
+- Endpoints usados (vía proxy): `/api/write/draft`, `/api/analyze/summary`.
+- Notas:
+  - Borrador local funciona sin backend.
+  - El análisis de URLs requiere backend/API key para resultados reales.
+
+## Capture (UI)
+- Formats: `jpg`, `jpeg`, `png` (= 5 MB). `webp` se convierte en cliente. `heic/heif` bloqueado con aviso.
+- Feedback inmediato al elegir/soltar: miniatura, nombre, tamaño; botón se habilita.
+- Badge: `Total Xs | p95(sess) Ys` (p95 local de la sesión del navegador).
+- Differences: checks fallidos antes/después y campos ajustados cuando hay fallback.
 
 ## Run With Proxy Locally
 - With Cloudflare Pages Functions:
-  - `wrangler pages dev frontend` to run static + functions together.
-  - Set `MININODE_API_BASE` and `MININODE_API_KEY` for local dev if backend requires auth.
+  - `wrangler pages dev frontend` para correr estático + functions.
+  - Define `MININODE_API_BASE` y `MININODE_API_KEY` si el backend exige auth.
 
 ## Build & Deploy
-- Static files: deploy `frontend/` to your static host.
-- Functions: deploy `frontend/functions` with your platform (e.g., Cloudflare Pages Functions).
-- Verify these routes after deploy:
-  - `POST /api/write/draft`
-  - `POST /api/analyze/summary`
-  - `POST /api/capture`
+- Estático: deploy `frontend/` en tu host.
+- Functions: deploy `frontend/functions` (Cloudflare Pages Functions).
+- Verifica tras el deploy: `POST /api/write/draft`, `POST /api/analyze/summary`, `POST /api/capture`.
 
 ## Troubleshooting
-- 403 from proxy: ensure route is in `ALLOWED` and `ROUTE_MAP` is correct.
-- 401 from backend: set `MININODE_API_KEY` to match API server config.
-- Mixed content errors: use HTTPS for both site and API in production.
+- 403 desde proxy: revisa `ALLOWED` y `ROUTE_MAP`.
+- 401 desde backend: `MININODE_API_KEY` no coincide.
+- 404 al usar `/api/*` en file://: el front ya usa `MININODE_API_BASE` automaticamente; define `MININODE_API_BASE` o ejecuta con Pages dev.
+- Mixed content: usa HTTPS para sitio y API en producción.
 
 ## Testing Proxy (cURL)
-
-- Write draft (proxy):
-  - `curl -s -X POST "https://<your-site>/api/write/draft" -H "Content-Type: application/json" -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}'`
-
-- Analyze summary (proxy):
-  - `curl -s -X POST "https://<your-site>/api/analyze/summary" -H "Content-Type: application/json" -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}'`
-
-- Capture (proxy, file upload):
-  - `curl -s -X POST "https://<your-site>/api/capture?doc_type=boleta&usar_fallback=true" -F "file=@/path/to/image.jpg"`
-
-Notes
-- The proxy forwards `X-Api-Key` from the Pages secret `MININODE_API_KEY` to the backend. Set it in your hosting environment.
-- Health check: call the backend directly, e.g., `curl -s "$MININODE_API_BASE/health"`.
-
-## Local Proxy with Wrangler
-
-- Create a `.dev.vars` file to define bindings for local dev:
-  - Path: `frontend/.dev.vars`
-  - Contents:
-    - `MININODE_API_BASE="http://127.0.0.1:8000"`
-    - `MININODE_API_KEY="your-local-api-key"`
-
-- Run Pages + Functions locally:
-  - `wrangler pages dev frontend`
-
-- Test locally (default port 8788):
-  - `curl -s -X POST "http://127.0.0.1:8788/api/write/draft" -H "Content-Type: application/json" -d '{"prompt":"Write a paragraph about Mininode.","tone":"neutral"}'`
-  - `curl -s -X POST "http://127.0.0.1:8788/api/analyze/summary" -H "Content-Type: application/json" -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}'`
-  - `curl -s -X POST "http://127.0.0.1:8788/api/capture?doc_type=boleta&usar_fallback=true" -F "file=@/path/to/image.jpg"`
+- Write draft: `curl -s -X POST "https://<your-site>/api/write/draft" -H "Content-Type: application/json" -d '{"prompt":"Write one paragraph about Mininode.","tone":"neutral"}'`
+- Analyze summary: `curl -s -X POST "https://<your-site>/api/analyze/summary" -H "Content-Type: application/json" -d '{"urls":["https://example.com"],"scope":"page","lang":"en","prompt":"3-sentence summary"}'`
+- Capture: `curl -s -X POST "https://<your-site>/api/capture?doc_type=boleta&usar_fallback=true" -F "file=@/path/to/image.jpg"`
