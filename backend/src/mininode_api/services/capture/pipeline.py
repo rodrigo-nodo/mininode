@@ -328,7 +328,8 @@ def procesar_documento(
     campos = req.return_fields or list(set(combinado.keys()))
     fields_out: Dict[str, FieldOut] = {}
     for k in campos:
-        val = combinado.get(k)
+        raw_val = combinado.get(k)
+        val = None if raw_val is None else (raw_val if isinstance(raw_val, str) else str(raw_val))
         uncertain = (val in (None, "", []))
         source = "merge(ocr|mini)" if not uncertain else "merge|missing"
         fields_out[k] = FieldOut(
