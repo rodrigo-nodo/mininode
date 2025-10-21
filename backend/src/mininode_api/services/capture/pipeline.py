@@ -299,7 +299,7 @@ def procesar_documento(
         ocr=ocr_res["took_ms"],
         llm_mini=t_mini,
         llm_fallback=int(fallback_tokens.get("took_ms", 0)) if fallback_tokens else 0,
-        validate=t_validate,
+        validate_ms=t_validate,
         total=int((time.time() - t0) * 1000),
     )
     cost = _sumar_costos(uso_list)

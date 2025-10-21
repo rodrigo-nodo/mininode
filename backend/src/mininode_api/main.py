@@ -3,7 +3,7 @@
 from __future__ import annotations
 import os
 from typing import List
-from fastapi import FastAPI, Header, HTTPException, Depends
+from fastapi import FastAPI, Header, HTTPException, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Mininode API", version="0.1.0")
@@ -22,6 +22,15 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
+    return {"status": "ok"}
+
+# Raíz: evita 404 en probes HEAD /
+@app.head("/")
+async def root_head():
+    return Response(status_code=204)
+
+@app.get("/")
+async def root_get():
     return {"status": "ok"}
 
 # Intenta incluir routers existentes (si los tienes ya)

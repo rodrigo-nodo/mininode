@@ -220,7 +220,7 @@ startBtn.addEventListener('click', async () => {
     pushTiming(totalMs);
     const p95Ms = p95(sessionTimings);
     perfBadge.textContent = `Total ${formatMs(totalMs)} | p95(sess) ${formatMs(p95Ms)}`;
-    perfBadge.title = `Etapas: upload+preproc cliente ≈, OCR ${formatMs(data.timings?.ocr||0)}, LLM-mini ${formatMs(data.timings?.llm_mini||0)}, validate ${formatMs(data.timings?.validate||0)}`;
+    perfBadge.title = `Etapas: upload+preproc cliente ≈, OCR ${formatMs(data.timings?.ocr||0)}, LLM-mini ${formatMs(data.timings?.llm_mini||0)}, validación ${formatMs(data.timings?.validate_ms||0)}`;
   } catch (e) {
     showError(String(e));
   } finally {

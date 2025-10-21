@@ -29,7 +29,7 @@ class TimingMs(BaseModel):
     ocr: int = 0
     llm_mini: int = 0
     llm_fallback: int = 0
-    validate: int = 0
+    validate_ms: int = 0
     total: int = 0
 
 class CaptureResponse(BaseModel):
@@ -38,4 +38,3 @@ class CaptureResponse(BaseModel):
     consistency: ConsistencyReport
     cost: CostBreakdown
     timings: TimingMs
-
