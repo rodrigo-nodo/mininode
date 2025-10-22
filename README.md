@@ -13,10 +13,12 @@
   - `include.js` normaliza enlaces `[data-rel]` de header/footer según profundidad (funciona con file:// y estáticos)
 - Proxy `/api/*` con multipart (Cloudflare Pages Functions): `frontend/functions/api/[[path]].js`
   - Reenvía adjuntos sin tocar el boundary; requiere `MININODE_API_KEY` si el backend valida API key
-- Backend Capture: timings y fallback
+- Backend Capture: 4o-first, preprocesado y fallback
+  - Orden de pipeline: 4o-first (cabecera) → preprocesado ligero → OCR + anclas (ROI lógico) → combinación → validación → fallback si aplica
   - `TimingMs.validate` renombrado a `validate_ms` (evita warning Pydantic)
   - Nuevos campos: `fallback_applied`, `adjusted_fields`, `consistency_after_fallback`
   - `timings.llm_fallback` ahora mide el tiempo real del fallback
+  - `timings.llm_mini` refleja el tiempo del paso LLM de cabecera (4o-first)
 
 ## Backend Quickstart
 ```bash

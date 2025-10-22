@@ -21,6 +21,18 @@ FastAPI app packaged as `mininode_api` under `backend/src`.
   - `API_KEY` o `API_KEYS` (coma-separado) para exigir `X-Api-Key`
   - `ALLOWED_ORIGINS` para CORS (coma-separado)
 
+## Pipeline (Capture)
+- Orden (Fase 1):
+  1) 4o-first (cabecera): `gpt-4o` extrae folio, RUTs, fecha, neto, iva, total
+  2) Preprocesado ligero de imagen: gris, autocontraste, filtro mediano
+  3) OCR + anclas: tokens OCR (Tesseract) + ventanas por ancla (ROI lógico) para completar/verificar campos
+  4) Combinación y validación (total≥neto, neto+IVA≈total)
+  5) Fallback (4o) si faltan críticos, checks fallan o baja confianza
+
+- Timings (ms): `{ ocr, llm_mini, llm_fallback, validate_ms, total }`
+  - `llm_mini` representa el tiempo del paso LLM de cabecera (4o-first)
+  - `llm_fallback` es la suma de tiempos de las llamadas de fallback
+
 ## Quickstart
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
@@ -70,6 +82,10 @@ curl -s -X POST "http://localhost:8000/capture?doc_type=boleta&usar_fallback=tru
   - hay checks de consistencia fallidos, o
   - hay baja confianza (<0.6) en críticos detectada por OCR/anclas
 - Nota: los valores del modelo se coercean a string al emitir `FieldOut`
+
+## Notas de precisión y ROI
+- OCR se aplica sobre la imagen preprocesada; el uso de anclas define ROIs lógicas por campo (sin recorte físico obligatorio)
+- Para montos y folio se recomienda whitelists numéricos (PSM 6/7) en futuras fases (ROI por celdas)
 
 Using X-Api-Key (if enabled)
 ```bash

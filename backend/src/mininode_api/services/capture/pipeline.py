@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64, io, os, re, time
 from typing import Dict, Any, List, Tuple, Optional
 
-from PIL import Image
+from PIL import Image, ImageOps, ImageFilter
 import pytesseract
 
 from pydantic import BaseModel
@@ -62,6 +62,18 @@ def _norm_money(s: str) -> Optional[int]:
     s2 = s.replace("$", "").replace(" ", "").replace(".", "").replace("\u00A0", "")
     s2 = s2.replace(",", "")  # CLP sin decimales
     return int(s2) if s2.isdigit() else None
+
+def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
+    """Preprocesado ligero para OCR: gris, autocontraste y filtro mediano.
+    Devuelve una copia procesada; si falla, retorna la original.
+    """
+    try:
+        g = ImageOps.grayscale(img)
+        g = ImageOps.autocontrast(g, cutoff=1)
+        g = g.filter(ImageFilter.MedianFilter(size=3))
+        return g
+    except Exception:
+        return img
 
 
 # =========================
@@ -121,6 +133,48 @@ def proceso_imagen_mini(img: Image.Image, doc_type: str) -> Dict[str, Any]:
         "took_ms": took,
         "usage": {
             "model": "gpt-4o-mini",
+            "prompt": getattr(usage, "prompt_tokens", 0) if usage else 0,
+            "completion": getattr(usage, "completion_tokens", 0) if usage else 0,
+            "total": getattr(usage, "total_tokens", 0) if usage else 0,
+        },
+    }
+
+def proceso_imagen_4o_header(img: Image.Image, doc_type: str) -> Dict[str, Any]:
+    """Extrae cabecera con gpt-4o (visión): folio, RUTs, fecha, neto, iva, total."""
+    if _OPENAI is None:
+        return {}
+    b64 = _b64_from_image(img)
+    prompt = (
+        f"Extrae en JSON los campos de un documento tipo '{doc_type}'. "
+        "Responde SOLO JSON, sin texto adicional. Claves: folio, rut_emisor, rut_receptor, "
+        "fecha_emision, neto, iva, total. Valores en string; si falta, usa null."
+    )
+    start = time.time()
+    resp = _OPENAI.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.0,
+        messages=[
+            {"role": "system", "content": "Eres un extractor estricto. Devuelves SOLO JSON válido."},
+            {"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}" }}
+            ]}
+        ],
+        response_format={"type": "json_object"},
+    )
+    took = int((time.time() - start) * 1000)
+    content = resp.choices[0].message.content or "{}"
+    try:
+        import json as _json
+        data = _json.loads(content)
+    except Exception:
+        data = {}
+    usage = getattr(resp, "usage", None)
+    return {
+        "data": data,
+        "took_ms": took,
+        "usage": {
+            "model": "gpt-4o",
             "prompt": getattr(usage, "prompt_tokens", 0) if usage else 0,
             "completion": getattr(usage, "completion_tokens", 0) if usage else 0,
             "total": getattr(usage, "total_tokens", 0) if usage else 0,
@@ -258,16 +312,17 @@ def procesar_documento(
 
     # 1) mini visión
     t1 = time.time()
-    mini = proceso_imagen_mini(img, doc_type=req.doc_type)
-    t_mini = int((time.time() - t1) * 1000)
+    hdr4o = proceso_imagen_4o_header(img, doc_type=req.doc_type)
+    t_llm4o = int((time.time() - t1) * 1000)
 
     # 2) OCR + anclas
     t2 = time.time()
-    ocr_res = proceso_tesseract_mini(img, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
+    img_ocr = _preprocess_for_ocr(img)
+    ocr_res = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
     ocr_res["took_ms"] = int((time.time() - t2) * 1000)
 
     # 3) combinar
-    combinado = combinar_json(mini, ocr_res)
+    combinado = combinar_json(hdr4o, ocr_res)
 
     # 4) validar
     t3 = time.time()
@@ -290,7 +345,7 @@ def procesar_documento(
             low_conf_crit.append(f)
 
     uso_list = []
-    if mini.get("usage"): uso_list.append(mini["usage"]) 
+    if hdr4o.get("usage"): uso_list.append(hdr4o["usage"]) 
 
     fallback_tokens = None
     fallback_took_total_ms = 0
@@ -343,7 +398,7 @@ def procesar_documento(
 
     timings = TimingMs(
         ocr=ocr_res["took_ms"],
-        llm_mini=t_mini,
+        llm_mini=t_llm4o,
         llm_fallback=fallback_took_total_ms,
         validate_ms=t_validate,
         total=int((time.time() - t0) * 1000),
@@ -360,3 +415,9 @@ def procesar_documento(
         fallback_applied=bool(adjusted_fields),
         adjusted_fields=adjusted_fields,
     )
+
+
+
+
+
+
