@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -6,7 +6,7 @@
   <title>Mininode Write</title>
 
   <!-- global -->
-  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" data-rel="styles.css" />
   <!-- page-specific -->
   <link rel="stylesheet" href="../../assets/css/write.page.css" />
   <!-- favicons -->
@@ -28,8 +28,8 @@
       <div class="wr-hero__inner">
         <!-- NUEVO: badge con fondo azul -->
         <span class="wr-badge wr-badge--brand">Mininode Write</span>
-        <h1>Escribe mejor, más rápido</h1>
-        <p class="wr-muted">Comparte esbozos o conceptos y obtén un borrador limpio.</p>
+        <h1>Escribe mejor, mÃ¡s rÃ¡pido</h1>
+        <p class="wr-muted">Comparte esbozos o conceptos y obtÃ©n un borrador limpio.</p>
       </div>
     </section>
 
@@ -39,12 +39,12 @@
     <section class="wr-panel">
       <div class="wr-field">
         <label for="wr-texto">Input</label>
-        <textarea id="wr-texto" class="wr-textarea" placeholder="Escribe tus esbozos o conceptos…"></textarea>
+        <textarea id="wr-texto" class="wr-textarea" placeholder="Escribe tus esbozos o conceptosâ€¦"></textarea>
       </div>
 
       <div class="wr-grid">
         <div class="wr-field">
-          <label for="wr-size">Tamaño</label>
+          <label for="wr-size">TamaÃ±o</label>
           <select id="wr-size" class="wr-select">
             <option value="micro">Micro</option>
             <option value="medio">Medio</option>
@@ -58,7 +58,7 @@
             <option value="simple">Simple</option>
             <option value="formal">Formal</option>
             <option value="inspirador">Inspirador</option>
-            <option value="técnico">Técnico</option>
+            <option value="tÃ©cnico">TÃ©cnico</option>
           </select>
         </div>
         <label class="wr-hidden" style="display:flex;align-items:center;gap:.5rem;margin:.25rem 0 0.25rem;">
@@ -71,7 +71,7 @@
         <div class="wr-field wr-hidden">
           <label for="wr-lang">Idioma</label>
           <select id="wr-lang" class="wr-select">
-            <option value="es" selected>Español</option>
+            <option value="es" selected>EspaÃ±ol</option>
             <option value="en">English</option>
           </select>
         </div>
@@ -120,11 +120,14 @@
 
   <!-- Env (dev/stg). En prod, usa env vars de Pages o Workers. -->
   <script>
-    // Para DEV rápido: sobreescribe con secret real en deploy/staging (no comitees a público).
+    // Para DEV rÃ¡pido: sobreescribe con secret real en deploy/staging (no comitees a pÃºblico).
     window.__MININODE_API_KEY__ = ""; // p.ej. "8b910aafe8f84a70af548e509657abde"
   </script>
 
-  <!-- JS (módulos reutilizables + página) -->
+  <!-- JS (mÃ³dulos reutilizables + pÃ¡gina) -->
   <script type="module" src="../../assets/js/write.page.js"></script>
 </body>
 </html>
+
+
+

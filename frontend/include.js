@@ -45,12 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // data-rel on anchors/imgs
+    // data-rel on anchors/imgs/links/scripts
     document.querySelectorAll('[data-rel]').forEach(el => {
       const rel = el.getAttribute('data-rel');
       if (!rel) return;
-      if (el.tagName === 'IMG') el.setAttribute('src', pre + rel);
-      else el.setAttribute('href', pre + rel);
+      const tag = el.tagName.toUpperCase();
+      if (tag === 'IMG' || tag === 'SCRIPT') el.setAttribute('src', pre + rel);
+      else if (tag === 'A' || tag === 'LINK') el.setAttribute('href', pre + rel);
+      else if (el.hasAttribute('href')) el.setAttribute('href', pre + rel);
+      else if (el.hasAttribute('src')) el.setAttribute('src', pre + rel);
     });
 
     // footer year

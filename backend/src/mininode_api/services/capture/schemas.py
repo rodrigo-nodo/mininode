@@ -30,6 +30,7 @@ class TimingMs(BaseModel):
     llm_mini: int = 0
     llm_fallback: int = 0
     validate_ms: int = 0
+    roi_table: int = 0
     total: int = 0
 
 class CaptureResponse(BaseModel):
@@ -41,3 +42,4 @@ class CaptureResponse(BaseModel):
     timings: TimingMs
     fallback_applied: bool = False
     adjusted_fields: List[str] = []
+    items: List[Dict[str, Optional[str]]] = []

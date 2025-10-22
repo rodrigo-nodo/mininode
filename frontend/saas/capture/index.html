@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -55,11 +55,11 @@
             Elegir archivo
             <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden />
           </label>
-          <p class="small wr-muted">Máx 5 MB. Formatos: JPG/PNG. WEBP se convierte localmente. HEIC requiere convertir a JPG/PNG.</p>
+          <p class="small wr-muted">MÃ¡x 5 MB. Formatos: JPG/PNG. WEBP se convierte localmente. HEIC requiere convertir a JPG/PNG.</p>
         </div>
       </div>
 
-      <!-- Selección (feedback inmediato) -->
+      <!-- SelecciÃ³n (feedback inmediato) -->
       <div id="file-info" class="wr-card wr-hidden" style="margin-top:10px; display:flex; align-items:center; gap:10px;">
         <img id="thumb" alt="miniatura" style="width:56px; height:56px; object-fit:cover; border:1px solid var(--border); border-radius:8px;" />
         <div>
@@ -83,7 +83,7 @@
         <div class="wr-result__bar">
           <span class="wr-label">Resultado</span>
           <div class="wr-row">
-            <span id="perf-badge" class="wr-badge">Total —</span>
+            <span id="perf-badge" class="wr-badge">Total â€”</span>
             <button id="copy-json" class="wr-btn">Copiar JSON</button>
             <div class="wr-dropdown">
               <button id="export-json" class="wr-btn">Exportar</button>
@@ -93,9 +93,29 @@
             </div>
           </div>
         </div>
+        <div id="items-box" class="wr-card wr-hidden" style="margin:8px 0;">
+          <div class="wr-result__bar">
+            <span class="wr-label">Detalle (Items)</span>
+            <span id="items-meta" class="wr-muted small"></span>
+          </div>
+          <div style="overflow:auto;">
+            <table id="items-table" style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:6px; border-bottom:1px solid var(--border);">CÃ³digo</th>
+                  <th style="text-align:left; padding:6px; border-bottom:1px solid var(--border);">DescripciÃ³n</th>
+                  <th style="text-align:right; padding:6px; border-bottom:1px solid var(--border);">Cantidad</th>
+                  <th style="text-align:right; padding:6px; border-bottom:1px solid var(--border);">P. Unitario</th>
+                  <th style="text-align:right; padding:6px; border-bottom:1px solid var(--border);">Total lÃ­nea</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
         <div class="wr-grid">
           <div>
-            <img id="preview" alt="preview" style="max-width:100%; border:1px solid var(--border); border-radius:8px;" />
+            <img id="preview" alt="preview" style="Máx-width:100%; border:1px solid var(--border); border-radius:8px;" />
           </div>
           <pre id="json-out" class="wr-pre"></pre>
         </div>
@@ -120,3 +140,5 @@
   <script type="module" src="../../assets/js/capture.page.js"></script>
 </body>
 </html>
+
+

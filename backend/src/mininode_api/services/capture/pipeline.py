@@ -63,6 +63,96 @@ def _norm_money(s: str) -> Optional[int]:
     s2 = s2.replace(",", "")  # CLP sin decimales
     return int(s2) if s2.isdigit() else None
 
+def _norm_number_float(s: str) -> Optional[float]:
+    if not s:
+        return None
+    txt = str(s).strip()
+    txt = txt.replace('$', '').replace(' ', '').replace('\u00A0', '')
+    if '.' in txt and ',' in txt:
+        last_dot = txt.rfind('.')
+        last_com = txt.rfind(',')
+        if last_com > last_dot:
+            txt = txt.replace('.', '').replace(',', '.')
+        else:
+            txt = txt.replace(',', '')
+    else:
+        if ',' in txt:
+            parts = txt.split(',')
+            if len(parts[-1]) in (1, 2):
+                txt = txt.replace('.', '').replace(',', '.')
+            else:
+                txt = txt.replace(',', '')
+        elif '.' in txt:
+            parts = txt.split('.')
+            if len(parts[-1]) not in (1, 2):
+                txt = txt.replace('.', '')
+    try:
+        return float(txt)
+    except Exception:
+        return None
+
+def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
+    if not words:
+        return []
+    rows: Dict[int, List[OCRWord]] = {}
+    for w in words:
+        y = int(round(w.bbox[1] * 200))
+        rows.setdefault(y, []).append(w)
+    sorted_rows = sorted(rows.items(), key=lambda kv: kv[0])
+    items: List[Dict[str, Optional[str]]] = []
+    header_seen = False
+    for _, toks in sorted_rows:
+        toks = sorted(toks, key=lambda t: t.bbox[0])
+        texts = [t.text for t in toks]
+        line = ' '.join(texts).lower()
+        if not header_seen and any(k in line for k in ['cantidad', 'cant', 'p.u', 'precio', 'total']):
+            header_seen = True
+            continue
+        if not header_seen:
+            continue
+        nums = []
+        for t in toks:
+            st = t.text.replace('$','').replace('%','').strip()
+            if any(ch.isdigit() for ch in st):
+                val = _norm_number_float(st)
+                if val is not None:
+                    nums.append((t, val))
+        if len(nums) < 2:
+            continue
+        nums_sorted = sorted(nums, key=lambda x: x[0].bbox[0])
+        total_token, total_val = nums_sorted[-1]
+        precio_val = nums_sorted[-2][1] if len(nums_sorted) >= 2 else None
+        cantidad_val = None
+        for tok, val in nums_sorted:
+            if abs(val - int(val)) < 1e-6:
+                cantidad_val = val
+                break
+        codigo = None
+        for t in toks:
+            if any(ch.isalnum() for ch in t.text):
+                codigo = t.text
+                break
+        desc_tokens = []
+        seen_code = False
+        for t in toks:
+            if not seen_code and codigo and t.text == codigo:
+                seen_code = True
+                continue
+            if seen_code and t.bbox[0] < total_token.bbox[0]:
+                vt = _norm_number_float(t.text)
+                if vt is None:
+                    desc_tokens.append(t.text)
+        descripcion = ' '.join(desc_tokens).strip() or None
+        item = {
+            'codigo': codigo,
+            'descripcion': descripcion,
+            'cantidad': str(int(cantidad_val)) if cantidad_val is not None else None,
+            'precio_unitario': (f"{precio_val:.2f}" if isinstance(precio_val, float) else None),
+            'total_linea': (f"{total_val:.2f}" if isinstance(total_val, float) else None),
+        }
+        items.append(item)
+    return items
+
 def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
     """Preprocesado ligero para OCR: gris, autocontraste y filtro mediano.
     Devuelve una copia procesada; si falla, retorna la original.
@@ -320,6 +410,11 @@ def procesar_documento(
     img_ocr = _preprocess_for_ocr(img)
     ocr_res = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
     ocr_res["took_ms"] = int((time.time() - t2) * 1000)
+    # 2.5) Items (ROI lógico sobre tokens OCR)
+    t_items = time.time()
+    words_all = ocr_words(img_ocr)
+    items = _extract_items_fast(words_all)
+    roi_table_ms = int((time.time() - t_items) * 1000)
 
     # 3) combinar
     combinado = combinar_json(hdr4o, ocr_res)
@@ -405,16 +500,12 @@ def procesar_documento(
     )
     cost = _sumar_costos(uso_list)
 
-    return CaptureResponse(
-        doc_type=req.doc_type,
-        fields=fields_out,
-        consistency=consistency,
-        consistency_after_fallback=consistency_after,
-        cost=cost,
-        timings=timings,
-        fallback_applied=bool(adjusted_fields),
+    return CaptureResponse(\n        doc_type=req.doc_type,\n        fields=fields_out,\n        consistency=consistency,\n        consistency_after_fallback=consistency_after,\n        cost=cost,\n        timings=timings,\n        fallback_applied=bool(adjusted_fields),\n        adjusted_fields=adjusted_fields,\n        items=items if "items" in locals() else [],\n    ),
         adjusted_fields=adjusted_fields,
     )
+
+
+
 
 
 

@@ -28,6 +28,9 @@ const diffOut = el('diff-out');
 const docTypeSel = el('doc-type');
 const copyBtn = el('copy-json');
 const exportBtn = el('export-json');
+const itemsBox = el('items-box');
+const itemsMeta = el('items-meta');
+const itemsTable = el('items-table');
 const fileInfo = el('file-info');
 const fileName = el('file-name');
 const fileMeta = el('file-meta');
@@ -206,6 +209,37 @@ startBtn.addEventListener('click', async () => {
 
     // Show JSON
     jsonOut.textContent = JSON.stringify(data, null, 2);
+
+    // Render items table if present
+    try {
+      const items = Array.isArray(data.items) ? data.items : [];
+      const tbody = itemsTable?.querySelector('tbody');
+      if (tbody) tbody.innerHTML = '';
+      if (items.length) {
+        items.forEach((it) => {
+          const tr = document.createElement('tr');
+          const td = (v, align='left') => {
+            const c = document.createElement('td');
+            c.style.padding = '6px';
+            c.style.borderBottom = '1px solid var(--border)';
+            c.style.textAlign = align;
+            c.textContent = v ?? '';
+            return c;
+          };
+          tr.appendChild(td(it.codigo || ''));
+          tr.appendChild(td(it.descripcion || ''));
+          tr.appendChild(td(it.cantidad || '', 'right'));
+          tr.appendChild(td(it.precio_unitario || '', 'right'));
+          tr.appendChild(td(it.total_linea || '', 'right'));
+          tbody.appendChild(tr);
+        });
+        if (itemsBox) itemsBox.classList.remove('wr-hidden');
+        if (itemsMeta) itemsMeta.textContent = `Filas: ${items.length}`;
+      } else {
+        if (itemsBox) itemsBox.classList.add('wr-hidden');
+        if (itemsMeta) itemsMeta.textContent = '';
+      }
+    } catch (_) {}
 
     // Differences section (if any): relies on consistency.notes or checks if delta exists in future
     // For MVP, if checks has false values, surface them
