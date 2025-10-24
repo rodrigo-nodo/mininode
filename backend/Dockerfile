@@ -1,10 +1,10 @@
 FROM python:3.11-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered logs
+# Fast, safe defaults
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-WORKDIR /app
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
 
 # System deps (OCR)
 RUN apt-get update \
@@ -13,14 +13,23 @@ RUN apt-get update \
       tesseract-ocr-spa \
  && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps (better layer caching)
+WORKDIR /app
+
+# Create virtualenv first (so pip doesn't warn about root) and install deps
+RUN python -m venv "$VIRTUAL_ENV"
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN "$VIRTUAL_ENV/bin/pip" install --upgrade pip \
+ && "$VIRTUAL_ENV/bin/pip" install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY src ./src
 
-# Expose default port (Render will set $PORT)
+# Create non-root user and fix ownership
+RUN useradd -m -u 10001 appuser \
+ && chown -R appuser:appuser /app "$VIRTUAL_ENV"
+USER appuser
+
+# Expose default port (Render sets $PORT)
 EXPOSE 8000
 
 # Start the FastAPI app. Render provides $PORT; default to 8000 locally.
