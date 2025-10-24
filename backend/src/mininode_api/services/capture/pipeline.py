@@ -20,7 +20,7 @@ from mininode_api.services.capture.zonas import (
 # --- OpenAI (usa la lib oficial 1.x)
 try:
     from openai import OpenAI
-    _OPENAI = OpenAI()
+    _OPENAI = OpenAI(timeout=8.0, max_retries=1)
 except Exception:
     _OPENAI = None  # permitimos correr sólo OCR/anchors si no está configurado
 
@@ -30,6 +30,7 @@ except Exception:
 # =========================
 # Ruta opcional vía env; si falta, se usa el recurso del paquete
 ANCHORS_PATH = os.getenv("CAPTURE_ANCHORS_PATH")
+TIME_BUDGET_MS = int(os.getenv("CAPTURE_TIME_BUDGET_MS", "14000"))
 
 TOKEN_COSTS = {
     "gpt-4o-mini": {"input": 0.00000015, "output": 0.00000060},
@@ -55,6 +56,15 @@ def _b64_from_image(img: Image.Image) -> str:
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=90)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+def _downscale(img: Image.Image, max_side: int = 1600) -> Image.Image:
+    w, h = img.size
+    m = max(w, h)
+    if m <= max_side:
+        return img
+    scale = max_side / float(m)
+    new_size = (int(w * scale), int(h * scale))
+    return img.resize(new_size)
 
 def _norm_money(s: str) -> Optional[int]:
     if not s:
@@ -170,7 +180,7 @@ def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
 # OCR tokens (palabra + bbox normalizado 0..1)
 # =========================
 def ocr_words(img: Image.Image) -> List[OCRWord]:
-    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT, lang="spa+eng")
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT, lang="spa")
     W, H = img.size
     words: List[OCRWord] = []
     n = len(data.get("text", []))
@@ -395,6 +405,7 @@ def procesar_documento(
 ) -> CaptureResponse:
     t0 = time.time()
     img = _img_from_bytes_or_path(file_or_bytes)
+    img = _downscale(img)
 
     # anchors base + overrides
     anchors_base = load_anchors_yaml(ANCHORS_PATH)
@@ -402,8 +413,8 @@ def procesar_documento(
 
     # 1) mini visión
     t1 = time.time()
-    hdr4o = proceso_imagen_4o_header(img, doc_type=req.doc_type)
-    t_llm4o = int((time.time() - t1) * 1000)
+    hdr_mini = proceso_imagen_mini(img, doc_type=req.doc_type)
+    t_llmmini = int((time.time() - t1) * 1000)
 
     # 2) OCR + anclas
     t2 = time.time()
@@ -417,7 +428,7 @@ def procesar_documento(
     roi_table_ms = int((time.time() - t_items) * 1000)
 
     # 3) combinar
-    combinado = combinar_json(hdr4o, ocr_res)
+    combinado = combinar_json(hdr_mini, ocr_res)
 
     # 4) validar
     t3 = time.time()
@@ -440,12 +451,14 @@ def procesar_documento(
             low_conf_crit.append(f)
 
     uso_list = []
-    if hdr4o.get("usage"): uso_list.append(hdr4o["usage"]) 
+    if hdr_mini.get("usage"): uso_list.append(hdr_mini["usage"]) 
 
     fallback_tokens = None
     fallback_took_total_ms = 0
     adjusted_fields: List[str] = []
-    if req.usar_fallback and faltantes:
+    elapsed_ms = int((time.time() - t0) * 1000)
+    time_left = TIME_BUDGET_MS - elapsed_ms
+    if req.usar_fallback and faltantes and time_left > 2500:
         _t_fb = time.time()
         fb = fallback_con_4o(img, faltantes=faltantes, doc_type=req.doc_type)
         for k, v in (fb.get("data") or {}).items():
@@ -458,7 +471,9 @@ def procesar_documento(
         fallback_took_total_ms += int((time.time() - _t_fb) * 1000)
 
     # Fallback adicional si hubo fallas de consistencia o baja confianza en críticos
-    if req.usar_fallback and (has_failed_checks or low_conf_crit):
+    elapsed_ms = int((time.time() - t0) * 1000)
+    time_left = TIME_BUDGET_MS - elapsed_ms
+    if req.usar_fallback and (has_failed_checks or low_conf_crit) and time_left > 2500:
         _t_fb2 = time.time()
         fb2 = fallback_con_4o(img, faltantes=CRITICAL_FIELDS.get(req.doc_type, []), doc_type=req.doc_type)
         for k, v in (fb2.get("data") or {}).items():
@@ -493,7 +508,7 @@ def procesar_documento(
 
     timings = TimingMs(
         ocr=ocr_res["took_ms"],
-        llm_mini=t_llm4o,
+        llm_mini=t_llmmini,
         llm_fallback=fallback_took_total_ms,
         validate_ms=t_validate,
         total=int((time.time() - t0) * 1000),
