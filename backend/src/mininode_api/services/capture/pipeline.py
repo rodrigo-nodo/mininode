@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+﻿# SPDX-License-Identifier: MIT
 # Pipeline “limpio”: mini visión + OCR/anchors + combinación + fallback 4o
 
 from __future__ import annotations
@@ -410,7 +410,7 @@ def procesar_documento(
     img_ocr = _preprocess_for_ocr(img)
     ocr_res = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
     ocr_res["took_ms"] = int((time.time() - t2) * 1000)
-    # 2.5) Items (ROI l�gico sobre tokens OCR)
+    # 2.5) Items (ROI l�gico sobre tokens OCR)
     t_items = time.time()
     words_all = ocr_words(img_ocr)
     items = _extract_items_fast(words_all)
@@ -500,9 +500,7 @@ def procesar_documento(
     )
     cost = _sumar_costos(uso_list)
 
-    return CaptureResponse(\n        doc_type=req.doc_type,\n        fields=fields_out,\n        consistency=consistency,\n        consistency_after_fallback=consistency_after,\n        cost=cost,\n        timings=timings,\n        fallback_applied=bool(adjusted_fields),\n        adjusted_fields=adjusted_fields,\n        items=items if "items" in locals() else [],\n    ),
-        adjusted_fields=adjusted_fields,
-    )
+    return CaptureResponse(\n        doc_type=req.doc_type,\n        fields=fields_out,\n        consistency=consistency,\n        consistency_after_fallback=consistency_after,\n        cost=cost,\n        timings=timings,\n        fallback_applied=bool(adjusted_fields),\n        adjusted_fields=adjusted_fields,\n        items=items if 'items' in locals() else [],\n    )
 
 
 
