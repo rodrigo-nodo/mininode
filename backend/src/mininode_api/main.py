@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 from typing import List
 from fastapi import FastAPI, Header, HTTPException, Depends, Response
+import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Mininode API", version="0.1.0")
@@ -37,27 +38,28 @@ async def root_get():
 try:
     from mininode_api.api.auth_check import router as auth_router
     app.include_router(auth_router)
-except Exception:
-    pass
+except Exception as e:
+    logging.exception("Failed to include auth_check router: %s", e)
 
 try:
     from mininode_api.api.write import router as write_router
     app.include_router(write_router)
-except Exception:
-    pass
+except Exception as e:
+    logging.exception("Failed to include write router: %s", e)
 
 try:
     from mininode_api.api.capture import router as capture_router
     app.include_router(capture_router)
-except Exception:
-    pass
+except Exception as e:
+    logging.exception("Failed to include capture router: %s", e)
 
 analyze_router_included = False
 try:
     from mininode_api.api.analyze import router as analyze_router
     app.include_router(analyze_router)
     analyze_router_included = True
-except Exception:
+except Exception as e:
+    logging.exception("Failed to include analyze router: %s", e)
     analyze_router_included = False
 
 # Fallback de /analyze/summary si no existe router

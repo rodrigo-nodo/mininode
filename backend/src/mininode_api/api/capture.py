@@ -1,6 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
 from mininode_api.core.auth import require_api_key
-from mininode_api.services.capture.pipeline import procesar_documento
 from mininode_api.services.capture.schemas import CaptureRequest, CaptureResponse
 
 router = APIRouter(prefix="", tags=["Capture"])
@@ -11,6 +10,12 @@ async def capture_endpoint(
     usar_fallback: bool = True,
     file: UploadFile = File(...),
 ):
+    # Import lazy to avoid failing router registration if optional deps are missing
+    try:
+        from mininode_api.services.capture.pipeline import procesar_documento
+    except Exception as e:
+        # Surface as service unavailable instead of hiding route at startup
+        raise HTTPException(status_code=503, detail=f"Capture pipeline unavailable: {type(e).__name__}")
     data = await file.read()
     req = CaptureRequest(doc_type=doc_type, usar_fallback=usar_fallback)
     return procesar_documento(data, req)
