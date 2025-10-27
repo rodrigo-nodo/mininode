@@ -169,6 +169,49 @@ function humanSize(bytes) {
   return `${n.toFixed(1)} ${units[i]}`;
 }
 
+// Number parsing and formatting helpers (no decimals, thousands separator)
+function parseNumberLike(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  let s = String(v).trim();
+  if (!s) return null;
+  // Remove currency/units; keep digits, separators and minus
+  s = s.replace(/[^0-9,\.\-]/g, '');
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma > -1 && lastDot > -1) {
+    if (lastComma > lastDot) {
+      // Comma as decimal separator; dots as thousands
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Dot as decimal; commas as thousands
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastComma > -1) {
+    const parts = s.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      // Likely decimal comma
+      s = s.replace(',', '.');
+    } else {
+      // Likely thousands commas
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastDot > -1) {
+    // If multiple dots, treat as thousands separators
+    if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+  }
+  const n = parseFloat(s);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+const nf0 = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function fmt0(v) {
+  const n = parseNumberLike(v);
+  if (n === null) return (v ?? '');
+  return nf0.format(Math.round(n));
+}
+
 function showFileInfo(file) {
   if (!fileInfo) return;
   fileName.textContent = file.name || 'archivo';
@@ -228,9 +271,9 @@ startBtn.addEventListener('click', async () => {
           };
           tr.appendChild(td(it.codigo || ''));
           tr.appendChild(td(it.descripcion || ''));
-          tr.appendChild(td(it.cantidad || '', 'right'));
-          tr.appendChild(td(it.precio_unitario || '', 'right'));
-          tr.appendChild(td(it.total_linea || '', 'right'));
+          tr.appendChild(td(fmt0(it.cantidad) || '', 'right'));
+          tr.appendChild(td(fmt0(it.precio_unitario) || '', 'right'));
+          tr.appendChild(td(fmt0(it.total_linea) || '', 'right'));
           tbody.appendChild(tr);
         });
         if (itemsBox) itemsBox.classList.remove('wr-hidden');
