@@ -202,12 +202,26 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                                  if tok.bbox[0] < total_token.bbox[0] and all(pt not in percent_tokens for pt in grp)]
             if price_candidates:
                 if cantidad_val and cantidad_val > 0:
-                    target = float(total_val) / float(cantidad_val)
-                    precio_val = min(price_candidates, key=lambda tv: abs(tv[1] - target))[1]
+                    # Elegir el candidato cuyo (val * cantidad) aprox = total
+                    def score(tv):
+                        v = float(tv[1])
+                        diff = abs(v * float(cantidad_val) - float(total_val))
+                        rel = diff / max(1.0, abs(float(total_val)))
+                        # penaliza valores imposibles (mayores al total si cant>=1)
+                        penalty = 0.5 if (float(cantidad_val) >= 1 and v > float(total_val)) else 0.0
+                        return rel + penalty
+                    precio_val = min(price_candidates, key=score)[1]
                 else:
+                    # Fallback: el más a la derecha (cerca de total)
                     precio_val = price_candidates[-1][1]
         except Exception:
             pass
+        # Último recurso si no se encontró unitario pero hay total y cantidad
+        if (precio_val is None) and (cantidad_val and cantidad_val > 0):
+            try:
+                precio_val = float(total_val) / float(cantidad_val)
+            except Exception:
+                pass
         desc_tokens = []
         seen_code = False
         for t in toks:
@@ -227,8 +241,8 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
             'codigo': codigo,
             'descripcion': descripcion,
             'cantidad': _fmt_out_number(cantidad_val) if cantidad_val is not None else None,
-            'precio_unitario': _fmt_out_number(precio_val) if isinstance(precio_val, float) else None,
-            'total_linea': _fmt_out_number(total_val) if isinstance(total_val, float) else None,
+            'precio_unitario': _fmt_out_number(precio_val) if precio_val is not None else None,
+            'total_linea': _fmt_out_number(total_val) if total_val is not None else None,
         }
         items.append(item)
     return items
