@@ -7,3 +7,23 @@
 .wr-drop__title { margin: 0 0 4px; font-weight:600; }
 
 .wr-card { border:1px solid var(--border); border-radius: 12px; background: #ffffff; padding: 12px; }
+
+/* Result layout adjustments */
+#capture-app #preview {
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+#capture-app .wr-pre {
+  overflow: auto;
+  max-height: 70vh;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
