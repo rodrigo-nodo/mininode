@@ -212,6 +212,13 @@ function fmt0(v) {
   return nf0.format(Math.round(n));
 }
 
+function pick(it, keys) {
+  for (const k of keys) {
+    if (it && it[k] !== undefined && it[k] !== null && String(it[k]).trim() !== '') return it[k];
+  }
+  return undefined;
+}
+
 function showFileInfo(file) {
   if (!fileInfo) return;
   fileName.textContent = file.name || 'archivo';
@@ -269,11 +276,15 @@ startBtn.addEventListener('click', async () => {
             c.textContent = v ?? '';
             return c;
           };
+          const vCantidad = pick(it, ['cantidad', 'cant']);
+          const vPU = pick(it, ['precio_unitario', 'p_unitario', 'p_unit', 'pu', 'precio']);
+          const vTotal = pick(it, ['total_linea', 'total', 'importe', 'monto']);
+
           tr.appendChild(td(it.codigo || ''));
           tr.appendChild(td(it.descripcion || ''));
-          tr.appendChild(td(fmt0(it.cantidad) || '', 'right'));
-          tr.appendChild(td(fmt0(it.precio_unitario) || '', 'right'));
-          tr.appendChild(td(fmt0(it.total_linea) || '', 'right'));
+          tr.appendChild(td(fmt0(vCantidad) || '', 'right'));
+          tr.appendChild(td(fmt0(vPU) || '', 'right'));
+          tr.appendChild(td(fmt0(vTotal) || '', 'right'));
           tbody.appendChild(tr);
         });
         if (itemsBox) itemsBox.classList.remove('wr-hidden');
