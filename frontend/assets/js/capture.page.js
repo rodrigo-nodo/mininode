@@ -294,7 +294,15 @@ startBtn.addEventListener('click', async () => {
 
     // Render items table if present
     try {
-      const items = Array.isArray(data.items) ? data.items : [];
+      let items = Array.isArray(data.items) ? data.items : [];
+      // Remove IVA line from detail (handled in header)
+      items = items.filter((it) => {
+        const cod = String(it.codigo || '').trim().toLowerCase();
+        const desc = String(it.descripcion || '').trim().toLowerCase();
+        if (cod === 'iva') return false;
+        if (/(^|\b)iva(\b|:)/i.test(it.descripcion || '')) return false;
+        return true;
+      });
       const tbody = itemsTable?.querySelector('tbody');
       if (tbody) tbody.innerHTML = '';
       if (items.length) {

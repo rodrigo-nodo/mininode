@@ -138,7 +138,7 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
             continue
         nums_sorted = sorted(nums, key=lambda x: x[0].bbox[0])
         total_token, total_val = nums_sorted[-1]
-        precio_val = nums_sorted[-2][1] if len(nums_sorted) >= 2 else None
+
         # quantity: first integer-like not equal to code token
         cantidad_val = None
         for tok, val in nums_sorted:
@@ -147,6 +147,24 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
             if abs(val - int(val)) < 1e-6:
                 cantidad_val = val
                 break
+
+        # Choose unit price robustly, ignoring discount column if present
+        # Prefer candidate to the left of total that best matches total/cantidad
+        precio_val = None
+        try:
+            # tokens with a percent sign are likely discounts; ignore them
+            percent_tokens = {t for t in toks if '%' in t.text}
+            price_candidates = [(tok, val) for (tok, val) in nums_sorted
+                                 if tok.bbox[0] < total_token.bbox[0] and tok not in percent_tokens]
+            if price_candidates:
+                if cantidad_val and cantidad_val > 0:
+                    target = float(total_val) / float(cantidad_val)
+                    precio_val = min(price_candidates, key=lambda tv: abs(tv[1] - target))[1]
+                else:
+                    # Fallback: pick the rightmost candidate (closest to total), excluding discounts
+                    precio_val = price_candidates[-1][1]
+        except Exception:
+            pass
         desc_tokens = []
         seen_code = False
         for t in toks:
