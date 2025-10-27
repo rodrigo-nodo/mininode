@@ -201,8 +201,22 @@ function parseNumberLike(v) {
       s = s.replace(/,/g, '');
     }
   } else if (lastDot > -1) {
-    // If multiple dots, treat as thousands separators
-    if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+    // Only dot present → decide by suffix length
+    const dotCount = (s.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      // Multiple dots: treat as thousands separators
+      s = s.replace(/\./g, '');
+    } else {
+      const parts = s.split('.');
+      const suffixLen = (parts[1] || '').length;
+      if (suffixLen === 3 || suffixLen > 3) {
+        // Likely thousands grouping (e.g., 169.660) → remove dot(s)
+        s = s.replace(/\./g, '');
+      } else {
+        // 0–2 digits → treat as decimal dot
+        // leave as is
+      }
+    }
   }
   const n = parseFloat(s);
   if (!Number.isFinite(n)) return null;
