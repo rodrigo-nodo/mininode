@@ -223,11 +223,24 @@ function parseNumberLike(v) {
   return n;
 }
 
-const nf0 = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-function fmt0(v) {
+// UI locale/decimals (paramétrico por país)
+function getQueryParam(name) {
+  try { return new URL(location.href).searchParams.get(name); } catch { return null; }
+}
+const UI_LOCALE = (window.MININODE_LOCALE || getQueryParam('locale') || 'es-CL');
+const UI_DECIMALS = (() => {
+  const q = getQueryParam('decimals_ui');
+  if (q !== null && q !== undefined && q !== '') return Math.max(0, Number(q));
+  if (typeof window.MININODE_DECIMALS_UI === 'number') return Math.max(0, window.MININODE_DECIMALS_UI|0);
+  return UI_LOCALE.toLowerCase().startsWith('es-cl') ? 0 : 2;
+})();
+const nfUI = new Intl.NumberFormat(UI_LOCALE, { minimumFractionDigits: UI_DECIMALS, maximumFractionDigits: UI_DECIMALS });
+function fmtUI(v) {
   const n = parseNumberLike(v);
   if (n === null) return (v ?? '');
-  return nf0.format(Math.round(n));
+  const factor = Math.pow(10, UI_DECIMALS);
+  const rounded = factor ? Math.round(n * factor) / factor : Math.round(n);
+  return nfUI.format(rounded);
 }
 
 function pick(it, keys) {
@@ -285,9 +298,9 @@ startBtn.addEventListener('click', async () => {
       const ivaVal = f.iva?.value ?? f.iva;
       const totalVal = f.total?.value ?? f.total;
       if (summaryBox && (netoVal != null || ivaVal != null || totalVal != null)) {
-        if (netoOut) netoOut.textContent = netoVal != null ? fmt0(netoVal) : '';
-        if (ivaOut) ivaOut.textContent = ivaVal != null ? fmt0(ivaVal) : '';
-        if (totalOut) totalOut.textContent = totalVal != null ? fmt0(totalVal) : '';
+        if (netoOut) netoOut.textContent = netoVal != null ? fmtUI(netoVal) : '';
+        if (ivaOut) ivaOut.textContent = ivaVal != null ? fmtUI(ivaVal) : '';
+        if (totalOut) totalOut.textContent = totalVal != null ? fmtUI(totalVal) : '';
         summaryBox.classList.remove('wr-hidden');
       }
     } catch (_) {}
@@ -322,9 +335,9 @@ startBtn.addEventListener('click', async () => {
 
           tr.appendChild(td(it.codigo || ''));
           tr.appendChild(td(it.descripcion || ''));
-          tr.appendChild(td(fmt0(vCantidad) || '', 'right'));
-          tr.appendChild(td(fmt0(vPU) || '', 'right'));
-          tr.appendChild(td(fmt0(vTotal) || '', 'right'));
+          tr.appendChild(td(fmtUI(vCantidad) || '', 'right'));
+          tr.appendChild(td(fmtUI(vPU) || '', 'right'));
+          tr.appendChild(td(fmtUI(vTotal) || '', 'right'));
           tbody.appendChild(tr);
         });
         if (itemsBox) itemsBox.classList.remove('wr-hidden');

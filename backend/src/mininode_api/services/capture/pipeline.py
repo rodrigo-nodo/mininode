@@ -31,6 +31,9 @@ except Exception:
 # Ruta opcional vía env; si falta, se usa el recurso del paquete
 ANCHORS_PATH = os.getenv("CAPTURE_ANCHORS_PATH")
 TIME_BUDGET_MS = int(os.getenv("CAPTURE_TIME_BUDGET_MS", "14000"))
+# Número de decimales a emitir en JSON para montos/cantidades.
+# En CL típicamente 0 (sin decimales). Parametrizable por env.
+OUT_DECIMALS = int(os.getenv("CAPTURE_DECIMALS", "0"))
 
 TOKEN_COSTS = {
     "gpt-4o-mini": {"input": 0.00000015, "output": 0.00000060},
@@ -101,6 +104,17 @@ def _norm_number_float(s: str) -> Optional[float]:
     except Exception:
         return None
 
+def _fmt_out_number(n: Optional[float | int]) -> Optional[str]:
+    if n is None:
+        return None
+    try:
+        if OUT_DECIMALS <= 0:
+            return str(int(round(float(n))))
+        fmt = "{:.%df}" % OUT_DECIMALS
+        return fmt.format(float(n))
+    except Exception:
+        return None
+
 def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
     if not words:
         return []
@@ -127,21 +141,51 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                 codigo = t.text
                 break
         # collect numeric tokens
-        nums = []
+        # Construir grupos numéricos contiguos (p.ej., "14.480")
+        def _is_num_token(txt: str) -> bool:
+            tx = txt.replace('$','').replace('%','').replace('\u00A0','').strip()
+            return bool(re.fullmatch(r"[0-9.,]+", tx))
+
+        parts: List[OCRWord] = []
+        groups: List[Tuple[List[OCRWord], str, Optional[float]]] = []
         for t in toks:
-            st = t.text.replace('$','').replace('%','').strip()
-            if any(ch.isdigit() for ch in st):
-                val = _norm_number_float(st)
-                if val is not None:
-                    nums.append((t, val))
+            if _is_num_token(t.text):
+                if parts:
+                    prev = parts[-1]
+                    gap = t.bbox[0] - (prev.bbox[0] + prev.bbox[2])
+                    if gap < 0.02:  # cercano → mismo grupo
+                        parts.append(t)
+                    else:
+                        txt = ''.join(p.text for p in parts)
+                        val = _norm_number_float(txt)
+                        groups.append((parts[:], txt, val))
+                        parts = [t]
+                else:
+                    parts = [t]
+            else:
+                if parts:
+                    txt = ''.join(p.text for p in parts)
+                    val = _norm_number_float(txt)
+                    groups.append((parts[:], txt, val))
+                    parts = []
+        if parts:
+            txt = ''.join(p.text for p in parts)
+            val = _norm_number_float(txt)
+            groups.append((parts[:], txt, val))
+
+        nums = []  # (first_token, value)
+        for g, _txt, val in groups:
+            if val is None:
+                continue
+            nums.append((g[0], val, g))
         if len(nums) < 2:
             continue
         nums_sorted = sorted(nums, key=lambda x: x[0].bbox[0])
-        total_token, total_val = nums_sorted[-1]
+        total_token, total_val, total_group = nums_sorted[-1]
 
         # quantity: first integer-like not equal to code token
         cantidad_val = None
-        for tok, val in nums_sorted:
+        for tok, val, _grp in nums_sorted:
             if codigo and tok.text == codigo:
                 continue
             if abs(val - int(val)) < 1e-6:
@@ -152,16 +196,15 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
         # Prefer candidate to the left of total that best matches total/cantidad
         precio_val = None
         try:
-            # tokens with a percent sign are likely discounts; ignore them
+            # Tokens con % son descuentos → excluir
             percent_tokens = {t for t in toks if '%' in t.text}
-            price_candidates = [(tok, val) for (tok, val) in nums_sorted
-                                 if tok.bbox[0] < total_token.bbox[0] and tok not in percent_tokens]
+            price_candidates = [(tok, val) for (tok, val, grp) in nums_sorted
+                                 if tok.bbox[0] < total_token.bbox[0] and all(pt not in percent_tokens for pt in grp)]
             if price_candidates:
                 if cantidad_val and cantidad_val > 0:
                     target = float(total_val) / float(cantidad_val)
                     precio_val = min(price_candidates, key=lambda tv: abs(tv[1] - target))[1]
                 else:
-                    # Fallback: pick the rightmost candidate (closest to total), excluding discounts
                     precio_val = price_candidates[-1][1]
         except Exception:
             pass
@@ -176,12 +219,16 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                 if vt is None:
                     desc_tokens.append(t.text)
         descripcion = ' '.join(desc_tokens).strip() or None
+        # Filtrar fila IVA en la extracción (no incluir en items)
+        if (codigo or "").strip().lower() == 'iva' or 'iva' in (descripcion or '').lower():
+            continue
+
         item = {
             'codigo': codigo,
             'descripcion': descripcion,
-            'cantidad': str(int(cantidad_val)) if cantidad_val is not None else None,
-            'precio_unitario': (f"{precio_val:.2f}" if isinstance(precio_val, float) else None),
-            'total_linea': (f"{total_val:.2f}" if isinstance(total_val, float) else None),
+            'cantidad': _fmt_out_number(cantidad_val) if cantidad_val is not None else None,
+            'precio_unitario': _fmt_out_number(precio_val) if isinstance(precio_val, float) else None,
+            'total_linea': _fmt_out_number(total_val) if isinstance(total_val, float) else None,
         }
         items.append(item)
     return items
@@ -452,6 +499,14 @@ def procesar_documento(
 
     # 3) combinar
     combinado = combinar_json(hdr_mini, ocr_res)
+    # Normalizar encabezado a formato numérico de salida (sin miles/decimales si OUT_DECIMALS=0)
+    for k in ("neto", "iva", "total"):
+        v = combinado.get(k)
+        if v not in (None, ""):
+            n = _norm_number_float(str(v))
+            if n is None:
+                n = _norm_money(str(v))
+            combinado[k] = _fmt_out_number(n) if n is not None else v
 
     # 4) validar
     t3 = time.time()
