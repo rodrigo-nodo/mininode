@@ -35,6 +35,10 @@ const fileInfo = el('file-info');
 const fileName = el('file-name');
 const fileMeta = el('file-meta');
 const thumb = el('thumb');
+const summaryBox = el('summary-box');
+const netoOut = el('neto-out');
+const ivaOut = el('iva-out');
+const totalOut = el('total-out');
 
 let selectedFile = null;
 
@@ -259,6 +263,20 @@ startBtn.addEventListener('click', async () => {
 
     // Show JSON
     jsonOut.textContent = JSON.stringify(data, null, 2);
+
+    // Header summary formatting (neto/iva/total) if present
+    try {
+      const f = data.fields || {};
+      const netoVal = f.neto?.value ?? f.neto;
+      const ivaVal = f.iva?.value ?? f.iva;
+      const totalVal = f.total?.value ?? f.total;
+      if (summaryBox && (netoVal != null || ivaVal != null || totalVal != null)) {
+        if (netoOut) netoOut.textContent = netoVal != null ? fmt0(netoVal) : '';
+        if (ivaOut) ivaOut.textContent = ivaVal != null ? fmt0(ivaVal) : '';
+        if (totalOut) totalOut.textContent = totalVal != null ? fmt0(totalVal) : '';
+        summaryBox.classList.remove('wr-hidden');
+      }
+    } catch (_) {}
 
     // Render items table if present
     try {

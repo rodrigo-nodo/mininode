@@ -120,6 +120,13 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
             continue
         if not header_seen:
             continue
+        # detect code first
+        codigo = None
+        for t in toks:
+            if any(ch.isalnum() for ch in t.text):
+                codigo = t.text
+                break
+        # collect numeric tokens
         nums = []
         for t in toks:
             st = t.text.replace('$','').replace('%','').strip()
@@ -132,15 +139,13 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
         nums_sorted = sorted(nums, key=lambda x: x[0].bbox[0])
         total_token, total_val = nums_sorted[-1]
         precio_val = nums_sorted[-2][1] if len(nums_sorted) >= 2 else None
+        # quantity: first integer-like not equal to code token
         cantidad_val = None
         for tok, val in nums_sorted:
+            if codigo and tok.text == codigo:
+                continue
             if abs(val - int(val)) < 1e-6:
                 cantidad_val = val
-                break
-        codigo = None
-        for t in toks:
-            if any(ch.isalnum() for ch in t.text):
-                codigo = t.text
                 break
         desc_tokens = []
         seen_code = False
