@@ -195,20 +195,36 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
         # Choose unit price robustly, ignoring discount column if present
         # Prefer candidate to the left of total that best matches total/cantidad
         precio_val = None
+        # Heurística por posiciones: [ ... UNITARIO , DSCTO , TOTAL ]
+        dscto_val = 0.0
+        try:
+            if len(nums_sorted) >= 2:
+                dscto_val = float(nums_sorted[-2][1] or 0.0)
+            if cantidad_val and cantidad_val > 0 and len(nums_sorted) >= 3:
+                cand_unit = float(nums_sorted[-3][1])
+                target = (float(total_val) + float(dscto_val)) / float(cantidad_val)
+                if cand_unit > 0:
+                    rel_diff = abs(cand_unit - target) / max(1.0, target)
+                    if rel_diff <= 0.12:  # 12% tolerancia
+                        precio_val = cand_unit
+        except Exception:
+            pass
+
         try:
             # Tokens con % son descuentos → excluir
             percent_tokens = {t for t in toks if '%' in t.text}
             price_candidates = [(tok, val) for (tok, val, grp) in nums_sorted
                                  if tok.bbox[0] < total_token.bbox[0] and all(pt not in percent_tokens for pt in grp)]
-            if price_candidates:
+            if price_candidates and (precio_val is None):
                 if cantidad_val and cantidad_val > 0:
-                    # Elegir el candidato cuyo (val * cantidad) aprox = total
+                    # Elegir candidato que mejor cumpla v*cantidad ≈ total + dscto
                     def score(tv):
                         v = float(tv[1])
-                        diff = abs(v * float(cantidad_val) - float(total_val))
-                        rel = diff / max(1.0, abs(float(total_val)))
-                        # penaliza valores imposibles (mayores al total si cant>=1)
-                        penalty = 0.5 if (float(cantidad_val) >= 1 and v > float(total_val)) else 0.0
+                        target_total = float(total_val) + float(dscto_val)
+                        diff = abs(v * float(cantidad_val) - target_total)
+                        rel = diff / max(1.0, abs(target_total))
+                        # penaliza valores imposibles (mayores al total+dscto si cant>=1 y dscto pequeño)
+                        penalty = 0.0
                         return rel + penalty
                     precio_val = min(price_candidates, key=score)[1]
                 else:
@@ -219,7 +235,7 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
         # Último recurso si no se encontró unitario pero hay total y cantidad
         if (precio_val is None) and (cantidad_val and cantidad_val > 0):
             try:
-                precio_val = float(total_val) / float(cantidad_val)
+                precio_val = (float(total_val) + float(dscto_val)) / float(cantidad_val)
             except Exception:
                 pass
         desc_tokens = []
@@ -233,8 +249,12 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                 if vt is None:
                     desc_tokens.append(t.text)
         descripcion = ' '.join(desc_tokens).strip() or None
-        # Filtrar fila IVA en la extracción (no incluir en items)
-        if (codigo or "").strip().lower() == 'iva' or 'iva' in (descripcion or '').lower():
+        # Filtrar fila IVA y totales en la extracción (no incluir en items)
+        cod_l = (codigo or "").strip().lower()
+        if cod_l in ('iva','neto','total','subtotal') or 'iva' in (descripcion or '').lower():
+            continue
+        # Evitar filas cuyo "codigo" no tenga dígitos (p.ej., filas de resumen)
+        if codigo and not any(ch.isdigit() for ch in codigo):
             continue
 
         item = {
