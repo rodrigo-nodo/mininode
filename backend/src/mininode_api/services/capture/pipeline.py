@@ -185,51 +185,69 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
 
         # quantity: first integer-like not equal to code token
         cantidad_val = None
+        cantidad_tok = None
         for tok, val, _grp in nums_sorted:
             if codigo and tok.text == codigo:
                 continue
             if abs(val - int(val)) < 1e-6:
                 cantidad_val = val
+                cantidad_tok = tok
                 break
 
         # Choose unit price robustly, ignoring discount column if present
         # Prefer candidate to the left of total that best matches total/cantidad
         precio_val = None
-        # Heurística por posiciones: [ ... UNITARIO , DSCTO , TOTAL ]
+        # Clasificación robusta de columnas a la derecha de cantidad
         dscto_val = 0.0
         try:
-            if len(nums_sorted) >= 2:
-                dscto_val = float(nums_sorted[-2][1] or 0.0)
-            if cantidad_val and cantidad_val > 0 and len(nums_sorted) >= 3:
-                cand_unit = float(nums_sorted[-3][1])
-                target = (float(total_val) + float(dscto_val)) / float(cantidad_val)
-                if cand_unit > 0:
-                    rel_diff = abs(cand_unit - target) / max(1.0, target)
-                    if rel_diff <= 0.12:  # 12% tolerancia
-                        precio_val = cand_unit
+            # Candidatos sólo entre cantidad y total
+            def right_of_qty(tok):
+                if cantidad_tok is None:
+                    return True
+                return tok.bbox[0] > (cantidad_tok.bbox[0] + cantidad_tok.bbox[2] * 0.2)
+            right_vals = [(tok, val) for (tok, val, _grp) in nums_sorted if right_of_qty(tok) and tok.bbox[0] < total_token.bbox[0]]
+            if right_vals:
+                # Tomar 2 últimos a la izquierda del total como candidatos (unit, dscto)
+                a = right_vals[-1][1] if len(right_vals) >= 1 else None
+                b = right_vals[-2][1] if len(right_vals) >= 2 else None
+                cand_pairs = []  # (unit, dscto, score)
+                if a is not None:
+                    # escenario: a = unit, dscto = 0
+                    cand_pairs.append((float(a), 0.0))
+                if a is not None and b is not None:
+                    # escenario: a = unit, b = dscto
+                    cand_pairs.append((float(a), float(b)))
+                    # escenario: b = unit, a = dscto
+                    cand_pairs.append((float(b), float(a)))
+                if cantidad_val and cand_pairs:
+                    best = None
+                    for unit, dsc in cand_pairs:
+                        target_total = float(total_val) + max(0.0, dsc)
+                        err = abs(unit * float(cantidad_val) - target_total)
+                        rel = err / max(1.0, target_total)
+                        # pequeña penalización si dsc es grande (evitar confundir con total unitario)
+                        rel += min(0.2, max(0.0, dsc) / max(1.0, target_total)) * 0.2
+                        if (best is None) or (rel < best[2]):
+                            best = (unit, dsc, rel)
+                    if best is not None:
+                        precio_val, dscto_val, _ = best
         except Exception:
             pass
 
+        # Como respaldo, buscar por score entre candidatos a la izquierda del total (ignorando %)
         try:
-            # Tokens con % son descuentos → excluir
-            percent_tokens = {t for t in toks if '%' in t.text}
-            price_candidates = [(tok, val) for (tok, val, grp) in nums_sorted
-                                 if tok.bbox[0] < total_token.bbox[0] and all(pt not in percent_tokens for pt in grp)]
-            if price_candidates and (precio_val is None):
-                if cantidad_val and cantidad_val > 0:
-                    # Elegir candidato que mejor cumpla v*cantidad ≈ total + dscto
+            if (precio_val is None) and cantidad_val:
+                percent_tokens = {t for t in toks if '%' in t.text}
+                price_candidates = [(tok, val) for (tok, val, grp) in nums_sorted
+                                     if tok.bbox[0] < total_token.bbox[0]
+                                     and (cantidad_tok is None or tok.bbox[0] > cantidad_tok.bbox[0])
+                                     and all(pt not in percent_tokens for pt in grp)]
+                if price_candidates:
                     def score(tv):
                         v = float(tv[1])
                         target_total = float(total_val) + float(dscto_val)
-                        diff = abs(v * float(cantidad_val) - target_total)
-                        rel = diff / max(1.0, abs(target_total))
-                        # penaliza valores imposibles (mayores al total+dscto si cant>=1 y dscto pequeño)
-                        penalty = 0.0
-                        return rel + penalty
+                        return abs(v * float(cantidad_val) - target_total) / max(1.0, abs(target_total))
                     precio_val = min(price_candidates, key=score)[1]
-                else:
-                    # Fallback: el más a la derecha (cerca de total)
-                    precio_val = price_candidates[-1][1]
         except Exception:
             pass
         # Calcular unitario derivado y corregir si difiere demasiado del candidato
