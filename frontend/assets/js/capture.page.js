@@ -1,4 +1,4 @@
-import { Stopwatch } from './lib/metrics.js';
+﻿import { Stopwatch } from './lib/metrics.js';
 import * as Ex from './util-export.js';
 
 // Simple session-based p95 tracker (client-side only, MVP)
@@ -99,7 +99,30 @@ async function webpToJpeg(file) {
   return new File([blob], (file.name || 'image') + '.jpg', { type: 'image/jpeg' });
 }
 
+async function downscaleToJpeg(file, maxSide = 1800, quality = 0.84) {
+  const dataUrl = await readAsDataURL(file);
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = dataUrl;
+  await img.decode();
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  const m = Math.max(w, h) || 1;
+  const scale = m > maxSide ? (maxSide / m) : 1;
+  const nw = Math.max(1, Math.round(w * scale));
+  const nh = Math.max(1, Math.round(h * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = nw;
+  canvas.height = nh;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, nw, nh);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  return new File([blob], (file.name || 'image') + '.jpg', { type: 'image/jpeg' });
+}
+
 function onFileChosen(file) {
+  try { fetch(apiUrl('/health')).catch(()=>{}); } catch {}
+
   clearError();
   if (!file) { setStartEnabled(false); return; }
 
@@ -111,7 +134,7 @@ function onFileChosen(file) {
 
   if (isHeic(file.type)) {
     // No conversion in MVP, ask user to convert
-    showError('Formato HEIC/HEIF no soportado en MVP. Convierte a JPG/PNG e inténtalo nuevamente.');
+    showError('Formato HEIC/HEIF no soportado en MVP. Convierte a JPG/PNG e intÃ©ntalo nuevamente.');
     setStartEnabled(false);
     return;
   }
@@ -146,7 +169,7 @@ async function buildFormData(file) {
     try {
       upFile = await webpToJpeg(file);
     } catch (e) {
-      showError('No se pudo convertir WEBP. Convierte a JPG/PNG e inténtalo.');
+      showError('No se pudo convertir WEBP. Convierte a JPG/PNG e intÃ©ntalo.');
       throw e;
     }
   }
@@ -201,7 +224,7 @@ function parseNumberLike(v) {
       s = s.replace(/,/g, '');
     }
   } else if (lastDot > -1) {
-    // Only dot present → decide by suffix length
+    // Only dot present â†’ decide by suffix length
     const dotCount = (s.match(/\./g) || []).length;
     if (dotCount > 1) {
       // Multiple dots: treat as thousands separators
@@ -210,10 +233,10 @@ function parseNumberLike(v) {
       const parts = s.split('.');
       const suffixLen = (parts[1] || '').length;
       if (suffixLen === 3 || suffixLen > 3) {
-        // Likely thousands grouping (e.g., 169.660) → remove dot(s)
+        // Likely thousands grouping (e.g., 169.660) â†’ remove dot(s)
         s = s.replace(/\./g, '');
       } else {
-        // 0–2 digits → treat as decimal dot
+        // 0â€“2 digits â†’ treat as decimal dot
         // leave as is
       }
     }
@@ -223,7 +246,7 @@ function parseNumberLike(v) {
   return n;
 }
 
-// UI locale/decimals (paramétrico por país)
+// UI locale/decimals (paramÃ©trico por paÃ­s)
 function getQueryParam(name) {
   try { return new URL(location.href).searchParams.get(name); } catch { return null; }
 }
@@ -253,7 +276,7 @@ function pick(it, keys) {
 function showFileInfo(file) {
   if (!fileInfo) return;
   fileName.textContent = file.name || 'archivo';
-  fileMeta.textContent = `${file.type || 'tipo desconocido'} • ${humanSize(file.size)}`;
+  fileMeta.textContent = `${file.type || 'tipo desconocido'} â€¢ ${humanSize(file.size)}`;
   fileInfo.classList.remove('wr-hidden');
 }
 
@@ -270,7 +293,20 @@ startBtn.addEventListener('click', async () => {
 
   const sw = new Stopwatch();
   try {
-    const fd = await buildFormData(selectedFile);
+    let fileToUpload = selectedFile;
+    try {
+      const t0 = (performance && performance.now) ? performance.now() : Date.now();
+      const before = fileToUpload.size || 0;
+      if (!isHeic(fileToUpload.type)) {
+        fileToUpload = await downscaleToJpeg(fileToUpload, 1800, 0.84);
+      }
+      const after = fileToUpload.size || before;
+      window.__cap_metrics = window.__cap_metrics || {};
+      window.__cap_metrics.compress_ms = Math.round(((performance && performance.now) ? performance.now() : Date.now()) - t0);
+      window.__cap_metrics.bytes_before = before;
+      window.__cap_metrics.bytes_after = after;
+    } catch {}
+    const fd = await buildFormData(fileToUpload);
     setPreview(selectedFile);
 
     const docType = docTypeSel.value || 'boleta';
@@ -358,8 +394,8 @@ startBtn.addEventListener('click', async () => {
     if (beforeBad.length) { lines.push('Checks fallidos (antes):'); beforeBad.forEach(k=>lines.push(`- ${k}`)); }
     if (applied) {
       lines.push('', `Fallback aplicado: ${adjusted.length ? adjusted.join(', ') : '(sin cambios reportados)'}`);
-      if (afterBad.length) { lines.push('Checks fallidos (después):'); afterBad.forEach(k=>lines.push(`- ${k}`)); }
-      else { lines.push('Checks después: OK'); }
+      if (afterBad.length) { lines.push('Checks fallidos (despuÃ©s):'); afterBad.forEach(k=>lines.push(`- ${k}`)); }
+      else { lines.push('Checks despuÃ©s: OK'); }
     }
     if (lines.length) {
       diffBox.classList.remove('wr-hidden');
@@ -367,11 +403,11 @@ startBtn.addEventListener('click', async () => {
     }
 
     // Perf badge
-    const totalMs = data.timings?.total || sw.elapsed();
+    const totalMs = data.timings?.server_total || data.timings?.total || sw.elapsed();
     pushTiming(totalMs);
     const p95Ms = p95(sessionTimings);
-    perfBadge.textContent = `Total ${formatMs(totalMs)} | p95(sess) ${formatMs(p95Ms)}`;
-    perfBadge.title = `Etapas: upload+preproc cliente ≈, OCR ${formatMs(data.timings?.ocr||0)}, LLM-mini ${formatMs(data.timings?.llm_mini||0)}, validación ${formatMs(data.timings?.validate_ms||0)}`;
+    perfBadge.textContent = `Srv ${formatMs(totalMs)} | p95 ${formatMs(p95Ms)}`;
+    perfBadge.title = `Srv decode ${data.timings?.decode_ms||0}ms, preproc ${data.timings?.preproc_ms||0}ms, OCR ${formatMs(data.timings?.ocr||0)}, LLM-mini ${formatMs(data.timings?.llm_mini||0)}, validar ${formatMs(data.timings?.validate_ms||0)}`;
   } catch (e) {
     showError(String(e));
   } finally {
@@ -407,3 +443,8 @@ if (exportBtn) {
     if (kind === 'json') Ex.downloadText(txt, 'capture.json', 'application/json');
   });
 }
+
+
+
+
+

@@ -26,11 +26,16 @@ class CostBreakdown(BaseModel):
     total_usd: float = 0.0
 
 class TimingMs(BaseModel):
+    # Nuevos (más claros)
+    server_total: int = 0
+    decode_ms: int = 0
+    preproc_ms: int = 0
     ocr: int = 0
     llm_mini: int = 0
     llm_fallback: int = 0
     validate_ms: int = 0
     roi_table: int = 0
+    # Compat: mantener 'total' por atrás; igual a server_total
     total: int = 0
 
 class CaptureResponse(BaseModel):

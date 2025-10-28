@@ -6,6 +6,7 @@ import base64, io, os, re, time
 from typing import Dict, Any, List, Tuple, Optional
 
 from PIL import Image, ImageOps, ImageFilter
+from concurrent.futures import ThreadPoolExecutor
 import pytesseract
 
 from pydantic import BaseModel
@@ -532,23 +533,27 @@ def procesar_documento(
     overrides_cfg: Optional[Dict[str, Any]] = None
 ) -> CaptureResponse:
     t0 = time.time()
+    _t_dec = time.time()
     img = _img_from_bytes_or_path(file_or_bytes)
+    decode_ms = int((time.time() - _t_dec) * 1000)
+    _t_pre = time.time()
     img = _downscale(img)
+    preproc_ms = int((time.time() - _t_pre) * 1000)
 
     # anchors base + overrides
     anchors_base = load_anchors_yaml(ANCHORS_PATH)
     anchors_cfg = merge_overrides(anchors_base, overrides_cfg or {})
 
-    # 1) mini visión
-    t1 = time.time()
-    hdr_mini = proceso_imagen_mini(img, doc_type=req.doc_type)
-    t_llmmini = int((time.time() - t1) * 1000)
-
-    # 2) OCR + anclas
-    t2 = time.time()
+    # 1) mini visión (LLM) y OCR cabecera en paralelo
     img_ocr = _preprocess_for_ocr(img)
-    ocr_res = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
-    ocr_res["took_ms"] = int((time.time() - t2) * 1000)
+    _t_ocr = time.time(); _t_llm = time.time()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_ocr = pool.submit(proceso_tesseract_mini, img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
+        f_llm = pool.submit(proceso_imagen_mini, img, doc_type=req.doc_type)
+        ocr_res = f_ocr.result()
+        hdr_mini = f_llm.result()
+    ocr_res["took_ms"] = int((time.time() - _t_ocr) * 1000)
+    t_llmmini = int((time.time() - _t_llm) * 1000)
     # 2.5) Items (ROI l�gico sobre tokens OCR)
     t_items = time.time()
     words_all = ocr_words(img_ocr)
@@ -642,12 +647,17 @@ def procesar_documento(
             value=val, confidence=0.9 if not uncertain else 0.0, source=source, uncertain=uncertain
         )
 
+    server_total = int((time.time() - t0) * 1000)
     timings = TimingMs(
+        server_total=server_total,
+        decode_ms=locals().get('decode_ms', 0),
+        preproc_ms=locals().get('preproc_ms', 0),
         ocr=ocr_res["took_ms"],
         llm_mini=t_llmmini,
         llm_fallback=fallback_took_total_ms,
         validate_ms=t_validate,
-        total=int((time.time() - t0) * 1000),
+        roi_table=roi_table_ms,
+        total=server_total,
     )
     cost = _sumar_costos(uso_list)
 
