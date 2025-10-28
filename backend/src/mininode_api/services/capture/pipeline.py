@@ -153,7 +153,7 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                 if parts:
                     prev = parts[-1]
                     gap = t.bbox[0] - (prev.bbox[0] + prev.bbox[2])
-                    if gap < 0.02:  # cercano → mismo grupo
+                    if gap < 0.03:  # ligeramente más permisivo para unir '3' '.' '590'
                         parts.append(t)
                     else:
                         txt = ''.join(p.text for p in parts)
@@ -232,10 +232,16 @@ def _extract_items_fast(words: List[OCRWord]) -> List[Dict[str, Optional[str]]]:
                     precio_val = price_candidates[-1][1]
         except Exception:
             pass
-        # Último recurso si no se encontró unitario pero hay total y cantidad
-        if (precio_val is None) and (cantidad_val and cantidad_val > 0):
+        # Calcular unitario derivado y corregir si difiere demasiado del candidato
+        if (cantidad_val and cantidad_val > 0):
             try:
-                precio_val = (float(total_val) + float(dscto_val)) / float(cantidad_val)
+                derived_unit = (float(total_val) + float(dscto_val)) / float(cantidad_val)
+                if precio_val is None:
+                    precio_val = derived_unit
+                else:
+                    rel_diff = abs(float(precio_val) - derived_unit) / max(1.0, derived_unit)
+                    if rel_diff > 0.05:  # si se aleja más de 5%, usar el derivado
+                        precio_val = derived_unit
             except Exception:
                 pass
         desc_tokens = []
