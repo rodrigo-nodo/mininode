@@ -622,12 +622,15 @@ def procesar_documento(
     ocr_res["took_ms"] = int((time.time() - _t_ocr) * 1000)
     t_llmmini = 0
     hdr_mini = {"data": {}, "usage": {}}
-    # 2) Items (ROI tabla)
-    t_items = time.time()
-    table_roi = (0.0, 0.30, 1.0, 0.60)
-    words_tbl = ocr_words_table_parallel(img_ocr, table_roi, stripes=max(2, os.cpu_count() or 2))
-    items = _extract_items_fast(words_tbl)
-    roi_table_ms = int((time.time() - t_items) * 1000)
+    # 2) Items (según modo)
+    roi_table_ms = 0
+    items = []
+    if getattr(req, 'mode', 'normal') == 'normal':
+        t_items = time.time()
+        table_roi = (0.0, 0.30, 1.0, 0.60)
+        words_tbl = ocr_words_table_parallel(img_ocr, table_roi, stripes=max(2, os.cpu_count() or 2))
+        items = _extract_items_fast(words_tbl)
+        roi_table_ms = int((time.time() - t_items) * 1000)
     # 3) combinar
     combinado = combinar_json(hdr_mini, ocr_res)
     # Normalizar encabezado a formato numérico de salida (sin miles/decimales si OUT_DECIMALS=0)
@@ -667,7 +670,7 @@ def procesar_documento(
     adjusted_fields: List[str] = []
     elapsed_ms = int((time.time() - t0) * 1000)
     time_left = TIME_BUDGET_MS - elapsed_ms
-    if req.usar_fallback and faltantes and time_left > 2500:
+    if (getattr(req, 'mode', 'normal') == 'normal') and req.usar_fallback and faltantes and time_left > 2500:
         _t_fb = time.time()
         fb = fallback_con_4o(img, faltantes=faltantes, doc_type=req.doc_type)
         for k, v in (fb.get("data") or {}).items():
@@ -682,7 +685,7 @@ def procesar_documento(
     # Fallback adicional si hubo fallas de consistencia o baja confianza en críticos
     elapsed_ms = int((time.time() - t0) * 1000)
     time_left = TIME_BUDGET_MS - elapsed_ms
-    if req.usar_fallback and (has_failed_checks or low_conf_crit) and time_left > 2500:
+    if (getattr(req, 'mode', 'normal') == 'normal') and req.usar_fallback and (has_failed_checks or low_conf_crit) and time_left > 2500:
         _t_fb2 = time.time()
         fb2 = fallback_con_4o(img, faltantes=CRITICAL_FIELDS.get(req.doc_type, []), doc_type=req.doc_type)
         for k, v in (fb2.get("data") or {}).items():
@@ -740,6 +743,9 @@ def procesar_documento(
     adjusted_fields=adjusted_fields,
     items=items if 'items' in locals() else [],
     )
+
+
+
 
 
 

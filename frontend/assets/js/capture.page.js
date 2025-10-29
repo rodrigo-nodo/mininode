@@ -134,7 +134,7 @@ function onFileChosen(file) {
 
   if (isHeic(file.type)) {
     // No conversion in MVP, ask user to convert
-    showError('Formato HEIC/HEIF no soportado en MVP. Convierte a JPG/PNG e intÃ©ntalo nuevamente.');
+    showError('Formato HEIC/HEIF no soportado en MVP. Convierte a JPG/PNG e inténtalo nuevamente.');
     setStartEnabled(false);
     return;
   }
@@ -169,7 +169,7 @@ async function buildFormData(file) {
     try {
       upFile = await webpToJpeg(file);
     } catch (e) {
-      showError('No se pudo convertir WEBP. Convierte a JPG/PNG e intÃ©ntalo.');
+      showError('No se pudo convertir WEBP. Convierte a JPG/PNG e inténtalo.');
       throw e;
     }
   }
@@ -310,7 +310,7 @@ startBtn.addEventListener('click', async () => {
     setPreview(selectedFile);
 
     const docType = docTypeSel.value || 'boleta';
-    const url = apiUrl(`/capture?doc_type=${encodeURIComponent(docType)}&usar_fallback=true`);
+    const url = apiUrl(`/capture?doc_type=${encodeURIComponent(docType)}&usar_fallback=true&mode=fast`);
 
     const resp = await fetch(url, {
       method: 'POST',
@@ -443,7 +443,6 @@ if (exportBtn) {
     if (kind === 'json') Ex.downloadText(txt, 'capture.json', 'application/json');
   });
 }
-
 
 
 

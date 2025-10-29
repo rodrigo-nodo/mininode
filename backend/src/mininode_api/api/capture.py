@@ -8,6 +8,7 @@ router = APIRouter(prefix="", tags=["Capture"])
 async def capture_endpoint(
     doc_type: str,
     usar_fallback: bool = True,
+    mode: str = "normal",
     file: UploadFile = File(...),
 ):
     # Import lazy to avoid failing router registration if optional deps are missing
@@ -17,5 +18,5 @@ async def capture_endpoint(
         # Surface as service unavailable instead of hiding route at startup
         raise HTTPException(status_code=503, detail=f"Capture pipeline unavailable: {type(e).__name__}")
     data = await file.read()
-    req = CaptureRequest(doc_type=doc_type, usar_fallback=usar_fallback)
+    req = CaptureRequest(doc_type=doc_type, usar_fallback=usar_fallback, mode=(mode or "normal"))
     return procesar_documento(data, req)
