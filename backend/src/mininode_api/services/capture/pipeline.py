@@ -307,6 +307,94 @@ def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
 
 
 # =========================
+# Modo FAST+: cabecera + totales con fallback simple
+# =========================
+def _procesar_fast_plus(
+    img: Image.Image,
+    req: CaptureRequest,
+    anchors_cfg: Dict[str, Any],
+    decode_ms: int,
+    preproc_ms: int,
+    t0: float,
+) -> CaptureResponse:
+    # OCR en dos ROIs: cabecera y totales inferiores a la derecha
+    img_ocr = _preprocess_for_ocr(img)
+    t_ocr0 = time.time()
+    hdr = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg, header_only=True)
+    totals = proceso_tesseract_mini(
+        img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg,
+        region=(0.55, 0.70, 0.45, 0.30), numeric_bias=True,
+    )
+    took_ocr = int((time.time() - t_ocr0) * 1000)
+
+    combinado: Dict[str, Any] = {}
+    combinado.update(hdr.get("data") or {})
+    combinado.update(totals.get("data") or {})
+
+    # Normalizar encabezado (sin miles; decimales según OUT_DECIMALS)
+    for k in ("neto", "iva", "total"):
+        v = combinado.get(k)
+        if v not in (None, ""):
+            n = _norm_number_float(str(v)) or _norm_money(str(v))
+            combinado[k] = _fmt_out_number(n) if n is not None else v
+
+    # Si faltan críticos, fallback a OCR de página completa (sin LLM)
+    falt: List[str] = []
+    for f in CRITICAL_FIELDS.get(req.doc_type, []):
+        if combinado.get(f) in (None, "", []):
+            falt.append(f)
+    if falt:
+        t_full = time.time()
+        full = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg, header_only=False)
+        combinado = full.get("data") or {}
+        for k in ("neto", "iva", "total"):
+            v = combinado.get(k)
+            if v not in (None, ""):
+                n = _norm_number_float(str(v)) or _norm_money(str(v))
+                combinado[k] = _fmt_out_number(n) if n is not None else v
+        took_ocr += int((time.time() - t_full) * 1000)
+
+    # Validación simple
+    t3 = time.time()
+    consistency = validar_consistencia(req.doc_type, combinado)
+    t_validate = int((time.time() - t3) * 1000)
+
+    # Armar respuesta
+    fields_out: Dict[str, FieldOut] = {}
+    for k, raw_val in combinado.items():
+        val = None if raw_val is None else (raw_val if isinstance(raw_val, str) else str(raw_val))
+        uncertain = (val in (None, "", []))
+        source = "fast+|ocr"
+        fields_out[k] = FieldOut(value=val, confidence=0.9 if not uncertain else 0.0, source=source, uncertain=uncertain)
+
+    server_total = int((time.time() - t0) * 1000)
+    timings = TimingMs(
+        server_total=server_total,
+        decode_ms=decode_ms,
+        preproc_ms=preproc_ms,
+        ocr=took_ocr,
+        llm_mini=0,
+        llm_fallback=0,
+        validate_ms=t_validate,
+        roi_table=0,
+        total=server_total,
+    )
+    cost = _sumar_costos([])
+
+    return CaptureResponse(
+        doc_type=req.doc_type,
+        fields=fields_out,
+        consistency=consistency,
+        consistency_after_fallback=None,
+        cost=cost,
+        timings=timings,
+        fallback_applied=False,
+        adjusted_fields=[],
+        items=[],
+    )
+
+
+# =========================
 # OCR tokens (palabra + bbox normalizado 0..1)
 # =========================
 def ocr_words(img: Image.Image) -> List[OCRWord]:
@@ -614,6 +702,14 @@ def procesar_documento(
     # anchors base + overrides
     anchors_base = load_anchors_yaml(ANCHORS_PATH)
     anchors_cfg = merge_overrides(anchors_base, overrides_cfg or {})
+
+    # Fast+ path: cabecera + totales por ROIs con fallback a página completa (sin items)
+    try:
+        if getattr(req, 'mode', 'normal') == 'fast':
+            return _procesar_fast_plus(img, req, anchors_cfg, decode_ms, preproc_ms, t0)
+    except Exception:
+        # si falla, continúa por pipeline normal
+        pass
 
         # 1) LLM off por defecto; OCR cabecera primero
     img_ocr = _preprocess_for_ocr(img)
