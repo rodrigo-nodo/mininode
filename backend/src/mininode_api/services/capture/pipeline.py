@@ -4,6 +4,7 @@
 from __future__ import annotations
 import base64, io, os, re, time
 from typing import Dict, Any, List, Tuple, Optional
+from concurrent.futures import ProcessPoolExecutor
 
 from PIL import Image, ImageOps, ImageFilter
 from concurrent.futures import ThreadPoolExecutor
@@ -323,6 +324,72 @@ def ocr_words(img: Image.Image) -> List[OCRWord]:
         words.append(OCRWord(text=text, bbox=(x / W, y / H, w / W, h / H)))
     return words
 
+def ocr_words_region(img: Image.Image, region: Tuple[float, float, float, float], *, numeric_bias: bool = False) -> List[OCRWord]:
+    W, H = img.size
+    x, y, w, h = region
+    bx = int(max(0.0, min(1.0, x)) * W)
+    by = int(max(0.0, min(1.0, y)) * H)
+    bw = int(max(0.0, min(1.0, w)) * W)
+    bh = int(max(0.0, min(1.0, h)) * H)
+    crop = img.crop((bx, by, bx + bw, by + bh))
+    config = "--oem 1 --psm 6 -l spa+eng -c load_system_dawg=0 -c load_freq_dawg=0"
+    if numeric_bias:
+        config += " -c tessedit_char_whitelist=0123456789.,% -c classify_bln_numeric_mode=1 -c preserve_interword_spaces=1"
+    data = pytesseract.image_to_data(crop, output_type=pytesseract.Output.DICT, config=config)
+    words: List[OCRWord] = []
+    n = len(data.get("text", []))
+    for i in range(n):
+        text = (data["text"][i] or "").strip()
+        if not text: continue
+        x0, y0, w0, h0 = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+        if w0 <= 0 or h0 <= 0: continue
+        gx = (bx + x0) / W; gy = (by + y0) / H; gw = w0 / W; gh = h0 / H
+        words.append(OCRWord(text=text, bbox=(gx, gy, gw, gh)))
+    return words
+
+def _ocr_crop_worker(b: bytes, extra_cfg: str) -> List[Tuple[str, Tuple[int,int,int,int]]]:
+    im = Image.open(io.BytesIO(b)).convert("RGB")
+    data = pytesseract.image_to_data(im, output_type=pytesseract.Output.DICT, config=extra_cfg)
+    rows = []
+    for i in range(len(data.get("text", []))):
+        txt = (data["text"][i] or "").strip()
+        if not txt: continue
+        rows.append((txt, (data["left"][i], data["top"][i], data["width"][i], data["height"][i])))
+    return rows
+
+def ocr_words_table_parallel(img: Image.Image, region: Tuple[float,float,float,float], stripes: int = 3) -> List[OCRWord]:
+    W, H = img.size
+    x, y, w, h = region
+    bx = int(x * W); by = int(y * H); bw = int(w * W); bh = int(h * H)
+    roi = img.crop((bx, by, bx + bw, by + bh))
+    stripe_h = max(1, bh // max(1, stripes))
+    cfg = "--oem 1 --psm 6 -l spa+eng -c load_system_dawg=0 -c load_freq_dawg=0"
+    tasks = []
+    chunks: List[Tuple[bytes, int, int]] = []
+    for i in range(stripes):
+        sy = i * stripe_h
+        sh = stripe_h if i < stripes - 1 else (bh - sy)
+        if sh <= 0: continue
+        c = roi.crop((0, sy, bw, sy + sh))
+        buf = io.BytesIO(); c.save(buf, format="JPEG", quality=90)
+        chunks.append((buf.getvalue(), sy, sh))
+    out: List[OCRWord] = []
+    with ProcessPoolExecutor(max_workers=stripes) as pool:
+        futs = [pool.submit(_ocr_crop_worker, b, cfg) for (b, _sy, _sh) in chunks]
+        for (fut, (b, sy, sh)) in zip(futs, chunks):
+            rows = []
+            try:
+                rows = fut.result()
+            except Exception:
+                rows = []
+            for txt, (lx, ly, lw, lh) in rows:
+                gx = (bx + lx) / W
+                gy = (by + sy + ly) / H
+                gw = lw / W
+                gh = lh / H
+                out.append(OCRWord(text=txt, bbox=(gx, gy, gw, gh)))
+    return out
+
 
 # =========================
 # Paso 1: mini con imagen (visión)
@@ -414,8 +481,12 @@ def proceso_imagen_4o_header(img: Image.Image, doc_type: str) -> Dict[str, Any]:
 # =========================
 # Paso 2: OCR + anclas
 # =========================
-def proceso_tesseract_mini(img: Image.Image, doc_type: str, anchors_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    words = ocr_words(img)
+def proceso_tesseract_mini(img: Image.Image, doc_type: str, anchors_cfg: Dict[str, Any], *, header_only: bool = False) -> Dict[str, Any]:
+    if header_only:
+        # ROI superior de la página (cabecera/totales)
+        words = ocr_words_region(img, (0.0, 0.0, 1.0, 0.35), numeric_bias=False)
+    else:
+        words = ocr_words(img)
     doc_cfg = anchors_cfg
     fields = extract_fields_for_doc(words, doc_cfg, doc_type=doc_type)
     out: Dict[str, Any] = {k: v.value for k, v in fields.items()}
@@ -544,22 +615,19 @@ def procesar_documento(
     anchors_base = load_anchors_yaml(ANCHORS_PATH)
     anchors_cfg = merge_overrides(anchors_base, overrides_cfg or {})
 
-    # 1) mini visión (LLM) y OCR cabecera en paralelo
+        # 1) LLM off por defecto; OCR cabecera primero
     img_ocr = _preprocess_for_ocr(img)
-    _t_ocr = time.time(); _t_llm = time.time()
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        f_ocr = pool.submit(proceso_tesseract_mini, img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg)
-        f_llm = pool.submit(proceso_imagen_mini, img, doc_type=req.doc_type)
-        ocr_res = f_ocr.result()
-        hdr_mini = f_llm.result()
+    _t_ocr = time.time()
+    ocr_res = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg, header_only=True)
     ocr_res["took_ms"] = int((time.time() - _t_ocr) * 1000)
-    t_llmmini = int((time.time() - _t_llm) * 1000)
-    # 2.5) Items (ROI l�gico sobre tokens OCR)
+    t_llmmini = 0
+    hdr_mini = {"data": {}, "usage": {}}
+    # 2) Items (ROI tabla)
     t_items = time.time()
-    words_all = ocr_words(img_ocr)
-    items = _extract_items_fast(words_all)
+    table_roi = (0.0, 0.30, 1.0, 0.60)
+    words_tbl = ocr_words_table_parallel(img_ocr, table_roi, stripes=max(2, os.cpu_count() or 2))
+    items = _extract_items_fast(words_tbl)
     roi_table_ms = int((time.time() - t_items) * 1000)
-
     # 3) combinar
     combinado = combinar_json(hdr_mini, ocr_res)
     # Normalizar encabezado a formato numérico de salida (sin miles/decimales si OUT_DECIMALS=0)
@@ -672,6 +740,7 @@ def procesar_documento(
     adjusted_fields=adjusted_fields,
     items=items if 'items' in locals() else [],
     )
+
 
 
 

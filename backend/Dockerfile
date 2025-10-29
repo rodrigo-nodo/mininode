@@ -6,9 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-# System deps (OCR)
+# System deps (OCR) — sin prompts de debconf ni warnings
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
+ && apt-get install -y -q --no-install-recommends \
+      apt-utils \
       tesseract-ocr \
       tesseract-ocr-spa \
  && rm -rf /var/lib/apt/lists/*
