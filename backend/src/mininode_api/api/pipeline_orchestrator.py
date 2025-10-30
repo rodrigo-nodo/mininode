@@ -1,10 +1,11 @@
+# backend/src/mininode_api/api/pipeline_orchestrator.py
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException
 from typing import Dict, Any
 from ..core import config
 from ..core.measure import now_ms, elapsed_ms
 from ..core.ids import new_id
 from ..models.api_base import ApiResponse, MetaObj, ErrorObj
-from ..models.pipeline import PipelineRunOut, StepResult
+from ..models.pipeline import PipelineRunOut, StepResult, FlowsOut
 from ..services.pipeline.runner import execute_flow
 from ..services.pipeline.flows import FLOWS
 
@@ -16,13 +17,21 @@ def _enforce_api_key(x_api_key: str | None):
     if not x_api_key or x_api_key != config.MININODE_API_KEY:
         raise HTTPException(status_code=401, detail="invalid api key")
 
-@router.get("/flows", response_model=ApiResponse[dict])
+@router.get("/flows", response_model=ApiResponse[FlowsOut])
 async def list_flows(x_api_key: str | None = Header(default=None, convert_underscores=False)):
     _enforce_api_key(x_api_key)
-    return ApiResponse(
-        ok=True, time_ms=0, data={"flows": list(FLOWS.keys())}, error=None,
-        meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
-    )
+    try:
+        data = FlowsOut(flows=list(FLOWS.keys()))
+        return ApiResponse(
+            ok=True, time_ms=0, data=data, error=None,
+            meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
+        )
+    except Exception as e:
+        return ApiResponse(
+            ok=False, time_ms=0, data=None,
+            error=ErrorObj(code="FLOW_ENUM_ERROR", message=str(e)),
+            meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
+        )
 
 @router.post("/flow/{flow_name}", response_model=ApiResponse[PipelineRunOut])
 async def run_flow(
@@ -33,17 +42,31 @@ async def run_flow(
     _enforce_api_key(x_api_key)
     t0_total = now_ms()
 
-    # Contexto compartido entre steps
     ctx: Dict[str, Any] = {}
     if file is not None:
         ctx["file"] = file
 
-    steps_raw, last_data = execute_flow(flow_name, ctx=ctx)
+    try:
+        steps_raw, last_data = execute_flow(flow_name, ctx=ctx)
+    except Exception as e:
+        return ApiResponse(
+            ok=False,
+            time_ms=elapsed_ms(t0_total),
+            data=None,
+            error=ErrorObj(code="FLOW_ERROR", message=str(e)),
+            meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
+        )
 
-    steps_out = [StepResult(
-        name=s["name"], ok=bool(s.get("ok")), time_ms=int(s.get("time_ms", 0)),
-        data=s.get("data"), error=ErrorObj(**s["error"]) if s.get("error") else None
-    ) for s in steps_raw]
+    steps_out = [
+        StepResult(
+            name=s["name"],
+            ok=bool(s.get("ok")),
+            time_ms=int(s.get("time_ms", 0)),
+            data=s.get("data"),
+            error=ErrorObj(**s["error"]) if s.get("error") else None,
+        )
+        for s in steps_raw
+    ]
 
     ok_global = all(s.ok for s in steps_out)
     return ApiResponse(

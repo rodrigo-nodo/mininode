@@ -12,3 +12,6 @@ class StepResult(BaseModel):
 class PipelineRunOut(BaseModel):
     steps: List[StepResult]
     result: Optional[Dict[str, Any]] = None
+
+class FlowsOut(BaseModel):
+    flows: List[str]
