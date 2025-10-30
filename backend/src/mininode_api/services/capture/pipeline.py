@@ -338,21 +338,7 @@ def _procesar_fast_plus(
             n = _norm_number_float(str(v)) or _norm_money(str(v))
             combinado[k] = _fmt_out_number(n) if n is not None else v
 
-    # Si faltan críticos, fallback a OCR de página completa (sin LLM)
-    falt: List[str] = []
-    for f in CRITICAL_FIELDS.get(req.doc_type, []):
-        if combinado.get(f) in (None, "", []):
-            falt.append(f)
-    if falt:
-        t_full = time.time()
-        full = proceso_tesseract_mini(img_ocr, doc_type=req.doc_type, anchors_cfg=anchors_cfg, header_only=False)
-        combinado = full.get("data") or {}
-        for k in ("neto", "iva", "total"):
-            v = combinado.get(k)
-            if v not in (None, ""):
-                n = _norm_number_float(str(v)) or _norm_money(str(v))
-                combinado[k] = _fmt_out_number(n) if n is not None else v
-        took_ocr += int((time.time() - t_full) * 1000)
+    # Estricto: NO hay fallback a página completa; si faltan campos, se devuelven vacíos
 
     # Validación simple
     t3 = time.time()

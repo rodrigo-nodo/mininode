@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 from typing import List
 from fastapi import FastAPI, Header, HTTPException, Depends, Response
+from fastapi.responses import RedirectResponse
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,6 +34,11 @@ async def root_head():
 @app.get("/")
 async def root_get():
     return {"status": "ok"}
+
+# Favicon: redirige al favicon del sitio público para evitar 404 en el subdominio del API
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return RedirectResponse(url=os.getenv("PUBLIC_FAVICON_URL", "https://mininode.io/favicon.ico"))
 
 # Intenta incluir routers existentes (si los tienes ya)
 try:
