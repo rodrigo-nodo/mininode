@@ -2,89 +2,113 @@
 # backend/src/mininode_api/main.py
 from __future__ import annotations
 import os
+import logging
 from typing import List
+
 from fastapi import FastAPI, Header, HTTPException, Depends, Response
 from fastapi.responses import RedirectResponse
-import logging
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Mininode API", version="0.1.0")
+# Patrón app factory: facilita tests, evita efectos colaterales al importar.
+def create_app() -> FastAPI:
+    app = FastAPI(title="Mininode API", version="0.1.0")
 
-# CORS desde env (coma-separado)
-origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
-allowed_origins: List[str] = [o.strip() for o in origins_env.split(",") if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-# Raíz: evita 404 en probes HEAD /
-@app.head("/")
-async def root_head():
-    return Response(status_code=204)
-
-@app.get("/")
-async def root_get():
-    return {"status": "ok"}
-
-# Favicon: redirige al favicon del sitio público para evitar 404 en el subdominio del API
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return RedirectResponse(url=os.getenv("PUBLIC_FAVICON_URL", "https://mininode.io/favicon.ico"))
-
-# Intenta incluir routers existentes (si los tienes ya)
-try:
-    from mininode_api.api.auth_check import router as auth_router
-    app.include_router(auth_router)
-except Exception as e:
-    logging.exception("Failed to include auth_check router: %s", e)
-
-try:
-    from mininode_api.api.write import router as write_router
-    app.include_router(write_router)
-except Exception as e:
-    logging.exception("Failed to include write router: %s", e)
-
-try:
-    from mininode_api.api.capture import router as capture_router
-    app.include_router(capture_router)
-except Exception as e:
-    logging.exception("Failed to include capture router: %s", e)
-
-analyze_router_included = False
-try:
-    from mininode_api.api.analyze import router as analyze_router
-    app.include_router(analyze_router)
-    analyze_router_included = True
-except Exception as e:
-    logging.exception("Failed to include analyze router: %s", e)
-    analyze_router_included = False
-
-# Fallback de /analyze/summary si no existe router
-if not analyze_router_included:
-    # Importa solo los modelos desde models
-    from mininode_api.models.analyze import (
-        SummaryIn, SummaryOut
+    # CORS desde env (coma-separado)
+    origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
+    allowed_origins: List[str] = [o.strip() for o in origins_env.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
-    # Y la lógica de servicio real desde core (o services)
-    from mininode_api.core.analyze_service import analyze_summary_service
 
-    MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")
+    # Endpoints básicos
+    @app.get("/health")
+    async def health():
+        return {"status": "ok"}
 
-    async def require_api_key(x_api_key: str = Header(default="")):
-        # Guardia mínima para mantener contrato. Si no hay clave configurada, permite paso.
-        if MININODE_API_KEY and x_api_key != MININODE_API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid X-Api-Key")
-        return True
+    @app.head("/")
+    async def root_head():
+        return Response(status_code=204)
 
-    @app.post("/analyze/summary", response_model=SummaryOut, dependencies=[Depends(require_api_key)])
-    async def analyze_summary(body: SummaryIn) -> SummaryOut:
-        return await analyze_summary_service(body)
+    @app.get("/")
+    async def root_get():
+        return {"status": "ok"}
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        return RedirectResponse(
+            url=os.getenv("PUBLIC_FAVICON_URL", "https://mininode.io/favicon.ico")
+        )
+
+    # Routers existentes (se incluyen si están disponibles)
+    try:
+        from mininode_api.api.auth_check import router as auth_router
+        app.include_router(auth_router)
+    except Exception as e:
+        logging.exception("Failed to include auth_check router: %s", e)
+
+    try:
+        from mininode_api.api.write import router as write_router
+        app.include_router(write_router)
+    except Exception as e:
+        logging.exception("Failed to include write router: %s", e)
+
+    try:
+        from mininode_api.api.capture import router as capture_router
+        app.include_router(capture_router)
+    except Exception as e:
+        logging.exception("Failed to include capture router: %s", e)
+
+    # Routers nuevos (upload + orquestador de pipelines)
+    try:
+        from mininode_api.api.files import router as files_router
+        app.include_router(files_router)
+    except Exception as e:
+        logging.exception("Failed to include files router: %s", e)
+
+    try:
+        from mininode_api.api.pipeline_orchestrator import router as pipeline_router
+        app.include_router(pipeline_router)
+    except Exception as e:
+        logging.exception("Failed to include pipeline_orchestrator router: %s", e)
+
+    # Analyze: intenta incluir router; si no existe, define fallback /analyze/summary
+    analyze_router_included = False
+    try:
+        from mininode_api.api.analyze import router as analyze_router
+        app.include_router(analyze_router)
+        analyze_router_included = True
+    except Exception as e:
+        logging.exception("Failed to include analyze router: %s", e)
+
+    if not analyze_router_included:
+        # Modelos y servicio reales
+        try:
+            from mininode_api.models.analyze import SummaryIn, SummaryOut
+            from mininode_api.core.analyze_service import analyze_summary_service
+        except Exception as e:
+            logging.exception("Analyze fallback unavailable: %s", e)
+            SummaryIn = SummaryOut = None
+            analyze_summary_service = None  # type: ignore
+
+        MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")
+
+        async def require_api_key(x_api_key: str = Header(default="")):
+            # Guardia mínima; si no hay clave configurada, permite paso (útil en dev).
+            if MININODE_API_KEY and x_api_key != MININODE_API_KEY:
+                raise HTTPException(status_code=401, detail="Invalid X-Api-Key")
+            return True
+
+        if SummaryIn and SummaryOut and analyze_summary_service:
+            @app.post("/analyze/summary", response_model=SummaryOut, dependencies=[Depends(require_api_key)])
+            async def analyze_summary(body: SummaryIn) -> SummaryOut:  # type: ignore[valid-type]
+                return await analyze_summary_service(body)  # type: ignore[misc]
+
+    return app
+
+
+# Punto de entrada para Uvicorn/Render
+app = create_app()
