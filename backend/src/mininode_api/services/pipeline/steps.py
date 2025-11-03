@@ -34,6 +34,8 @@ def step_upload(ctx: Dict[str, Any], args: Dict[str, Any]) -> Tuple[Dict[str, An
             f.write(chunk)
             chunk = upf.file.read(1024 * 1024)
 
+    ctx["file_id"] = file_id
+    
     out = {"file_id": file_id, "filename": getattr(upf, "filename", None),
            "mime": getattr(upf, "content_type", None), "size": size}
     return out, elapsed_ms(t0)
