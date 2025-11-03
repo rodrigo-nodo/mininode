@@ -20,6 +20,8 @@ def execute_flow(flow_name: str, *, ctx: Dict[str, Any]) -> Tuple[List[Dict[str,
             data, t_ms = fn(ctx, spec.args or {})
             steps_out.append({"name": spec.name, "ok": True, "time_ms": t_ms, "data": data})
             last_data = data
+            if isinstance(data, dict):
+                ctx.update(data) 
         except Exception as e:
             steps_out.append({"name": spec.name, "ok": False, "time_ms": 0,
                               "error": {"code":"STEP_ERROR","message": str(e)}})
