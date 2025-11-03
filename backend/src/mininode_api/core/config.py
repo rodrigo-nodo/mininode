@@ -25,5 +25,6 @@ def get_settings() -> Settings:
 
 API_VERSION = "v1"
 DATA_DIR = os.getenv("DATA_DIR", "./storage")
+MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")
 # MININODE_API_KEY = os.getenv("MININODE_API_KEY", "")  # ya lo tienes; si no, aÃ±Ã¡delo
 
