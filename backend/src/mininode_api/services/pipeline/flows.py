@@ -11,11 +11,14 @@ class StepSpec:
 
 STEP_REGISTRY: Dict[str, Callable] = {
     "upload": ST.step_upload,
+    "optimize": ST.step_optimize,
 }
 
 class S:
     @staticmethod
     def upload(**kwargs): return StepSpec("upload", kwargs)
+    @staticmethod
+    def optimize(**kwargs): return StepSpec("optimize", kwargs)
 
 FLOWS: Dict[str, List[StepSpec]] = {
     "p1_upload_v1": [ S.upload() ],

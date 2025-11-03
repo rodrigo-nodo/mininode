@@ -1,6 +1,6 @@
 # Steps atómicos. Hoy sólo upload (pipeline 1).
 from __future__ import annotations
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 from pathlib import Path
 from ...core import config
 from ...core.measure import now_ms, elapsed_ms
