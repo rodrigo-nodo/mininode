@@ -70,6 +70,12 @@ def create_app() -> FastAPI:
         logging.exception("Failed to include files router: %s", e)
 
     try:
+        from mininode_api.api.imaging import router as imaging_router   # ← NUEVO
+        app.include_router(imaging_router)
+    except Exception as e:
+        logging.exception("Failed to include imaging router: %s", e)
+        
+    try:
         from mininode_api.api.pipeline_orchestrator import router as pipeline_router
         app.include_router(pipeline_router)
     except Exception as e:

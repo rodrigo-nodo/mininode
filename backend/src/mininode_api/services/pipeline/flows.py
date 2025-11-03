@@ -19,4 +19,8 @@ class S:
 
 FLOWS: Dict[str, List[StepSpec]] = {
     "p1_upload_v1": [ S.upload() ],
+    "p2_upload_opt_v1": [
+        S.upload(),
+        S.optimize(ops=["deskew","binarize"])
+        ],
 }
