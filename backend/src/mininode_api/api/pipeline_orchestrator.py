@@ -1,11 +1,13 @@
-# backend/src/mininode_api/api/pipeline_orchestrator.py
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException
 from typing import Dict, Any
 from ..core import config
 from ..core.measure import now_ms, elapsed_ms
 from ..core.ids import new_id
-from ..models.api_base import ApiResponse, MetaObj, ErrorObj
-from ..models.pipeline import PipelineRunOut, StepResult, FlowsOut
+from ..models.api_base import ErrorObj, MetaObj
+from ..models.pipeline import (
+    PipelineRunOut, StepResult, FlowsOut,
+    ApiResponseFlows, ApiResponsePipeline
+)
 from ..services.pipeline.runner import execute_flow
 from ..services.pipeline.flows import FLOWS
 
@@ -17,23 +19,23 @@ def _enforce_api_key(x_api_key: str | None):
     if not x_api_key or x_api_key != config.MININODE_API_KEY:
         raise HTTPException(status_code=401, detail="invalid api key")
 
-@router.get("/flows", response_model=ApiResponse[FlowsOut])
+@router.get("/flows", response_model=ApiResponseFlows)
 async def list_flows(x_api_key: str | None = Header(default=None, convert_underscores=False)):
     _enforce_api_key(x_api_key)
     try:
         data = FlowsOut(flows=list(FLOWS.keys()))
-        return ApiResponse(
+        return ApiResponseFlows(
             ok=True, time_ms=0, data=data, error=None,
             meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
         )
     except Exception as e:
-        return ApiResponse(
+        return ApiResponseFlows(
             ok=False, time_ms=0, data=None,
             error=ErrorObj(code="FLOW_ENUM_ERROR", message=str(e)),
             meta=MetaObj(request_id=new_id("req"), version=config.API_VERSION),
         )
 
-@router.post("/flow/{flow_name}", response_model=ApiResponse[PipelineRunOut])
+@router.post("/flow/{flow_name}", response_model=ApiResponsePipeline)
 async def run_flow(
     flow_name: str,
     file: UploadFile | None = File(default=None),
@@ -49,7 +51,7 @@ async def run_flow(
     try:
         steps_raw, last_data = execute_flow(flow_name, ctx=ctx)
     except Exception as e:
-        return ApiResponse(
+        return ApiResponsePipeline(
             ok=False,
             time_ms=elapsed_ms(t0_total),
             data=None,
@@ -69,7 +71,7 @@ async def run_flow(
     ]
 
     ok_global = all(s.ok for s in steps_out)
-    return ApiResponse(
+    return ApiResponsePipeline(
         ok=ok_global,
         time_ms=elapsed_ms(t0_total),
         data=PipelineRunOut(steps=steps_out, result=last_data if ok_global else None),
