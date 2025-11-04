@@ -8,10 +8,11 @@ from ..core.measure import now_ms, elapsed_ms
 from ..core.ids import new_id
 from ..models.api_base import ApiResponse, MetaObj, ErrorObj
 from ..models.imaging import OptimizeIn, OptimizeOut, OptimizeMetrics
+from ..services.pipeline.steps import _sha256 as _sha256_file, _apply_ops_and_save, SUPPORTED_OPS
 
 router = APIRouter(prefix="/image", tags=["image"])
 
-SUPPORTED_OPS = {"deskew", "binarize", "denoise"}
+SUPPORTED_OPS = SUPPORTED_OPS
 
 def _enforce_api_key(x_api_key: str | None):
     if not config.MININODE_API_KEY:
@@ -58,19 +59,17 @@ async def optimize_image(
 
     # Antes
     bytes_before = src.stat().st_size
-    sha_before = _sha256(src)
+    sha_before = _sha256_file(src)
 
-    # Copia (placeholder de optimize real)
+    # Optimización real (deskew/binarize/denoise + re-encode)
     dst_id = new_id("opt")
     dst = _bucket_dir("optimized").joinpath(dst_id)
-    with open(src, "rb") as r, open(dst, "wb") as w:
-        for chunk in iter(lambda: r.read(1024 * 1024), b""):
-            w.write(chunk)
+    _ = _apply_ops_and_save(src, dst, ops_applied)
 
     # Después
     bytes_after = dst.stat().st_size
-    sha_after = _sha256(dst)
-    size_delta_pct = round(((bytes_after - max(1, bytes_before)) / max(1, bytes_before)) * 100.0, 2)
+    sha_after = _sha256_file(dst)
+    size_delta_pct = round(((bytes_after - bytes_before) / max(1, bytes_before)) * 100.0, 2)
     changed = (sha_before != sha_after)
 
     out = OptimizeOut(
