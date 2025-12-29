@@ -9,6 +9,7 @@ httpx[http2]>=0.27
 trafilatura==1.9.0
 beautifulsoup4==4.12.3
 lxml>=5.1
+lxml-html-clean>=0.3.1
 pytesseract>=0.3.10,<0.4
 Pillow>=10,<12
 PyYAML>=6,<7

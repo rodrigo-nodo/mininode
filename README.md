@@ -1,7 +1,9 @@
 # Mininode (monorepo)
 
-- `frontend/`: sitio estático + Functions (proxy) y UI (Agents/SaaS)
+- `frontend/`: sitio estático + Functions (proxy) y UI (Agents/SaaS) 
+  - html + css + js
 - `backend/`: FastAPI app (`mininode_api`) bajo `backend/src`
+  - python + postgreSQL
 
 ## Novedades relevantes (MVP Capture)
 - Front Capture (SaaS): `frontend/saas/capture/index.html`
@@ -46,3 +48,19 @@ See more details in `backend/README.md`.
 
 ## Licencia
 MIT – ver archivo `LICENSE`. © 2025 Rodrigo.
+
+
+
+## Anexo:
+### Subdominios
+Se define usar subdominios por cada servicio (saas1.mininode.io) en vez de rutas mininode.io/saas1 (subruta):
+
+saas1.mininode.io (subdominio):
+- Aisla cachés, cookies y CORS; DNS y certificados separados.
+- Despliegues más independientes; cada Pages/Worker puede tener su dominio.
+- URLs limpias y evitas colisiones de rutas/estáticos entre apps.
+
+mininode.io/saas1 (subruta):
+- Un solo dominio/certificado; puede simplificar marketing/SEO.
+- Necesitas un router/rewrite en Cloudflare que sirva cada app por carpeta, y cuidar paths relativos de assets.
+- Cookies/caché se comparten si no las segmentas.
