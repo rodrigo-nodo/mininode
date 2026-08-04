@@ -3,26 +3,77 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacidad — Mininode</title>
-  <meta name="description" content="Política de privacidad minimal del MVP.">
+  <title>Mininode Privacy — Diagnóstico inicial de privacidad</title>
+  <meta name="description" content="Obtén un diagnóstico inicial de privacidad para tu sitio web en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
-<main>
-  <section class="container doc">
-    <h1>Privacidad</h1>
-    <p><strong>Datos que tratamos.</strong> Email si nos escribes; métricas anónimas de uso si habilitamos analítica.</p>
-    <p><strong>Fines.</strong> Responder consultas y mejorar el servicio.</p>
-    <p><strong>Proveedores.</strong> Cloudflare (hosting/CDN); correo reenviado mediante Email Routing; analítica opcional.</p>
-    <p><strong>Conservación.</strong> El tiempo mínimo necesario.</p>
-    <p><strong>Tus derechos.</strong> Solicita acceso o eliminación escribiendo a <a href="mailto:contact@mininode.io">contact@mininode.io</a>.</p>
-    <p><strong>Cookies.</strong> Si activamos analítica, usaremos cookies con IP anonimizada.</p>
+<main class="privacy-page">
+  <section class="privacy-hero container" aria-labelledby="privacy-title">
+    <div class="privacy-hero__content">
+      <p class="eyebrow">Diagnóstico gratuito</p>
+      <h1 id="privacy-title">Mininode Privacy</h1>
+      <p class="privacy-subtitle">Obtén un diagnóstico inicial de privacidad para tu sitio web en menos de un minuto.</p>
+
+      <form class="privacy-form" id="privacy-form">
+        <label for="site-url">URL del sitio web</label>
+        <div class="privacy-form__row">
+          <input id="site-url" name="siteUrl" type="text" inputmode="url" placeholder="https://tusitio.com" autocomplete="url" required>
+          <button class="btn btn--primary" type="submit" id="privacy-submit">Obtener diagnóstico gratuito</button>
+        </div>
+        <p class="privacy-note">Sin registro. Sin tarjeta de crédito. Resultado en menos de un minuto.</p>
+      </form>
+    </div>
+  </section>
+
+  <section class="container privacy-output" aria-live="polite" aria-atomic="true">
+    <div class="privacy-loading card" id="privacy-loading" hidden>
+      <span class="privacy-spinner" aria-hidden="true"></span>
+      <p>Analizando señales visibles del sitio web...</p>
+    </div>
+
+    <article class="privacy-result card" id="privacy-result" hidden>
+      <div class="privacy-result__header">
+        <div>
+          <p class="eyebrow">Resultado simulado</p>
+          <h2>Diagnóstico preliminar</h2>
+        </div>
+        <span class="risk-badge">Riesgo: Medio</span>
+      </div>
+
+      <dl class="result-meta">
+        <div>
+          <dt>URL analizada</dt>
+          <dd id="analyzed-url">—</dd>
+        </div>
+      </dl>
+
+      <div class="executive-summary">
+        <h3>Resumen ejecutivo</h3>
+        <p>Se detectaron formularios que podrían recopilar datos personales. No se encontró una política de privacidad visible y existen oportunidades de mejora relacionadas con consentimiento y transparencia.</p>
+      </div>
+
+      <div class="privacy-checklist">
+        <h3>Checklist recomendado</h3>
+        <ul>
+          <li>Agregar una política de privacidad.</li>
+          <li>Revisar el consentimiento de los formularios.</li>
+          <li>Revisar el uso de cookies.</li>
+          <li>Identificar los datos personales capturados.</li>
+          <li>Definir un responsable del tratamiento de datos.</li>
+        </ul>
+      </div>
+
+      <p class="privacy-disclaimer">Este es un diagnóstico preliminar basado únicamente en señales visibles del sitio web. No reemplaza una evaluación completa del tratamiento de datos personales.</p>
+      <button class="btn privacy-secondary" type="button">Conocer diagnóstico completo</button>
+    </article>
   </section>
 </main>
 <div data-include="../partials/footer.html"></div>
 </body>
 </html>
-
