@@ -3,26 +3,145 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacidad — Mininode</title>
-  <meta name="description" content="Política de privacidad minimal del MVP.">
+  <title>Mininode Privacy — Diagnóstico inicial de privacidad</title>
+  <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="styles.css">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
-<main>
-  <section class="container doc">
-    <h1>Privacidad</h1>
-    <p><strong>Datos que tratamos.</strong> Email si nos escribes; métricas anónimas de uso si habilitamos analítica.</p>
-    <p><strong>Fines.</strong> Responder consultas y mejorar el servicio.</p>
-    <p><strong>Proveedores.</strong> Cloudflare (hosting/CDN); correo reenviado mediante Email Routing; analítica opcional.</p>
-    <p><strong>Conservación.</strong> El tiempo mínimo necesario.</p>
-    <p><strong>Tus derechos.</strong> Solicita acceso o eliminación escribiendo a <a href="mailto:contact@mininode.io">contact@mininode.io</a>.</p>
-    <p><strong>Cookies.</strong> Si activamos analítica, usaremos cookies con IP anonimizada.</p>
+<main class="privacy-page">
+  <section class="privacy-shell container" aria-labelledby="privacy-title">
+    <nav class="privacy-local-nav" aria-label="Mininode Privacy">
+      <a class="privacy-local-brand" href="./" aria-label="Mininode Privacy">Mininode Privacy</a>
+      <div class="privacy-local-links">
+        <a href="#how-it-works" id="help-link">Ayuda</a>
+      </div>
+    </nav>
+
+    <div class="privacy-hero">
+      <p class="privacy-tag">Diagnóstico inicial</p>
+      <h1 id="privacy-title">Conoce el nivel de preparación de tu sitio web frente a la <span>protección de datos</span>.</h1>
+      <p class="privacy-subtitle">Normalmente en menos de un minuto.</p>
+
+      <form class="privacy-form" id="privacy-form">
+        <label for="site-url">URL del sitio web</label>
+        <input id="site-url" name="siteUrl" type="text" inputmode="url" placeholder="https://tusitio.cl" autocomplete="url" aria-describedby="url-error" required>
+        <p class="privacy-error" id="url-error" hidden>Ingresa una URL válida.<br>Ejemplo: https://tusitio.cl</p>
+        <button class="btn btn--primary privacy-primary" type="submit" id="privacy-submit">Iniciar diagnóstico <span aria-hidden="true">→</span></button>
+      </form>
+
+      <p class="privacy-trust">Diagnóstico inicial gratuito <span>·</span> Sin registro <span>·</span> Solo analizamos información pública</p>
+      <button class="privacy-help" type="button" id="how-it-works">¿Cómo funciona el diagnóstico?</button>
+    </div>
+  </section>
+
+  <section class="container privacy-output">
+    <div class="privacy-loading" id="privacy-loading" role="status" aria-live="polite" hidden>
+      <span class="privacy-loading__dot" aria-hidden="true"></span>
+      <p>Analizando tu sitio...</p>
+    </div>
+
+    <article class="privacy-result" id="privacy-result" hidden>
+      <div class="privacy-result__top">
+        <div>
+          <p class="privacy-result__label">Resultado inicial</p>
+          <h2>Diagnóstico inicial</h2>
+        </div>
+        <div class="privacy-score" aria-label="Privacy Score estimado: 58 de 100. Estado: En preparación.">
+          <span>Privacy Score</span>
+          <strong>58 / 100</strong>
+          <em>En preparación</em>
+        </div>
+      </div>
+
+      <dl class="privacy-meta">
+        <div>
+          <dt>URL analizada</dt>
+          <dd id="analyzed-url">—</dd>
+        </div>
+        <div>
+          <dt>Estado</dt>
+          <dd>En preparación</dd>
+        </div>
+      </dl>
+
+      <div class="privacy-result__note">
+        <p>Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.</p>
+        <p>No representa un porcentaje de cumplimiento de la ley.</p>
+      </div>
+
+      <div class="privacy-columns">
+        <section aria-labelledby="signals-title">
+          <h3 id="signals-title">Señales detectadas</h3>
+          <ul class="privacy-list privacy-list--plain">
+            <li>Formularios visibles</li>
+            <li>Cookies detectadas</li>
+            <li>Política de privacidad no encontrada</li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="actions-title">
+          <h3 id="actions-title">Acciones recomendadas</h3>
+          <ol class="privacy-list privacy-list--numbered">
+            <li>Agregar una política de privacidad visible.</li>
+            <li>Revisar el consentimiento de los formularios.</li>
+            <li>Revisar el uso de cookies.</li>
+          </ol>
+        </section>
+      </div>
+
+      <p class="privacy-upgrade-note">Este diagnóstico inicial muestra las señales y acciones más relevantes. El diagnóstico completo profundiza en los hallazgos y prioridades.</p>
+
+      <div class="privacy-next">
+        <div>
+          <h3>Diagnóstico completo</h3>
+          <p class="privacy-price" aria-label="Precio: 39.900 pesos chilenos">$39.900 CLP</p>
+          <p class="privacy-price-note">Pago único. Sin suscripción.</p>
+          <p>Profundiza en los hallazgos de tu sitio y recibe un análisis detallado con prioridades y acciones recomendadas.</p>
+        </div>
+        <ul class="privacy-paid-list">
+          <li>Privacy Score detallado.</li>
+          <li>Explicación de cada hallazgo.</li>
+          <li>Acciones priorizadas.</li>
+          <li>Recomendaciones relacionadas con la protección de datos.</li>
+          <li>Reporte descargable.</li>
+        </ul>
+        <a class="btn privacy-secondary" href="/privacy/diagnostico-completo/">Conocer el diagnóstico completo</a>
+      </div>
+    </article>
   </section>
 </main>
+
+<div class="privacy-modal" id="privacy-modal" hidden>
+  <div class="privacy-modal__backdrop" data-modal-close></div>
+  <section class="privacy-modal__panel" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" tabindex="-1">
+    <button class="privacy-modal__close" type="button" aria-label="Cerrar" data-modal-close>×</button>
+    <h2 id="privacy-modal-title">¿Cómo funciona el diagnóstico?</h2>
+
+    <div class="privacy-modal__block">
+      <h3>Analizamos</h3>
+      <p>Información pública y visible del sitio web, como formularios, cookies, políticas de privacidad y textos relacionados con el tratamiento de datos personales.</p>
+    </div>
+
+    <div class="privacy-modal__block">
+      <h3>No analizamos</h3>
+      <p>Bases de datos, sistemas internos, archivos privados ni información protegida por autenticación.</p>
+    </div>
+
+    <div class="privacy-modal__block">
+      <h3>Resultado</h3>
+      <p>Privacy Score, señales detectadas y acciones iniciales recomendadas.</p>
+    </div>
+
+    <p class="privacy-modal__highlight">Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales.</p>
+    <p><strong>No constituye una certificación legal ni una auditoría completa.</strong></p>
+  </section>
+</div>
+
 <div data-include="../partials/footer.html"></div>
 </body>
 </html>
-
