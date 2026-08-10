@@ -1,0 +1,143 @@
+{
+  "framework": {
+    "id": "mininode-privacy-framework",
+    "version": "0.1",
+    "name": "Marco de Evaluación Mininode Privacy",
+    "description": "Marco inicial para evaluar señales públicas visibles de preparación frente a la protección de datos personales.",
+    "scope": {
+      "includes": [
+        "Páginas públicas del sitio web",
+        "Políticas visibles",
+        "Formularios visibles",
+        "Información o consentimiento asociado a formularios",
+        "Información visible sobre cookies",
+        "Canales de contacto",
+        "Uso de HTTPS",
+        "Coherencia general de señales visibles de privacidad"
+      ],
+      "excludes": [
+        "Bases de datos",
+        "Archivos internos",
+        "Contratos",
+        "CRM",
+        "Excel",
+        "WhatsApp",
+        "Procesos internos",
+        "Medidas técnicas de seguridad no visibles",
+        "Información protegida mediante autenticación"
+      ]
+    },
+    "allowed_values": {
+      "impact": [
+        "bajo",
+        "medio",
+        "alto",
+        "muy_alto"
+      ],
+      "automatable": [
+        "si",
+        "parcial",
+        "ia",
+        "manual"
+      ]
+    },
+    "controls": [
+      {
+        "code": "PRV-001",
+        "domain": "Transparencia",
+        "name": "Política de privacidad visible",
+        "impact": "muy_alto",
+        "automatable": "si",
+        "expected_evidence": [
+          "Enlace o referencia visible a una política de privacidad desde el sitio"
+        ],
+        "impact_reason": "Es el principal mecanismo público mediante el cual una organización informa sobre el tratamiento de datos personales.",
+        "base_recommendation": "Publicar una política de privacidad accesible desde las páginas principales del sitio."
+      },
+      {
+        "code": "PRV-002",
+        "domain": "Transparencia",
+        "name": "Política de privacidad accesible",
+        "impact": "medio",
+        "automatable": "si",
+        "expected_evidence": [
+          "URL válida, accesible y con contenido relacionado con privacidad"
+        ],
+        "impact_reason": "Una política existente pierde utilidad si las personas no pueden encontrarla o acceder a ella correctamente.",
+        "base_recommendation": "Verificar que el enlace sea visible, funcione correctamente y dirija a contenido pertinente."
+      },
+      {
+        "code": "PRV-101",
+        "domain": "Formularios",
+        "name": "Formularios que recopilan datos personales",
+        "impact": "alto",
+        "automatable": "si",
+        "expected_evidence": [
+          "Formulario visible con campos como nombre, correo, teléfono, dirección u otros datos personales"
+        ],
+        "impact_reason": "Los formularios constituyen uno de los principales puntos visibles de recopilación de datos personales.",
+        "base_recommendation": "Revisar qué datos se solicitan y limitar la recopilación a aquellos necesarios para la finalidad informada."
+      },
+      {
+        "code": "PRV-104",
+        "domain": "Formularios",
+        "name": "Información o consentimiento asociado al formulario",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "expected_evidence": [
+          "Checkbox, aviso, enlace o texto relacionado con privacidad antes del envío"
+        ],
+        "impact_reason": "La recopilación de datos debe estar acompañada de información clara y, cuando corresponda, de un mecanismo válido de consentimiento.",
+        "base_recommendation": "Incorporar información clara sobre el tratamiento de datos y un mecanismo de consentimiento cuando corresponda."
+      },
+      {
+        "code": "PRV-201",
+        "domain": "Cookies",
+        "name": "Información visible sobre cookies",
+        "impact": "medio",
+        "automatable": "parcial",
+        "expected_evidence": [
+          "Banner, aviso, panel de preferencias o texto informativo sobre cookies"
+        ],
+        "impact_reason": "Permite informar sobre tecnologías de almacenamiento o seguimiento utilizadas en el sitio.",
+        "base_recommendation": "Informar el uso de cookies y habilitar mecanismos de gestión de preferencias cuando corresponda."
+      },
+      {
+        "code": "PRV-301",
+        "domain": "Contacto",
+        "name": "Canal de contacto visible",
+        "impact": "bajo",
+        "automatable": "si",
+        "expected_evidence": [
+          "Correo, teléfono, formulario o dirección de contacto accesible"
+        ],
+        "impact_reason": "Facilita que las personas puedan realizar consultas o solicitudes relacionadas con sus datos.",
+        "base_recommendation": "Publicar un canal de contacto claro y fácilmente accesible."
+      },
+      {
+        "code": "PRV-501",
+        "domain": "Seguridad visible",
+        "name": "Uso de HTTPS",
+        "impact": "muy_alto",
+        "automatable": "si",
+        "expected_evidence": [
+          "Sitio cargado mediante HTTPS y certificado válido"
+        ],
+        "impact_reason": "HTTPS protege la transmisión de información y constituye una medida básica esperada para cualquier sitio que recopile datos.",
+        "base_recommendation": "Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros."
+      },
+      {
+        "code": "PRV-701",
+        "domain": "Preparación",
+        "name": "Coherencia general de señales de privacidad",
+        "impact": "alto",
+        "automatable": "ia",
+        "expected_evidence": [
+          "Conjunto de señales visibles: políticas, formularios, avisos, contacto y consistencia entre páginas"
+        ],
+        "impact_reason": "Permite estimar de forma global el nivel visible de preparación del sitio, sin reemplazar la evaluación de controles específicos.",
+        "base_recommendation": "Fortalecer la consistencia general de las prácticas visibles de privacidad y transparencia."
+      }
+    ]
+  }
+}
