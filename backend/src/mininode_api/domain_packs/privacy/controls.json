@@ -1,0 +1,48 @@
+{
+  "version": "0.1",
+  "controls": [
+    {
+      "code": "PRV-001",
+      "title": "Aviso de privacidad visible",
+      "type": "evaluation",
+      "impact": "alto"
+    },
+    {
+      "code": "PRV-002",
+      "title": "Información clara sobre el tratamiento",
+      "type": "conditional_evaluation",
+      "impact": "medio"
+    },
+    {
+      "code": "PRV-101",
+      "title": "Contexto del tratamiento de datos",
+      "type": "context",
+      "impact": "bajo",
+      "score_weight": 0
+    },
+    {
+      "code": "PRV-104",
+      "title": "Consentimiento cuando corresponde",
+      "type": "conditional_evaluation",
+      "impact": "muy_alto"
+    },
+    {
+      "code": "PRV-201",
+      "title": "Gestión de derechos cuando corresponde",
+      "type": "conditional_evaluation",
+      "impact": "alto"
+    },
+    {
+      "code": "PRV-301",
+      "title": "Medidas visibles de protección",
+      "type": "evaluation",
+      "impact": "alto"
+    },
+    {
+      "code": "PRV-501",
+      "title": "Canal de contacto de privacidad",
+      "type": "evaluation",
+      "impact": "alto"
+    }
+  ]
+}
