@@ -1,0 +1,159 @@
+{
+  "pack": "mininode-privacy",
+  "version": "0.1",
+  "controls": [
+    {
+      "code": "PRV-001",
+      "domain": "Transparencia",
+      "name": "Política de privacidad visible",
+      "impact": "muy_alto",
+      "automatable": "si",
+      "control_type": "evaluation",
+      "type_reason": "La presencia o ausencia de una política visible representa directamente una señal relevante de transparencia.",
+      "expected_evidence": [
+        "enlace visible relacionado con privacidad",
+        "referencia visible a una política de privacidad o tratamiento de datos"
+      ],
+      "base_recommendation": "Publicar una política de privacidad accesible desde las páginas principales del sitio.",
+      "criteria": {
+        "detected": "Se identifica un enlace o referencia visible claramente asociada a una política de privacidad o tratamiento de datos personales.",
+        "not_detected": "No se identifica una política o referencia equivalente en las páginas públicas revisadas.",
+        "not_evaluable": "Una limitación técnica impide revisar adecuadamente el sitio."
+      }
+    },
+    {
+      "code": "PRV-002",
+      "domain": "Transparencia",
+      "name": "Política de privacidad accesible",
+      "impact": "medio",
+      "automatable": "si",
+      "control_type": "conditional_evaluation",
+      "type_reason": "Solo puede evaluarse si PRV-001 detectó una política visible; una vez aplicable, su accesibilidad sí influye en la evaluación.",
+      "depends_on": "PRV-001",
+      "applicability": "Solo aplica cuando PRV-001 = detected.",
+      "expected_evidence": [
+        "URL de la política",
+        "respuesta HTTP satisfactoria",
+        "contenido claramente relacionado con privacidad o tratamiento de datos"
+      ],
+      "base_recommendation": "Verificar que el enlace sea visible, funcione correctamente y dirija a contenido pertinente.",
+      "criteria": {
+        "detected": "PRV-001 fue detectado, el enlace abre correctamente y el contenido corresponde claramente a una política de privacidad o tratamiento de datos personales.",
+        "partial": "La política existe, pero presenta problemas de acceso, claridad o contenido.",
+        "not_detected": "Existe un enlace que aparenta corresponder a una política, pero no conduce a una política utilizable.",
+        "not_applicable": "PRV-001 = not_detected.",
+        "not_evaluable": "Una limitación técnica impide comprobar la política."
+      }
+    },
+    {
+      "code": "PRV-101",
+      "domain": "Formularios",
+      "name": "Formularios que recopilan datos personales",
+      "impact": "alto",
+      "automatable": "si",
+      "control_type": "context",
+      "type_reason": "Tener formularios no constituye por sí mismo una brecha; el control identifica un punto de recopilación y activa controles posteriores.",
+      "score_weight": 0,
+      "expected_evidence": [
+        "formulario público",
+        "campos potencialmente personales como nombre, email, teléfono, RUT, dirección o texto libre"
+      ],
+      "base_recommendation": "Revisar qué datos se solicitan y limitar la recopilación a aquellos necesarios para la finalidad informada.",
+      "criteria": {
+        "detected": "Se identifica al menos un formulario público que solicita uno o más datos potencialmente personales.",
+        "not_detected": "Se revisan las páginas públicas consideradas y no se identifican formularios que soliciten datos potencialmente personales.",
+        "not_evaluable": "Una limitación técnica impide revisar adecuadamente los formularios del sitio."
+      }
+    },
+    {
+      "code": "PRV-104",
+      "domain": "Formularios",
+      "name": "Información o consentimiento asociado al formulario",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "control_type": "conditional_evaluation",
+      "type_reason": "Solo se evalúa cuando existe un formulario que recopila datos personales; una vez aplicable, la información asociada sí es relevante.",
+      "depends_on": "PRV-101",
+      "applicability": "Solo aplica cuando PRV-101 = detected.",
+      "expected_evidence": [
+        "texto informativo asociado al formulario",
+        "enlace a política de privacidad",
+        "checkbox",
+        "mecanismo de consentimiento cuando corresponda"
+      ],
+      "base_recommendation": "Incorporar información clara sobre el tratamiento de datos y un mecanismo de consentimiento cuando corresponda.",
+      "criteria": {
+        "detected": "El formulario muestra información clara sobre el tratamiento de datos y, cuando corresponde, incorpora un mecanismo de consentimiento visible antes del envío.",
+        "partial": "Existe algún texto, enlace, checkbox o aviso relacionado con privacidad, pero es incompleto, ambiguo, poco visible o no cubre claramente el tratamiento o consentimiento necesario.",
+        "not_detected": "El formulario solicita datos potencialmente personales y no se identifica información asociada sobre su tratamiento ni mecanismo de consentimiento cuando corresponde.",
+        "not_applicable": "PRV-101 = not_detected.",
+        "not_evaluable": "Una limitación técnica impide revisar adecuadamente el contenido o comportamiento del formulario."
+      }
+    },
+    {
+      "code": "PRV-201",
+      "domain": "Cookies",
+      "name": "Información visible sobre cookies",
+      "impact": "medio",
+      "automatable": "parcial",
+      "control_type": "conditional_evaluation",
+      "type_reason": "Solo tiene sentido evaluarlo cuando se detectan cookies o tecnologías relevantes dentro del alcance del diagnóstico.",
+      "applicability": "Solo aplica cuando se detectan cookies o tecnologías relevantes dentro del alcance del diagnóstico.",
+      "expected_evidence": [
+        "banner o aviso de cookies",
+        "texto informativo sobre cookies",
+        "panel o mecanismo de preferencias cuando corresponda"
+      ],
+      "base_recommendation": "Informar el uso de cookies y habilitar mecanismos de gestión de preferencias cuando corresponda.",
+      "criteria": {
+        "detected": "Se detecta información visible sobre el uso de cookies y, cuando corresponde, existe un mecanismo para informar o gestionar las preferencias del usuario.",
+        "partial": "Existe banner, aviso o información sobre cookies, pero es incompleta, poco clara o el mecanismo de gestión disponible parece limitado.",
+        "not_detected": "Se detectan cookies o tecnologías relevantes, pero no se identifica información visible ni mecanismo asociado cuando corresponde.",
+        "not_applicable": "No se detectan cookies o tecnologías que hagan necesario evaluar este control dentro del alcance del diagnóstico.",
+        "not_evaluable": "Una limitación técnica impide determinar adecuadamente el uso de cookies o revisar los mecanismos asociados."
+      }
+    },
+    {
+      "code": "PRV-301",
+      "domain": "Contacto",
+      "name": "Canal de contacto visible",
+      "impact": "bajo",
+      "automatable": "si",
+      "control_type": "evaluation",
+      "type_reason": "La existencia de un canal público y accesible es una señal directa de transparencia y posibilidad de contacto con la organización.",
+      "expected_evidence": [
+        "correo",
+        "teléfono",
+        "formulario de contacto",
+        "dirección",
+        "otro canal público accesible"
+      ],
+      "base_recommendation": "Publicar un canal de contacto claro y fácilmente accesible.",
+      "criteria": {
+        "detected": "Se identifica al menos un canal de contacto público y accesible.",
+        "not_detected": "No se identifica ningún canal de contacto público en las páginas revisadas.",
+        "not_evaluable": "Una limitación técnica impide revisar adecuadamente la información de contacto."
+      }
+    },
+    {
+      "code": "PRV-501",
+      "domain": "Seguridad visible",
+      "name": "Uso de HTTPS",
+      "impact": "muy_alto",
+      "automatable": "si",
+      "control_type": "evaluation",
+      "type_reason": "HTTPS es una señal técnica observable que puede evaluarse directamente y aporta al nivel de preparación visible del sitio.",
+      "expected_evidence": [
+        "URL HTTPS",
+        "certificado TLS válido"
+      ],
+      "base_recommendation": "Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros.",
+      "criteria": {
+        "detected": "El sitio es accesible mediante HTTPS y presenta un certificado TLS válido para el dominio evaluado.",
+        "partial": "El sitio utiliza HTTPS, pero se detecta una anomalía visible relevante, por ejemplo mixed content o redirecciones inconsistentes entre HTTP y HTTPS.",
+        "not_detected": "El sitio se encuentra disponible mediante HTTP sin una protección HTTPS válida, o HTTPS presenta un certificado inválido que impide establecer una conexión segura normal.",
+        "not_evaluable": "Una limitación técnica impide comprobar de manera confiable HTTPS/TLS."
+      }
+    }
+  ]
+}
