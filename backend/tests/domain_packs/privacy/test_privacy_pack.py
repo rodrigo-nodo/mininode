@@ -9,74 +9,199 @@ BACKEND_SRC = Path(__file__).resolve().parents[3] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.domain_packs.privacy.evaluator import (  # noqa: E402
-    evaluate_privacy,
+    evaluate_control,
     load_controls,
 )
 from mininode_api.domain_packs.privacy.prioritization import (  # noqa: E402
     prioritize_findings,
 )
-from mininode_api.domain_packs.privacy.scoring import score_privacy  # noqa: E402
+from mininode_api.domain_packs.privacy.scoring import (  # noqa: E402
+    load_scoring,
+    score_privacy,
+)
 
 
-SCENARIO = {
-    "PRV-001": "detected",
-    "PRV-002": "partial",
-    "PRV-101": "detected",
-    "PRV-104": "not_detected",
-    "PRV-201": "not_applicable",
-    "PRV-301": "detected",
-    "PRV-501": "detected",
+EXPECTED = {
+    "PRV-001": ("Política de privacidad visible", "muy_alto", "evaluation"),
+    "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
+    "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
+    "PRV-104": ("Información o consentimiento asociado al formulario", "muy_alto", "conditional_evaluation"),
+    "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
+    "PRV-301": ("Canal de contacto visible", "bajo", "evaluation"),
+    "PRV-501": ("Uso de HTTPS", "muy_alto", "evaluation"),
 }
 
 
-def test_control_catalog_has_the_closed_v01_definition():
+def evaluated_scenario():
+    results = {}
+    results["PRV-001"] = evaluate_control("PRV-001", {"policy_visible": True})
+    results["PRV-002"] = evaluate_control(
+        "PRV-002",
+        {"policy_link_found": True, "policy_accessible": True},
+        results,
+    )
+    results["PRV-101"] = evaluate_control(
+        "PRV-101", {"personal_data_form": True}
+    )
+    results["PRV-104"] = evaluate_control(
+        "PRV-104", {"privacy_information": False}, results
+    )
+    results["PRV-201"] = evaluate_control(
+        "PRV-201", {"relevant_cookies": False}
+    )
+    results["PRV-301"] = evaluate_control(
+        "PRV-301", {"contact_channel_visible": True}
+    )
+    results["PRV-501"] = evaluate_control(
+        "PRV-501", {"https": True, "tls_valid": True}
+    )
+    return results
+
+
+def test_catalog_matches_the_seven_approved_controls_exactly():
     controls = load_controls()
-    assert [control["code"] for control in controls] == [
-        "PRV-001", "PRV-002", "PRV-101", "PRV-104", "PRV-201",
-        "PRV-301", "PRV-501",
-    ]
-    assert next(item for item in controls if item["code"] == "PRV-101")[
-        "score_weight"
-    ] == 0
+    assert len(controls) == 7
+    assert {
+        control["code"]: (control["name"], control["impact"], control["type"])
+        for control in controls
+    } == EXPECTED
 
 
-def test_required_scenario_scores_67_with_full_coverage():
-    result = score_privacy(evaluate_privacy(SCENARIO))
-    assert result == {"score": 67, "state": "En preparación", "coverage": 100}
+def test_catalog_contains_required_metadata_and_dependencies():
+    controls = {control["code"]: control for control in load_controls()}
+    assert controls["PRV-101"]["type"] == "context"
+    assert controls["PRV-101"]["score_weight"] == 0
+    assert controls["PRV-002"]["dependency"] == "PRV-001"
+    assert controls["PRV-104"]["dependency"] == "PRV-101"
+    for control in controls.values():
+        assert control["expected_evidence"]
+        assert control["base_recommendation"]
+        assert control["criteria"]
+
+
+def test_evaluator_accepts_structured_evidence_and_returns_approved_shape():
+    result = evaluate_control(
+        "PRV-001",
+        {
+            "policy_visible": True,
+            "confidence": "high",
+            "evidence": [{"url": "/privacidad"}],
+        },
+    )
+    assert result == {
+        "control_code": "PRV-001",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [{"url": "/privacidad"}],
+        "reason": load_controls()[0]["criteria"]["detected"],
+    }
+
+
+def test_dependencies_produce_not_applicable():
+    policy = evaluate_control("PRV-001", {"policy_visible": False})
+    forms = evaluate_control("PRV-101", {"personal_data_form": False})
+    assert evaluate_control(
+        "PRV-002", {}, {"PRV-001": policy}
+    )["result"] == "not_applicable"
+    assert evaluate_control(
+        "PRV-104", {}, {"PRV-101": forms}
+    )["result"] == "not_applicable"
+
+
+def test_cookies_can_be_not_applicable():
+    assert evaluate_control(
+        "PRV-201", {"relevant_cookies": False}
+    )["result"] == "not_applicable"
+
+
+@pytest.mark.parametrize(
+    ("result", "expected_score"),
+    [("detected", 100), ("partial", 50), ("not_detected", 0)],
+)
+def test_result_factors_are_applied(result, expected_score):
+    assert score_privacy([{"control_code": "PRV-501", "result": result}])[
+        "score"
+    ] == expected_score
+
+
+def test_not_applicable_does_not_affect_score():
+    detected = {"control_code": "PRV-001", "result": "detected"}
+    assert score_privacy([detected]) == score_privacy(
+        [detected, {"control_code": "PRV-201", "result": "not_applicable"}]
+    )
 
 
 def test_not_evaluable_is_unscored_and_reduces_coverage():
-    statuses = {**SCENARIO, "PRV-301": "not_evaluable"}
-    result = score_privacy(evaluate_privacy(statuses))
-    assert result["coverage"] == 80
+    results = list(evaluated_scenario().values())
+    results[-1] = {"control_code": "PRV-501", "result": "not_evaluable"}
+    scored = score_privacy(results)
+    assert scored["evaluated_controls"] == 4
+    assert scored["applicable_controls"] == 5
+    assert scored["coverage"] == 80
 
 
-def test_context_and_not_applicable_do_not_affect_score():
-    baseline = score_privacy(evaluate_privacy(SCENARIO))
-    changed_context = {**SCENARIO, "PRV-101": "not_detected"}
-    assert score_privacy(evaluate_privacy(changed_context)) == baseline
+def test_context_never_scores():
+    detected = score_privacy(
+        [{"control_code": "PRV-101", "result": "detected"}]
+    )
+    not_detected = score_privacy(
+        [{"control_code": "PRV-101", "result": "not_detected"}]
+    )
+    assert detected == not_detected
 
 
-def test_priorities_follow_impact_status_confidence_and_code_order():
-    evaluations = evaluate_privacy(SCENARIO)
-    for item in evaluations:
-        item["confidence"] = 0.8
-    priorities = prioritize_findings(evaluations)
-    assert [item["code"] for item in priorities] == ["PRV-104", "PRV-002"]
+def test_integral_scenario_returns_the_approved_result():
+    assert score_privacy(evaluated_scenario().values()) == {
+        "score": 67,
+        "status": "En preparación",
+        "coverage": 100,
+        "evaluated_controls": 5,
+        "applicable_controls": 5,
+    }
 
 
-def test_priorities_are_limited_to_three_and_exclude_context():
-    statuses = {code: "not_detected" for code in SCENARIO}
-    priorities = prioritize_findings(evaluate_privacy(statuses), limit=20)
+def test_prioritization_is_consumer_facing_limited_and_excludes_context():
+    results = [
+        {"control_code": code, "result": "not_detected", "confidence": "high"}
+        for code in EXPECTED
+    ]
+    priorities = prioritize_findings(results, limit=20)
     assert len(priorities) == 3
-    assert all(item["type"] != "context" for item in priorities)
+    assert all(
+        set(priority)
+        == {"control_code", "name", "priority", "finding", "recommendation"}
+        for priority in priorities
+    )
+    assert "PRV-101" not in {priority["control_code"] for priority in priorities}
 
 
-def test_invalid_input_is_rejected():
-    with pytest.raises(ValueError, match="Unknown privacy controls"):
-        evaluate_privacy({"PRV-999": "detected"})
-    with pytest.raises(ValueError, match="Invalid status"):
-        evaluate_privacy({"PRV-001": "unknown"})
+def test_priority_order_is_impact_result_confidence_then_code():
+    results = [
+        {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
+        {"control_code": "PRV-104", "result": "not_detected", "confidence": "low"},
+        {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"},
+    ]
+    assert [item["control_code"] for item in prioritize_findings(results)] == [
+        "PRV-001",
+        "PRV-104",
+        "PRV-501",
+    ]
+
+
+def test_scoring_disclaimers_are_literal():
+    assert load_scoring()["disclaimers"] == [
+        "Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.",
+        "No representa un porcentaje de cumplimiento de la ley.",
+    ]
+
+
+def test_invalid_control_evidence_and_confidence_are_rejected():
+    with pytest.raises(ValueError, match="Unknown privacy control"):
+        evaluate_control("PRV-999", {})
+    with pytest.raises(TypeError, match="evidence must be a mapping"):
+        evaluate_control("PRV-001", [])
+    with pytest.raises(ValueError, match="Invalid confidence"):
+        evaluate_control("PRV-001", {"confidence": "certain"})
 
 
 def test_json_files_are_valid_utf8_json():
