@@ -1,10 +1,12 @@
-"""Deterministic scoring for the Privacy Pack v0.1."""
+"""Privacy Score calculation for Privacy Pack v0.1."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Iterable, Mapping
+
+from .evaluator import load_controls
 
 
 _SCORING_PATH = Path(__file__).with_name("scoring.json")
@@ -15,32 +17,46 @@ def load_scoring() -> dict:
         return json.load(source)
 
 
-def score_privacy(evaluations: Iterable[Mapping]) -> dict:
-    """Calculate score, preparation state and evaluation coverage."""
-    rules = load_scoring()
-    evaluations = list(evaluations)
-    scoring_controls = [item for item in evaluations if item["type"] != "context"]
-    applicable = [
-        item for item in scoring_controls if item["status"] != "not_applicable"
-    ]
-    evaluable = [item for item in applicable if item["status"] != "not_evaluable"]
+def score_privacy(results: Iterable[Mapping]) -> dict:
+    """Calculate visible preparation score and evidence coverage.
 
-    possible = sum(
-        rules["impact_weights"][item["impact"]]
-        * item.get("score_weight", 1)
-        for item in evaluable
+    The returned score is not a percentage of legal compliance.
+    """
+    rules = load_scoring()
+    controls = {control["code"]: control for control in load_controls()}
+    normalized = []
+    for item in results:
+        code = item.get("control_code", item.get("code"))
+        if code not in controls:
+            raise ValueError(f"Unknown privacy control: {code}")
+        normalized.append((controls[code], item.get("result", item.get("status"))))
+
+    scoring_results = [pair for pair in normalized if pair[0]["type"] != "context"]
+    applicable = [pair for pair in scoring_results if pair[1] != "not_applicable"]
+    evaluated = [pair for pair in applicable if pair[1] != "not_evaluable"]
+
+    possible_points = sum(
+        rules["impact_weights"][control["impact"]]
+        * control.get("score_weight", 1)
+        for control, _ in evaluated
     )
-    earned = sum(
-        rules["impact_weights"][item["impact"]]
-        * item.get("score_weight", 1)
-        * rules["status_factors"][item["status"]]
-        for item in evaluable
+    earned_points = sum(
+        rules["impact_weights"][control["impact"]]
+        * control.get("score_weight", 1)
+        * rules["result_factors"][result]
+        for control, result in evaluated
     )
-    score = round(100 * earned / possible) if possible else 0
-    coverage = round(100 * len(evaluable) / len(applicable)) if applicable else 100
-    state = next(
-        item["label"]
-        for item in rules["ranges"]
-        if item["minimum"] <= score <= item["maximum"]
+    score = round(100 * earned_points / possible_points) if possible_points else 0
+    coverage = round(100 * len(evaluated) / len(applicable)) if applicable else 100
+    status = next(
+        score_range["label"]
+        for score_range in rules["ranges"]
+        if score_range["minimum"] <= score <= score_range["maximum"]
     )
-    return {"score": score, "state": state, "coverage": coverage}
+    return {
+        "score": score,
+        "status": status,
+        "coverage": coverage,
+        "evaluated_controls": len(evaluated),
+        "applicable_controls": len(applicable),
+    }

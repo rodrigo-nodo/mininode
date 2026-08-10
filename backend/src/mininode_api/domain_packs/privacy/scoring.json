@@ -5,12 +5,12 @@
     "alto": 3,
     "muy_alto": 4
   },
-  "status_factors": {
+  "result_factors": {
     "detected": 1.0,
     "partial": 0.5,
     "not_detected": 0.0
   },
-  "excluded_statuses": [
+  "excluded_results": [
     "not_applicable",
     "not_evaluable"
   ],
@@ -19,5 +19,9 @@
     {"minimum": 40, "maximum": 69, "label": "En preparación"},
     {"minimum": 70, "maximum": 84, "label": "Preparación avanzada"},
     {"minimum": 85, "maximum": 100, "label": "Alta preparación visible"}
+  ],
+  "disclaimers": [
+    "Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.",
+    "No representa un porcentaje de cumplimiento de la ley."
   ]
 }
