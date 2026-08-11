@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from time import monotonic
 from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
 from mininode_api.web_inspector import WebFetcher, build_evidence, extract_page, select_pages
-from mininode_api.web_inspector.models import InspectionFetchResult
+from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
+from mininode_api.web_inspector.models import FetchError, FetchPageResult, InspectionFetchResult
 
 
 class PrivacyInspectionError(Exception):
@@ -47,14 +49,15 @@ def _home_failure(result: InspectionFetchResult) -> None:
 def diagnose_privacy_url(
     url: str,
     *,
-    fetcher_factory: Callable[[], WebFetcher] | None = None,
+    fetcher_factory: Callable[..., WebFetcher] | None = None,
 ) -> dict:
     """Inspect one URL and run the existing Privacy diagnostic pipeline."""
 
     target_url = validate_public_url_format(url)
     factory = fetcher_factory or WebFetcher
-    with factory() as fetcher:
-        home_result = fetcher.fetch(target_url, [target_url])
+    started = monotonic()
+    with factory(inspection_budget=INSPECTION_BUDGET_SECONDS) as home_fetcher:
+        home_result = home_fetcher.fetch(target_url, [target_url])
         if home_result.pages_fetched != 1 or not home_result.pages:
             _home_failure(home_result)
 
@@ -65,10 +68,29 @@ def diagnose_privacy_url(
         home_evidence = extract_page(home_page.html, home_page.final_url)
         selected = select_pages(home_page.final_url, home_evidence.links, limit=5)
         remaining = [page_url for page_url in selected if page_url != home_page.final_url]
-        secondary_result = (
-            fetcher.fetch(target_url, remaining)
-            if remaining
-            else InspectionFetchResult(target_url=target_url, pages_requested=0)
+
+    remaining_budget = INSPECTION_BUDGET_SECONDS - (monotonic() - started)
+    if remaining and remaining_budget > 0:
+        with factory(inspection_budget=remaining_budget) as secondary_fetcher:
+            secondary_result = secondary_fetcher.fetch(home_page.final_url, remaining)
+    elif remaining:
+        errors = [
+            FetchError("timeout", "Inspection time budget exceeded", page_url)
+            for page_url in remaining
+        ]
+        secondary_result = InspectionFetchResult(
+            target_url=home_page.final_url,
+            pages_requested=len(remaining),
+            pages=[
+                FetchPageResult(requested_url=error.url, error=error)
+                for error in errors
+            ],
+            errors=errors,
+        )
+    else:
+        secondary_result = InspectionFetchResult(
+            target_url=home_page.final_url,
+            pages_requested=0,
         )
 
     combined = InspectionFetchResult(
