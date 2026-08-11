@@ -146,6 +146,7 @@ class WebFetcher:
         started = time.monotonic()
         current_url = requested_url
         redirects = 0
+        cookie_names: list[str] = []
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
@@ -163,6 +164,11 @@ class WebFetcher:
                     timeout=REQUEST_TIMEOUT_SECONDS,
                     extensions={VALIDATED_IP_EXTENSION: pinned_ip},
                 ) as response:
+                    for header in response.headers.get_list("set-cookie"):
+                        name, separator, _ = header.partition("=")
+                        name = name.strip()
+                        if separator and name and name not in cookie_names:
+                            cookie_names.append(name)
                     if response.status_code in REDIRECT_STATUSES and response.headers.get("location"):
                         if redirects >= MAX_REDIRECTS:
                             return self._error_page(requested_url, current_url, response.status_code, redirects, started, "too_many_redirects", "Maximum redirect count exceeded")
@@ -187,12 +193,6 @@ class WebFetcher:
                     if response.status_code >= 400:
                         return self._error_page(requested_url, current_url, response.status_code, redirects, started, "http_error", f"HTTP status {response.status_code}", content_type)
                     encoding = response.encoding or "utf-8"
-                    cookie_names: list[str] = []
-                    for header in response.headers.get_list("set-cookie"):
-                        name, separator, _ = header.partition("=")
-                        name = name.strip()
-                        if separator and name and name not in cookie_names:
-                            cookie_names.append(name)
                     return FetchPageResult(
                         requested_url=requested_url,
                         final_url=current_url,
