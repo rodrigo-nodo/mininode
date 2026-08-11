@@ -17,7 +17,7 @@ export const onRequest = async (ctx) => {
   const destPathPublic = url.pathname.replace(/^\/api\/?/, '');
 
   // Whitelist MVP
-  const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture']);
+  const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose']);
   if (!ALLOWED.has(destPathPublic)) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
@@ -30,6 +30,7 @@ export const onRequest = async (ctx) => {
     'write/draft': 'write/draft',
     'analyze/summary': 'analyze/summary',
     'capture': 'capture',
+    'privacy/diagnose': 'privacy/diagnose',
   };
   const destPathBackend = ROUTE_MAP[destPathPublic] || destPathPublic;
 
