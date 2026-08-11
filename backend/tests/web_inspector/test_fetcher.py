@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 
 from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url
+from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
 
 def public_resolver(hostname: str, port: int) -> set[str]:
@@ -134,3 +135,63 @@ def test_revalidates_and_rejects_public_to_private_redirect():
     assert result.pages[0].error.code == "blocked_by_ssrf"
     assert result.pages[0].redirect_count == 1
     assert calls.count("example.com") >= 3
+
+
+def test_request_carries_validated_ip_and_original_host_header():
+    observed = []
+
+    def handler(request):
+        observed.append(
+            (
+                request.url.path,
+                request.extensions[VALIDATED_IP_EXTENSION],
+                request.headers["host"],
+            )
+        )
+        content_type = "text/plain" if request.url.path == "/robots.txt" else "text/html"
+        status = 404 if request.url.path == "/robots.txt" else 200
+        return httpx.Response(status, text="ok", headers={"content-type": content_type})
+
+    result = WebFetcher(client=client_for(handler), resolver=public_resolver).fetch(
+        "https://example.com", ["https://example.com/page"]
+    )
+
+    assert result.pages_fetched == 1
+    assert observed == [
+        ("/robots.txt", "93.184.216.34", "example.com"),
+        ("/page", "93.184.216.34", "example.com"),
+    ]
+
+
+def test_redirect_revalidates_and_pins_each_destination():
+    answers = iter(
+        [
+            {"93.184.216.30"},  # initial target validation
+            {"93.184.216.31"},  # robots.txt request
+            {"93.184.216.32"},  # first page request
+            {"93.184.216.33"},  # redirected request
+        ]
+    )
+    observed = []
+
+    def resolver(hostname, port):
+        return next(answers)
+
+    def handler(request):
+        observed.append((request.url.path, request.extensions[VALIDATED_IP_EXTENSION]))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "/final"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+        "https://example.com", ["https://example.com/start"]
+    )
+
+    assert result.pages_fetched == 1
+    assert observed == [
+        ("/robots.txt", "93.184.216.31"),
+        ("/start", "93.184.216.32"),
+        ("/final", "93.184.216.33"),
+    ]
