@@ -50,3 +50,80 @@ def test_integral_evidence_contract_is_json_compatible_and_observational():
     assert "<html" not in encoded.lower()
     for forbidden in ("PRV-", "Privacy Score", "cumplimiento legal"):
         assert forbidden not in encoded
+
+
+def test_target_transport_uses_only_the_matching_home_result():
+    home = FetchPageResult(
+        "https://example.com",
+        "https://example.com/",
+        200,
+        "text/html",
+        "<title>Home</title>",
+        tls_valid=True,
+    )
+    contact = FetchPageResult(
+        "https://example.com/contacto",
+        "https://example.com/contacto",
+        200,
+        "text/html",
+        "<title>Contacto</title>",
+        tls_valid=True,
+    )
+
+    payload = build_evidence(InspectionFetchResult("https://example.com/", 2, pages=[contact, home])).to_dict()
+
+    assert payload["target"]["final_url"] == "https://example.com/"
+    assert payload["transport"]["https"] is True
+    assert payload["transport"]["tls_valid"] is True
+
+
+def test_target_redirect_is_derived_from_its_own_result():
+    home = FetchPageResult(
+        "http://example.com/",
+        "https://example.com/",
+        200,
+        "text/html",
+        "<title>Home</title>",
+        tls_valid=True,
+    )
+
+    payload = build_evidence(InspectionFetchResult("http://example.com/", 1, pages=[home])).to_dict()
+
+    assert payload["target"]["final_url"] == "https://example.com/"
+    assert payload["transport"]["http_redirects_to_https"] is True
+
+
+def test_successful_secondary_page_does_not_replace_failed_target():
+    failed_home = FetchPageResult("http://example.com/")
+    contact = FetchPageResult(
+        "https://example.com/contacto",
+        "https://example.com/contacto",
+        200,
+        "text/html",
+        "<title>Contacto</title>",
+        tls_valid=True,
+    )
+
+    payload = build_evidence(InspectionFetchResult("http://example.com/", 2, pages=[failed_home, contact])).to_dict()
+
+    assert payload["target"]["final_url"] is None
+    assert payload["transport"]["https"] is None
+    assert payload["transport"]["tls_valid"] is None
+    assert payload["transport"]["http_redirects_to_https"] is None
+
+
+def test_failed_https_home_has_no_final_url_from_successful_contact():
+    failed_home = FetchPageResult("https://example.com/")
+    contact = FetchPageResult(
+        "https://example.com/contacto",
+        "https://example.com/contacto",
+        200,
+        "text/html",
+        "<title>Contacto</title>",
+        tls_valid=True,
+    )
+
+    payload = build_evidence(InspectionFetchResult("https://example.com/", 2, pages=[failed_home, contact])).to_dict()
+
+    assert payload["target"]["final_url"] is None
+    assert payload["transport"]["https"] is None
