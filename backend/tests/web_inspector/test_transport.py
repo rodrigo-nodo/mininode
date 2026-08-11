@@ -1,6 +1,14 @@
+import http.client
 import socket
 
-from mininode_api.web_inspector.transport import _PinnedHTTPConnection, _PinnedHTTPSConnection
+import httpx
+
+from mininode_api.web_inspector.transport import (
+    VALIDATED_IP_EXTENSION,
+    PinnedHTTPTransport,
+    _PinnedHTTPConnection,
+    _PinnedHTTPSConnection,
+)
 
 
 class FakeSocket:
@@ -66,3 +74,55 @@ def test_https_connects_to_pin_but_preserves_hostname_for_sni(monkeypatch):
 
     assert connected == [("93.184.216.34", 443)]
     assert wrapped == [(sock, "example.com")]
+
+
+def test_pinned_https_transport_preserves_tcp_ip_sni_certificate_name_and_host(monkeypatch):
+    connected = []
+    server_hostnames = []
+    sent_headers = {}
+
+    class FakeContext:
+        check_hostname = True
+
+        def wrap_socket(self, sock, *, server_hostname):
+            server_hostnames.append(server_hostname)
+            return sock
+
+    class FakeResponse:
+        status = 200
+
+        def getheaders(self):
+            return [("content-type", "text/html")]
+
+        def read(self, size):
+            return b""
+
+        def close(self):
+            pass
+
+    def fail_if_resolved(*args, **kwargs):
+        raise AssertionError("HTTPS connection must not resolve the hostname again")
+
+    def fake_request(connection, method, target, body=None, headers=None, **kwargs):
+        connection.connect()
+        sent_headers.update(headers or {})
+
+    monkeypatch.setattr(socket, "getaddrinfo", fail_if_resolved)
+    monkeypatch.setattr(socket, "socket", lambda family, kind: FakeSocket(connected))
+    monkeypatch.setattr(http.client.HTTPSConnection, "request", fake_request)
+    monkeypatch.setattr(http.client.HTTPSConnection, "getresponse", lambda connection: FakeResponse())
+
+    request = httpx.Request(
+        "GET",
+        "https://example.com/test",
+        extensions={VALIDATED_IP_EXTENSION: "93.184.216.34"},
+    )
+    ssl_context = FakeContext()
+    response = PinnedHTTPTransport(ssl_context=ssl_context).handle_request(request)
+    response.close()
+
+    normalized_headers = {key.lower(): value for key, value in sent_headers.items()}
+    assert connected == [("93.184.216.34", 443)]
+    assert server_hostnames == ["example.com"]
+    assert ssl_context.check_hostname is True
+    assert normalized_headers["host"] == "example.com"
