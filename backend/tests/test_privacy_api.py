@@ -122,6 +122,7 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
     footer = "https://example.com/partials/footer.html"
     contact = "https://example.com/contact/index.html"
     privacy = "https://example.com/legal/privacy/index.html"
+    privacy_final = "https://example.com/legal/privacy/"
     client, fake = client_with(
         monkeypatch,
         {
@@ -133,9 +134,17 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
             ),
             contact: page(
                 contact,
-                '<title>Contacto</title><form><input name="email" type="email"></form>',
+                '<title>Contacto</title><form>'
+                '<label>Nombre <input name="name"></label>'
+                '<label>Email <input name="email" type="email"></label>'
+                '<label>Mensaje <textarea name="message"></textarea></label>'
+                '</form>',
             ),
-            privacy: page(privacy, "<title>Privacidad</title>"),
+            privacy: page(
+                privacy_final,
+                "<title>Política de privacidad</title>",
+                requested_url=privacy,
+            ),
         },
     )
     response = client.post("/privacy/diagnose", json={"url": HOME})
@@ -151,6 +160,39 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
     assert controls["PRV-001"]["result"] == "detected"
     assert controls["PRV-002"]["result"] == "detected"
     assert controls["PRV-101"]["result"] == "detected"
+    assert controls["PRV-301"]["result"] == "detected"
+    assert response.json()["coverage"] == 100
+
+
+def test_privacy_response_is_utf8_json_with_exact_spanish_text(monkeypatch):
+    client, _ = client_with(
+        monkeypatch,
+        {HOME: page(HOME, "<html><title>Inicio</title></html>")},
+    )
+    expected = (
+        "Política de privacidad",
+        "Preparación avanzada",
+        "páginas públicas",
+        "Información o consentimiento",
+    )
+    monkeypatch.setattr(
+        service,
+        "run_privacy_diagnostic",
+        lambda contract: {"unicode_samples": list(expected)},
+    )
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    decoded = response.content.decode("utf-8")
+    body = response.json()
+    serialized = str(body)
+    for text in expected:
+        assert text in decoded
+        assert text in serialized
+    assert "PolÃtica" not in decoded
+    assert "PreparaciÃ³n" not in decoded
 
 
 def test_include_failure_does_not_abort_valid_home_diagnostic(monkeypatch):

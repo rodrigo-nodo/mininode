@@ -70,6 +70,23 @@ def test_prv002_obtained_relevant_policy_is_accessible_and_relevant():
     assert evidence["policy_content_relevant"] is True
 
 
+def test_prv002_matches_policy_candidate_to_redirected_final_page():
+    requested = "https://example.com/legal/privacy/index.html"
+    final = "https://example.com/legal/privacy/"
+    link = LinkEvidence(requested, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(final, 200, "Política de privacidad", "text/html", requested)
+
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    evidence = adapted["PRV-002"]
+
+    assert evidence["policy_link_found"] is True
+    assert evidence["policy_accessible"] is True
+    assert evidence["policy_content_relevant"] is True
+    assert evaluate_control("PRV-002", evidence, {
+        "PRV-001": evaluate_control("PRV-001", adapted["PRV-001"]),
+    })["result"] == "detected"
+
+
 def test_prv002_attempted_failed_policy_is_inaccessible():
     url = "https://example.com/privacy"
     link = LinkEvidence(url, "Privacy", "https://example.com/")
@@ -175,6 +192,46 @@ def test_prv301_detects_explicit_contact(contact):
     evidence = adapt_evidence(contract(contacts=[contact]))["PRV-301"]
     assert evidence == {"confidence": "high", "contact_channel_visible": True}
     assert evaluate_control("PRV-301", evidence)["result"] == "detected"
+
+
+def test_prv301_detects_contact_page_form():
+    contact_form = FormEvidence(
+        "https://example.com/contact/", "https://example.com/contact/send", "post",
+        [
+            FieldEvidence("name", "text", "Nombre", True),
+            FieldEvidence("email", "email", "Email", True),
+            FieldEvidence("message", "textarea", "Mensaje", True),
+        ], [], "Nombre Email Mensaje", [],
+    )
+    page = PageEvidence("https://example.com/contact/", 200, "Contacto — Mininode", "text/html")
+
+    evidence = adapt_evidence(contract(forms=[contact_form], pages=[page]))["PRV-301"]
+
+    assert evidence["contact_channel_visible"] is True
+    assert evaluate_control("PRV-301", evidence)["result"] == "detected"
+
+
+@pytest.mark.parametrize(
+    "source_url,title,fields",
+    [
+        (
+            "https://example.com/login/", "Iniciar sesión",
+            [FieldEvidence("email", "email", "Email", True), FieldEvidence("password", "password", "Contraseña", True)],
+        ),
+        (
+            "https://example.com/newsletter/", "Newsletter",
+            [FieldEvidence("email", "email", "Email", True)],
+        ),
+    ],
+)
+def test_prv301_does_not_treat_unrelated_forms_as_contact(source_url, title, fields):
+    unrelated = FormEvidence(source_url, source_url, "post", fields, [], title, [])
+    page = PageEvidence(source_url, 200, title, "text/html")
+
+    evidence = adapt_evidence(contract(forms=[unrelated], pages=[page]))["PRV-301"]
+
+    assert evidence["contact_channel_visible"] is False
+    assert evaluate_control("PRV-301", evidence)["result"] == "not_detected"
 
 
 def test_prv301_distinguishes_absence_from_insufficient_evidence():

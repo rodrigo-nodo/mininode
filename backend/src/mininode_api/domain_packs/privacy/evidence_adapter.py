@@ -38,6 +38,9 @@ _CONSENT_TERMS = (
 )
 _PERSONAL_TYPES = {"email", "tel", "textarea"}
 _TECHNICAL_TYPES = {"hidden", "submit", "button", "reset", "image"}
+_CONTACT_TERMS = ("contact", "contacto", "contactenos", "contactanos")
+_MESSAGE_TERMS = ("message", "mensaje", "consulta", "comentario")
+_CONTACT_ADDRESS_TYPES = {"email", "tel"}
 
 
 def _normalize(value: str) -> str:
@@ -92,6 +95,29 @@ def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     return False, None
 
 
+def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
+    """Recognize an explicit contact page with communication-oriented fields."""
+
+    page = next((page for page in contract.pages if page.url == form.source_url), None)
+    page_signal = _contains_phrase(urlsplit(form.source_url).path, _CONTACT_TERMS) or (
+        page is not None and _contains_phrase(page.title or "", _CONTACT_TERMS)
+    )
+    if not page_signal:
+        return False
+
+    has_address = any(
+        _normalize(field.type) in _CONTACT_ADDRESS_TYPES
+        or _contains_phrase(f"{field.name} {field.label}", {"email", "correo", "telefono", "phone"})
+        for field in form.fields
+    )
+    has_message = any(
+        _normalize(field.type) == "textarea"
+        or _contains_phrase(f"{field.name} {field.label}", _MESSAGE_TERMS)
+        for field in form.fields
+    )
+    return has_address and has_message
+
+
 def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     """Return deterministic, minimized evidence for exactly seven controls."""
     sufficient = _inspection_sufficient(contract)
@@ -109,7 +135,12 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "confidence": policy_confidence if candidates else ("high" if sufficient else "low"),
     }
     if candidates:
-        successful_pages = {_normalized_url(page.url): page for page in contract.pages}
+        successful_pages = {
+            _normalized_url(observed_url): page
+            for page in contract.pages
+            for observed_url in (page.url, page.requested_url)
+            if observed_url
+        }
         error_urls = {_normalized_url(error["url"]) for error in contract.inspection.errors if error.get("url")}
         candidate_urls = {_normalized_url(link.url) for link, _ in candidates}
         successful_candidates = candidate_urls & successful_pages.keys()
@@ -183,7 +214,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     else:
         prv201["technical_error"] = True
 
-    contact_visible = any(
+    explicit_contact = any(
         (
             getattr(contact, "type", None) in {"email", "phone"}
             and bool(getattr(contact, "value", None))
@@ -191,6 +222,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         or bool(getattr(contact, "email", None))
         or bool(getattr(contact, "phone", None))
         for contact in contract.contacts
+    )
+    contact_visible = explicit_contact or any(
+        _contact_form(form, contract) for form in contract.forms
     )
     prv301 = {"confidence": "high" if sufficient else "low"}
     if sufficient:

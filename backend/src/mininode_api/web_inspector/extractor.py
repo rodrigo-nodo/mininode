@@ -174,7 +174,13 @@ def build_evidence(
     for page in successful:
         assert page.final_url is not None and page.html is not None
         extracted = extract_page(page.html, page.final_url)
-        pages.append(PageEvidence(page.final_url, page.status_code, extracted.title, page.content_type))
+        pages.append(PageEvidence(
+            url=page.final_url,
+            status_code=page.status_code,
+            title=extracted.title,
+            content_type=page.content_type,
+            requested_url=page.requested_url,
+        ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)
         contacts.extend(extracted.contacts)
