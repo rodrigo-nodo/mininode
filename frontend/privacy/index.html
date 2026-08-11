@@ -29,9 +29,10 @@
 
       <form class="privacy-form" id="privacy-form">
         <label for="site-url">URL del sitio web</label>
-        <input id="site-url" name="siteUrl" type="text" inputmode="url" placeholder="https://tusitio.cl" autocomplete="url" aria-describedby="url-error" required>
+        <input id="site-url" name="siteUrl" type="text" inputmode="url" placeholder="https://tusitio.cl" autocomplete="url" aria-describedby="url-error request-error" required>
         <p class="privacy-error" id="url-error" hidden>Ingresa una URL válida.<br>Ejemplo: https://tusitio.cl</p>
         <button class="btn btn--primary privacy-primary" type="submit" id="privacy-submit">Iniciar diagnóstico <span aria-hidden="true">→</span></button>
+        <p class="privacy-error" id="request-error" role="alert" hidden></p>
       </form>
 
       <p class="privacy-trust">Diagnóstico inicial gratuito <span>·</span> Sin registro <span>·</span> Solo analizamos información pública</p>
@@ -45,16 +46,16 @@
       <p>Analizando tu sitio...</p>
     </div>
 
-    <article class="privacy-result" id="privacy-result" hidden>
+    <article class="privacy-result" id="privacy-result" aria-live="polite" tabindex="-1" hidden>
       <div class="privacy-result__top">
         <div>
           <p class="privacy-result__label">Resultado inicial</p>
           <h2>Diagnóstico inicial</h2>
         </div>
-        <div class="privacy-score" aria-label="Privacy Score estimado: 58 de 100. Estado: En preparación.">
+        <div class="privacy-score" id="privacy-score" aria-label="Privacy Score">
           <span>Privacy Score</span>
-          <strong>58 / 100</strong>
-          <em>En preparación</em>
+          <strong id="score-value">— / 100</strong>
+          <em id="score-status">—</em>
         </div>
       </div>
 
@@ -65,32 +66,33 @@
         </div>
         <div>
           <dt>Estado</dt>
-          <dd>En preparación</dd>
+          <dd id="diagnostic-status">—</dd>
+        </div>
+        <div>
+          <dt>Cobertura del diagnóstico</dt>
+          <dd id="diagnostic-coverage">—</dd>
+        </div>
+        <div>
+          <dt>Alcance inicial</dt>
+          <dd id="diagnostic-scope">—</dd>
         </div>
       </dl>
 
       <div class="privacy-result__note">
         <p>Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.</p>
         <p>No representa un porcentaje de cumplimiento de la ley.</p>
+        <p>El diagnóstico inicial inspecciona una muestra acotada de páginas públicas relevantes del sitio.</p>
       </div>
 
       <div class="privacy-columns">
         <section aria-labelledby="signals-title">
           <h3 id="signals-title">Señales detectadas</h3>
-          <ul class="privacy-list privacy-list--plain">
-            <li>Formularios visibles</li>
-            <li>Cookies detectadas</li>
-            <li>Política de privacidad no encontrada</li>
-          </ul>
+          <ul class="privacy-list privacy-list--plain" id="detected-signals"></ul>
         </section>
 
         <section aria-labelledby="actions-title">
-          <h3 id="actions-title">Acciones recomendadas</h3>
-          <ol class="privacy-list privacy-list--numbered">
-            <li>Agregar una política de privacidad visible.</li>
-            <li>Revisar el consentimiento de los formularios.</li>
-            <li>Revisar el uso de cookies.</li>
-          </ol>
+          <h3 id="actions-title">Prioridades</h3>
+          <div class="privacy-priorities" id="diagnostic-priorities"></div>
         </section>
       </div>
 

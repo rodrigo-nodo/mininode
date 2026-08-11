@@ -1,10 +1,19 @@
 const form = document.querySelector('#privacy-form');
 const urlInput = document.querySelector('#site-url');
 const urlError = document.querySelector('#url-error');
+const requestError = document.querySelector('#request-error');
 const submitButton = document.querySelector('#privacy-submit');
 const loadingCard = document.querySelector('#privacy-loading');
 const resultCard = document.querySelector('#privacy-result');
 const analyzedUrl = document.querySelector('#analyzed-url');
+const privacyScore = document.querySelector('#privacy-score');
+const scoreValue = document.querySelector('#score-value');
+const scoreStatus = document.querySelector('#score-status');
+const diagnosticStatus = document.querySelector('#diagnostic-status');
+const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
+const diagnosticScope = document.querySelector('#diagnostic-scope');
+const detectedSignals = document.querySelector('#detected-signals');
+const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
@@ -12,6 +21,16 @@ const modalPanel = modal?.querySelector('.privacy-modal__panel');
 const modalCloseButtons = modal?.querySelectorAll('[data-modal-close]') ?? [];
 const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 let lastFocusedElement = null;
+let isDiagnosing = false;
+
+const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
+const signalLabels = {
+  'PRV-001': 'Política de privacidad visible',
+  'PRV-101': 'Formularios que recopilan datos personales',
+  'PRV-201': 'Uso de cookies o información sobre cookies observada',
+  'PRV-301': 'Canal de contacto visible',
+  'PRV-501': 'HTTPS activo',
+};
 
 const normalizeUrl = (value) => {
   const trimmedValue = value.trim();
@@ -56,6 +75,83 @@ const setSubmitText = (text) => {
 const setUrlError = (isInvalid) => {
   urlError.hidden = !isInvalid;
   urlInput.setAttribute('aria-invalid', String(isInvalid));
+};
+
+const setRequestError = (message = '') => {
+  requestError.textContent = message;
+  requestError.hidden = !message;
+};
+
+const appendTextElement = (parent, tagName, text, className) => {
+  const element = document.createElement(tagName);
+  element.textContent = text;
+  if (className) {
+    element.className = className;
+  }
+  parent.append(element);
+  return element;
+};
+
+const renderSignals = (controls) => {
+  detectedSignals.replaceChildren();
+
+  const signals = (Array.isArray(controls) ? controls : [])
+    .filter(({ control_code: code, result }) => signalLabels[code]
+      && (result === 'detected' || (code === 'PRV-201' && result === 'partial')))
+    .slice(0, 5);
+
+  if (signals.length === 0) {
+    appendTextElement(detectedSignals, 'li', 'No se identificaron señales claras para resumir dentro del alcance inicial.');
+    return;
+  }
+
+  signals.forEach(({ control_code: code }) => {
+    appendTextElement(detectedSignals, 'li', signalLabels[code]);
+  });
+};
+
+const renderPriorities = (priorities) => {
+  diagnosticPriorities.replaceChildren();
+  const visiblePriorities = (Array.isArray(priorities) ? priorities : []).slice(0, 3);
+
+  if (visiblePriorities.length === 0) {
+    appendTextElement(
+      diagnosticPriorities,
+      'p',
+      'No se identificaron acciones prioritarias dentro del alcance de este diagnóstico inicial.',
+    );
+    return;
+  }
+
+  visiblePriorities.forEach((priority) => {
+    const item = appendTextElement(diagnosticPriorities, 'article', '', 'privacy-priority');
+    appendTextElement(item, 'h4', priority.name || 'Acción prioritaria');
+    if (priority.finding) {
+      appendTextElement(item, 'p', `Hallazgo: ${priority.finding}`);
+    }
+    if (priority.recommendation) {
+      appendTextElement(item, 'p', `Recomendación: ${priority.recommendation}`);
+    }
+  });
+};
+
+const renderDiagnostic = (diagnostic, websiteUrl) => {
+  const score = diagnostic.score;
+  const status = diagnostic.status;
+  const coverage = diagnostic.coverage;
+  const pagesAnalyzed = diagnostic.scope?.pages_analyzed;
+
+  analyzedUrl.textContent = websiteUrl;
+  scoreValue.textContent = `${score} / 100`;
+  scoreStatus.textContent = status;
+  diagnosticStatus.textContent = status;
+  diagnosticCoverage.textContent = `${coverage}%`;
+  diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
+    ? `${pagesAnalyzed} ${pagesAnalyzed === 1 ? 'página pública relevante analizada' : 'páginas públicas relevantes analizadas'}`
+    : 'Muestra acotada de páginas públicas relevantes';
+  privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${status}.`);
+  renderSignals(diagnostic.controls);
+  renderPriorities(diagnostic.priorities);
 };
 
 const getFocusableElements = () => {
@@ -126,8 +222,12 @@ urlInput.addEventListener('input', () => {
   }
 });
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
   event.preventDefault();
+
+  if (isDiagnosing) {
+    return;
+  }
 
   const formData = new FormData(form);
   const websiteUrl = normalizeUrl(formData.get('siteUrl'));
@@ -139,19 +239,52 @@ form.addEventListener('submit', (event) => {
   }
 
   setUrlError(false);
-  analyzedUrl.textContent = websiteUrl;
+  setRequestError();
   resultCard.hidden = true;
   loadingCard.hidden = false;
+  isDiagnosing = true;
   submitButton.disabled = true;
   submitButton.textContent = 'Analizando...';
 
-  window.setTimeout(() => {
+  try {
+    const response = await fetch('/api/privacy/diagnose', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: websiteUrl }),
+    });
+    const diagnostic = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const responseError = new Error(typeof diagnostic.message === 'string' && diagnostic.message.trim()
+        ? diagnostic.message
+        : genericDiagnosticError);
+      responseError.isUserFacing = true;
+      throw responseError;
+    }
+
+    if (!Number.isFinite(diagnostic.score)
+      || !Number.isFinite(diagnostic.coverage)
+      || typeof diagnostic.status !== 'string') {
+      const invalidResponseError = new Error(genericDiagnosticError);
+      invalidResponseError.isUserFacing = true;
+      throw invalidResponseError;
+    }
+
+    renderDiagnostic(diagnostic, websiteUrl);
     loadingCard.hidden = true;
     resultCard.hidden = false;
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) {
+    loadingCard.hidden = true;
+    setRequestError(error instanceof Error && error.isUserFacing ? error.message : genericDiagnosticError);
+    requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } finally {
+    isDiagnosing = false;
     submitButton.disabled = false;
     setSubmitText('Iniciar diagnóstico');
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 1400);
+  }
 });
 
 [helpLink, headerHelpLink].forEach((trigger) => {
