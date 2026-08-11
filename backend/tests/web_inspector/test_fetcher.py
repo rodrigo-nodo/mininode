@@ -195,3 +195,25 @@ def test_redirect_revalidates_and_pins_each_destination():
         ("/start", "93.184.216.32"),
         ("/final", "93.184.216.33"),
     ]
+
+
+def test_preserves_deduplicated_cookie_names_across_redirects():
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "/middle", "set-cookie": "cookie_a=secret"})
+        if request.url.path == "/middle":
+            return httpx.Response(301, headers={"location": "/final", "set-cookie": "cookie_b=value"})
+        return httpx.Response(
+            200,
+            text="ok",
+            headers={"content-type": "text/html", "set-cookie": "cookie_a=different"},
+        )
+
+    result = WebFetcher(client=client_for(handler), resolver=public_resolver).fetch(
+        "https://example.com", ["https://example.com/start"]
+    )
+
+    assert result.pages[0].set_cookie_names == ["cookie_a", "cookie_b"]
+    assert "secret" not in repr(result.pages[0].set_cookie_names)
