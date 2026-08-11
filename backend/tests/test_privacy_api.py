@@ -20,9 +20,9 @@ from mininode_api.web_inspector.models import (  # noqa: E402
 HOME = "https://example.com/"
 
 
-def page(url, html, *, cookies=None):
+def page(url, html, *, cookies=None, requested_url=None):
     return FetchPageResult(
-        requested_url=url,
+        requested_url=requested_url or url,
         final_url=url,
         status_code=200,
         content_type="text/html",
@@ -44,6 +44,8 @@ class FakeFetcher:
     def __init__(self, pages):
         self.pages = pages
         self.calls = []
+        self.target_calls = []
+        self.inspection_budgets = []
 
     def __enter__(self):
         return self
@@ -54,6 +56,7 @@ class FakeFetcher:
     def fetch(self, target_url, candidate_urls):
         requested = list(candidate_urls)
         self.calls.append(requested)
+        self.target_calls.append(target_url)
         results = [self.pages[url] for url in requested]
         errors = [item.error for item in results if item.error]
         return InspectionFetchResult(
@@ -67,7 +70,12 @@ class FakeFetcher:
 
 def client_with(monkeypatch, pages):
     fake = FakeFetcher(pages)
-    monkeypatch.setattr(service, "WebFetcher", lambda: fake)
+
+    def factory(**kwargs):
+        fake.inspection_budgets.append(kwargs["inspection_budget"])
+        return fake
+
+    monkeypatch.setattr(service, "WebFetcher", factory)
     monkeypatch.delenv("API_KEY", raising=False)
     monkeypatch.delenv("API_KEYS", raising=False)
     return TestClient(create_app()), fake
@@ -147,6 +155,75 @@ def test_selection_is_bounded_to_five_pages(monkeypatch):
     assert response.json()["scope"]["limited"] is True
 
 
+def test_total_budget_is_not_reset_before_secondary_fetch(monkeypatch):
+    privacy = "https://example.com/privacidad"
+    client, fake = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, f'<a href="{privacy}">Privacidad</a>'),
+            privacy: page(privacy, "<title>Privacidad</title>"),
+        },
+    )
+    ticks = iter([0.0, 25.0])
+    monkeypatch.setattr(service, "monotonic", lambda: next(ticks))
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.inspection_budgets == [30.0, 5.0]
+
+
+def test_exhausted_total_budget_does_not_start_secondary_fetch(monkeypatch):
+    privacy = "https://example.com/privacidad"
+    client, fake = client_with(
+        monkeypatch,
+        {HOME: page(HOME, f'<a href="{privacy}">Privacidad</a>')},
+    )
+    ticks = iter([0.0, 30.0])
+    monkeypatch.setattr(service, "monotonic", lambda: next(ticks))
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME]]
+    assert fake.inspection_budgets == [30.0]
+    assert response.json()["scope"]["pages_analyzed"] == 1
+
+
+def test_redirected_home_is_effective_base_and_original_target_is_preserved(monkeypatch):
+    original = "http://example.com"
+    privacy = "https://example.com/privacidad"
+    contact = "https://example.com/contacto"
+    client, fake = client_with(
+        monkeypatch,
+        {
+            original: page(
+                HOME,
+                '<a href="/privacidad">Privacidad</a><a href="/contacto">Contacto</a>',
+                requested_url=original,
+            ),
+            privacy: page(privacy, "<title>Privacidad</title>"),
+            contact: page(contact, "<title>Contacto</title>"),
+        },
+    )
+    captured = {}
+
+    def diagnostic_with_capture(contract):
+        captured["contract"] = contract
+        return real_privacy_diagnostic(contract)
+
+    monkeypatch.setattr(service, "run_privacy_diagnostic", diagnostic_with_capture)
+
+    response = client.post("/privacy/diagnose", json={"url": original})
+
+    assert response.status_code == 200
+    assert fake.calls == [[original], [privacy, contact]]
+    assert fake.target_calls == [original, HOME]
+    assert captured["contract"].target.requested_url == original
+    assert captured["contract"].target.final_url == HOME
+    assert captured["contract"].transport.http_redirects_to_https is True
+
+
 def test_invalid_url_returns_stable_400(monkeypatch):
     client, fake = client_with(monkeypatch, {})
 
@@ -210,14 +287,18 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch):
     assert body["scope"] == {"pages_requested": 3, "pages_analyzed": 2, "limited": False}
     assert captured["contract"].inspection.errors[0]["code"] == "timeout"
     controls = {item["control_code"]: item for item in body["controls"]}
-    assert controls["PRV-002"]["result"] in {"partial", "not_evaluable", "not_detected"}
+    assert controls["PRV-002"]["result"] == "partial"
     assert body["coverage"] <= 100
 
 
 def test_api_key_mechanism_is_reused(monkeypatch):
     monkeypatch.setenv("API_KEY", "secret")
     fake = FakeFetcher({HOME: page(HOME, "<title>Inicio</title>")})
-    monkeypatch.setattr(service, "WebFetcher", lambda: fake)
+    monkeypatch.setattr(
+        service,
+        "WebFetcher",
+        lambda **kwargs: fake.inspection_budgets.append(kwargs["inspection_budget"]) or fake,
+    )
     client = TestClient(create_app())
 
     assert client.post("/privacy/diagnose", json={"url": HOME}).status_code == 401
