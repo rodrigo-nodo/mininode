@@ -8,6 +8,7 @@ from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
+from .fetcher import normalize_url
 from .models import (
     CheckboxEvidence, ContactEvidence, CookieEvidence, EvidenceContract, FieldEvidence,
     FormEvidence, InspectionEvidence, InspectionFetchResult, LinkEvidence, PageEvidence,
@@ -84,12 +85,18 @@ def _forms(soup: BeautifulSoup, source_url: str) -> list[FormEvidence]:
                 checkboxes.append(CheckboxEvidence(name, label))
             else:
                 fields.append(FieldEvidence(name, kind, label, control.has_attr("required")))
-        nearby = _text(form)[:500]
+        context = form.find_parent(["div", "section", "article"])
+        context = context if isinstance(context, Tag) else form
+        nearby = _text(context)[:500]
         privacy_links: list[LinkEvidence] = []
-        for anchor in form.find_all("a", href=True):
+        seen_privacy_links: set[str] = set()
+        for anchor in context.find_all("a", href=True):
             signal = f"{_text(anchor)} {anchor['href']}".lower()
             if any(term in signal for term in PRIVACY_SIGNALS):
-                privacy_links.append(LinkEvidence(urljoin(source_url, str(anchor["href"])), _text(anchor), source_url))
+                url = urljoin(source_url, str(anchor["href"]))
+                if url not in seen_privacy_links:
+                    seen_privacy_links.add(url)
+                    privacy_links.append(LinkEvidence(url, _text(anchor), source_url))
         results.append(FormEvidence(
             source_url=source_url,
             action=urljoin(source_url, str(form.get("action") or source_url)),
@@ -175,7 +182,19 @@ def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
         if urlsplit(page.final_url).scheme == "https":
             https_mixed.append(extracted.mixed_content)
 
-    final_url = successful[0].final_url if successful else next((page.final_url for page in fetch_result.pages if page.final_url), None)
+    try:
+        normalized_target = normalize_url(fetch_result.target_url)
+    except ValueError:
+        normalized_target = fetch_result.target_url
+    target_page = next(
+        (
+            page
+            for page in fetch_result.pages
+            if _normalized_or_original(page.requested_url) == normalized_target
+        ),
+        None,
+    )
+    final_url = target_page.final_url if target_page is not None else None
     requested_scheme = urlsplit(fetch_result.target_url).scheme.lower()
     final_scheme = urlsplit(final_url).scheme.lower() if final_url else ""
     redirects_to_https = (final_scheme == "https") if requested_scheme == "http" and final_url else None
@@ -186,7 +205,7 @@ def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
         pages=pages,
         transport=TransportEvidence(
             https=(final_scheme == "https") if final_url else None,
-            tls_valid=True if any(page.tls_valid is True for page in successful) else None,
+            tls_valid=True if target_page is not None and target_page.tls_valid is True else None,
             http_redirects_to_https=redirects_to_https,
             mixed_content=any(https_mixed) if https_mixed else None,
         ),
@@ -195,3 +214,10 @@ def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
         cookies=CookieEvidence(bool(cookie_names), cookie_names, banner, preferences),
         contacts=contacts,
     )
+
+
+def _normalized_or_original(url: str) -> str:
+    try:
+        return normalize_url(url)
+    except ValueError:
+        return url

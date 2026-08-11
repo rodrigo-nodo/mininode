@@ -49,3 +49,21 @@ def test_malformed_html_is_accepted_and_cookie_in_script_is_not_visible():
     assert result.title == "Broken"
     assert result.forms[0].fields[0].label == "Value"
     assert result.banner_detected is False
+
+
+def test_form_uses_only_its_nearest_container_as_context():
+    html = """
+    <section>
+      <form><input name="email"><a href="/privacidad">Privacidad</a></form>
+      <p>Al enviar este formulario se tratarán sus datos.
+        <a href="/privacidad">Política de privacidad</a>
+      </p>
+    </section>
+    <section><a href="/privacy-far">Privacy lejana</a></section>
+    """
+
+    form = extract_page(html, "https://example.com/contacto").forms[0]
+
+    assert "Al enviar este formulario" in form.nearby_text
+    assert len(form.nearby_text) <= 500
+    assert [link.url for link in form.privacy_links] == ["https://example.com/privacidad"]
