@@ -2,6 +2,7 @@
 
 from .fetcher import WebFetcher, normalize_url
 from .extractor import build_evidence, extract_page
+from .include_discovery import MAX_INCLUDES_PER_PAGE, discover_include_links
 from .models import (
     CheckboxEvidence,
     ContactEvidence,
@@ -32,11 +33,13 @@ __all__ = [
     "InspectionEvidence",
     "InspectionFetchResult",
     "LinkEvidence",
+    "MAX_INCLUDES_PER_PAGE",
     "PageEvidence",
     "TargetEvidence",
     "TransportEvidence",
     "WebFetcher",
     "build_evidence",
+    "discover_include_links",
     "extract_page",
     "normalize_url",
     "select_pages",

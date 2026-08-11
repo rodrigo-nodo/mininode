@@ -118,6 +118,84 @@ def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     assert response.json()["scope"]["pages_analyzed"] == 2
 
 
+def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(monkeypatch):
+    footer = "https://example.com/partials/footer.html"
+    contact = "https://example.com/contact/index.html"
+    privacy = "https://example.com/legal/privacy/index.html"
+    client, fake = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, '<div data-include="partials/footer.html"></div>'),
+            footer: page(
+                footer,
+                '<a href="#" data-rel="contact/index.html">Contacto</a>'
+                '<a href="#" data-rel="legal/privacy/index.html">Política de privacidad</a>',
+            ),
+            contact: page(contact, "<title>Contacto</title>"),
+            privacy: page(privacy, "<title>Privacidad</title>"),
+        },
+    )
+    captured = {}
+
+    def diagnostic_with_capture(contract):
+        captured["contract"] = contract
+        return real_privacy_diagnostic(contract)
+
+    monkeypatch.setattr(service, "run_privacy_diagnostic", diagnostic_with_capture)
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [footer], [privacy, contact]]
+    assert response.json()["scope"] == {
+        "pages_requested": 3,
+        "pages_analyzed": 3,
+        "limited": False,
+    }
+    assert [item.url for item in captured["contract"].pages] == [HOME, privacy, contact]
+
+
+def test_include_failure_does_not_abort_valid_home_diagnostic(monkeypatch):
+    footer = "https://example.com/footer.html"
+    client, fake = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, '<div data-include="/footer.html"></div>'),
+            footer: failed_page(footer),
+        },
+    )
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [footer]]
+    assert response.json()["scope"] == {
+        "pages_requested": 1,
+        "pages_analyzed": 1,
+        "limited": False,
+    }
+
+
+def test_include_discovery_and_secondary_fetch_share_total_budget(monkeypatch):
+    footer = "https://example.com/footer.html"
+    privacy = "https://example.com/privacy"
+    client, fake = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, '<div data-include="/footer.html"></div>'),
+            footer: page(footer, f'<a href="{privacy}">Privacidad</a>'),
+            privacy: page(privacy, "<title>Privacidad</title>"),
+        },
+    )
+    ticks = iter([0.0, 10.0, 25.0])
+    monkeypatch.setattr(service, "monotonic", lambda: next(ticks))
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.inspection_budgets == [30.0, 20.0, 5.0]
+
+
 def test_contact_form_is_analyzed(monkeypatch):
     contact = "https://example.com/contacto"
     client, _ = client_with(

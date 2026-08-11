@@ -7,7 +7,13 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
-from mininode_api.web_inspector import WebFetcher, build_evidence, extract_page, select_pages
+from mininode_api.web_inspector import (
+    WebFetcher,
+    build_evidence,
+    discover_include_links,
+    extract_page,
+    select_pages,
+)
 from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 from mininode_api.web_inspector.models import FetchError, FetchPageResult, InspectionFetchResult
 
@@ -66,7 +72,17 @@ def diagnose_privacy_url(
             _home_failure(home_result)
 
         home_evidence = extract_page(home_page.html, home_page.final_url)
-        selected = select_pages(home_page.final_url, home_evidence.links, limit=5)
+        include_links = discover_include_links(
+            home_page.html,
+            home_page.final_url,
+            lambda budget: factory(inspection_budget=budget),
+            lambda: INSPECTION_BUDGET_SECONDS - (monotonic() - started),
+        )
+        selected = select_pages(
+            home_page.final_url,
+            [*home_evidence.links, *include_links],
+            limit=5,
+        )
         remaining = [page_url for page_url in selected if page_url != home_page.final_url]
 
     remaining_budget = INSPECTION_BUDGET_SECONDS - (monotonic() - started)
