@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit
 
@@ -156,7 +157,10 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
     )
 
 
-def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
+def build_evidence(
+    fetch_result: InspectionFetchResult,
+    additional_links: Iterable[LinkEvidence] | None = None,
+) -> EvidenceContract:
     """Build Evidence Contract v0.1 from an existing bounded fetch result."""
 
     pages: list[PageEvidence] = []
@@ -181,6 +185,15 @@ def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
                 cookie_names.append(name)
         if urlsplit(page.final_url).scheme == "https":
             https_mixed.append(extracted.mixed_content)
+
+    links.extend(additional_links or [])
+    deduplicated_links: list[LinkEvidence] = []
+    seen_links: set[tuple[str, str, str]] = set()
+    for link in links:
+        identity = (link.url, link.text, link.source_url)
+        if identity not in seen_links:
+            seen_links.add(identity)
+            deduplicated_links.append(link)
 
     try:
         normalized_target = normalize_url(fetch_result.target_url)
@@ -209,7 +222,7 @@ def build_evidence(fetch_result: InspectionFetchResult) -> EvidenceContract:
             http_redirects_to_https=redirects_to_https,
             mixed_content=any(https_mixed) if https_mixed else None,
         ),
-        links=links,
+        links=deduplicated_links,
         forms=forms,
         cookies=CookieEvidence(bool(cookie_names), cookie_names, banner, preferences),
         contacts=contacts,

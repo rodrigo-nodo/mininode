@@ -183,7 +183,15 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     else:
         prv201["technical_error"] = True
 
-    contact_visible = any(contact.email or contact.phone for contact in contract.contacts)
+    contact_visible = any(
+        (
+            getattr(contact, "type", None) in {"email", "phone"}
+            and bool(getattr(contact, "value", None))
+        )
+        or bool(getattr(contact, "email", None))
+        or bool(getattr(contact, "phone", None))
+        for contact in contract.contacts
+    )
     prv301 = {"confidence": "high" if sufficient else "low"}
     if sufficient:
         prv301["contact_channel_visible"] = contact_visible

@@ -1,10 +1,12 @@
 import httpx
 
+from mininode_api.web_inspector.extractor import build_evidence
 from mininode_api.web_inspector.fetcher import WebFetcher
 from mininode_api.web_inspector.include_discovery import (
     MAX_INCLUDES_PER_PAGE,
     discover_include_links,
 )
+from mininode_api.web_inspector.models import FetchPageResult, InspectionFetchResult
 from mininode_api.web_inspector.selector import select_pages
 
 HOME = "https://example.com/"
@@ -61,6 +63,44 @@ def test_relative_include_and_root_based_data_rel_reach_selector():
         "https://example.com/contact/index.html",
     ]
     assert "https://example.com/partials/footer.html" in requested
+
+
+def test_include_links_enter_evidence_without_turning_fragment_into_a_page():
+    links, _ = discover(
+        '<div data-include="partials/footer.html"></div>',
+        {
+            "/partials/footer.html": (
+                '<a href="#" data-rel="legal/privacy/index.html">'
+                "Política de privacidad</a>"
+            ),
+        },
+    )
+    fetched = InspectionFetchResult(
+        target_url=HOME,
+        pages_requested=1,
+        pages_fetched=1,
+        pages=[
+            FetchPageResult(
+                requested_url=HOME,
+                final_url=HOME,
+                status_code=200,
+                content_type="text/html",
+                html='<div data-include="partials/footer.html"></div>',
+            )
+        ],
+    )
+
+    evidence = build_evidence(fetched, additional_links=links)
+
+    assert [(link.url, link.text, link.source_url) for link in evidence.links] == [
+        (
+            "https://example.com/legal/privacy/index.html",
+            "Política de privacidad",
+            "https://example.com/partials/footer.html",
+        )
+    ]
+    assert [page.url for page in evidence.pages] == [HOME]
+    assert evidence.inspection.pages_analyzed == 1
 
 
 def test_absolute_same_hostname_include_and_normal_href_are_supported():

@@ -131,18 +131,13 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
                 '<a href="#" data-rel="contact/index.html">Contacto</a>'
                 '<a href="#" data-rel="legal/privacy/index.html">Política de privacidad</a>',
             ),
-            contact: page(contact, "<title>Contacto</title>"),
+            contact: page(
+                contact,
+                '<title>Contacto</title><form><input name="email" type="email"></form>',
+            ),
             privacy: page(privacy, "<title>Privacidad</title>"),
         },
     )
-    captured = {}
-
-    def diagnostic_with_capture(contract):
-        captured["contract"] = contract
-        return real_privacy_diagnostic(contract)
-
-    monkeypatch.setattr(service, "run_privacy_diagnostic", diagnostic_with_capture)
-
     response = client.post("/privacy/diagnose", json={"url": HOME})
 
     assert response.status_code == 200
@@ -152,7 +147,10 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
         "pages_analyzed": 3,
         "limited": False,
     }
-    assert [item.url for item in captured["contract"].pages] == [HOME, privacy, contact]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-001"]["result"] == "detected"
+    assert controls["PRV-002"]["result"] == "detected"
+    assert controls["PRV-101"]["result"] == "detected"
 
 
 def test_include_failure_does_not_abort_valid_home_diagnostic(monkeypatch):

@@ -172,11 +172,15 @@ def test_prv201_insufficient_inspection_is_not_evaluable():
 
 @pytest.mark.parametrize("contact", [ContactEvidence("https://example.com", email="a@example.com"), ContactEvidence("https://example.com", phone="+56 2 1234 5678")])
 def test_prv301_detects_explicit_contact(contact):
-    assert adapt_evidence(contract(contacts=[contact]))["PRV-301"] == {"confidence": "high", "contact_channel_visible": True}
+    evidence = adapt_evidence(contract(contacts=[contact]))["PRV-301"]
+    assert evidence == {"confidence": "high", "contact_channel_visible": True}
+    assert evaluate_control("PRV-301", evidence)["result"] == "detected"
 
 
 def test_prv301_distinguishes_absence_from_insufficient_evidence():
-    assert adapt_evidence(contract())["PRV-301"]["contact_channel_visible"] is False
+    absent = adapt_evidence(contract())["PRV-301"]
+    assert absent["contact_channel_visible"] is False
+    assert evaluate_control("PRV-301", absent)["result"] == "not_detected"
     failed = adapt_evidence(contract(final_url=None, pages=[], pages_analyzed=0))["PRV-301"]
     assert failed["technical_error"] is True
     assert "contact_channel_visible" not in failed
