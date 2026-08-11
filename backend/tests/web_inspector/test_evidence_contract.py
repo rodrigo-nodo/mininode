@@ -42,6 +42,8 @@ def test_integral_evidence_contract_is_json_compatible_and_observational():
     assert list(payload) == ["target", "inspection", "pages", "transport", "links", "forms", "cookies", "contacts"]
     assert payload["target"]["domain"] == "example.com"
     assert payload["inspection"]["pages_analyzed"] == 3
+    assert payload["pages"][0]["requested_url"] == "http://example.com/"
+    assert payload["pages"][0]["url"] == "https://example.com/"
     assert payload["transport"] == {"https": True, "tls_valid": True, "http_redirects_to_https": True, "mixed_content": False}
     assert payload["links"][0]["source_url"] == "https://example.com/"
     assert payload["forms"][0]["source_url"] == "https://example.com/contacto"
@@ -50,6 +52,27 @@ def test_integral_evidence_contract_is_json_compatible_and_observational():
     assert "<html" not in encoded.lower()
     for forbidden in ("PRV-", "Privacy Score", "cumplimiento legal"):
         assert forbidden not in encoded
+
+
+def test_page_evidence_preserves_requested_to_final_url_trace():
+    requested = "https://example.com/legal/privacy/index.html"
+    final = "https://example.com/legal/privacy/"
+    fetched = InspectionFetchResult(
+        target_url="https://example.com/",
+        pages_requested=1,
+        pages=[FetchPageResult(
+            requested_url=requested,
+            final_url=final,
+            status_code=200,
+            content_type="text/html",
+            html="<title>Política de privacidad</title>",
+        )],
+    )
+
+    page = build_evidence(fetched).pages[0]
+
+    assert page.requested_url == requested
+    assert page.url == final
 
 
 def test_target_transport_uses_only_the_matching_home_result():
