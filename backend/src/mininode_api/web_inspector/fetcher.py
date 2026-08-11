@@ -187,6 +187,12 @@ class WebFetcher:
                     if response.status_code >= 400:
                         return self._error_page(requested_url, current_url, response.status_code, redirects, started, "http_error", f"HTTP status {response.status_code}", content_type)
                     encoding = response.encoding or "utf-8"
+                    cookie_names: list[str] = []
+                    for header in response.headers.get_list("set-cookie"):
+                        name, separator, _ = header.partition("=")
+                        name = name.strip()
+                        if separator and name and name not in cookie_names:
+                            cookie_names.append(name)
                     return FetchPageResult(
                         requested_url=requested_url,
                         final_url=current_url,
@@ -195,6 +201,8 @@ class WebFetcher:
                         html=bytes(body).decode(encoding, errors="replace"),
                         elapsed_ms=int((time.monotonic() - started) * 1000),
                         redirect_count=redirects,
+                        set_cookie_names=cookie_names,
+                        tls_valid=True if urlsplit(current_url).scheme == "https" else None,
                     )
             except httpx.TimeoutException:
                 return self._error_page(requested_url, current_url, None, redirects, started, "timeout", "Request timed out")
