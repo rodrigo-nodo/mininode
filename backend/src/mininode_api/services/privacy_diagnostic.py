@@ -117,4 +117,6 @@ def diagnose_privacy_url(
         errors=[*home_result.errors, *secondary_result.errors],
         limited=len(selected) == 5 or home_result.limited or secondary_result.limited,
     )
-    return run_privacy_diagnostic(build_evidence(combined))
+    return run_privacy_diagnostic(
+        build_evidence(combined, additional_links=include_links)
+    )
