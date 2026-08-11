@@ -18,6 +18,7 @@ from .ssrf import (
     system_resolver,
     validate_url,
 )
+from .transport import PinnedHTTPTransport, VALIDATED_IP_EXTENSION
 
 USER_AGENT = "Mininode-Web-Inspector/0.1"
 ROBOTS_USER_AGENT = "Mininode-Web-Inspector"
@@ -60,6 +61,7 @@ class WebFetcher:
         inspection_budget: float = INSPECTION_BUDGET_SECONDS,
     ) -> None:
         self._client = client or httpx.Client(
+            transport=PinnedHTTPTransport(),
             follow_redirects=False,
             timeout=REQUEST_TIMEOUT_SECONDS,
             headers={"User-Agent": USER_AGENT},
@@ -146,15 +148,20 @@ class WebFetcher:
         redirects = 0
         while True:
             try:
-                validate_url(current_url, self._resolver)
+                validated_addresses = validate_url(current_url, self._resolver)
                 if urlsplit(current_url).hostname != allowed_hostname:
                     raise UnsafeTargetError("Redirect leaves the initial hostname")
+                # A deterministic member of the fully validated DNS answer set is
+                # passed to the transport. The production transport connects to
+                # this address directly and never resolves the hostname again.
+                pinned_ip = sorted(validated_addresses)[0]
                 with self._client.stream(
                     "GET",
                     current_url,
                     headers={"User-Agent": USER_AGENT},
                     follow_redirects=False,
                     timeout=REQUEST_TIMEOUT_SECONDS,
+                    extensions={VALIDATED_IP_EXTENSION: pinned_ip},
                 ) as response:
                     if response.status_code in REDIRECT_STATUSES and response.headers.get("location"):
                         if redirects >= MAX_REDIRECTS:
