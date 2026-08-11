@@ -334,6 +334,34 @@
   padding-left: 22px;
 }
 
+.privacy-priorities {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.privacy-priority {
+  border-left: 3px solid #d7e7ff;
+  padding-left: 12px;
+}
+
+.privacy-priority h4,
+.privacy-priority p,
+.privacy-priorities > p {
+  margin: 0;
+}
+
+.privacy-priority h4 {
+  color: var(--fg);
+  font-size: 1rem;
+}
+
+.privacy-priority p,
+.privacy-priorities > p {
+  color: var(--muted);
+  margin-top: 7px;
+}
+
 .privacy-next {
   background: #f8fbff;
   border: 1px solid #dbeafe;
