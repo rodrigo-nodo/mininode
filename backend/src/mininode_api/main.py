@@ -81,6 +81,12 @@ def create_app() -> FastAPI:
     except Exception as e:
         logging.exception("Failed to include pipeline_orchestrator router: %s", e)
 
+    try:
+        from mininode_api.api.privacy import router as privacy_router
+        app.include_router(privacy_router)
+    except Exception as e:
+        logging.exception("Failed to include privacy router: %s", e)
+
     # Analyze: intenta incluir router; si no existe, define fallback /analyze/summary
     analyze_router_included = False
     try:
