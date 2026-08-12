@@ -381,17 +381,21 @@ def test_home_timeout_returns_no_artificial_diagnostic(monkeypatch):
 
 def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     secret = "super-secret-api-key"
+    pinned_ip = "203.0.113.42"
+    raw_socket_message = "connection refused on socket"
     html = "<html>private body</html>"
     cookie = "session=private-cookie"
     failed = failed_page(f"{HOME}?token=private-query", "dns_failure")
     failed.elapsed_ms = 123
     failed.redirect_count = 1
     failed.status_code = 503
+    failed.network_family = "ipv6"
+    failed.transport_error_class = "ConnectError"
     failed.html = html
     failed.set_cookie_names = [cookie]
     failed.error = FetchError(
         "dns_failure",
-        f"must not log {secret} {html} {cookie}",
+        f"must not log {secret} {pinned_ip} {raw_socket_message} {html} {cookie}",
         failed.requested_url,
     )
     client, _ = client_with(monkeypatch, {HOME: failed})
@@ -420,13 +424,23 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
             "event": "privacy_home_inspection_failed",
             "failure_class": "controlled_fetch_error",
             "hostname": "example.com",
+            "network_family": "ipv6",
             "phase": "home_fetch",
             "redirect_count": 1,
             "status_code": 503,
+            "transport_error_class": "ConnectError",
         }
     ]
     rendered = " ".join(record.message for record in caplog.records)
-    for sensitive_value in (secret, html, cookie, "token", "private-query"):
+    for sensitive_value in (
+        secret,
+        pinned_ip,
+        raw_socket_message,
+        html,
+        cookie,
+        "token",
+        "private-query",
+    ):
         assert sensitive_value not in rendered
 
 

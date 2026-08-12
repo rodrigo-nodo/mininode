@@ -55,6 +55,8 @@ def _home_failure(result: InspectionFetchResult) -> None:
         "phase": "home_fetch",
         "error_code": error.code if error else "inspection_failed",
         "failure_class": "controlled_fetch_error",
+        "network_family": page.network_family if page else None,
+        "transport_error_class": page.transport_error_class if page else None,
         "redirect_count": page.redirect_count if page else 0,
         "status_code": page.status_code if page else None,
         "elapsed_ms": page.elapsed_ms if page else 0,

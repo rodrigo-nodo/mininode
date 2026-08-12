@@ -15,6 +15,41 @@ def client_for(handler) -> httpx.Client:
     return httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False)
 
 
+@pytest.mark.parametrize(
+    ("pinned_ip", "expected_family"),
+    [("93.184.216.34", "ipv4"), ("2606:2800:220:1:248:1893:25c8:1946", "ipv6")],
+)
+def test_records_pinned_network_family_without_retaining_address(pinned_ip, expected_family):
+    def resolver(hostname, port):
+        return {pinned_ip}
+
+    fetcher = WebFetcher(
+        client=client_for(lambda request: httpx.Response(200, text="ok", headers={"content-type": "text/html"})),
+        resolver=resolver,
+    )
+
+    page = fetcher._fetch_page("https://example.com/", "example.com")
+
+    assert page.network_family == expected_family
+    assert pinned_ip not in repr(page)
+
+
+@pytest.mark.parametrize("error_type", [httpx.ConnectError, httpx.ConnectTimeout])
+def test_records_safe_transport_error_class(error_type):
+    raw_message = "socket detail secret=private"
+
+    def handler(request):
+        raise error_type(raw_message, request=request)
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.network_family == "ipv4"
+    assert page.transport_error_class == error_type.__name__
+    assert raw_message not in page.transport_error_class
+
+
 def test_normalization_removes_fragment_tracking_and_default_port():
     assert normalize_url("HTTPS://EXAMPLE.COM:443/path?utm_source=x&id=7#top") == "https://example.com/path?id=7"
 
