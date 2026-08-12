@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import time
 from collections.abc import Iterable
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
@@ -34,13 +35,31 @@ REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 def same_site_hostname(a: str | None, b: str | None) -> bool:
     """Return whether two hostnames differ only by one leading ``www.``."""
 
-    def normalized_apex(hostname: str | None) -> str | None:
+    def normalize(hostname: str | None) -> str | None:
         if not hostname:
             return None
         normalized = hostname.rstrip(".").lower()
-        return normalized.removeprefix("www.")
+        return normalized or None
 
-    return bool(a and b) and normalized_apex(a) == normalized_apex(b)
+    normalized_a = normalize(a)
+    normalized_b = normalize(b)
+    if normalized_a is None or normalized_b is None:
+        return False
+    if normalized_a == normalized_b:
+        return True
+    try:
+        ipaddress.ip_address(normalized_a)
+    except ValueError:
+        pass
+    else:
+        return False
+    try:
+        ipaddress.ip_address(normalized_b)
+    except ValueError:
+        pass
+    else:
+        return False
+    return normalized_a.removeprefix("www.") == normalized_b.removeprefix("www.")
 
 
 def normalize_url(url: str) -> str:
