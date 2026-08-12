@@ -178,6 +178,7 @@ class WebFetcher:
         current_url = requested_url
         redirects = 0
         cookie_names: list[str] = []
+        network_family: str | None = None
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
@@ -187,6 +188,7 @@ class WebFetcher:
                 # passed to the transport. The production transport connects to
                 # this address directly and never resolves the hostname again.
                 pinned_ip = sorted(validated_addresses)[0]
+                network_family = f"ipv{ipaddress.ip_address(pinned_ip).version}"
                 with self._client.stream(
                     "GET",
                     current_url,
@@ -234,23 +236,24 @@ class WebFetcher:
                         redirect_count=redirects,
                         set_cookie_names=cookie_names,
                         tls_valid=True if urlsplit(current_url).scheme == "https" else None,
+                        network_family=network_family,
                     )
-            except httpx.TimeoutException:
-                return self._error_page(requested_url, current_url, None, redirects, started, "timeout", "Request timed out")
+            except httpx.TimeoutException as exc:
+                return self._error_page(requested_url, current_url, None, redirects, started, "timeout", "Request timed out", network_family=network_family, transport_error_class=type(exc).__name__)
             except DNSResolutionError as exc:
                 return self._error_page(requested_url, current_url, None, redirects, started, "dns_failure", str(exc))
             except SSRFGuardError as exc:
                 error = self._guard_error(current_url, exc)
-                return FetchPageResult(requested_url, current_url, elapsed_ms=int((time.monotonic() - started) * 1000), redirect_count=redirects, error=error)
+                return FetchPageResult(requested_url, current_url, elapsed_ms=int((time.monotonic() - started) * 1000), redirect_count=redirects, error=error, network_family=network_family)
             except httpx.HTTPError as exc:
-                return self._error_page(requested_url, current_url, None, redirects, started, "http_error", str(exc))
+                return self._error_page(requested_url, current_url, None, redirects, started, "http_error", str(exc), network_family=network_family, transport_error_class=type(exc).__name__)
 
     @staticmethod
     def _guard_error(url: str, exc: SSRFGuardError) -> FetchError:
         return FetchError("blocked_by_ssrf", str(exc), url)
 
     @staticmethod
-    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None) -> FetchPageResult:
+    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None) -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -259,4 +262,6 @@ class WebFetcher:
             elapsed_ms=int((time.monotonic() - started) * 1000),
             redirect_count=redirects,
             error=FetchError(code, message, final_url),
+            network_family=network_family,
+            transport_error_class=transport_error_class,
         )

@@ -27,6 +27,8 @@ class FetchPageResult:
     set_cookie_names: list[str] = field(default_factory=list)
     tls_valid: bool | None = None
     error: FetchError | None = None
+    network_family: str | None = None
+    transport_error_class: str | None = None
 
 
 @dataclass
