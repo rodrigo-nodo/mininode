@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 
-from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url
+from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
 
@@ -16,6 +16,17 @@ def client_for(handler) -> httpx.Client:
 
 def test_normalization_removes_fragment_tracking_and_default_port():
     assert normalize_url("HTTPS://EXAMPLE.COM:443/path?utm_source=x&id=7#top") == "https://example.com/path?id=7"
+
+
+def test_same_site_hostname_allows_only_apex_and_www_variants():
+    assert same_site_hostname("example.com", "example.com")
+    assert same_site_hostname("example.com", "www.example.com")
+    assert same_site_hostname("www.example.com", "example.com")
+    assert same_site_hostname("WWW.EXAMPLE.COM.", "example.com.")
+    assert not same_site_hostname("example.com", "blog.example.com")
+    assert not same_site_hostname("www.example.com", "shop.example.com")
+    assert not same_site_hostname("example.com", "example.net")
+    assert not same_site_hostname(None, None)
 
 
 def test_caps_at_five_and_deduplicates_urls():
@@ -48,6 +59,36 @@ def test_rejects_external_hostname_and_subdomain_without_requesting_them():
     )
     assert [page.error.code for page in result.pages] == ["hostname_mismatch", "hostname_mismatch"]
     assert paths == ["https://example.com/robots.txt"]
+
+
+def test_rejects_non_www_subdomains_and_external_redirects():
+    destinations = ["blog.example.com", "api.example.com", "login.example.com", "evil.com"]
+
+    for destination in destinations:
+        requested_hosts = []
+
+        def handler(request):
+            requested_hosts.append(request.url.host)
+            if request.url.path == "/robots.txt":
+                return httpx.Response(404, headers={"content-type": "text/plain"})
+            return httpx.Response(302, headers={"location": f"https://{destination}/final"})
+
+        result = WebFetcher(client=client_for(handler), resolver=public_resolver).fetch(
+            "https://example.com", ["https://example.com/start"]
+        )
+
+        assert result.pages[0].error.code == "blocked_by_ssrf"
+        assert requested_hosts == ["example.com", "example.com"]
+
+    def www_handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        return httpx.Response(302, headers={"location": "https://shop.example.com/final"})
+
+    result = WebFetcher(client=client_for(www_handler), resolver=public_resolver).fetch(
+        "https://www.example.com", ["https://www.example.com/start"]
+    )
+    assert result.pages[0].error.code == "blocked_by_ssrf"
 
 
 def test_timeout_is_controlled_and_secondary_error_does_not_abort():
@@ -195,6 +236,105 @@ def test_redirect_revalidates_and_pins_each_destination():
         ("/start", "93.184.216.32"),
         ("/final", "93.184.216.33"),
     ]
+
+
+def test_apex_to_www_redirect_revalidates_and_pins_effective_hostname():
+    calls = []
+    observed = []
+
+    def resolver(hostname, port):
+        calls.append(hostname)
+        return {"93.184.216.35" if hostname == "www.example.com" else "93.184.216.34"}
+
+    def handler(request):
+        observed.append((request.url.host, request.url.path, request.extensions[VALIDATED_IP_EXTENSION], request.headers["host"]))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "https://www.example.com/final"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+        "https://example.com/start", ["https://example.com/start"]
+    )
+
+    assert result.pages_fetched == 1
+    assert result.pages[0].final_url == "https://www.example.com/final"
+    assert result.pages[0].error is None
+    assert calls[-1] == "www.example.com"
+    assert observed[-1] == ("www.example.com", "/final", "93.184.216.35", "www.example.com")
+
+
+def test_www_to_apex_redirect_succeeds_with_revalidation():
+    calls = []
+
+    def resolver(hostname, port):
+        calls.append(hostname)
+        return {"93.184.216.34"}
+
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "https://example.com/final"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+        "https://www.example.com/start", ["https://www.example.com/start"]
+    )
+
+    assert result.pages_fetched == 1
+    assert result.pages[0].final_url == "https://example.com/final"
+    assert result.pages[0].error is None
+    assert calls[-1] == "example.com"
+
+
+def test_www_redirect_to_private_or_mixed_dns_is_blocked_without_connection():
+    for www_answers in ({"127.0.0.1"}, {"93.184.216.34", "127.0.0.1"}):
+        requested_hosts = []
+
+        def resolver(hostname, port):
+            return www_answers if hostname == "www.example.com" else {"93.184.216.34"}
+
+        def handler(request):
+            requested_hosts.append(request.url.host)
+            if request.url.path == "/robots.txt":
+                return httpx.Response(404, headers={"content-type": "text/plain"})
+            return httpx.Response(302, headers={"location": "https://www.example.com/final"})
+
+        result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+            "https://example.com", ["https://example.com/start"]
+        )
+
+        assert result.pages[0].error.code == "blocked_by_ssrf"
+        assert requested_hosts == ["example.com", "example.com"]
+
+
+def test_www_candidate_pages_are_allowed_after_home_redirect():
+    requested = []
+
+    def handler(request):
+        requested.append(str(request.url))
+        if request.url.host == "example.com" and request.url.path == "/robots.txt":
+            return httpx.Response(302, headers={"location": "https://www.example.com/robots.txt"})
+        if request.url.host == "www.example.com" and request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.host == "example.com" and request.url.path == "/":
+            return httpx.Response(302, headers={"location": "https://www.example.com/"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    result = WebFetcher(client=client_for(handler), resolver=public_resolver).fetch(
+        "https://example.com", [
+            "https://example.com/",
+            "https://www.example.com/privacy",
+            "https://www.example.com/contact",
+        ]
+    )
+
+    assert result.pages_fetched == 3
+    assert not result.errors
+    assert "https://www.example.com/privacy" in requested
+    assert "https://www.example.com/contact" in requested
 
 
 def test_preserves_deduplicated_cookie_names_across_redirects():

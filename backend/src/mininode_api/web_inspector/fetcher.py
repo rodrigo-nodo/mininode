@@ -31,6 +31,18 @@ HTML_CONTENT_TYPES = {"text/html", "application/xhtml+xml"}
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
+def same_site_hostname(a: str | None, b: str | None) -> bool:
+    """Return whether two hostnames differ only by one leading ``www.``."""
+
+    def normalized_apex(hostname: str | None) -> str | None:
+        if not hostname:
+            return None
+        normalized = hostname.rstrip(".").lower()
+        return normalized.removeprefix("www.")
+
+    return bool(a and b) and normalized_apex(a) == normalized_apex(b)
+
+
 def normalize_url(url: str) -> str:
     """Canonicalize an HTTP URL and remove common campaign parameters."""
 
@@ -111,7 +123,7 @@ class WebFetcher:
             if time.monotonic() - started >= self._inspection_budget:
                 error = FetchError("timeout", "Inspection time budget exceeded", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
-            elif urlsplit(requested_url).hostname != allowed_hostname:
+            elif not same_site_hostname(urlsplit(requested_url).hostname, allowed_hostname):
                 error = FetchError("hostname_mismatch", "URL is outside the initial hostname", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
             elif robots is not None and not robots.can_fetch(ROBOTS_USER_AGENT, requested_url):
@@ -150,7 +162,7 @@ class WebFetcher:
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
-                if urlsplit(current_url).hostname != allowed_hostname:
+                if not same_site_hostname(urlsplit(current_url).hostname, allowed_hostname):
                     raise UnsafeTargetError("Redirect leaves the initial hostname")
                 # A deterministic member of the fully validated DNS answer set is
                 # passed to the transport. The production transport connects to
