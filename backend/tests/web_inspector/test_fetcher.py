@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 
 from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
@@ -18,15 +19,37 @@ def test_normalization_removes_fragment_tracking_and_default_port():
     assert normalize_url("HTTPS://EXAMPLE.COM:443/path?utm_source=x&id=7#top") == "https://example.com/path?id=7"
 
 
-def test_same_site_hostname_allows_only_apex_and_www_variants():
-    assert same_site_hostname("example.com", "example.com")
-    assert same_site_hostname("example.com", "www.example.com")
-    assert same_site_hostname("www.example.com", "example.com")
-    assert same_site_hostname("WWW.EXAMPLE.COM.", "example.com.")
-    assert not same_site_hostname("example.com", "blog.example.com")
-    assert not same_site_hostname("www.example.com", "shop.example.com")
-    assert not same_site_hostname("example.com", "example.net")
-    assert not same_site_hostname(None, None)
+@pytest.mark.parametrize(
+    ("a", "b", "expected"),
+    [
+        ("example.com", "example.com", True),
+        ("example.com", "www.example.com", True),
+        ("www.example.com", "example.com", True),
+        ("www.example.com", "www.example.com", True),
+        ("example.com", "www.blog.example.com", False),
+        ("www.example.com", "www.www.example.com", False),
+        ("foo.example.com", "bar.example.com", False),
+        ("foo.example.com", "www.bar.example.com", False),
+        ("127.0.0.1", "www.127.0.0.1", False),
+        ("www.127.0.0.1", "127.0.0.1", False),
+        (None, None, False),
+        (None, "example.com", False),
+        ("example.com", None, False),
+        ("", "", False),
+        ("", "example.com", False),
+        (".", ".", False),
+        ("WWW.EXAMPLE.COM.", "example.com.", True),
+        ("EXAMPLE.COM.", "www.example.com", True),
+    ],
+)
+def test_same_site_hostname_defensive_boundaries(a, b, expected):
+    assert same_site_hostname(a, b) is expected
+
+
+def test_same_site_hostname_documents_literal_rule_for_initial_subdomain():
+    # Current behavior is deliberately literal: an initial subdomain and its
+    # one leading www variant are equivalent, without trusting sibling hosts.
+    assert same_site_hostname("foo.example.com", "www.foo.example.com")
 
 
 def test_caps_at_five_and_deduplicates_urls():
