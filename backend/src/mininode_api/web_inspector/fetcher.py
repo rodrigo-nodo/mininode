@@ -72,17 +72,11 @@ def normalize_url(url: str) -> str:
     if ":" in hostname and not hostname.startswith("["):
         hostname = f"[{hostname}]"
     port = parsed.port
-    default_port = (scheme == "http" and port == 80) or (
-        scheme == "https" and port == 443
-    )
+    default_port = (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
     netloc = hostname if port is None or default_port else f"{hostname}:{port}"
     path = parsed.path or "/"
     query = urlencode(
-        [
-            (key, value)
-            for key, value in parse_qsl(parsed.query, keep_blank_values=True)
-            if not key.lower().startswith("utm_")
-        ],
+        [(key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True) if not key.lower().startswith("utm_")],
         doseq=True,
     )
     return urlunsplit((scheme, netloc, path, query, ""))
@@ -118,9 +112,7 @@ class WebFetcher:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def fetch(
-        self, target_url: str, candidate_urls: Iterable[str]
-    ) -> InspectionFetchResult:
+    def fetch(self, target_url: str, candidate_urls: Iterable[str]) -> InspectionFetchResult:
         candidates = list(candidate_urls)
         limited = len(candidates) > MAX_URLS
         candidates = candidates[:MAX_URLS]
@@ -142,46 +134,24 @@ class WebFetcher:
         except SSRFGuardError as exc:
             error = self._guard_error(target_url, exc)
             page = FetchPageResult(requested_url=target_url, error=error)
-            return InspectionFetchResult(
-                target_url,
-                len(normalized),
-                pages=[page],
-                errors=[error],
-                limited=limited,
-            )
+            return InspectionFetchResult(target_url, len(normalized), pages=[page], errors=[error], limited=limited)
 
-        result = InspectionFetchResult(
-            normalized_target, len(normalized), limited=limited
-        )
+        result = InspectionFetchResult(normalized_target, len(normalized), limited=limited)
         started = time.monotonic()
         deadline = started + self._inspection_budget
         robots = self._load_robots(normalized_target, allowed_hostname, deadline)
         for requested_url in normalized:
             if time.monotonic() - started >= self._inspection_budget:
-                error = FetchError(
-                    "timeout", "Inspection time budget exceeded", requested_url
-                )
+                error = FetchError("timeout", "Inspection time budget exceeded", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
-            elif not same_site_hostname(
-                urlsplit(requested_url).hostname, allowed_hostname
-            ):
-                error = FetchError(
-                    "hostname_mismatch",
-                    "URL is outside the initial hostname",
-                    requested_url,
-                )
+            elif not same_site_hostname(urlsplit(requested_url).hostname, allowed_hostname):
+                error = FetchError("hostname_mismatch", "URL is outside the initial hostname", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
-            elif robots is not None and not robots.can_fetch(
-                ROBOTS_USER_AGENT, requested_url
-            ):
-                error = FetchError(
-                    "robots_disallowed", "robots.txt disallows this path", requested_url
-                )
+            elif robots is not None and not robots.can_fetch(ROBOTS_USER_AGENT, requested_url):
+                error = FetchError("robots_disallowed", "robots.txt disallows this path", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
             else:
-                page = self._fetch_page(
-                    requested_url, allowed_hostname, deadline=deadline
-                )
+                page = self._fetch_page(requested_url, allowed_hostname, deadline=deadline)
             result.pages.append(page)
             if page.error:
                 result.errors.append(page.error)
@@ -189,13 +159,9 @@ class WebFetcher:
                 result.pages_fetched += 1
         return result
 
-    def _load_robots(
-        self, target_url: str, allowed_hostname: str | None, deadline: float
-    ) -> RobotFileParser | None:
+    def _load_robots(self, target_url: str, allowed_hostname: str | None, deadline: float) -> RobotFileParser | None:
         robots_url = urlunsplit((*urlsplit(target_url)[:2], "/robots.txt", "", ""))
-        page = self._fetch_page(
-            robots_url, allowed_hostname, accept_plain_text=True, deadline=deadline
-        )
+        page = self._fetch_page(robots_url, allowed_hostname, accept_plain_text=True, deadline=deadline)
         if page.error or page.status_code != 200 or page.html is None:
             return None
         parser = RobotFileParser()
@@ -212,9 +178,7 @@ class WebFetcher:
         deadline: float | None = None,
     ) -> FetchPageResult:
         started = time.monotonic()
-        deadline = (
-            deadline if deadline is not None else started + self._inspection_budget
-        )
+        deadline = deadline if deadline is not None else started + self._inspection_budget
         current_url = requested_url
         redirects = 0
         cookie_names: list[str] = []
@@ -222,16 +186,12 @@ class WebFetcher:
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
-                if not same_site_hostname(
-                    urlsplit(current_url).hostname, allowed_hostname
-                ):
+                if not same_site_hostname(urlsplit(current_url).hostname, allowed_hostname):
                     raise UnsafeTargetError("Redirect leaves the initial hostname")
                 # Every attempt is pinned to one deterministic member of this
                 # single, fully validated DNS answer set. No DNS lookup occurs
                 # between attempts.
-                last_connection_error: (
-                    httpx.ConnectError | httpx.ConnectTimeout | None
-                ) = None
+                last_connection_error: httpx.ConnectError | httpx.ConnectTimeout | None = None
                 for pinned_ip in sorted(validated_addresses):
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
@@ -444,9 +404,7 @@ class WebFetcher:
 
         current: BaseException | None = exc
         while current is not None:
-            if isinstance(
-                current, (ssl.CertificateError, ssl.SSLCertVerificationError)
-            ):
+            if isinstance(current, (ssl.CertificateError, ssl.SSLCertVerificationError)):
                 return True
             current = current.__cause__ or current.__context__
         return False
@@ -456,18 +414,7 @@ class WebFetcher:
         return FetchError("blocked_by_ssrf", str(exc), url)
 
     @staticmethod
-    def _error_page(
-        requested_url: str,
-        final_url: str,
-        status_code: int | None,
-        redirects: int,
-        started: float,
-        code: str,
-        message: str,
-        content_type: str | None = None,
-        network_family: str | None = None,
-        transport_error_class: str | None = None,
-    ) -> FetchPageResult:
+    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None) -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,

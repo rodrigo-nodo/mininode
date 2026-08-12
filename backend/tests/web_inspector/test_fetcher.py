@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ssl
+
 import httpx
 import pytest
 
@@ -171,6 +173,68 @@ def test_does_not_start_fallback_after_inspection_budget_expires(monkeypatch):
 
     assert page.error.code == "timeout"
     assert page.transport_error_class == "ConnectError"
+    assert attempts == ["93.184.216.33"]
+
+
+def test_second_attempt_uses_only_remaining_inspection_budget(monkeypatch):
+    now = [0.0]
+    timeouts = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        timeouts.append(request.extensions["timeout"]["connect"])
+        if len(timeouts) == 1:
+            now[0] = 25.0
+            raise httpx.ConnectError("unreachable", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+        inspection_budget=30.0,
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.html == "ok"
+    assert timeouts == [10.0, 5.0]
+    assert timeouts[1] <= 30.0 - now[0]
+
+
+def test_certificate_connect_error_does_not_fall_back():
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        certificate_error = ssl.SSLCertVerificationError("hostname mismatch")
+        raise httpx.ConnectError("TLS failed", request=request) from certificate_error
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == "http_error"
+    assert page.transport_error_class == "ConnectError"
+    assert attempts == ["93.184.216.33"]
+
+
+@pytest.mark.parametrize(
+    ("error_type", "expected_code"),
+    [(httpx.ReadTimeout, "timeout"), (httpx.ReadError, "http_error")],
+)
+def test_post_connection_read_error_does_not_fall_back(error_type, expected_code):
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        raise error_type("read failed", request=request)
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == expected_code
+    assert page.transport_error_class == error_type.__name__
     assert attempts == ["93.184.216.33"]
 
 
