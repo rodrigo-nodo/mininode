@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
+from mininode_api.web_inspector import fetcher as fetcher_module
 from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
@@ -50,6 +51,185 @@ def test_records_safe_transport_error_class(error_type):
     assert raw_message not in page.transport_error_class
 
 
+@pytest.mark.parametrize(
+    ("addresses", "expected_attempts", "expected_family"),
+    [
+        (
+            {"2606:2800:220:1:248:1893:25c8:1946", "93.184.216.34"},
+            ["2606:2800:220:1:248:1893:25c8:1946", "93.184.216.34"],
+            "ipv4",
+        ),
+        (
+            {"93.184.216.34", "93.184.216.33"},
+            ["93.184.216.33", "93.184.216.34"],
+            "ipv4",
+        ),
+    ],
+)
+def test_retries_validated_addresses_in_sorted_order(
+    addresses, expected_attempts, expected_family
+):
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        if len(attempts) == 1:
+            raise httpx.ConnectError("unreachable", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler), resolver=lambda hostname, port: addresses
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.html == "ok"
+    assert page.network_family == expected_family
+    assert attempts == expected_attempts
+
+
+def test_returns_last_connection_failure_after_each_validated_address_once():
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        raise httpx.ConnectError("unreachable", request=request)
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == "http_error"
+    assert page.network_family == "ipv4"
+    assert page.transport_error_class == "ConnectError"
+    assert attempts == ["93.184.216.33", "93.184.216.34"]
+
+
+@pytest.mark.parametrize("status_code", [403, 500])
+def test_does_not_try_another_address_after_http_response(status_code):
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        return httpx.Response(
+            status_code, text="error", headers={"content-type": "text/html"}
+        )
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.status_code == status_code
+    assert page.error.code == "http_error"
+    assert attempts == ["93.184.216.33"]
+
+
+def test_mixed_dns_is_blocked_before_any_address_attempt():
+    attempts = []
+    page = WebFetcher(
+        client=client_for(lambda request: attempts.append(request)),
+        resolver=lambda hostname, port: {"93.184.216.34", "127.0.0.1"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == "blocked_by_ssrf"
+    assert attempts == []
+
+
+def test_connect_timeout_falls_back_while_budget_remains():
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        if len(attempts) == 1:
+            raise httpx.ConnectTimeout("timed out", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.html == "ok"
+    assert attempts == ["93.184.216.33", "93.184.216.34"]
+
+
+def test_does_not_start_fallback_after_inspection_budget_expires(monkeypatch):
+    now = [0.0]
+    attempts = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        now[0] = 31.0
+        raise httpx.ConnectError("unreachable", request=request)
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+        inspection_budget=30.0,
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == "timeout"
+    assert page.transport_error_class == "ConnectError"
+    assert attempts == ["93.184.216.33"]
+
+
+def test_each_fallback_attempt_preserves_hostname_host_header_and_pin():
+    observed = []
+
+    def handler(request):
+        observed.append(
+            (
+                str(request.url),
+                request.headers["host"],
+                request.extensions[VALIDATED_IP_EXTENSION],
+            )
+        )
+        if len(observed) == 1:
+            raise httpx.ConnectError("unreachable", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/path", "example.com")
+
+    assert page.html == "ok"
+    assert observed == [
+        ("https://example.com/path", "example.com", "93.184.216.33"),
+        ("https://example.com/path", "example.com", "93.184.216.34"),
+    ]
+
+
+def test_redirect_fallback_uses_only_new_host_validated_addresses():
+    observed = []
+
+    def resolver(hostname, port):
+        if hostname == "www.example.com":
+            return {"93.184.216.36", "93.184.216.35"}
+        return {"93.184.216.34", "93.184.216.33"}
+
+    def handler(request):
+        pin = request.extensions[VALIDATED_IP_EXTENSION]
+        observed.append((request.url.host, pin))
+        if request.url.host == "example.com":
+            return httpx.Response(
+                302, headers={"location": "https://www.example.com/final"}
+            )
+        if pin == "93.184.216.35":
+            raise httpx.ConnectError("unreachable", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(client=client_for(handler), resolver=resolver)._fetch_page(
+        "https://example.com/start", "example.com"
+    )
+
+    assert page.html == "ok"
+    assert observed == [
+        ("example.com", "93.184.216.33"),
+        ("www.example.com", "93.184.216.35"),
+        ("www.example.com", "93.184.216.36"),
+    ]
 def test_normalization_removes_fragment_tracking_and_default_port():
     assert normalize_url("HTTPS://EXAMPLE.COM:443/path?utm_source=x&id=7#top") == "https://example.com/path?id=7"
 
