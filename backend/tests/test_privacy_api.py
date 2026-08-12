@@ -1,3 +1,5 @@
+import json
+import logging
 import sys
 from pathlib import Path
 
@@ -377,7 +379,68 @@ def test_home_timeout_returns_no_artificial_diagnostic(monkeypatch):
     assert "traceback" not in response.text.lower()
 
 
-def test_secondary_timeout_preserves_partial_evidence(monkeypatch):
+def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
+    secret = "super-secret-api-key"
+    html = "<html>private body</html>"
+    cookie = "session=private-cookie"
+    failed = failed_page(f"{HOME}?token=private-query", "dns_failure")
+    failed.elapsed_ms = 123
+    failed.redirect_count = 1
+    failed.status_code = 503
+    failed.html = html
+    failed.set_cookie_names = [cookie]
+    failed.error = FetchError(
+        "dns_failure",
+        f"must not log {secret} {html} {cookie}",
+        failed.requested_url,
+    )
+    client, _ = client_with(monkeypatch, {HOME: failed})
+
+    with caplog.at_level(logging.WARNING, logger=service.__name__):
+        response = client.post(
+            "/privacy/diagnose",
+            json={"url": HOME},
+            headers={"X-Api-Key": secret},
+        )
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if "privacy_home_inspection_failed" in record.message
+    ]
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "inspection_failed",
+        "message": "No fue posible inspeccionar el sitio solicitado.",
+    }
+    assert events == [
+        {
+            "elapsed_ms": 123,
+            "error_code": "dns_failure",
+            "event": "privacy_home_inspection_failed",
+            "failure_class": "controlled_fetch_error",
+            "hostname": "example.com",
+            "phase": "home_fetch",
+            "redirect_count": 1,
+            "status_code": 503,
+        }
+    ]
+    rendered = " ".join(record.message for record in caplog.records)
+    for sensitive_value in (secret, html, cookie, "token", "private-query"):
+        assert sensitive_value not in rendered
+
+
+def test_success_does_not_log_home_failure(monkeypatch, caplog):
+    client, _ = client_with(monkeypatch, {HOME: page(HOME, "<title>Inicio</title>")})
+
+    with caplog.at_level(logging.WARNING, logger=service.__name__):
+        response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert not any("privacy_home_inspection_failed" in record.message for record in caplog.records)
+
+
+def test_secondary_timeout_preserves_partial_evidence(monkeypatch, caplog):
     privacy = "https://example.com/privacidad"
     contact = "https://example.com/contacto"
     html = f'<a href="{privacy}">Privacidad</a><a href="{contact}">Contacto</a>'
@@ -397,7 +460,8 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch):
 
     monkeypatch.setattr(service, "run_privacy_diagnostic", diagnostic_with_capture)
 
-    response = client.post("/privacy/diagnose", json={"url": HOME})
+    with caplog.at_level(logging.WARNING, logger=service.__name__):
+        response = client.post("/privacy/diagnose", json={"url": HOME})
 
     assert response.status_code == 200
     body = response.json()
@@ -407,6 +471,7 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch):
     controls = {item["control_code"]: item for item in body["controls"]}
     assert controls["PRV-002"]["result"] == "partial"
     assert body["coverage"] <= 100
+    assert not any("privacy_home_inspection_failed" in record.message for record in caplog.records)
 
 
 def test_api_key_mechanism_is_reused(monkeypatch):

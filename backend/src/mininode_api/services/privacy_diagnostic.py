@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from collections.abc import Callable
 from time import monotonic
 from urllib.parse import urlsplit
@@ -16,6 +18,8 @@ from mininode_api.web_inspector import (
 )
 from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 from mininode_api.web_inspector.models import FetchError, FetchPageResult, InspectionFetchResult
+
+logger = logging.getLogger(__name__)
 
 
 class PrivacyInspectionError(Exception):
@@ -42,7 +46,20 @@ def validate_public_url_format(url: str) -> str:
 
 
 def _home_failure(result: InspectionFetchResult) -> None:
-    error = result.pages[0].error if result.pages and result.pages[0].error else None
+    page = result.pages[0] if result.pages else None
+    error = page.error if page and page.error else None
+    hostname = (urlsplit(result.target_url).hostname or "").rstrip(".").lower() or None
+    event = {
+        "event": "privacy_home_inspection_failed",
+        "hostname": hostname,
+        "phase": "home_fetch",
+        "error_code": error.code if error else "inspection_failed",
+        "failure_class": "controlled_fetch_error",
+        "redirect_count": page.redirect_count if page else 0,
+        "status_code": page.status_code if page else None,
+        "elapsed_ms": page.elapsed_ms if page else 0,
+    }
+    logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:
         raise PrivacyInspectionError("inspection_failed")
     if error.code == "blocked_by_ssrf":
