@@ -74,7 +74,7 @@ def test_technical_failure_is_unscored_not_artificially_penalized():
     assert result["scope"] == {"pages_requested": 3, "pages_analyzed": 0, "limited": True}
 
 
-def test_source_trace_does_not_change_score_status_coverage_or_priorities():
+def test_visible_evidence_does_not_change_diagnostic_or_priority_order():
     traced = complete_contract()
     traced.pages.append(PageEvidence("https://example.com/contact", 200, "Contacto", "text/html"))
     baseline = complete_contract()
@@ -91,12 +91,16 @@ def test_source_trace_does_not_change_score_status_coverage_or_priorities():
 
     for field in ("score", "status", "coverage", "evaluated_controls", "applicable_controls"):
         assert traced_result[field] == baseline_result[field]
+    for traced_control, baseline_control in zip(traced_result["controls"], baseline_result["controls"]):
+        for field in ("control_code", "result", "reason", "confidence"):
+            assert traced_control[field] == baseline_control[field]
     assert [item["control_code"] for item in traced_result["priorities"]] == [
         item["control_code"] for item in baseline_result["priorities"]
     ]
     assert len(traced_result["priorities"]) == len(baseline_result["priorities"])
     priority = next(item for item in traced_result["priorities"] if item["control_code"] == "PRV-104")
     assert priority["source_url"] == "https://example.com/contact"
+    assert priority["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
 
 
 def test_frontend_conditionally_renders_safe_source_path_and_home_label():
@@ -105,3 +109,5 @@ def test_frontend_conditionally_renders_safe_source_path_and_home_label():
     assert "if (priority.source_url)" in app
     assert "Detectado en: ${page}" in app
     assert "source.pathname === '/' ? 'página principal' : source.pathname" in app
+    assert "if (priority.evidence_summary)" in app
+    assert "Evidencia: ${priority.evidence_summary}" in app

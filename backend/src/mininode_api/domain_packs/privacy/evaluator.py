@@ -9,6 +9,13 @@ from typing import Any, Mapping
 
 _CONTROLS_PATH = Path(__file__).with_name("controls.json")
 _ALLOWED_CONFIDENCE = {"high", "medium", "low"}
+_VISIBLE_FIELD_LABELS = {
+    "name": "nombre",
+    "email": "correo electrónico",
+    "phone": "teléfono",
+    "message": "mensaje",
+}
+_VISIBLE_FIELD_ORDER = tuple(_VISIBLE_FIELD_LABELS)
 
 
 def load_controls() -> list[dict[str, Any]]:
@@ -30,9 +37,46 @@ def _reported_evidence(evidence: Mapping[str, Any]) -> list[Any]:
         return [
             {key: value}
             for key, value in evidence.items()
-            if key not in {"confidence", "technical_error"}
+            if key not in {"confidence", "technical_error", "visible_evidence"}
         ]
     return list(reported) if isinstance(reported, (list, tuple)) else [reported]
+
+
+def _join_visible_fields(fields: list[str]) -> str:
+    if len(fields) == 1:
+        return fields[0]
+    return f"{', '.join(fields[:-1])} y {fields[-1]}"
+
+
+def _evidence_summary(control_code: str, evidence: Mapping[str, Any]) -> str | None:
+    visible = evidence.get("visible_evidence")
+    if not isinstance(visible, Mapping) or visible.get("type") != "personal_data_form":
+        return None
+    source_urls = evidence.get("source_urls")
+    if not isinstance(source_urls, (list, tuple)) or not source_urls:
+        return None
+    if visible.get("source_url") != source_urls[0]:
+        return None
+
+    if control_code == "PRV-101":
+        categories = set(visible.get("fields", ()))
+        labels = [
+            _VISIBLE_FIELD_LABELS[category]
+            for category in _VISIBLE_FIELD_ORDER
+            if category in categories
+        ]
+        if labels:
+            return f"Formulario que solicita {_join_visible_fields(labels)}."
+        return "Se detectó un formulario que solicita datos potencialmente personales."
+    if control_code == "PRV-104":
+        if visible.get("privacy_link"):
+            return "Se detectó un formulario con enlace a política de privacidad."
+        if visible.get("privacy_information"):
+            return "Se detectó información relacionada con privacidad asociada al formulario."
+        if visible.get("consent_mechanism"):
+            return "Se detectó un mecanismo visible de consentimiento asociado al formulario."
+        return "Se detectó un formulario sin mecanismo visible de consentimiento."
+    return None
 
 
 def _result(control: Mapping, result: str, evidence: Mapping, confidence: str) -> dict:
@@ -48,6 +92,9 @@ def _result(control: Mapping, result: str, evidence: Mapping, confidence: str) -
     source_urls = evidence.get("source_urls")
     if isinstance(source_urls, (list, tuple)) and source_urls:
         evaluated["source_url"] = source_urls[0]
+    summary = _evidence_summary(control["code"], evidence)
+    if summary:
+        evaluated["evidence_summary"] = summary
     return evaluated
 
 

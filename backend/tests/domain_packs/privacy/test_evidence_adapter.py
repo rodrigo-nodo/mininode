@@ -149,7 +149,7 @@ def test_personal_form_trace_uses_only_inspected_final_page_and_sanitizes_url():
 
     assert adapted["PRV-101"]["source_urls"] == ["https://example.com/contact"]
     assert adapted["PRV-104"]["source_urls"] == ["https://example.com/contact"]
-    assert "email" not in repr(adapted)
+    assert "test@example.com" not in repr(adapted)
     assert "#form" not in repr(adapted)
 
 
@@ -170,6 +170,70 @@ def test_personal_form_trace_is_deterministic_for_multiple_inspected_pages():
         "https://example.com/a-contact",
         "https://example.com/z-contact",
     ]
+    assert evidence["visible_evidence"]["source_url"] == "https://example.com/a-contact"
+
+
+def test_visible_evidence_uses_known_categories_from_selected_source_only():
+    selected = FormEvidence(
+        "https://example.com/a-contact?token=secret#form", "https://example.com/send", "post",
+        [
+            FieldEvidence("full_name", "text", "Persona privada", False),
+            FieldEvidence("email", "email", "persona@example.com", True),
+            FieldEvidence("message", "textarea", "<b>Mensaje</b>", False),
+        ], [], "header: secret", [],
+    )
+    other = FormEvidence(
+        "https://example.com/z-register", "https://example.com/send", "post",
+        [FieldEvidence("phone", "tel", "+56 9 1234 5678", False)], [], "", [],
+    )
+    pages = [
+        PageEvidence(selected.source_url, 200, "Contacto", "text/html"),
+        PageEvidence(other.source_url, 200, "Registro", "text/html"),
+    ]
+
+    adapted = adapt_evidence(contract(forms=[other, selected], pages=pages))
+    visible = adapted["PRV-101"]["visible_evidence"]
+
+    assert visible == {
+        "type": "personal_data_form",
+        "fields": ["email", "message", "name"],
+        "privacy_link": False,
+        "privacy_information": False,
+        "consent_mechanism": False,
+        "source_url": "https://example.com/a-contact",
+    }
+    serialized = repr(visible)
+    for secret in ("persona@example.com", "+56 9 1234 5678", "<b>", "secret", "?", "#"):
+        assert secret not in serialized
+
+
+def test_visible_evidence_summaries_are_conservative_and_control_scoped():
+    source = "https://example.com/contact"
+    page = PageEvidence(source, 200, "Contacto", "text/html")
+    privacy_link = LinkEvidence("https://example.com/privacy", "Privacidad", source)
+    known = FormEvidence(
+        source, source, "post",
+        [FieldEvidence("email", "email", "", False), FieldEvidence("message", "textarea", "", False)],
+        [], "", [privacy_link],
+    )
+    adapted = adapt_evidence(contract(forms=[known], pages=[page]))
+
+    prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
+    prv104 = evaluate_control("PRV-104", adapted["PRV-104"], {"PRV-101": prv101})
+    assert prv101["evidence_summary"] == "Formulario que solicita correo electrónico y mensaje."
+    assert prv104["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
+    assert prv101["source_url"] == adapted["PRV-101"]["visible_evidence"]["source_url"]
+
+    unknown = FormEvidence(
+        source, source, "post", [FieldEvidence("customer", "text", "Correo", False)], [], "", [],
+    )
+    unknown_evidence = adapt_evidence(contract(forms=[unknown], pages=[page]))["PRV-101"]
+    assert evaluate_control("PRV-101", unknown_evidence)["evidence_summary"] == (
+        "Se detectó un formulario que solicita datos potencialmente personales."
+    )
+
+    for code in ("PRV-001", "PRV-002", "PRV-201", "PRV-301", "PRV-501"):
+        assert "evidence_summary" not in evaluate_control(code, adapted[code])
 
 
 def test_personal_form_trace_supports_home_and_rejects_uninspected_source():

@@ -268,7 +268,8 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
             HOME: page(HOME, f'<a href="{contact_requested}">Contacto</a>'),
             contact_inspected: page(
                 contact_requested,
-                '<form><input name="email" type="email"></form>',
+                '<form><input name="email" type="email" value="persona@example.com">'
+                '<textarea name="message">contenido privado</textarea></form>',
             ),
         },
     )
@@ -282,6 +283,14 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
     assert {"control_code", "name", "priority", "finding", "recommendation"} <= priority.keys()
     assert "?" not in priority["source_url"]
     assert "#" not in priority["source_url"]
+    assert priority["evidence_summary"] == (
+        "Se detectó un formulario sin mecanismo visible de consentimiento."
+    )
+    serialized = str(body)
+    assert "persona@example.com" not in serialized
+    assert "contenido privado" not in serialized
+    assert "<form" not in serialized
+    assert "?" not in priority["evidence_summary"]
 
 
 def test_selection_is_bounded_to_five_pages(monkeypatch):
