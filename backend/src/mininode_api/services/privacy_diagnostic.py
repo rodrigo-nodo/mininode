@@ -10,16 +10,21 @@ from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
 from mininode_api.web_inspector import (
+    PageCandidate,
     WebFetcher,
     build_evidence,
+    classify_page_candidates,
     discover_include_links,
     extract_page,
-    select_pages,
 )
 from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
-from mininode_api.web_inspector.models import FetchError, FetchPageResult, InspectionFetchResult
+from mininode_api.web_inspector.models import InspectionFetchResult
 
 logger = logging.getLogger(__name__)
+
+MAX_PAGES_ATTEMPTED = 5
+_GAP_RESULTS = frozenset({"not_detected", "partial"})
+_CATEGORY_ORDER = ("privacy", "contact", "action")
 
 
 class PrivacyInspectionError(Exception):
@@ -71,21 +76,63 @@ def _home_failure(result: InspectionFetchResult) -> None:
     raise PrivacyInspectionError("inspection_failed")
 
 
+def _result_map(diagnostic: dict) -> dict[str, str]:
+    return {item["control_code"]: item["result"] for item in diagnostic["controls"]}
+
+
+def _needed_categories(diagnostic: dict) -> set[str]:
+    """Map resolvable evaluator gaps to candidate categories.
+
+    Only ``not_detected`` and ``partial`` are evidence gaps in V1. ``detected``
+    is sufficient, while ``not_applicable`` and ``not_evaluable`` do not cause
+    speculative crawling. PRV-001, PRV-201, and PRV-501 never cause expansion.
+    """
+
+    results = _result_map(diagnostic)
+    needed: set[str] = set()
+    if results.get("PRV-002") in _GAP_RESULTS:
+        needed.add("privacy")
+    if results.get("PRV-301") in _GAP_RESULTS:
+        needed.add("contact")
+    if any(results.get(code) in _GAP_RESULTS for code in ("PRV-101", "PRV-104")):
+        needed.update(("contact", "action"))
+    return needed
+
+
+def _next_candidate(
+    candidates: list[PageCandidate], attempted_urls: set[str], needed: set[str]
+) -> PageCandidate | None:
+    for category in _CATEGORY_ORDER:
+        if category not in needed:
+            continue
+        available = [
+            candidate
+            for candidate in candidates
+            if candidate.category == category and candidate.url not in attempted_urls
+        ]
+        if available:
+            return min(available, key=lambda candidate: candidate.rank)
+    return None
+
+
 def diagnose_privacy_url(
     url: str,
     *,
     fetcher_factory: Callable[..., WebFetcher] | None = None,
 ) -> dict:
-    """Inspect one URL and run the existing Privacy diagnostic pipeline."""
+    """Inspect HOME, then only candidates relevant to current Privacy gaps."""
 
     target_url = validate_public_url_format(url)
     factory = fetcher_factory or WebFetcher
     started = monotonic()
-    with factory(inspection_budget=INSPECTION_BUDGET_SECONDS) as home_fetcher:
-        home_result = home_fetcher.fetch(target_url, [target_url])
+    deadline = started + INSPECTION_BUDGET_SECONDS
+    attempted_urls: set[str] = {target_url}
+    categories_attempted: list[str] = []
+
+    with factory(inspection_budget=INSPECTION_BUDGET_SECONDS) as fetcher:
+        home_result = fetcher.fetch(target_url, [target_url], deadline=deadline)
         if home_result.pages_fetched != 1 or not home_result.pages:
             _home_failure(home_result)
-
         home_page = home_result.pages[0]
         if home_page.error or home_page.html is None or home_page.final_url is None:
             _home_failure(home_result)
@@ -94,48 +141,81 @@ def diagnose_privacy_url(
         include_links = discover_include_links(
             home_page.html,
             home_page.final_url,
-            lambda budget: factory(inspection_budget=budget),
-            lambda: INSPECTION_BUDGET_SECONDS - (monotonic() - started),
+            fetcher=fetcher,
+            deadline=deadline,
         )
-        selected = select_pages(
-            home_page.final_url,
-            [*home_evidence.links, *include_links],
-            limit=5,
+        candidates = classify_page_candidates(
+            home_page.final_url, [*home_evidence.links, *include_links]
         )
-        remaining = [page_url for page_url in selected if page_url != home_page.final_url]
-
-    remaining_budget = INSPECTION_BUDGET_SECONDS - (monotonic() - started)
-    if remaining and remaining_budget > 0:
-        with factory(inspection_budget=remaining_budget) as secondary_fetcher:
-            secondary_result = secondary_fetcher.fetch(home_page.final_url, remaining)
-    elif remaining:
-        errors = [
-            FetchError("timeout", "Inspection time budget exceeded", page_url)
-            for page_url in remaining
-        ]
-        secondary_result = InspectionFetchResult(
-            target_url=home_page.final_url,
-            pages_requested=len(remaining),
-            pages=[
-                FetchPageResult(requested_url=error.url, error=error)
-                for error in errors
-            ],
-            errors=errors,
-        )
-    else:
-        secondary_result = InspectionFetchResult(
-            target_url=home_page.final_url,
-            pages_requested=0,
+        attempted_urls.add(home_page.final_url)
+        combined = InspectionFetchResult(
+            target_url=target_url,
+            pages_requested=1,
+            pages_fetched=1,
+            pages=list(home_result.pages),
+            errors=list(home_result.errors),
         )
 
-    combined = InspectionFetchResult(
-        target_url=target_url,
-        pages_requested=len(selected),
-        pages_fetched=home_result.pages_fetched + secondary_result.pages_fetched,
-        pages=[*home_result.pages, *secondary_result.pages],
-        errors=[*home_result.errors, *secondary_result.errors],
-        limited=len(selected) == 5 or home_result.limited or secondary_result.limited,
+        def evaluate() -> dict:
+            return run_privacy_diagnostic(
+                build_evidence(combined, additional_links=include_links)
+            )
+
+        diagnostic = evaluate()
+        while True:
+            needed = _needed_categories(diagnostic)
+            if not needed:
+                stop_reason = "no_resolvable_gaps"
+                break
+            if combined.pages_requested >= MAX_PAGES_ATTEMPTED:
+                stop_reason = "max_pages"
+                combined.limited = True
+                break
+            if monotonic() >= deadline:
+                stop_reason = "deadline"
+                combined.limited = True
+                break
+            candidate = _next_candidate(candidates, attempted_urls, needed)
+            if candidate is None:
+                stop_reason = "no_candidates"
+                break
+
+            attempted_urls.add(candidate.url)
+            categories_attempted.append(candidate.category)
+            result = fetcher.fetch(home_page.final_url, [candidate.url], deadline=deadline)
+            combined.pages_requested += 1
+            combined.pages.extend(result.pages)
+            combined.errors.extend(result.errors)
+            combined.pages_fetched += result.pages_fetched
+            combined.limited |= result.limited
+            combined.limited |= combined.pages_requested >= MAX_PAGES_ATTEMPTED
+            if result.pages_fetched:
+                diagnostic = evaluate()
+
+    diagnostic["scope"] = {
+        "pages_requested": combined.pages_requested,
+        "pages_analyzed": combined.pages_fetched,
+        "limited": combined.limited,
+    }
+    elapsed_ms = max(0, round((monotonic() - started) * 1000))
+    logger.info(
+        json.dumps(
+            {
+                "event": "privacy_adaptive_scope_completed",
+                "hostname": (urlsplit(home_page.final_url).hostname or "")
+                .rstrip(".")
+                .lower()
+                or None,
+                "pages_attempted": combined.pages_requested,
+                "pages_analyzed": combined.pages_fetched,
+                "candidate_count": len(candidates),
+                "expansion_triggered": combined.pages_requested > 1,
+                "stop_reason": stop_reason,
+                "elapsed_ms": elapsed_ms,
+                "categories_attempted": categories_attempted,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        )
     )
-    return run_privacy_diagnostic(
-        build_evidence(combined, additional_links=include_links)
-    )
+    return diagnostic
