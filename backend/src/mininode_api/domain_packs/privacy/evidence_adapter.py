@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
 from mininode_api.web_inspector.models import EvidenceContract, FormEvidence, LinkEvidence
@@ -67,6 +68,44 @@ def _normalized_url(value: str) -> str:
     netloc = hostname if not port or default_port else f"{hostname}:{port}"
     path = parts.path.rstrip("/") or "/"
     return urlunsplit((parts.scheme.lower(), netloc, path, parts.query, ""))
+
+
+def _public_source_url(value: str) -> str | None:
+    """Return a display-safe page URL without credentials, query, or fragment."""
+
+    try:
+        parts = urlsplit(value)
+        hostname = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in {"http", "https"} or not hostname:
+        return None
+    try:
+        ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        return None
+    default_port = (parts.scheme.lower() == "http" and port == 80) or (
+        parts.scheme.lower() == "https" and port == 443
+    )
+    netloc = hostname if not port or default_port else f"{hostname}:{port}"
+    return urlunsplit((parts.scheme.lower(), netloc, parts.path or "/", "", ""))
+
+
+def _inspected_source_urls(contract: EvidenceContract, values: list[str]) -> list[str]:
+    """Keep deterministic, safe references to final URLs actually inspected."""
+
+    inspected = {page.url for page in contract.pages}
+    sources = {
+        safe
+        for value in values
+        if value in inspected
+        for safe in [_public_source_url(value)]
+        if safe
+    }
+    return sorted(sources)
 
 
 def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
@@ -170,6 +209,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         prv002["technical_error"] = True
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
+    personal_form_source_urls = _inspected_source_urls(
+        contract, [form.source_url for form, _ in personal_forms]
+    )
     prv101 = {"confidence": "low"}
     if sufficient:
         prv101["personal_data_form"] = bool(personal_forms)
@@ -177,6 +219,8 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
             "high" if any(confidence == "high" for _, confidence in personal_forms)
             else "medium" if personal_forms else "high"
         )
+        if personal_form_source_urls:
+            prv101["source_urls"] = personal_form_source_urls
     else:
         prv101["technical_error"] = True
 
@@ -198,6 +242,8 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "privacy_link": privacy_link,
         "confidence": "high" if personal_forms else ("high" if sufficient else "low"),
     }
+    if personal_form_source_urls:
+        prv104["source_urls"] = personal_form_source_urls
     if not sufficient:
         prv104["technical_error"] = True
 

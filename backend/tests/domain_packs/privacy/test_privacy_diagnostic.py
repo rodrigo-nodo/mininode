@@ -1,5 +1,6 @@
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 BACKEND_SRC = Path(__file__).resolve().parents[3] / "src"
@@ -71,3 +72,36 @@ def test_technical_failure_is_unscored_not_artificially_penalized():
     assert result["score"] == 0
     assert result["priorities"] == []
     assert result["scope"] == {"pages_requested": 3, "pages_analyzed": 0, "limited": True}
+
+
+def test_source_trace_does_not_change_score_status_coverage_or_priorities():
+    traced = complete_contract()
+    traced.pages.append(PageEvidence("https://example.com/contact", 200, "Contacto", "text/html"))
+    baseline = complete_contract()
+    baseline = replace(baseline, forms=[
+        FormEvidence(
+            "https://example.com/untraced", form.action, form.method, form.fields,
+            form.checkboxes, form.nearby_text, form.privacy_links,
+        )
+        for form in baseline.forms
+    ])
+
+    traced_result = run_privacy_diagnostic(traced)
+    baseline_result = run_privacy_diagnostic(baseline)
+
+    for field in ("score", "status", "coverage", "evaluated_controls", "applicable_controls"):
+        assert traced_result[field] == baseline_result[field]
+    assert [item["control_code"] for item in traced_result["priorities"]] == [
+        item["control_code"] for item in baseline_result["priorities"]
+    ]
+    assert len(traced_result["priorities"]) == len(baseline_result["priorities"])
+    priority = next(item for item in traced_result["priorities"] if item["control_code"] == "PRV-104")
+    assert priority["source_url"] == "https://example.com/contact"
+
+
+def test_frontend_conditionally_renders_safe_source_path_and_home_label():
+    app = (Path(__file__).resolve().parents[4] / "frontend" / "privacy" / "app.js").read_text()
+
+    assert "if (priority.source_url)" in app
+    assert "Detectado en: ${page}" in app
+    assert "source.pathname === '/' ? 'página principal' : source.pathname" in app

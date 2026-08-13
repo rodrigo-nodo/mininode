@@ -188,6 +188,31 @@ def test_priority_order_is_impact_result_confidence_then_code():
     ]
 
 
+def test_optional_source_trace_preserves_priority_shape_order_and_count():
+    results = [
+        {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"},
+        {
+            "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
+            "source_url": "https://example.com/contact",
+        },
+        {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
+    ]
+    without_trace = [{key: value for key, value in result.items() if key != "source_url"} for result in results]
+
+    priorities = prioritize_findings(results)
+    baseline = prioritize_findings(without_trace)
+
+    assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
+    assert len(priorities) == len(baseline)
+    assert priorities[1]["source_url"] == "https://example.com/contact"
+    assert set(priorities[1]) == {
+        "control_code", "name", "priority", "finding", "recommendation", "source_url",
+    }
+    assert set(priorities[0]) == {
+        "control_code", "name", "priority", "finding", "recommendation",
+    }
+
+
 def test_scoring_disclaimers_are_literal():
     assert load_scoring()["disclaimers"] == [
         "Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.",
