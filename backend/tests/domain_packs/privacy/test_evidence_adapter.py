@@ -137,6 +137,155 @@ def test_prv101_technical_only_form_is_not_personal():
     assert adapt_evidence(contract(forms=[form(field_type="hidden", name="csrf", label="")]))["PRV-101"]["personal_data_form"] is False
 
 
+def test_personal_form_trace_uses_only_inspected_final_page_and_sanitizes_url():
+    source = "https://example.com/contact?email=test@example.com#form"
+    traced_form = FormEvidence(
+        source, "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+    page = PageEvidence(source, 200, "Contacto", "text/html")
+
+    adapted = adapt_evidence(contract(forms=[traced_form], pages=[page]))
+
+    assert adapted["PRV-101"]["source_urls"] == ["https://example.com/contact"]
+    assert adapted["PRV-104"]["source_urls"] == ["https://example.com/contact"]
+    assert "test@example.com" not in repr(adapted)
+    assert "#form" not in repr(adapted)
+
+
+def test_visible_evidence_uses_controlled_field_types_and_conservative_fallback():
+    detailed = FormEvidence(
+        "https://example.com/", "https://example.com/send", "post",
+        [
+            FieldEvidence("full_name", "text", "Nombre", True),
+            FieldEvidence("reply", "email", "", True),
+            FieldEvidence("body", "text", "Mensaje", True),
+        ], [], "", [],
+    )
+    generic = FormEvidence(
+        "https://example.com/", "https://example.com/send", "post",
+        [FieldEvidence("company", "text", "", True)], [], "", [],
+    )
+
+    detailed_result = evaluate_control(
+        "PRV-101", adapt_evidence(contract(forms=[detailed]))["PRV-101"]
+    )
+    generic_result = evaluate_control(
+        "PRV-101", adapt_evidence(contract(forms=[generic]))["PRV-101"]
+    )
+
+    assert detailed_result["evidence_summary"] == (
+        "Formulario que solicita correo electrónico, nombre y mensaje."
+    )
+    assert generic_result["evidence_summary"] == (
+        "Se detectó un formulario que solicita datos potencialmente personales."
+    )
+
+
+def test_prv104_summary_uses_existing_privacy_and_consent_signals_only():
+    privacy_link = LinkEvidence(
+        "https://example.com/privacy", "Privacidad", "https://example.com/"
+    )
+    observed = FormEvidence(
+        "https://example.com/", "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)],
+        [CheckboxEvidence("privacy", "Acepto la política de privacidad")],
+        "", [privacy_link],
+    )
+
+    result = evaluate_control(
+        "PRV-104", adapt_evidence(contract(forms=[observed]))["PRV-104"]
+    )
+
+    assert result["evidence_summary"] == (
+        "Formulario con un enlace a la política de privacidad y un mecanismo visible de consentimiento."
+    )
+
+
+def test_visible_summary_matches_deterministically_selected_source_page():
+    forms = [
+        FormEvidence(
+            "https://example.com/z-register", "https://example.com/send", "post",
+            [FieldEvidence("phone", "tel", "Teléfono", True)], [], "", [],
+        ),
+        FormEvidence(
+            "https://example.com/a-contact", "https://example.com/send", "post",
+            [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+        ),
+    ]
+    pages = [
+        PageEvidence(form.source_url, 200, "Formulario", "text/html")
+        for form in forms
+    ]
+
+    result = evaluate_control(
+        "PRV-101", adapt_evidence(contract(forms=forms, pages=pages))["PRV-101"]
+    )
+
+    assert result["source_url"] == "https://example.com/a-contact"
+    assert result["evidence_summary"] == "Formulario que solicita correo electrónico."
+    assert "teléfono" not in result["evidence_summary"]
+
+
+def test_personal_form_trace_is_deterministic_for_multiple_inspected_pages():
+    sources = ["https://example.com/z-contact", "https://example.com/a-contact"]
+    forms = [
+        FormEvidence(
+            source, source, "post",
+            [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+        )
+        for source in sources
+    ]
+    pages = [PageEvidence(source, 200, "Contacto", "text/html") for source in sources]
+
+    evidence = adapt_evidence(contract(forms=forms, pages=pages))["PRV-104"]
+
+    assert evidence["source_urls"] == [
+        "https://example.com/a-contact",
+        "https://example.com/z-contact",
+    ]
+
+
+def test_personal_form_trace_supports_home_and_rejects_uninspected_source():
+    home_form = FormEvidence(
+        "https://example.com/", "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+    invented_form = FormEvidence(
+        "https://example.com/not-inspected", "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+
+    traced = adapt_evidence(contract(forms=[home_form]))["PRV-101"]
+    untraced = adapt_evidence(contract(forms=[invented_form]))["PRV-101"]
+
+    assert traced["source_urls"] == ["https://example.com/"]
+    assert "source_urls" not in untraced
+
+
+def test_personal_form_trace_never_exposes_userinfo_or_ip_literal():
+    credentialed = "https://user:secret@example.com/contact"
+    pinned_ip = "https://203.0.113.10/contact"
+    forms = [
+        FormEvidence(
+            source, source, "post",
+            [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+        )
+        for source in (credentialed, pinned_ip)
+    ]
+    pages = [
+        PageEvidence(source, 200, "Contacto", "text/html")
+        for source in (credentialed, pinned_ip)
+    ]
+
+    evidence = adapt_evidence(contract(forms=forms, pages=pages))["PRV-104"]
+
+    assert evidence["source_urls"] == ["https://example.com/contact"]
+    assert "user" not in repr(evidence)
+    assert "secret" not in repr(evidence)
+    assert "203.0.113.10" not in repr(evidence)
+
+
 def test_prv104_maps_privacy_link_and_information():
     privacy_link = LinkEvidence("https://example.com/privacy", "Privacy", "https://example.com/contacto")
     evidence = adapt_evidence(contract(forms=[form(field_type="email", privacy_links=[privacy_link])]))["PRV-104"]

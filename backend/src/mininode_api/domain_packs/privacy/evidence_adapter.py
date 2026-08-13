@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
 from mininode_api.web_inspector.models import EvidenceContract, FormEvidence, LinkEvidence
@@ -41,6 +42,12 @@ _TECHNICAL_TYPES = {"hidden", "submit", "button", "reset", "image"}
 _CONTACT_TERMS = ("contact", "contacto", "contactenos", "contactanos")
 _MESSAGE_TERMS = ("message", "mensaje", "consulta", "comentario")
 _CONTACT_ADDRESS_TYPES = {"email", "tel"}
+_VISIBLE_FIELD_KINDS = (
+    ("email", {"email", "correo", "correo electronico", "e mail"}),
+    ("phone", {"tel", "telefono", "fono", "phone", "celular", "movil"}),
+    ("name", {"nombre", "name", "apellido", "surname"}),
+    ("message", set(_MESSAGE_TERMS)),
+)
 
 
 def _normalize(value: str) -> str:
@@ -69,6 +76,44 @@ def _normalized_url(value: str) -> str:
     return urlunsplit((parts.scheme.lower(), netloc, path, parts.query, ""))
 
 
+def _public_source_url(value: str) -> str | None:
+    """Return a display-safe page URL without credentials, query, or fragment."""
+
+    try:
+        parts = urlsplit(value)
+        hostname = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in {"http", "https"} or not hostname:
+        return None
+    try:
+        ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        return None
+    default_port = (parts.scheme.lower() == "http" and port == 80) or (
+        parts.scheme.lower() == "https" and port == 443
+    )
+    netloc = hostname if not port or default_port else f"{hostname}:{port}"
+    return urlunsplit((parts.scheme.lower(), netloc, parts.path or "/", "", ""))
+
+
+def _inspected_source_urls(contract: EvidenceContract, values: list[str]) -> list[str]:
+    """Keep deterministic, safe references to final URLs actually inspected."""
+
+    inspected = {page.url for page in contract.pages}
+    sources = {
+        safe
+        for value in values
+        if value in inspected
+        for safe in [_public_source_url(value)]
+        if safe
+    }
+    return sorted(sources)
+
+
 def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
     if _contains_phrase(link.text, _PRIVACY_TERMS):
         return True, "high"
@@ -93,6 +138,61 @@ def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
         if _contains_phrase(field.name, _PERSONAL_TERMS):
             return True, "medium"
     return False, None
+
+
+def _visible_field_types(form: FormEvidence) -> list[str]:
+    """Return controlled field categories without exposing raw attributes."""
+
+    detected: set[str] = set()
+    for field in form.fields:
+        value = f"{field.type} {field.name} {field.label}"
+        normalized_type = _normalize(field.type)
+        for kind, terms in _VISIBLE_FIELD_KINDS:
+            if normalized_type in terms or _contains_phrase(value, terms):
+                detected.add(kind)
+    return [kind for kind, _ in _VISIBLE_FIELD_KINDS if kind in detected]
+
+
+def _visible_form_evidence(
+    contract: EvidenceContract,
+    personal_forms: list[tuple[FormEvidence, str]],
+) -> list[dict]:
+    """Build minimized observations grouped by an actually inspected page."""
+
+    inspected = {page.url for page in contract.pages}
+    grouped: dict[str, list[FormEvidence]] = {}
+    for form, _ in personal_forms:
+        if form.source_url in inspected:
+            source_url = _public_source_url(form.source_url)
+            if source_url:
+                grouped.setdefault(source_url, []).append(form)
+
+    visible = []
+    for source_url in sorted(grouped):
+        forms = grouped[source_url]
+        fields = {
+            field_type
+            for form in forms
+            for field_type in _visible_field_types(form)
+        }
+        visible.append({
+            "source_url": source_url,
+            "type": "personal_data_form",
+            "fields": [
+                kind for kind, _ in _VISIBLE_FIELD_KINDS if kind in fields
+            ],
+            "privacy_link": any(form.privacy_links for form in forms),
+            "privacy_information": any(
+                _contains_phrase(form.nearby_text, _PRIVACY_INFORMATION_TERMS)
+                for form in forms
+            ),
+            "consent_mechanism": any(
+                _contains_phrase(checkbox.label, _CONSENT_TERMS)
+                for form in forms
+                for checkbox in form.checkboxes
+            ),
+        })
+    return visible
 
 
 def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
@@ -170,6 +270,10 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         prv002["technical_error"] = True
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
+    personal_form_source_urls = _inspected_source_urls(
+        contract, [form.source_url for form, _ in personal_forms]
+    )
+    visible_form_evidence = _visible_form_evidence(contract, personal_forms)
     prv101 = {"confidence": "low"}
     if sufficient:
         prv101["personal_data_form"] = bool(personal_forms)
@@ -177,6 +281,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
             "high" if any(confidence == "high" for _, confidence in personal_forms)
             else "medium" if personal_forms else "high"
         )
+        if personal_form_source_urls:
+            prv101["source_urls"] = personal_form_source_urls
+            prv101["visible_evidence"] = visible_form_evidence
     else:
         prv101["technical_error"] = True
 
@@ -198,6 +305,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "privacy_link": privacy_link,
         "confidence": "high" if personal_forms else ("high" if sufficient else "low"),
     }
+    if personal_form_source_urls:
+        prv104["source_urls"] = personal_form_source_urls
+        prv104["visible_evidence"] = visible_form_evidence
     if not sufficient:
         prv104["technical_error"] = True
 

@@ -258,6 +258,60 @@ def test_contact_form_is_analyzed(monkeypatch):
     assert controls["PRV-101"]["result"] == "detected"
 
 
+def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypatch):
+    contact_requested = "https://example.com/contacto?email=test@example.com#form"
+    contact_inspected = "https://example.com/contacto?email=test%40example.com"
+    contact_public = "https://example.com/contacto"
+    client, _ = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, f'<a href="{contact_requested}">Contacto</a>'),
+            contact_inspected: page(
+                contact_requested,
+                '<form><input name="email" type="email"></form>',
+            ),
+        },
+    )
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    body = response.json()
+    priority = next(item for item in body["priorities"] if item["control_code"] == "PRV-104")
+    assert priority["source_url"] == contact_public
+    assert {"control_code", "name", "priority", "finding", "recommendation"} <= priority.keys()
+    assert "?" not in priority["source_url"]
+    assert "#" not in priority["source_url"]
+
+
+def test_api_visible_evidence_exposes_no_values_query_or_html(monkeypatch):
+    contact = "https://example.com/contacto?token=private"
+    sensitive = "persona@example.com"
+    client, _ = client_with(
+        monkeypatch,
+        {
+            HOME: page(HOME, f'<a href="{contact}">Contacto</a>'),
+            contact: page(
+                contact,
+                f'<form><input name="email" type="email" value="{sensitive}"></form>',
+            ),
+        },
+    )
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    priority = next(
+        item for item in response.json()["priorities"]
+        if item["control_code"] == "PRV-104"
+    )
+    assert priority["evidence_summary"] == "Formulario que solicita correo electrónico."
+    assert sensitive not in priority["evidence_summary"]
+    assert "token" not in priority["evidence_summary"]
+    assert "<" not in priority["evidence_summary"]
+    assert ">" not in priority["evidence_summary"]
+
+
 def test_selection_is_bounded_to_five_pages(monkeypatch):
     paths = ["privacidad", "contacto", "newsletter", "cotizar", "registro"]
     labels = ["Privacidad", "Contacto", "Newsletter", "Cotizar", "Registro"]

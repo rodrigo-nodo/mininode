@@ -9,6 +9,12 @@ from typing import Any, Mapping
 
 _CONTROLS_PATH = Path(__file__).with_name("controls.json")
 _ALLOWED_CONFIDENCE = {"high", "medium", "low"}
+_VISIBLE_FIELD_LABELS = {
+    "email": "correo electrónico",
+    "phone": "teléfono",
+    "name": "nombre",
+    "message": "mensaje",
+}
 
 
 def load_controls() -> list[dict[str, Any]]:
@@ -35,16 +41,69 @@ def _reported_evidence(evidence: Mapping[str, Any]) -> list[Any]:
     return list(reported) if isinstance(reported, (list, tuple)) else [reported]
 
 
+def _join_labels(labels: list[str]) -> str:
+    if len(labels) == 1:
+        return labels[0]
+    return f"{', '.join(labels[:-1])} y {labels[-1]}"
+
+
+def _evidence_summary(control_code: str, observation: Mapping) -> str | None:
+    if observation.get("type") != "personal_data_form":
+        return None
+    fields = [
+        _VISIBLE_FIELD_LABELS[field]
+        for field in observation.get("fields", [])
+        if field in _VISIBLE_FIELD_LABELS
+    ]
+    form_summary = (
+        f"Formulario que solicita {_join_labels(fields)}."
+        if fields
+        else "Se detectó un formulario que solicita datos potencialmente personales."
+    )
+    if control_code == "PRV-101":
+        return form_summary
+    if control_code != "PRV-104":
+        return None
+    privacy_signals = []
+    if observation.get("privacy_link"):
+        privacy_signals.append("un enlace a la política de privacidad")
+    elif observation.get("privacy_information"):
+        privacy_signals.append("información de privacidad asociada")
+    if observation.get("consent_mechanism"):
+        privacy_signals.append("un mecanismo visible de consentimiento")
+    if not privacy_signals:
+        return form_summary
+    return f"Formulario con {_join_labels(privacy_signals)}."
+
+
 def _result(control: Mapping, result: str, evidence: Mapping, confidence: str) -> dict:
     if confidence not in _ALLOWED_CONFIDENCE:
         raise ValueError(f"Invalid confidence: {confidence}")
-    return {
+    evaluated = {
         "control_code": control["code"],
         "result": result,
         "confidence": confidence,
         "evidence": _reported_evidence(evidence),
         "reason": control["criteria"][result],
     }
+    source_urls = evidence.get("source_urls")
+    if isinstance(source_urls, (list, tuple)) and source_urls:
+        evaluated["source_url"] = source_urls[0]
+        observations = evidence.get("visible_evidence")
+        if isinstance(observations, (list, tuple)):
+            observation = next(
+                (
+                    item for item in observations
+                    if isinstance(item, Mapping)
+                    and item.get("source_url") == evaluated["source_url"]
+                ),
+                None,
+            )
+            if observation:
+                summary = _evidence_summary(control["code"], observation)
+                if summary:
+                    evaluated["evidence_summary"] = summary
+    return evaluated
 
 
 def evaluate_control(
