@@ -178,6 +178,34 @@ def test_adaptive_home_sufficient_does_not_fetch_existing_candidates(monkeypatch
     assert event["stop_reason"] == "no_resolvable_gaps"
 
 
+def test_adaptive_completion_logs_once_without_sensitive_page_data(monkeypatch, caplog):
+    target = f"{HOME}private/path?token=private-query"
+    private_html = "<html>email private@example.com; phone +1-555-0100</html>"
+    client, _ = client_with(monkeypatch, {target: page(target, private_html)})
+    sequenced_diagnostic(monkeypatch, adaptive_result())
+
+    with caplog.at_level(logging.INFO, logger=service.__name__):
+        response = client.post("/privacy/diagnose", json={"url": target})
+
+    events = [
+        record.message
+        for record in caplog.records
+        if "privacy_adaptive_scope_completed" in record.message
+    ]
+    assert response.status_code == 200
+    assert len(events) == 1
+    assert json.loads(events[0])["hostname"] == "example.com"
+    for sensitive_value in (
+        "private/path",
+        "token",
+        "private-query",
+        private_html,
+        "private@example.com",
+        "+1-555-0100",
+    ):
+        assert sensitive_value not in events[0]
+
+
 def test_coverage_100_does_not_stop_real_privacy_gap(monkeypatch):
     privacy, contact = f"{HOME}privacy", f"{HOME}contact"
     client, fake = client_with(monkeypatch, {

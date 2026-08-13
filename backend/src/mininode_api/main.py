@@ -9,6 +9,29 @@ from fastapi import FastAPI, Header, HTTPException, Depends, Response
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+
+def configure_application_logging() -> None:
+    """Expose Mininode INFO logs through Uvicorn's existing error handlers."""
+
+    application_logger = logging.getLogger("mininode_api")
+    application_logger.setLevel(logging.INFO)
+
+    uvicorn_logger: logging.Logger | None = logging.getLogger("uvicorn.error")
+    while uvicorn_logger is not None and not uvicorn_logger.handlers:
+        uvicorn_logger = uvicorn_logger.parent
+    uvicorn_handlers = uvicorn_logger.handlers if uvicorn_logger is not None else []
+    if not uvicorn_handlers:
+        # Outside Uvicorn (notably tests), let the surrounding process capture
+        # records rather than creating and owning a new handler here.
+        application_logger.propagate = True
+        return
+
+    for handler in uvicorn_handlers:
+        if handler not in application_logger.handlers:
+            application_logger.addHandler(handler)
+    application_logger.propagate = False
+
+
 # Patrón app factory: facilita tests, evita efectos colaterales al importar.
 def create_app() -> FastAPI:
     app = FastAPI(title="Mininode API", version="0.1.0")
@@ -123,4 +146,5 @@ def create_app() -> FastAPI:
 
 
 # Punto de entrada para Uvicorn/Render
+configure_application_logging()
 app = create_app()
