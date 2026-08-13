@@ -54,5 +54,7 @@ def prioritize_findings(results: Iterable[Mapping], *, limit: int = 3) -> list[d
         }
         if result.get("source_url"):
             priority["source_url"] = result["source_url"]
+        if result.get("evidence_summary"):
+            priority["evidence_summary"] = result["evidence_summary"]
         priorities.append(priority)
     return priorities

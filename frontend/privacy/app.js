@@ -135,6 +135,9 @@ const renderPriorities = (priorities) => {
         // Ignore malformed optional trace data rather than displaying it.
       }
     }
+    if (priority.evidence_summary) {
+      appendTextElement(item, 'p', `Evidencia: ${priority.evidence_summary}`);
+    }
     if (priority.finding) {
       appendTextElement(item, 'p', `Hallazgo: ${priority.finding}`);
     }

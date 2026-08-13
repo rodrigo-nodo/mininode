@@ -42,6 +42,17 @@ _TECHNICAL_TYPES = {"hidden", "submit", "button", "reset", "image"}
 _CONTACT_TERMS = ("contact", "contacto", "contactenos", "contactanos")
 _MESSAGE_TERMS = ("message", "mensaje", "consulta", "comentario")
 _CONTACT_ADDRESS_TYPES = {"email", "tel"}
+_VISIBLE_FIELD_TYPES = {
+    "email": "email",
+    "tel": "phone",
+    "textarea": "message",
+}
+_VISIBLE_NAME_FIELDS = {
+    "name": "name",
+    "nombre": "name",
+    "full name": "name",
+    "nombre completo": "name",
+}
 
 
 def _normalize(value: str) -> str:
@@ -106,6 +117,59 @@ def _inspected_source_urls(contract: EvidenceContract, values: list[str]) -> lis
         if safe
     }
     return sorted(sources)
+
+
+def _visible_field_category(field) -> str | None:
+    """Map only conservative, known field metadata to a public category."""
+
+    field_type = _normalize(field.type)
+    if field_type in _VISIBLE_FIELD_TYPES:
+        return _VISIBLE_FIELD_TYPES[field_type]
+    if field_type in {"text", ""}:
+        return _VISIBLE_NAME_FIELDS.get(_normalize(field.name))
+    return None
+
+
+def _visible_form_evidence(
+    forms: list[tuple[FormEvidence, str | None]], source_url: str | None
+) -> dict | None:
+    """Minimize form observations from exactly the selected public source."""
+
+    if not source_url:
+        return None
+    matching = [
+        form
+        for form, _ in forms
+        if _public_source_url(form.source_url) == source_url
+    ]
+    if not matching:
+        return None
+
+    fields = sorted({
+        category
+        for form in matching
+        for field in form.fields
+        for category in [_visible_field_category(field)]
+        if category
+    })
+    privacy_link = any(form.privacy_links for form in matching)
+    privacy_information = privacy_link or any(
+        _contains_phrase(form.nearby_text, _PRIVACY_INFORMATION_TERMS)
+        for form in matching
+    )
+    consent_mechanism = any(
+        _contains_phrase(checkbox.label, _CONSENT_TERMS)
+        for form in matching
+        for checkbox in form.checkboxes
+    )
+    return {
+        "type": "personal_data_form",
+        "fields": fields,
+        "privacy_link": privacy_link,
+        "privacy_information": privacy_information,
+        "consent_mechanism": consent_mechanism,
+        "source_url": source_url,
+    }
 
 
 def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
@@ -212,6 +276,10 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     personal_form_source_urls = _inspected_source_urls(
         contract, [form.source_url for form, _ in personal_forms]
     )
+    visible_evidence = _visible_form_evidence(
+        personal_forms,
+        personal_form_source_urls[0] if personal_form_source_urls else None,
+    )
     prv101 = {"confidence": "low"}
     if sufficient:
         prv101["personal_data_form"] = bool(personal_forms)
@@ -221,6 +289,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         )
         if personal_form_source_urls:
             prv101["source_urls"] = personal_form_source_urls
+            prv101["visible_evidence"] = visible_evidence
     else:
         prv101["technical_error"] = True
 
@@ -244,6 +313,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     }
     if personal_form_source_urls:
         prv104["source_urls"] = personal_form_source_urls
+        prv104["visible_evidence"] = visible_evidence
     if not sufficient:
         prv104["technical_error"] = True
 
