@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -139,6 +140,33 @@ def test_gap_policy_is_control_and_state_specific(control, result, categories):
     assert service._needed_categories(diagnostic) == categories
 
 
+def test_remaining_gap_telemetry_reuses_policy_without_mutating_diagnostic():
+    diagnostic = adaptive_result(
+        **{
+            "PRV-001": "not_evaluable",
+            "PRV-002": "partial",
+            "PRV-104": "not_detected",
+            "PRV-201": "not_evaluable",
+            "PRV-501": "not_evaluable",
+        }
+    )
+    diagnostic.update(
+        score=42,
+        coverage=57,
+        status="insufficient_evidence",
+        priorities=[{"control_code": "PRV-104"}],
+        source_url="https://example.com/private?token=secret",
+        evidence_summary="private evidence",
+    )
+    before = deepcopy(diagnostic)
+
+    gaps = service._remaining_adaptive_gaps(diagnostic)
+
+    assert list(gaps) == ["PRV-002", "PRV-104"]
+    assert service._needed_categories(diagnostic) == {"privacy", "contact", "action"}
+    assert diagnostic == before
+
+
 def test_valid_simple_site_runs_full_pipeline(monkeypatch):
     client, fake = client_with(
         monkeypatch,
@@ -176,12 +204,20 @@ def test_adaptive_home_sufficient_does_not_fetch_existing_candidates(monkeypatch
     assert (event["pages_attempted"], event["pages_analyzed"]) == (1, 1)
     assert event["expansion_triggered"] is False
     assert event["stop_reason"] == "no_resolvable_gaps"
+    assert event["remaining_gap_controls"] == []
+    assert event["remaining_gap_categories"] == []
 
 
 def test_adaptive_completion_logs_once_without_sensitive_page_data(monkeypatch, caplog):
     target = f"{HOME}private/path?token=private-query"
-    private_html = "<html>email private@example.com; phone +1-555-0100</html>"
-    client, _ = client_with(monkeypatch, {target: page(target, private_html)})
+    private_html = (
+        "<html>email private@example.com; phone +1-555-0100; "
+        "IP 192.0.2.42; socket connection refused</html>"
+    )
+    client, _ = client_with(
+        monkeypatch,
+        {target: page(target, private_html, cookies=["private_session_cookie"])},
+    )
     sequenced_diagnostic(monkeypatch, adaptive_result())
 
     with caplog.at_level(logging.INFO, logger=service.__name__):
@@ -202,6 +238,9 @@ def test_adaptive_completion_logs_once_without_sensitive_page_data(monkeypatch, 
         private_html,
         "private@example.com",
         "+1-555-0100",
+        "private_session_cookie",
+        "192.0.2.42",
+        "socket connection refused",
     ):
         assert sensitive_value not in events[0]
 
@@ -279,6 +318,8 @@ def test_not_evaluable_without_compatible_candidate_stops_as_no_candidates(
         )
     )
     assert event["stop_reason"] == "no_candidates"
+    assert event["remaining_gap_controls"] == ["PRV-002"]
+    assert event["remaining_gap_categories"] == ["privacy"]
 
 
 def test_form_gap_prefers_contact_then_one_action(monkeypatch):
@@ -359,6 +400,8 @@ def test_maximum_is_five_attempts_including_failed_candidates(monkeypatch, caplo
     assert event["pages_attempted"] == 5
     assert event["pages_analyzed"] == 1
     assert event["stop_reason"] == "max_pages"
+    assert event["remaining_gap_controls"] == ["PRV-002"]
+    assert event["remaining_gap_categories"] == ["privacy"]
 
 
 def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
@@ -623,6 +666,8 @@ def test_exhausted_total_budget_does_not_start_secondary_fetch(monkeypatch, capl
     event = json.loads(next(record.message for record in caplog.records if "privacy_adaptive_scope_completed" in record.message))
     assert event["pages_analyzed"] == 1
     assert event["stop_reason"] == "deadline"
+    assert event["remaining_gap_controls"] == ["PRV-002"]
+    assert event["remaining_gap_categories"] == ["privacy"]
 
 
 def test_redirected_home_is_effective_base_and_original_target_is_preserved(monkeypatch):

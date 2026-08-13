@@ -30,6 +30,12 @@ _EXPANDABLE_RESULTS_BY_CONTROL = {
     "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),
 }
+_CATEGORIES_BY_EXPANDABLE_CONTROL = {
+    "PRV-002": frozenset({"privacy"}),
+    "PRV-101": frozenset({"contact", "action"}),
+    "PRV-104": frozenset({"contact", "action"}),
+    "PRV-301": frozenset({"contact"}),
+}
 
 
 class PrivacyInspectionError(Exception):
@@ -85,6 +91,17 @@ def _result_map(diagnostic: dict) -> dict[str, str]:
     return {item["control_code"]: item["result"] for item in diagnostic["controls"]}
 
 
+def _remaining_adaptive_gaps(diagnostic: dict) -> dict[str, frozenset[str]]:
+    """Return the current control-to-category adaptive policy matches."""
+
+    results = _result_map(diagnostic)
+    return {
+        control: _CATEGORIES_BY_EXPANDABLE_CONTROL[control]
+        for control in sorted(_CATEGORIES_BY_EXPANDABLE_CONTROL)
+        if results.get(control) in _EXPANDABLE_RESULTS_BY_CONTROL[control]
+    }
+
+
 def _needed_categories(diagnostic: dict) -> set[str]:
     """Map resolvable evaluator gaps to candidate categories.
 
@@ -94,18 +111,11 @@ def _needed_categories(diagnostic: dict) -> set[str]:
     PRV-501 never cause expansion.
     """
 
-    results = _result_map(diagnostic)
-    needed: set[str] = set()
-    if results.get("PRV-002") in _EXPANDABLE_RESULTS_BY_CONTROL["PRV-002"]:
-        needed.add("privacy")
-    if results.get("PRV-301") in _EXPANDABLE_RESULTS_BY_CONTROL["PRV-301"]:
-        needed.add("contact")
-    if any(
-        results.get(code) in _EXPANDABLE_RESULTS_BY_CONTROL[code]
-        for code in ("PRV-101", "PRV-104")
-    ):
-        needed.update(("contact", "action"))
-    return needed
+    return {
+        category
+        for categories in _remaining_adaptive_gaps(diagnostic).values()
+        for category in categories
+    }
 
 
 def _next_candidate(
@@ -209,6 +219,10 @@ def diagnose_privacy_url(
         "limited": combined.limited,
     }
     elapsed_ms = max(0, round((monotonic() - started) * 1000))
+    remaining_gaps = _remaining_adaptive_gaps(diagnostic)
+    remaining_categories = {
+        category for categories in remaining_gaps.values() for category in categories
+    }
     logger.info(
         json.dumps(
             {
@@ -224,6 +238,12 @@ def diagnose_privacy_url(
                 "stop_reason": stop_reason,
                 "elapsed_ms": elapsed_ms,
                 "categories_attempted": categories_attempted,
+                "remaining_gap_controls": list(remaining_gaps),
+                "remaining_gap_categories": [
+                    category
+                    for category in _CATEGORY_ORDER
+                    if category in remaining_categories
+                ],
             },
             separators=(",", ":"),
             sort_keys=True,
