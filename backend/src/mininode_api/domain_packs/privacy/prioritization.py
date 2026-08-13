@@ -43,13 +43,16 @@ def prioritize_findings(results: Iterable[Mapping], *, limit: int = 3) -> list[d
             item[0]["code"],
         )
     )
-    return [
-        {
+    priorities = []
+    for control, result, outcome in eligible[: min(max(limit, 0), 3)]:
+        priority = {
             "control_code": control["code"],
             "name": control["name"],
             "priority": _VISIBLE_PRIORITY[control["impact"]],
             "finding": control["criteria"][outcome],
             "recommendation": control["base_recommendation"],
         }
-        for control, _, outcome in eligible[: min(max(limit, 0), 3)]
-    ]
+        if result.get("source_url"):
+            priority["source_url"] = result["source_url"]
+        priorities.append(priority)
+    return priorities

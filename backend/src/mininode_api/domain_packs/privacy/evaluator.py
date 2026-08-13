@@ -38,13 +38,17 @@ def _reported_evidence(evidence: Mapping[str, Any]) -> list[Any]:
 def _result(control: Mapping, result: str, evidence: Mapping, confidence: str) -> dict:
     if confidence not in _ALLOWED_CONFIDENCE:
         raise ValueError(f"Invalid confidence: {confidence}")
-    return {
+    evaluated = {
         "control_code": control["code"],
         "result": result,
         "confidence": confidence,
         "evidence": _reported_evidence(evidence),
         "reason": control["criteria"][result],
     }
+    source_urls = evidence.get("source_urls")
+    if isinstance(source_urls, (list, tuple)) and source_urls:
+        evaluated["source_url"] = source_urls[0]
+    return evaluated
 
 
 def evaluate_control(

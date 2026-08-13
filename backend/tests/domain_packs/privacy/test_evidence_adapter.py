@@ -137,6 +137,81 @@ def test_prv101_technical_only_form_is_not_personal():
     assert adapt_evidence(contract(forms=[form(field_type="hidden", name="csrf", label="")]))["PRV-101"]["personal_data_form"] is False
 
 
+def test_personal_form_trace_uses_only_inspected_final_page_and_sanitizes_url():
+    source = "https://example.com/contact?email=test@example.com#form"
+    traced_form = FormEvidence(
+        source, "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+    page = PageEvidence(source, 200, "Contacto", "text/html")
+
+    adapted = adapt_evidence(contract(forms=[traced_form], pages=[page]))
+
+    assert adapted["PRV-101"]["source_urls"] == ["https://example.com/contact"]
+    assert adapted["PRV-104"]["source_urls"] == ["https://example.com/contact"]
+    assert "email" not in repr(adapted)
+    assert "#form" not in repr(adapted)
+
+
+def test_personal_form_trace_is_deterministic_for_multiple_inspected_pages():
+    sources = ["https://example.com/z-contact", "https://example.com/a-contact"]
+    forms = [
+        FormEvidence(
+            source, source, "post",
+            [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+        )
+        for source in sources
+    ]
+    pages = [PageEvidence(source, 200, "Contacto", "text/html") for source in sources]
+
+    evidence = adapt_evidence(contract(forms=forms, pages=pages))["PRV-104"]
+
+    assert evidence["source_urls"] == [
+        "https://example.com/a-contact",
+        "https://example.com/z-contact",
+    ]
+
+
+def test_personal_form_trace_supports_home_and_rejects_uninspected_source():
+    home_form = FormEvidence(
+        "https://example.com/", "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+    invented_form = FormEvidence(
+        "https://example.com/not-inspected", "https://example.com/send", "post",
+        [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+    )
+
+    traced = adapt_evidence(contract(forms=[home_form]))["PRV-101"]
+    untraced = adapt_evidence(contract(forms=[invented_form]))["PRV-101"]
+
+    assert traced["source_urls"] == ["https://example.com/"]
+    assert "source_urls" not in untraced
+
+
+def test_personal_form_trace_never_exposes_userinfo_or_ip_literal():
+    credentialed = "https://user:secret@example.com/contact"
+    pinned_ip = "https://203.0.113.10/contact"
+    forms = [
+        FormEvidence(
+            source, source, "post",
+            [FieldEvidence("email", "email", "Correo", True)], [], "", [],
+        )
+        for source in (credentialed, pinned_ip)
+    ]
+    pages = [
+        PageEvidence(source, 200, "Contacto", "text/html")
+        for source in (credentialed, pinned_ip)
+    ]
+
+    evidence = adapt_evidence(contract(forms=forms, pages=pages))["PRV-104"]
+
+    assert evidence["source_urls"] == ["https://example.com/contact"]
+    assert "user" not in repr(evidence)
+    assert "secret" not in repr(evidence)
+    assert "203.0.113.10" not in repr(evidence)
+
+
 def test_prv104_maps_privacy_link_and_information():
     privacy_link = LinkEvidence("https://example.com/privacy", "Privacy", "https://example.com/contacto")
     evidence = adapt_evidence(contract(forms=[form(field_type="email", privacy_links=[privacy_link])]))["PRV-104"]

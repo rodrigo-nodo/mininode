@@ -126,6 +126,15 @@ const renderPriorities = (priorities) => {
   visiblePriorities.forEach((priority) => {
     const item = appendTextElement(diagnosticPriorities, 'article', '', 'privacy-priority');
     appendTextElement(item, 'h4', priority.name || 'Acción prioritaria');
+    if (priority.source_url) {
+      try {
+        const source = new URL(priority.source_url);
+        const page = source.pathname === '/' ? 'página principal' : source.pathname;
+        appendTextElement(item, 'p', `Detectado en: ${page}`);
+      } catch {
+        // Ignore malformed optional trace data rather than displaying it.
+      }
+    }
     if (priority.finding) {
       appendTextElement(item, 'p', `Hallazgo: ${priority.finding}`);
     }
