@@ -219,7 +219,7 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
         {
             "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
             "source_url": "https://example.com/contact",
-            "evidence_summary": "Se detectó un formulario sin mecanismo visible de consentimiento.",
+            "evidence_summary": "No se detectó un mecanismo visible de consentimiento asociado al formulario.",
         },
         {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
     ]
@@ -231,7 +231,9 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
 
     assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
     assert len(priorities) == len(baseline)
-    assert priorities[1]["evidence_summary"].startswith("Se detectó un formulario")
+    assert priorities[1]["evidence_summary"] == (
+        "No se detectó un mecanismo visible de consentimiento asociado al formulario."
+    )
 
 
 def test_scoring_disclaimers_are_literal():
