@@ -23,8 +23,13 @@ from mininode_api.web_inspector.models import InspectionFetchResult
 logger = logging.getLogger(__name__)
 
 MAX_PAGES_ATTEMPTED = 5
-_GAP_RESULTS = frozenset({"not_detected", "partial"})
 _CATEGORY_ORDER = ("privacy", "contact", "action")
+_EXPANDABLE_RESULTS_BY_CONTROL = {
+    "PRV-002": frozenset({"not_detected", "partial", "not_evaluable"}),
+    "PRV-301": frozenset({"not_detected", "partial", "not_evaluable"}),
+    "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
+    "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),
+}
 
 
 class PrivacyInspectionError(Exception):
@@ -83,18 +88,22 @@ def _result_map(diagnostic: dict) -> dict[str, str]:
 def _needed_categories(diagnostic: dict) -> set[str]:
     """Map resolvable evaluator gaps to candidate categories.
 
-    Only ``not_detected`` and ``partial`` are evidence gaps in V1. ``detected``
-    is sufficient, while ``not_applicable`` and ``not_evaluable`` do not cause
-    speculative crawling. PRV-001, PRV-201, and PRV-501 never cause expansion.
+    ``not_evaluable`` is expandable only for the four controls where a concrete
+    Privacy, Contact, or Action candidate can supply the missing evidence.
+    ``detected`` and ``not_applicable`` do not expand. PRV-001, PRV-201, and
+    PRV-501 never cause expansion.
     """
 
     results = _result_map(diagnostic)
     needed: set[str] = set()
-    if results.get("PRV-002") in _GAP_RESULTS:
+    if results.get("PRV-002") in _EXPANDABLE_RESULTS_BY_CONTROL["PRV-002"]:
         needed.add("privacy")
-    if results.get("PRV-301") in _GAP_RESULTS:
+    if results.get("PRV-301") in _EXPANDABLE_RESULTS_BY_CONTROL["PRV-301"]:
         needed.add("contact")
-    if any(results.get(code) in _GAP_RESULTS for code in ("PRV-101", "PRV-104")):
+    if any(
+        results.get(code) in _EXPANDABLE_RESULTS_BY_CONTROL[code]
+        for code in ("PRV-101", "PRV-104")
+    ):
         needed.update(("contact", "action"))
     return needed
 
@@ -189,8 +198,10 @@ def diagnose_privacy_url(
             combined.pages_fetched += result.pages_fetched
             combined.limited |= result.limited
             combined.limited |= combined.pages_requested >= MAX_PAGES_ATTEMPTED
-            if result.pages_fetched:
-                diagnostic = evaluate()
+            # Controlled failures are operational evidence too: rebuilding the
+            # complete contract lets the adapter distinguish an untried link
+            # from an attempted but inaccessible destination before replacement.
+            diagnostic = evaluate()
 
     diagnostic["scope"] = {
         "pages_requested": combined.pages_requested,
