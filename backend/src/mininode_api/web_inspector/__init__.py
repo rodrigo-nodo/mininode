@@ -19,7 +19,7 @@ from .models import (
     TargetEvidence,
     TransportEvidence,
 )
-from .selector import select_pages
+from .selector import PageCandidate, candidate_identity, classify_page_candidates, select_pages
 
 __all__ = [
     "CheckboxEvidence",
@@ -35,10 +35,13 @@ __all__ = [
     "LinkEvidence",
     "MAX_INCLUDES_PER_PAGE",
     "PageEvidence",
+    "PageCandidate",
     "TargetEvidence",
     "TransportEvidence",
     "WebFetcher",
     "build_evidence",
+    "candidate_identity",
+    "classify_page_candidates",
     "discover_include_links",
     "extract_page",
     "normalize_url",

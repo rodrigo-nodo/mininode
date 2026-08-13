@@ -79,8 +79,11 @@ def _fragment_links(html: str, fragment_url: str, site_url: str) -> list[LinkEvi
 def discover_include_links(
     home_html: str,
     home_url: str,
-    fetcher_factory: Callable[[float], WebFetcher],
-    remaining_budget: Callable[[], float],
+    fetcher_factory: Callable[[float], WebFetcher] | None = None,
+    remaining_budget: Callable[[], float] | None = None,
+    *,
+    fetcher: WebFetcher | None = None,
+    deadline: float | None = None,
 ) -> list[LinkEvidence]:
     """Fetch depth-one include resources and return only discovered links.
 
@@ -91,11 +94,22 @@ def discover_include_links(
     include_urls = _include_urls(home_html, home_url)
     if not include_urls:
         return []
-    budget = remaining_budget()
-    if budget <= 0:
-        return []
-    with fetcher_factory(budget) as fetcher:
-        fetched = fetcher.fetch(home_url, include_urls)
+    if fetcher is not None:
+        if deadline is None:
+            fetched = fetcher.fetch(home_url, include_urls)
+        else:
+            fetched = fetcher.fetch(home_url, include_urls, deadline=deadline)
+    else:
+        if fetcher_factory is None or remaining_budget is None:
+            raise TypeError("fetcher_factory and remaining_budget are required without fetcher")
+        budget = remaining_budget()
+        if budget <= 0:
+            return []
+        with fetcher_factory(budget) as owned_fetcher:
+            if deadline is None:
+                fetched = owned_fetcher.fetch(home_url, include_urls)
+            else:
+                fetched = owned_fetcher.fetch(home_url, include_urls, deadline=deadline)
     links: list[LinkEvidence] = []
     seen: set[str] = set()
     for fragment in fetched.pages:

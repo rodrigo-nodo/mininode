@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Iterable
-from urllib.parse import urlsplit
+from dataclasses import dataclass
+from typing import Literal
+from urllib.parse import urlsplit, urlunsplit
 
 from .fetcher import normalize_url
 from .models import LinkEvidence
@@ -21,6 +23,15 @@ EXCLUDED_WORDS = ("blog", "noticias", "news", "tags", "categorias", "paginacion"
 EXCLUDED_EXTENSIONS = (".pdf", ".zip", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg")
 
 
+@dataclass(frozen=True)
+class PageCandidate:
+    """A classified page that may be selected by a planning policy."""
+
+    url: str
+    category: Literal["privacy", "contact", "action"]
+    rank: tuple[str, ...]
+
+
 def _plain(value: str) -> str:
     value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[\W_]+", " ", value).strip()
@@ -30,15 +41,28 @@ def _has_signal(text: str, signal: str) -> bool:
     return f" {_plain(signal)} " in f" {text} "
 
 
-def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | str], limit: int = 5) -> list[str]:
-    """Select home, privacy, contact, then at most two relevant action pages."""
+def candidate_identity(url: str) -> str:
+    """Return selector-only identity, treating a non-root trailing slash as optional.
 
-    if limit <= 0:
-        return []
+    The normalized URL itself remains the URL that is requested. Query strings
+    are preserved, so functionally different URLs retain different identities.
+    """
+
+    parsed = urlsplit(url)
+    path = parsed.path.rstrip("/") or "/"
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
+
+
+def classify_page_candidates(
+    home_url: str,
+    links: Iterable[LinkEvidence | dict[str, str] | str],
+) -> list[PageCandidate]:
+    """Normalize and classify every relevant same-host page deterministically."""
+
     home = normalize_url(home_url)
     hostname = urlsplit(home).hostname
-    candidates: list[tuple[str, str]] = []
-    seen = {home}
+    by_identity: dict[str, tuple[str, str]] = {}
+    home_identity = candidate_identity(home)
     for link in links:
         if isinstance(link, str):
             raw_url, text = link, ""
@@ -53,25 +77,45 @@ def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | 
         parsed = urlsplit(url)
         if parsed.scheme not in {"http", "https"} or parsed.hostname != hostname:
             continue
-        if parsed.path.lower().endswith(EXCLUDED_EXTENSIONS) or url in seen:
+        if parsed.path.lower().endswith(EXCLUDED_EXTENSIONS):
             continue
         signal = _plain(f"{text} {parsed.path} {parsed.query}")
         if any(_has_signal(signal, word) for word in EXCLUDED_WORDS):
             continue
-        seen.add(url)
-        candidates.append((url, signal))
+        identity = candidate_identity(url)
+        if identity == home_identity:
+            continue
+        # Input order cannot decide which spelling survives: retain the
+        # lexicographically smallest normalized URL and its associated signal.
+        previous = by_identity.get(identity)
+        if previous is None or url < previous[0]:
+            by_identity[identity] = (url, signal)
 
-    def first_matching(signals: tuple[str, ...], used: set[str]) -> str | None:
-        matches = [(url, signal) for url, signal in candidates if url not in used and any(_has_signal(signal, term) for term in signals)]
-        return min(matches, key=lambda item: item[0])[0] if matches else None
+    candidates: list[PageCandidate] = []
+    categories = (("privacy", PRIVACY), ("contact", CONTACT), ("action", ADDITIONAL))
+    for url, signal in sorted(by_identity.values()):
+        for category, terms in categories:
+            if any(_has_signal(signal, term) for term in terms):
+                candidates.append(PageCandidate(url, category, (url,)))
+                break
+    return candidates
+
+
+def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | str], limit: int = 5) -> list[str]:
+    """Select home, privacy, contact, then at most two relevant action pages."""
+
+    if limit <= 0:
+        return []
+    home = normalize_url(home_url)
+    candidates = classify_page_candidates(home, links)
 
     selected = [home]
     used = {home}
-    for signals in (PRIVACY, CONTACT):
-        match = first_matching(signals, used)
+    for category in ("privacy", "contact"):
+        match = next((item.url for item in candidates if item.category == category), None)
         if match and len(selected) < limit:
             selected.append(match)
             used.add(match)
-    additional = sorted(url for url, signal in candidates if url not in used and any(_has_signal(signal, term) for term in ADDITIONAL))
+    additional = [item.url for item in candidates if item.category == "action" and item.url not in used]
     selected.extend(additional[: min(2, max(0, limit - len(selected)))])
     return selected[:limit]

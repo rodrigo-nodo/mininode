@@ -18,6 +18,77 @@ def client_for(handler) -> httpx.Client:
     return httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False)
 
 
+def test_robots_is_cached_once_per_origin_in_a_fetcher_session():
+    requested = []
+
+    def handler(request):
+        requested.append(str(request.url))
+        status = 200
+        content_type = "text/plain" if request.url.path == "/robots.txt" else "text/html"
+        return httpx.Response(status, text="ok", headers={"content-type": content_type})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    fetcher.fetch("https://example.com", ["https://example.com/one"])
+    fetcher.fetch("https://example.com", ["https://example.com/two"])
+
+    assert requested.count("https://example.com/robots.txt") == 1
+
+
+def test_failed_robots_result_is_cached_and_origins_are_independent():
+    robots = []
+
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            robots.append(str(request.url))
+            return httpx.Response(500, headers={"content-type": "text/plain"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    fetcher.fetch("https://example.com", ["https://example.com/one"])
+    fetcher.fetch("https://example.com", ["https://example.com/two"])
+    fetcher.fetch("https://other.example", ["https://other.example/one"])
+
+    assert robots == [
+        "https://example.com/robots.txt",
+        "https://other.example/robots.txt",
+    ]
+
+
+def test_shared_deadline_does_not_reset_and_later_fetch_uses_remaining(monkeypatch):
+    now = [0.0]
+    observed = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        observed.append((request.url.path, request.extensions["timeout"]["connect"]))
+        if request.url.path == "/one":
+            now[0] = 26.0
+        status = 404 if request.url.path == "/robots.txt" else 200
+        content_type = "text/plain" if request.url.path == "/robots.txt" else "text/html"
+        return httpx.Response(status, text="ok", headers={"content-type": content_type})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    fetcher.fetch("https://example.com", ["https://example.com/one"], deadline=30.0)
+    fetcher.fetch("https://example.com", ["https://example.com/two"], deadline=30.0)
+
+    assert observed[-1] == ("/two", 4.0)
+
+
+def test_exhausted_shared_deadline_starts_no_new_network_request(monkeypatch):
+    requested = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: 30.0)
+    fetcher = WebFetcher(
+        client=client_for(lambda request: requested.append(request)), resolver=public_resolver
+    )
+
+    result = fetcher.fetch(
+        "https://example.com", ["https://example.com/late"], deadline=30.0
+    )
+
+    assert requested == []
+    assert result.pages[0].error.code == "timeout"
+
+
 @pytest.mark.parametrize(
     ("pinned_ip", "expected_family"),
     [("93.184.216.34", "ipv4"), ("2606:2800:220:1:248:1893:25c8:1946", "ipv6")],
