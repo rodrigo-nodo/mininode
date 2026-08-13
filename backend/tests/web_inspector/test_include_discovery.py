@@ -1,3 +1,5 @@
+import time
+
 import httpx
 
 from mininode_api.web_inspector.extractor import build_evidence
@@ -188,3 +190,34 @@ def test_non_html_include_is_ignored():
         {"/footer.json": ("application/json", "{}")},
     )
     assert links == []
+
+
+def test_can_reuse_caller_fetcher_and_shared_deadline():
+    requested = []
+
+    def handler(request):
+        requested.append(str(request.url))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        return httpx.Response(
+            200,
+            text='<a href="/contact">Contacto</a>',
+            headers={"content-type": "text/html"},
+        )
+
+    fetcher = WebFetcher(
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        resolver=public_resolver,
+    )
+    deadline = time.monotonic() + 30.0
+    fetcher.fetch(HOME, [HOME], deadline=deadline)
+
+    links = discover_include_links(
+        '<div data-include="/footer.html"></div>',
+        HOME,
+        fetcher=fetcher,
+        deadline=deadline,
+    )
+
+    assert [link.url for link in links] == ["https://example.com/contact"]
+    assert requested.count("https://example.com/robots.txt") == 1

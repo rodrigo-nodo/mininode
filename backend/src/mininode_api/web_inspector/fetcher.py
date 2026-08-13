@@ -101,6 +101,7 @@ class WebFetcher:
         self._owns_client = client is None
         self._resolver = resolver
         self._inspection_budget = inspection_budget
+        self._robots_cache: dict[tuple[str, str, int], RobotFileParser | None] = {}
 
     def close(self) -> None:
         if self._owns_client:
@@ -112,7 +113,13 @@ class WebFetcher:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def fetch(self, target_url: str, candidate_urls: Iterable[str]) -> InspectionFetchResult:
+    def fetch(
+        self,
+        target_url: str,
+        candidate_urls: Iterable[str],
+        *,
+        deadline: float | None = None,
+    ) -> InspectionFetchResult:
         candidates = list(candidate_urls)
         limited = len(candidates) > MAX_URLS
         candidates = candidates[:MAX_URLS]
@@ -138,10 +145,10 @@ class WebFetcher:
 
         result = InspectionFetchResult(normalized_target, len(normalized), limited=limited)
         started = time.monotonic()
-        deadline = started + self._inspection_budget
-        robots = self._load_robots(normalized_target, allowed_hostname, deadline)
+        deadline = deadline if deadline is not None else started + self._inspection_budget
+        robots = self._cached_robots(normalized_target, allowed_hostname, deadline)
         for requested_url in normalized:
-            if time.monotonic() - started >= self._inspection_budget:
+            if time.monotonic() >= deadline:
                 error = FetchError("timeout", "Inspection time budget exceeded", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
             elif not same_site_hostname(urlsplit(requested_url).hostname, allowed_hostname):
@@ -158,6 +165,16 @@ class WebFetcher:
             else:
                 result.pages_fetched += 1
         return result
+
+    def _cached_robots(
+        self, target_url: str, allowed_hostname: str | None, deadline: float
+    ) -> RobotFileParser | None:
+        parsed = urlsplit(target_url)
+        default_port = 443 if parsed.scheme == "https" else 80
+        key = (parsed.scheme, (parsed.hostname or "").rstrip(".").lower(), parsed.port or default_port)
+        if key not in self._robots_cache:
+            self._robots_cache[key] = self._load_robots(target_url, allowed_hostname, deadline)
+        return self._robots_cache[key]
 
     def _load_robots(self, target_url: str, allowed_hostname: str | None, deadline: float) -> RobotFileParser | None:
         robots_url = urlunsplit((*urlsplit(target_url)[:2], "/robots.txt", "", ""))
