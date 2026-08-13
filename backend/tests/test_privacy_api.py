@@ -114,6 +114,31 @@ def sequenced_diagnostic(monkeypatch, *results):
     return calls
 
 
+@pytest.mark.parametrize(
+    ("control", "result", "categories"),
+    [
+        ("PRV-002", "not_evaluable", {"privacy"}),
+        ("PRV-301", "not_evaluable", {"contact"}),
+        ("PRV-101", "not_evaluable", {"contact", "action"}),
+        ("PRV-104", "not_evaluable", {"contact", "action"}),
+        ("PRV-002", "detected", set()),
+        ("PRV-301", "not_applicable", set()),
+        ("PRV-101", "detected", set()),
+        ("PRV-104", "not_applicable", set()),
+        ("PRV-001", "not_evaluable", set()),
+        ("PRV-201", "not_evaluable", set()),
+        ("PRV-501", "not_evaluable", set()),
+    ],
+)
+def test_gap_policy_is_control_and_state_specific(control, result, categories):
+    diagnostic = adaptive_result()
+    for item in diagnostic["controls"]:
+        if item["control_code"] == control:
+            item["result"] = result
+
+    assert service._needed_categories(diagnostic) == categories
+
+
 def test_valid_simple_site_runs_full_pipeline(monkeypatch):
     client, fake = client_with(
         monkeypatch,
@@ -174,24 +199,58 @@ def test_failed_privacy_candidate_is_replaced_and_consumes_attempt(monkeypatch, 
     client, fake = client_with(monkeypatch, {
         HOME: page(HOME, f'<a href="{second}">Privacy B</a><a href="{first}">Privacy A</a>'),
         first: failed_page(first, "robots_disallowed"),
-        second: page(second, "<h1>Policy</h1>"),
+        second: page(second, "<title>Privacy policy</title>"),
     })
-    contracts = sequenced_diagnostic(
-        monkeypatch,
-        adaptive_result(**{"PRV-002": "not_detected"}),
-        adaptive_result(),
-    )
+    contracts = []
+
+    def diagnostic_with_capture(contract):
+        contracts.append(contract)
+        return real_privacy_diagnostic(contract)
+
+    monkeypatch.setattr(service, "run_privacy_diagnostic", diagnostic_with_capture)
 
     with caplog.at_level(logging.INFO, logger=service.__name__):
         response = client.post("/privacy/diagnose", json={"url": HOME})
 
     assert response.status_code == 200
     assert fake.calls == [[HOME], [first], [second]]
-    assert len(contracts) == 2
+    assert len(contracts) == 3
+    outcomes = [
+        next(
+            control["result"]
+            for control in result["controls"]
+            if control["control_code"] == "PRV-002"
+        )
+        for result in map(real_privacy_diagnostic, contracts)
+    ]
+    assert outcomes == ["not_evaluable", "partial", "detected"]
+    assert contracts[1].inspection.errors[0]["code"] == "robots_disallowed"
+    assert contracts[1].inspection.pages_analyzed == 1
     assert contracts[-1].inspection.pages_requested == 3
     assert contracts[-1].inspection.pages_analyzed == 2
     event = json.loads(next(record.message for record in caplog.records if "privacy_adaptive_scope_completed" in record.message))
     assert event["categories_attempted"] == ["privacy", "privacy"]
+
+
+def test_not_evaluable_without_compatible_candidate_stops_as_no_candidates(
+    monkeypatch, caplog
+):
+    client, fake = client_with(monkeypatch, {HOME: page(HOME, "<title>Home</title>")})
+    sequenced_diagnostic(monkeypatch, adaptive_result(**{"PRV-002": "not_evaluable"}))
+
+    with caplog.at_level(logging.INFO, logger=service.__name__):
+        response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME]]
+    event = json.loads(
+        next(
+            record.message
+            for record in caplog.records
+            if "privacy_adaptive_scope_completed" in record.message
+        )
+    )
+    assert event["stop_reason"] == "no_candidates"
 
 
 def test_form_gap_prefers_contact_then_one_action(monkeypatch):
@@ -288,10 +347,14 @@ def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     response = client.post("/privacy/diagnose", json={"url": HOME})
 
     assert response.status_code == 200
-    # The visible link itself is sufficient PRV-002 evidence, so adaptive
-    # scope does not fetch the linked policy merely because it exists.
-    assert fake.calls == [[HOME]]
-    assert response.json()["scope"]["pages_analyzed"] == 1
+    assert fake.calls == [[HOME], [privacy]]
+    assert response.json()["scope"] == {
+        "pages_requested": 2,
+        "pages_analyzed": 2,
+        "limited": False,
+    }
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-002"]["result"] == "detected"
 
 
 def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(monkeypatch):
@@ -326,18 +389,18 @@ def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(m
     response = client.post("/privacy/diagnose", json={"url": HOME})
 
     assert response.status_code == 200
-    assert fake.calls == [[HOME], [footer], [contact]]
+    assert fake.calls == [[HOME], [footer], [privacy], [contact]]
     assert response.json()["scope"] == {
-        "pages_requested": 2,
-        "pages_analyzed": 2,
+        "pages_requested": 3,
+        "pages_analyzed": 3,
         "limited": False,
     }
     controls = {item["control_code"]: item for item in response.json()["controls"]}
     assert controls["PRV-001"]["result"] == "detected"
-    assert controls["PRV-002"]["result"] == "not_evaluable"
+    assert controls["PRV-002"]["result"] == "detected"
     assert controls["PRV-101"]["result"] == "detected"
     assert controls["PRV-301"]["result"] == "detected"
-    assert response.json()["coverage"] == 80
+    assert response.json()["coverage"] == 100
 
 
 def test_privacy_response_is_utf8_json_with_exact_spanish_text(monkeypatch):
@@ -561,8 +624,8 @@ def test_redirected_home_is_effective_base_and_original_target_is_preserved(monk
     response = client.post("/privacy/diagnose", json={"url": original})
 
     assert response.status_code == 200
-    assert fake.calls == [[original], [contact]]
-    assert fake.target_calls == [original, HOME]
+    assert fake.calls == [[original], [privacy], [contact]]
+    assert fake.target_calls == [original, HOME, HOME]
     assert captured["contract"].target.requested_url == original
     assert captured["contract"].target.final_url == HOME
     assert captured["contract"].transport.http_redirects_to_https is True
@@ -704,10 +767,10 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch, caplog):
     assert response.status_code == 200
     body = response.json()
     assert len(body["controls"]) == 7
-    assert body["scope"] == {"pages_requested": 2, "pages_analyzed": 2, "limited": False}
-    assert captured["contract"].inspection.errors == []
+    assert body["scope"] == {"pages_requested": 3, "pages_analyzed": 2, "limited": False}
+    assert captured["contract"].inspection.errors[0]["code"] == "timeout"
     controls = {item["control_code"]: item for item in body["controls"]}
-    assert controls["PRV-002"]["result"] == "not_evaluable"
+    assert controls["PRV-002"]["result"] == "partial"
     assert body["coverage"] <= 100
     assert not any("privacy_home_inspection_failed" in record.message for record in caplog.records)
 
