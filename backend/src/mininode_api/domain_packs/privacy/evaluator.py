@@ -75,7 +75,7 @@ def _evidence_summary(control_code: str, evidence: Mapping[str, Any]) -> str | N
             return "Se detectó información relacionada con privacidad asociada al formulario."
         if visible.get("consent_mechanism"):
             return "Se detectó un mecanismo visible de consentimiento asociado al formulario."
-        return "Se detectó un formulario sin mecanismo visible de consentimiento."
+        return "No se detectó un mecanismo visible de consentimiento asociado al formulario."
     return None
 
 
