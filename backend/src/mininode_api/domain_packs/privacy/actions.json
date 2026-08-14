@@ -1,0 +1,97 @@
+{
+  "version": "1",
+  "actions": {
+    "PRV-001": {
+      "not_detected": {
+        "action_steps": [
+          "Preparar o revisar la información de privacidad que corresponda al sitio.",
+          "Publicarla en una página pública claramente identificada.",
+          "Incorporar un enlace visible desde páginas principales, por ejemplo navegación o pie de página."
+        ],
+        "validation_step": "Abrir una página principal en una sesión nueva, localizar el enlace de privacidad y comprobar que conduce a contenido relacionado con privacidad."
+      }
+    },
+    "PRV-002": {
+      "partial": {
+        "action_steps": [
+          "Revisar el enlace de privacidad detectado y localizar el problema de acceso, claridad o pertinencia.",
+          "Corregir la URL, redirección o contenido de destino según corresponda.",
+          "Mantener el enlace visible desde las páginas donde ya está publicado."
+        ],
+        "validation_step": "Seguir el enlace desde una página pública y comprobar que carga correctamente y presenta contenido claramente relacionado con privacidad."
+      },
+      "not_detected": {
+        "action_steps": [
+          "Revisar el destino del enlace de privacidad identificado.",
+          "Corregir el enlace o publicar una página de privacidad utilizable.",
+          "Confirmar que el destino puede abrirse públicamente sin autenticación."
+        ],
+        "validation_step": "Abrir el enlace desde una página pública y comprobar que el destino carga y contiene información claramente relacionada con privacidad."
+      }
+    },
+    "PRV-104": {
+      "not_detected": {
+        "action_steps": [
+          "Definir qué información necesita recibir la persona antes de enviar el formulario.",
+          "Mostrar junto al formulario información clara sobre el uso de los datos y facilitar acceso a información más completa cuando corresponda.",
+          "Evaluar si el tratamiento requiere un mecanismo específico de consentimiento y, solo cuando corresponda, incorporarlo antes del envío."
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar, antes del envío, que la información relevante es visible, que los enlaces asociados funcionan y que cualquier mecanismo aplicable puede identificarse claramente."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la información o mecanismo ya visible junto al formulario e identificar qué parte está incompleta o poco clara.",
+          "Completar la información sobre el uso de los datos y facilitar acceso a información más completa cuando corresponda.",
+          "Evaluar si el mecanismo de consentimiento existente es adecuado para el contexto y ajustarlo solo cuando corresponda."
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar que la información visible antes del envío es clara, accesible y coherente con el mecanismo disponible."
+      }
+    },
+    "PRV-201": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar con quien administra el sitio qué cookies o tecnologías similares se utilizan y para qué finalidad.",
+          "Incorporar información visible sobre su uso cuando corresponda.",
+          "Evaluar si corresponde ofrecer mecanismos de gestión de preferencias."
+        ],
+        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que la información sobre cookies aparece cuando corresponde y que las opciones disponibles pueden utilizarse."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la información de cookies actualmente visible e identificar qué aspecto está incompleto o poco claro.",
+          "Completar la explicación sobre el uso de cookies o tecnologías similares.",
+          "Revisar las opciones de preferencias disponibles y ajustarlas cuando corresponda."
+        ],
+        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que la información es clara y que las preferencias disponibles funcionan de acuerdo con la configuración esperada."
+      }
+    },
+    "PRV-301": {
+      "not_detected": {
+        "action_steps": [
+          "Definir un canal público de contacto que la organización pueda atender regularmente.",
+          "Publicarlo con una etiqueta clara en una ubicación fácil de encontrar.",
+          "Comprobar que el canal puede utilizarse sin depender de información no visible para la persona usuaria."
+        ],
+        "validation_step": "Localizar el canal desde una página principal y realizar una prueba controlada para comprobar que está accesible y operativo."
+      }
+    },
+    "PRV-501": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la configuración HTTPS y el certificado del dominio con el proveedor técnico.",
+          "Corregir problemas de certificado o configuración HTTPS identificados.",
+          "Configurar una redirección consistente desde HTTP hacia HTTPS cuando corresponda."
+        ],
+        "validation_step": "Abrir el sitio mediante HTTP y HTTPS y comprobar la redirección y la validez del certificado en el navegador."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar los recursos o redirecciones que todavía utilizan HTTP dentro del sitio HTTPS.",
+          "Reemplazar recursos inseguros por versiones HTTPS cuando estén disponibles.",
+          "Comprobar que las redirecciones mantienen HTTPS de forma consistente."
+        ],
+        "validation_step": "Abrir el sitio en HTTPS y comprobar que el navegador no informa recursos inseguros y que las redirecciones mantienen una conexión segura."
+      }
+    }
+  }
+}

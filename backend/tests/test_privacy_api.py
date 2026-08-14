@@ -594,6 +594,9 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
     priority = next(item for item in body["priorities"] if item["control_code"] == "PRV-104")
     assert priority["source_url"] == contact_public
     assert {"control_code", "name", "priority", "finding", "recommendation"} <= priority.keys()
+    assert {"action_steps", "validation_step"} <= priority.keys()
+    assert len(priority["action_steps"]) == 3
+    assert all("example.com" not in text for text in [*priority["action_steps"], priority["validation_step"]])
     assert "?" not in priority["source_url"]
     assert "#" not in priority["source_url"]
     assert priority["evidence_summary"] == (
