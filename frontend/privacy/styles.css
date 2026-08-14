@@ -362,6 +362,40 @@
   margin-top: 7px;
 }
 
+.privacy-action-plan {
+  margin-top: 10px;
+}
+
+.privacy-action-plan summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.privacy-action-plan__content {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 12px;
+}
+
+.privacy-action-plan h5 {
+  color: var(--fg);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.privacy-action-plan__steps {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+
+.privacy-action-plan__validation {
+  margin-top: 14px;
+}
+
 .privacy-next {
   background: #f8fbff;
   border: 1px solid #dbeafe;

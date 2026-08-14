@@ -142,7 +142,26 @@ const renderPriorities = (priorities) => {
       appendTextElement(item, 'p', `Hallazgo: ${priority.finding}`);
     }
     if (priority.recommendation) {
-      appendTextElement(item, 'p', `Recomendación: ${priority.recommendation}`);
+      appendTextElement(item, 'p', `Qué hacer: ${priority.recommendation}`);
+    }
+
+    const actionSteps = Array.isArray(priority.action_steps) ? priority.action_steps : [];
+    if (actionSteps.length > 0) {
+      const actionPlan = appendTextElement(item, 'details', '', 'privacy-action-plan');
+      appendTextElement(actionPlan, 'summary', 'Ver primeros pasos');
+
+      const actionPlanContent = appendTextElement(actionPlan, 'div', '', 'privacy-action-plan__content');
+      appendTextElement(actionPlanContent, 'h5', 'Primeros pasos');
+      const steps = appendTextElement(actionPlanContent, 'ol', '', 'privacy-action-plan__steps');
+      actionSteps.forEach((step) => {
+        appendTextElement(steps, 'li', step);
+      });
+
+      if (typeof priority.validation_step === 'string' && priority.validation_step.trim()) {
+        const validation = appendTextElement(actionPlanContent, 'div', '', 'privacy-action-plan__validation');
+        appendTextElement(validation, 'h5', 'Cómo validar');
+        appendTextElement(validation, 'p', priority.validation_step);
+      }
     }
   });
 };
