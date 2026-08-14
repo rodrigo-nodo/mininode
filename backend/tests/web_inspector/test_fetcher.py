@@ -124,6 +124,26 @@ def test_records_safe_transport_error_class(error_type):
     assert raw_message not in page.transport_error_class
 
 
+def test_explicit_certificate_failure_is_normalized_without_raw_details():
+    raw_message = "certificate detail secret=private"
+
+    def handler(request):
+        verification_error = ssl.SSLCertVerificationError(raw_message)
+        try:
+            raise verification_error
+        except ssl.SSLCertVerificationError as cause:
+            raise httpx.ConnectError(raw_message, request=request) from cause
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.error.code == "tls_certificate_error"
+    assert page.error.message == "TLS certificate verification failed"
+    assert page.tls_valid is False
+    assert raw_message not in repr(page)
+
+
 @pytest.mark.parametrize(
     ("addresses", "expected_attempts", "expected_family"),
     [
@@ -172,6 +192,7 @@ def test_returns_last_connection_failure_after_each_validated_address_once():
     )._fetch_page("https://example.com/", "example.com")
 
     assert page.error.code == "http_error"
+    assert page.tls_valid is None
     assert page.network_family == "ipv4"
     assert page.transport_error_class == "ConnectError"
     assert attempts == ["93.184.216.33", "93.184.216.34"]
@@ -194,6 +215,7 @@ def test_does_not_try_another_address_after_http_response(status_code):
 
     assert page.status_code == status_code
     assert page.error.code == "http_error"
+    assert page.tls_valid is None
     assert attempts == ["93.184.216.33"]
 
 
@@ -283,7 +305,8 @@ def test_certificate_connect_error_does_not_fall_back():
         resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
     )._fetch_page("https://example.com/", "example.com")
 
-    assert page.error.code == "http_error"
+    assert page.error.code == "tls_certificate_error"
+    assert page.tls_valid is False
     assert page.transport_error_class == "ConnectError"
     assert attempts == ["93.184.216.33"]
 

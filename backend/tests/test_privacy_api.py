@@ -123,11 +123,13 @@ def sequenced_diagnostic(monkeypatch, *results):
         ("PRV-101", "not_evaluable", {"contact", "action"}),
         ("PRV-104", "not_evaluable", {"contact", "action"}),
         ("PRV-002", "detected", set()),
+        ("PRV-002", "not_detected", set()),
         ("PRV-301", "not_applicable", set()),
         ("PRV-101", "detected", set()),
         ("PRV-104", "not_applicable", set()),
         ("PRV-001", "not_evaluable", set()),
         ("PRV-201", "not_evaluable", set()),
+        ("PRV-201", "not_detected", set()),
         ("PRV-501", "not_evaluable", set()),
     ],
 )
@@ -389,7 +391,7 @@ def test_maximum_is_five_attempts_including_failed_candidates(monkeypatch, caplo
     client, fake = client_with(monkeypatch, {
         HOME: page(HOME, html), **{url: failed_page(url) for url in urls},
     })
-    sequenced_diagnostic(monkeypatch, adaptive_result(**{"PRV-002": "not_detected"}))
+    sequenced_diagnostic(monkeypatch, adaptive_result(**{"PRV-002": "partial"}))
 
     with caplog.at_level(logging.INFO, logger=service.__name__):
         response = client.post("/privacy/diagnose", json={"url": HOME})
@@ -540,7 +542,7 @@ def test_include_discovery_and_secondary_fetch_share_total_budget(monkeypatch):
     monkeypatch.setattr(service, "monotonic", lambda: next(ticks, 25.0))
     sequenced_diagnostic(
         monkeypatch,
-        adaptive_result(**{"PRV-002": "not_detected"}),
+        adaptive_result(**{"PRV-002": "partial"}),
         adaptive_result(),
     )
 
@@ -639,7 +641,7 @@ def test_total_budget_is_not_reset_before_secondary_fetch(monkeypatch):
     monkeypatch.setattr(service, "monotonic", lambda: next(ticks, 25.0))
     sequenced_diagnostic(
         monkeypatch,
-        adaptive_result(**{"PRV-002": "not_detected"}),
+        adaptive_result(**{"PRV-002": "partial"}),
         adaptive_result(),
     )
 
@@ -658,7 +660,7 @@ def test_exhausted_total_budget_does_not_start_secondary_fetch(monkeypatch, capl
     )
     ticks = iter([0.0, 30.0])
     monkeypatch.setattr(service, "monotonic", lambda: next(ticks, 30.0))
-    sequenced_diagnostic(monkeypatch, adaptive_result(**{"PRV-002": "not_detected"}))
+    sequenced_diagnostic(monkeypatch, adaptive_result(**{"PRV-002": "partial"}))
 
     with caplog.at_level(logging.INFO, logger=service.__name__):
         response = client.post("/privacy/diagnose", json={"url": HOME})

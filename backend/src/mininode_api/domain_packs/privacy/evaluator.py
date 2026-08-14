@@ -130,41 +130,35 @@ def evaluate_control(
         relevant = evidence.get("policy_content_relevant", False)
         if accessible and relevant:
             result = "detected"
-        elif evidence.get("policy_link_found") or accessible or relevant:
-            result = "partial"
         else:
-            result = "not_detected"
+            result = "partial"
     elif control_code == "PRV-101":
         result = "detected" if evidence.get("personal_data_form") else "not_detected"
     elif control_code == "PRV-104":
         information = evidence.get("privacy_information", False)
-        consent_required = evidence.get("consent_required", False)
         consent = evidence.get("consent_mechanism", False)
-        complete = evidence.get("information_complete", information)
-        if information and complete and (not consent_required or consent):
+        if information:
             result = "detected"
-        elif information or consent or evidence.get("privacy_link"):
+        elif consent:
             result = "partial"
         else:
             result = "not_detected"
     elif control_code == "PRV-201":
-        if evidence.get("relevant_cookies") is False:
+        cookies_observed = evidence.get(
+            "cookies_observed", evidence.get("relevant_cookies")
+        )
+        if cookies_observed is False:
             result = "not_applicable"
+        elif evidence.get("cookie_banner", evidence.get("cookie_information", False)):
+            result = "detected"
         else:
-            information = evidence.get("cookie_information", False)
-            preferences_required = evidence.get("preferences_required", False)
-            preferences = evidence.get("preference_mechanism", False)
-            complete = evidence.get("information_complete", information)
-            if information and complete and (not preferences_required or preferences):
-                result = "detected"
-            elif information or preferences or evidence.get("cookie_banner"):
-                result = "partial"
-            else:
-                result = "not_detected"
+            result = "not_detected"
     elif control_code == "PRV-301":
         result = "detected" if evidence.get("contact_channel_visible") else "not_detected"
     else:  # PRV-501
-        https_valid = evidence.get("https", False) and evidence.get("tls_valid", False)
+        https = evidence.get("https")
+        tls_valid = evidence.get("tls_valid")
+        https_valid = https is True and tls_valid is True
         anomaly = evidence.get("mixed_content", False) or evidence.get(
             "inconsistent_redirects", False
         )
@@ -172,7 +166,9 @@ def evaluate_control(
             result = "partial"
         elif https_valid:
             result = "detected"
-        else:
+        elif https is False or tls_valid is False:
             result = "not_detected"
+        else:
+            result = "not_evaluable"
 
     return _result(control, result, evidence, confidence)
