@@ -169,7 +169,10 @@ def test_prioritization_is_consumer_facing_limited_and_excludes_context():
     assert len(priorities) == 3
     assert all(
         set(priority)
-        == {"control_code", "name", "priority", "finding", "recommendation"}
+        == {
+            "control_code", "name", "priority", "finding", "recommendation",
+            "action_steps", "validation_step",
+        }
         for priority in priorities
     )
     assert "PRV-101" not in {priority["control_code"] for priority in priorities}
@@ -207,9 +210,11 @@ def test_optional_source_trace_preserves_priority_shape_order_and_count():
     assert priorities[1]["source_url"] == "https://example.com/contact"
     assert set(priorities[1]) == {
         "control_code", "name", "priority", "finding", "recommendation", "source_url",
+        "action_steps", "validation_step",
     }
     assert set(priorities[0]) == {
         "control_code", "name", "priority", "finding", "recommendation",
+        "action_steps", "validation_step",
     }
 
 
@@ -254,6 +259,6 @@ def test_invalid_control_evidence_and_confidence_are_rejected():
 
 def test_json_files_are_valid_utf8_json():
     privacy_dir = BACKEND_SRC / "mininode_api" / "domain_packs" / "privacy"
-    for filename in ("controls.json", "scoring.json"):
+    for filename in ("controls.json", "scoring.json", "actions.json"):
         with (privacy_dir / filename).open(encoding="utf-8") as source:
             assert isinstance(json.load(source), dict)

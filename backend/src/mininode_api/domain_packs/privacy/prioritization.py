@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Iterable, Mapping
 
 from .evaluator import load_controls
@@ -17,6 +20,19 @@ _VISIBLE_PRIORITY = {
     "medio": "Media",
     "bajo": "Baja",
 }
+
+
+@lru_cache(maxsize=1)
+def load_actions() -> dict:
+    """Load and minimally validate the versioned deterministic action catalog."""
+    path = Path(__file__).with_name("actions.json")
+    with path.open(encoding="utf-8") as source:
+        catalog = json.load(source)
+    if not isinstance(catalog, dict) or not catalog.get("version"):
+        raise ValueError("Privacy action catalog requires a version")
+    if not isinstance(catalog.get("actions"), dict):
+        raise ValueError("Privacy action catalog requires an actions object")
+    return catalog
 
 
 def prioritize_findings(results: Iterable[Mapping], *, limit: int = 3) -> list[dict]:
@@ -57,4 +73,12 @@ def prioritize_findings(results: Iterable[Mapping], *, limit: int = 3) -> list[d
         if result.get("evidence_summary"):
             priority["evidence_summary"] = result["evidence_summary"]
         priorities.append(priority)
+    actions = load_actions()["actions"]
+    for priority, (_, _, outcome) in zip(
+        priorities, eligible[: min(max(limit, 0), 3)]
+    ):
+        action = actions.get(priority["control_code"], {}).get(outcome)
+        if action:
+            priority["action_steps"] = list(action["action_steps"])
+            priority["validation_step"] = action["validation_step"]
     return priorities
