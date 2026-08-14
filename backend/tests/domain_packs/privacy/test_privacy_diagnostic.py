@@ -47,7 +47,7 @@ def test_full_contract_runs_complete_privacy_pipeline():
     assert [control["control_code"] for control in result["controls"]] == CODES
     assert len(result["controls"]) == 7
     assert result["controls"][1]["result"] == "detected"
-    assert result["controls"][3]["result"] == "partial"
+    assert result["controls"][3]["result"] == "detected"
     assert 0 <= result["score"] <= 100
     assert result["status"] in {item["label"] for item in load_scoring()["ranges"]}
     assert 0 <= result["coverage"] <= 100
@@ -98,9 +98,14 @@ def test_visible_evidence_does_not_change_diagnostic_or_priority_order():
         item["control_code"] for item in baseline_result["priorities"]
     ]
     assert len(traced_result["priorities"]) == len(baseline_result["priorities"])
-    priority = next(item for item in traced_result["priorities"] if item["control_code"] == "PRV-104")
-    assert priority["source_url"] == "https://example.com/contact"
-    assert priority["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
+    assert all(
+        item["control_code"] != "PRV-104" for item in traced_result["priorities"]
+    )
+    control = next(
+        item for item in traced_result["controls"] if item["control_code"] == "PRV-104"
+    )
+    assert control["source_url"] == "https://example.com/contact"
+    assert control["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
 
 
 def test_frontend_conditionally_renders_safe_source_path_and_home_label():

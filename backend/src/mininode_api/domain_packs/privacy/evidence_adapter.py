@@ -326,7 +326,11 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "confidence": "high" if sufficient else "low",
     }
     if sufficient:
-        prv201["relevant_cookies"] = bool(contract.cookies.detected or contract.cookies.set_cookie_names)
+        # Keep the legacy key to preserve the API evidence shape. Its value means
+        # only that a cookie was observed in an inspected response.
+        prv201["relevant_cookies"] = bool(
+            contract.cookies.detected or contract.cookies.set_cookie_names
+        )
     else:
         prv201["technical_error"] = True
 
@@ -356,7 +360,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "inconsistent_redirects": False,
         "confidence": "high",
     }
-    if transport.https is None or transport.tls_valid is None:
+    if transport.https is None or (
+        transport.https is True and transport.tls_valid is None
+    ):
         prv501["technical_error"] = True
         prv501["confidence"] = "low"
 

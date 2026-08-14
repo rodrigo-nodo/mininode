@@ -224,7 +224,7 @@ def build_evidence(
         pages=pages,
         transport=TransportEvidence(
             https=(final_scheme == "https") if final_url else None,
-            tls_valid=True if target_page is not None and target_page.tls_valid is True else None,
+            tls_valid=target_page.tls_valid if target_page is not None else None,
             http_redirects_to_https=redirects_to_https,
             mixed_content=any(https_mixed) if https_mixed else None,
         ),

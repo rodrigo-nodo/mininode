@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 MAX_PAGES_ATTEMPTED = 5
 _CATEGORY_ORDER = ("privacy", "contact", "action")
 _EXPANDABLE_RESULTS_BY_CONTROL = {
-    "PRV-002": frozenset({"not_detected", "partial", "not_evaluable"}),
+    "PRV-002": frozenset({"partial", "not_evaluable"}),
     "PRV-301": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),

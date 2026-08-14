@@ -403,16 +403,18 @@ class WebFetcher:
                     network_family=network_family,
                 )
             except httpx.HTTPError as exc:
+                certificate_error = self._is_certificate_error(exc)
                 return self._error_page(
                     requested_url,
                     current_url,
                     None,
                     redirects,
                     started,
-                    "http_error",
-                    str(exc),
+                    "tls_certificate_error" if certificate_error else "http_error",
+                    "TLS certificate verification failed" if certificate_error else str(exc),
                     network_family=network_family,
                     transport_error_class=type(exc).__name__,
+                    tls_valid=False if certificate_error else None,
                 )
 
     @staticmethod
@@ -431,7 +433,7 @@ class WebFetcher:
         return FetchError("blocked_by_ssrf", str(exc), url)
 
     @staticmethod
-    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None) -> FetchPageResult:
+    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None, tls_valid: bool | None = None) -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -442,4 +444,5 @@ class WebFetcher:
             error=FetchError(code, message, final_url),
             network_family=network_family,
             transport_error_class=transport_error_class,
+            tls_valid=tls_valid,
         )

@@ -124,6 +124,35 @@ def test_result_factors_are_applied(result, expected_score):
     ] == expected_score
 
 
+def test_prv104_observable_detection_changes_only_its_score_contribution():
+    unchanged = [
+        {"control_code": "PRV-001", "result": "detected"},
+        {"control_code": "PRV-201", "result": "not_detected"},
+        {"control_code": "PRV-501", "result": "detected"},
+    ]
+    before = score_privacy([
+        *unchanged, {"control_code": "PRV-104", "result": "partial"}
+    ])
+    after = score_privacy([
+        *unchanged, {"control_code": "PRV-104", "result": "detected"}
+    ])
+
+    assert before == {
+        "score": 71,
+        "status": "Preparación avanzada",
+        "coverage": 100,
+        "evaluated_controls": 4,
+        "applicable_controls": 4,
+    }
+    assert after == {
+        "score": 86,
+        "status": "Alta preparación visible",
+        "coverage": 100,
+        "evaluated_controls": 4,
+        "applicable_controls": 4,
+    }
+
+
 def test_not_applicable_does_not_affect_score():
     detected = {"control_code": "PRV-001", "result": "detected"}
     assert score_privacy([detected]) == score_privacy(
