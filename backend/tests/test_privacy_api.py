@@ -485,7 +485,7 @@ def test_privacy_response_is_utf8_json_with_exact_spanish_text(monkeypatch):
         "Política de privacidad",
         "Preparación avanzada",
         "páginas públicas",
-        "Información o consentimiento",
+        "Información de privacidad",
     )
     def diagnostic_with_samples(contract):
         return {**real_privacy_diagnostic(contract), "unicode_samples": list(expected)}

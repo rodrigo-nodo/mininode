@@ -21,6 +21,7 @@ EXPECTED_ACTIONS = {
     "PRV-301": {"not_detected"},
     "PRV-501": {"partial", "not_detected"},
 }
+ORPHAN_ACTIONS = {("PRV-002", "not_detected"), ("PRV-201", "partial")}
 LEGACY_FIELDS = {
     "control_code", "name", "priority", "finding", "recommendation",
     "source_url", "evidence_summary",
@@ -36,8 +37,18 @@ def test_action_catalog_integrity_and_approved_results():
     controls = {control["code"]: control for control in load_controls()}
     assert set(catalog["actions"]) <= set(controls)
     assert "PRV-101" not in catalog["actions"]
+    observed_orphans = {
+        (code, outcome)
+        for code, outcomes in catalog["actions"].items()
+        for outcome in outcomes
+        if outcome not in controls[code]["criteria"]
+    }
+    assert observed_orphans == ORPHAN_ACTIONS
     for code, outcomes in catalog["actions"].items():
-        assert set(outcomes) <= set(controls[code]["criteria"])
+        reachable = {
+            outcome for outcome in outcomes if (code, outcome) not in ORPHAN_ACTIONS
+        }
+        assert reachable <= set(controls[code]["criteria"])
         assert set(outcomes) <= {"partial", "not_detected"}
         for action in outcomes.values():
             assert set(action) == {"action_steps", "validation_step"}

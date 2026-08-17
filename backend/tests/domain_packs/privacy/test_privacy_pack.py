@@ -25,7 +25,7 @@ EXPECTED = {
     "PRV-001": ("Política de privacidad visible", "muy_alto", "evaluation"),
     "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
-    "PRV-104": ("Información o consentimiento asociado al formulario", "muy_alto", "conditional_evaluation"),
+    "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
     "PRV-301": ("Canal de contacto visible", "bajo", "evaluation"),
     "PRV-501": ("Uso de HTTPS", "muy_alto", "evaluation"),
@@ -77,6 +77,47 @@ def test_catalog_contains_required_metadata_and_dependencies():
         assert control["expected_evidence"]
         assert control["base_recommendation"]
         assert control["criteria"]
+
+
+def test_catalog_criteria_match_active_evaluator_results():
+    active_results = {
+        "PRV-001": {"detected", "not_detected", "not_evaluable"},
+        "PRV-002": {"detected", "partial", "not_applicable", "not_evaluable"},
+        "PRV-101": {"detected", "not_detected", "not_evaluable"},
+        "PRV-104": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-201": {"detected", "not_detected", "not_applicable", "not_evaluable"},
+        "PRV-301": {"detected", "not_detected", "not_evaluable"},
+        "PRV-501": {"detected", "partial", "not_detected", "not_evaluable"},
+    }
+    controls = {control["code"]: control for control in load_controls()}
+
+    assert {
+        code: set(control["criteria"]) for code, control in controls.items()
+    } == active_results
+
+
+def test_observable_findings_avoid_unmeasured_claims():
+    controls = {control["code"]: control for control in load_controls()}
+    prv104 = controls["PRV-104"]["criteria"]
+    prv201 = controls["PRV-201"]["criteria"]
+
+    assert all(term not in prv104["detected"].lower() for term in (
+        "clara", "completa", "consentimiento cuando corresponda",
+    ))
+    assert all(term not in prv104["partial"].lower() for term in (
+        "incomplet", "ambigu", "poco visible",
+    ))
+    assert all(term not in prv201["detected"].lower() for term in (
+        "preferencias", "completa",
+    ))
+    assert "no existe mecanismo" not in prv201["not_detected"].lower()
+    assert "no se observaron" in prv201["not_applicable"].lower()
+    assert "no usa cookies" not in prv201["not_applicable"].lower()
+    assert "not_detected" not in controls["PRV-002"]["criteria"]
+    assert "partial" not in prv201
 
 
 def test_evaluator_accepts_structured_evidence_and_returns_approved_shape():
