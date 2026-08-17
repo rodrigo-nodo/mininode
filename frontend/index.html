@@ -1,32 +1,50 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mininode — Soluciones inteligentes para negocios en crecimiento</title>
-  <meta name="description" content="Soluciones inteligentes para negocios en crecimiento. Agentes IA y SaaS minimalistas.">
+  <title>Mininode — Herramientas simples para pequeñas empresas</title>
+  <meta name="description" content="Herramientas simples para pequeñas empresas. Soluciones prácticas para entender problemas concretos y saber qué hacer después.">
   <link rel="stylesheet" href="styles.css">
   <script src="assets/js/core-head.js" defer></script>
   <script src="include.js" defer></script>
 </head>
 <body>
-<div data-include="partials/header-landing.html"></div>
+<div data-include="partials/header-nav.html"></div>
 <main>
-  <section class="hero hero--center container">
-    <h1>Soluciones inteligentes para negocios en crecimiento</h1>
+  <section class="home-hero container" aria-labelledby="home-title">
+    <div class="home-hero__copy">
+      <p class="eyebrow">Herramientas simples</p>
+      <h1 id="home-title">Herramientas simples para pequeñas empresas.</h1>
+      <p class="home-hero__support">Creamos soluciones prácticas para ayudarte a entender problemas concretos y saber qué hacer después.</p>
+    </div>
+    <svg class="node-map" viewBox="0 0 440 360" role="img" aria-label="" aria-hidden="true">
+      <g class="node-map__lines" fill="none">
+        <path d="M220 180 L92 90 M220 180 L348 76 M220 180 L374 212 M220 180 L306 310 M220 180 L92 282 M220 180 L62 188"/>
+      </g>
+      <g class="node-map__nodes">
+        <circle cx="92" cy="90" r="9"/><circle cx="348" cy="76" r="7"/>
+        <circle cx="374" cy="212" r="11"/><circle cx="306" cy="310" r="7"/>
+        <circle cx="92" cy="282" r="9"/><circle cx="62" cy="188" r="6"/>
+      </g>
+      <circle class="node-map__center" cx="220" cy="180" r="53"/>
+      <text x="220" y="181" text-anchor="middle" dominant-baseline="central">M</text>
+    </svg>
   </section>
-  <style>
-  body {
-    background-image: url('assets/fondo.png');
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-  </style>
-  
+
+  <section class="products container" id="products" aria-labelledby="products-title">
+    <p class="eyebrow">Productos</p>
+    <h2 id="products-title">Pequeños nodos. Grandes soluciones.</h2>
+    <a class="product-row" href="/privacy/" aria-label="Conocer Mininode Privacy">
+      <span class="product-row__number">01</span>
+      <span class="product-row__content">
+        <span class="product-row__name">Privacy</span>
+        <span class="product-row__description">Revisa señales públicas de privacidad de tu sitio, identifica qué puedes mejorar y conoce los primeros pasos para abordarlo.</span>
+      </span>
+      <span class="product-row__arrow" aria-hidden="true">→</span>
+    </a>
+  </section>
 </main>
 <div data-include="partials/footer.html"></div>
 </body>
 </html>
-
-

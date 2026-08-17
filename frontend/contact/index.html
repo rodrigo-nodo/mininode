@@ -14,6 +14,7 @@
 <main>
   <section class="container doc">
     <h1>Contacto</h1>
+    <p class="contact-context" id="contactContext" hidden>Consulta sobre Mininode Privacy</p>
     <form id="contactForm" class="card form" autocomplete="on">
       <label>
         <span>Nombre</span>
@@ -28,18 +29,25 @@
         <textarea name="message" rows="5" required placeholder="Cuéntanos brevemente qué necesitas"></textarea>
       </label>
       <input type="hidden" name="_subject" value="Nuevo mensaje desde mininode.io">
-      <button class="btn btn--primary" type="submit">Enviar</button>
+      <button class="btn btn--primary" type="submit" id="contactSubmit">Enviar</button>
       <p id="formStatus" class="muted" role="status" aria-live="polite"></p>
     </form>
-    <p class="muted">Al enviar aceptas nuestra <a href="../privacy/index.html">Política de Privacidad</a>.</p>
+    <p class="muted">Usaremos tus datos para responder tu consulta. Consulta nuestra <a href="/legal/privacy/">Política de privacidad</a>.</p>
   </section>
   <script>
   const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwprvwrk";
   const form = document.getElementById('contactForm');
   const statusEl = document.getElementById('formStatus');
+  const submitButton = document.getElementById('contactSubmit');
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('source') === 'privacy' && params.get('intent') === 'correction') {
+    document.getElementById('contactContext').hidden = false;
+    form.elements.message.value = 'Quiero recibir ayuda para corregir las prioridades detectadas en mi sitio.';
+  }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     statusEl.textContent = "Enviando...";
+    submitButton.disabled = true;
     try {
       const data = new FormData(form);
       const res = await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } });
@@ -47,10 +55,12 @@
         form.reset();
         statusEl.textContent = "¡Gracias! Responderemos pronto.";
       } else {
-        statusEl.textContent = "No se pudo enviar. Intenta nuevamente o escríbenos a contact@mininode.io.";
+        statusEl.innerHTML = 'No se pudo enviar. Intenta nuevamente o escríbenos a <a href="mailto:contact@mininode.io">contact@mininode.io</a>.';
       }
     } catch (err) {
-      statusEl.textContent = "Error de red. Intenta otra vez.";
+      statusEl.innerHTML = 'Error de red. Intenta otra vez o escríbenos a <a href="mailto:contact@mininode.io">contact@mininode.io</a>.';
+    } finally {
+      submitButton.disabled = false;
     }
   });
   </script>
@@ -58,4 +68,3 @@
 <div data-include="../partials/footer.html"></div>
 </body>
 </html>
-
