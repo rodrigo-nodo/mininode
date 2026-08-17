@@ -281,6 +281,14 @@
   margin: 0;
 }
 
+.privacy-scope-note {
+  border-left: 3px solid var(--primary);
+  color: var(--fg);
+  font-weight: 700;
+  margin: 18px 0 0;
+  padding: 6px 0 6px 14px;
+}
+
 .privacy-upgrade-note {
   color: var(--muted);
   margin: 24px 0 0;
@@ -396,6 +404,19 @@
   max-width: 62ch;
 }
 
+.privacy-includes h4 {
+  color: var(--fg);
+  margin: 0 0 8px;
+}
+
+.privacy-includes ul {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+}
+
 .privacy-price {
   color: var(--primary) !important;
   font-size: clamp(28px, 5vw, 38px);
@@ -412,6 +433,45 @@
 .privacy-secondary {
   margin-top: 2px;
   width: fit-content;
+}
+
+.privacy-secondary-offer {
+  border-top: 1px solid var(--border);
+  margin-top: 26px;
+  padding-top: 22px;
+}
+
+.privacy-secondary-offer h3,
+.privacy-secondary-offer p {
+  margin: 0;
+}
+
+.privacy-secondary-offer h3 {
+  font-size: 1.05rem;
+}
+
+.privacy-secondary-offer p {
+  color: var(--muted);
+  margin-top: 7px;
+  max-width: 62ch;
+}
+
+.privacy-secondary-offer a {
+  color: var(--primary);
+  display: inline-block;
+  font-weight: 700;
+  margin-top: 12px;
+  text-underline-offset: 3px;
+}
+
+.privacy-no-priorities {
+  margin-top: 28px;
+}
+
+.privacy-no-priorities__message {
+  color: var(--fg);
+  font-weight: 800;
+  margin: 0;
 }
 
 .privacy-modal[hidden] {

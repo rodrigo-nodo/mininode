@@ -14,6 +14,8 @@ const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
 const diagnosticScope = document.querySelector('#diagnostic-scope');
 const detectedSignals = document.querySelector('#detected-signals');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
+const correctionOffer = document.querySelector('#privacy-correction-offer');
+const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
@@ -139,7 +141,7 @@ const renderPriorities = (priorities) => {
       appendTextElement(item, 'p', `Evidencia: ${priority.evidence_summary}`);
     }
     if (priority.finding) {
-      appendTextElement(item, 'p', `Hallazgo: ${priority.finding}`);
+      appendTextElement(item, 'p', `Qué falta: ${priority.finding}`);
     }
     if (priority.recommendation) {
       appendTextElement(item, 'p', `Qué hacer: ${priority.recommendation}`);
@@ -166,6 +168,12 @@ const renderPriorities = (priorities) => {
   });
 };
 
+const renderCommercialOffer = (priorities) => {
+  const hasPriorities = Array.isArray(priorities) && priorities.length > 0;
+  correctionOffer.hidden = !hasPriorities;
+  noPrioritiesOffer.hidden = hasPriorities;
+};
+
 const renderDiagnostic = (diagnostic, websiteUrl) => {
   const score = diagnostic.score;
   const status = diagnostic.status;
@@ -183,6 +191,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${status}.`);
   renderSignals(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
+  renderCommercialOffer(diagnostic.priorities);
 };
 
 const getFocusableElements = () => {

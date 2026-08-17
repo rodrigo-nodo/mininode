@@ -40,9 +40,27 @@
   const statusEl = document.getElementById('formStatus');
   const submitButton = document.getElementById('contactSubmit');
   const params = new URLSearchParams(window.location.search);
-  if (params.get('source') === 'privacy' && params.get('intent') === 'correction') {
+  const privacyContactContexts = {
+    correction: {
+      label: 'Consulta sobre Mininode Privacy',
+      message: 'Quiero recibir ayuda para corregir las prioridades detectadas en mi sitio.',
+    },
+    'internal-review': {
+      label: 'Consulta sobre revisión interna',
+      message: 'Me interesa conocer futuras opciones para revisar procesos internos relacionados con privacidad.',
+    },
+    'technical-support': {
+      label: 'Consulta sobre apoyo técnico',
+      message: 'Necesito evaluar apoyo técnico para implementar cambios en mi sitio.',
+    },
+  };
+  const contactContext = params.get('source') === 'privacy'
+    ? privacyContactContexts[params.get('intent')]
+    : null;
+  if (contactContext) {
+    document.getElementById('contactContext').textContent = contactContext.label;
     document.getElementById('contactContext').hidden = false;
-    form.elements.message.value = 'Quiero recibir ayuda para corregir las prioridades detectadas en mi sitio.';
+    form.elements.message.value = contactContext.message;
   }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
