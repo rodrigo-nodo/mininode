@@ -70,12 +70,19 @@ def _evidence_summary(control_code: str, evidence: Mapping[str, Any]) -> str | N
         return "Se detectó un formulario que solicita datos potencialmente personales."
     if control_code == "PRV-104":
         if visible.get("privacy_link"):
-            return "Se detectó un formulario con enlace a política de privacidad."
+            return "Se detectó un formulario con un enlace visible relacionado con privacidad."
         if visible.get("privacy_information"):
-            return "Se detectó información relacionada con privacidad asociada al formulario."
+            return "Se detectó información visible relacionada con privacidad asociada al formulario."
         if visible.get("consent_mechanism"):
-            return "Se detectó un mecanismo visible de consentimiento asociado al formulario."
-        return "No se detectó un mecanismo visible de consentimiento asociado al formulario."
+            return (
+                "Se detectó una señal visible de consentimiento o aceptación asociada "
+                "al formulario, sin información de privacidad reconocida en el contexto "
+                "revisado."
+            )
+        return (
+            "En el formulario revisado no se identificaron señales visibles de información "
+            "de privacidad ni de consentimiento o aceptación."
+        )
     return None
 
 
