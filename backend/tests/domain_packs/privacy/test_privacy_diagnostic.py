@@ -105,7 +105,7 @@ def test_visible_evidence_does_not_change_diagnostic_or_priority_order():
         item for item in traced_result["controls"] if item["control_code"] == "PRV-104"
     )
     assert control["source_url"] == "https://example.com/contact"
-    assert control["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
+    assert control["evidence_summary"] == "Se detectó un formulario con un enlace visible relacionado con privacidad."
 
 
 def test_frontend_conditionally_renders_safe_source_path_and_home_label():

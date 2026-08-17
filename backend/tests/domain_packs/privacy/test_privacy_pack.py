@@ -294,7 +294,7 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
         {
             "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
             "source_url": "https://example.com/contact",
-            "evidence_summary": "No se detectó un mecanismo visible de consentimiento asociado al formulario.",
+            "evidence_summary": "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación.",
         },
         {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
     ]
@@ -307,7 +307,7 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
     assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
     assert len(priorities) == len(baseline)
     assert priorities[1]["evidence_summary"] == (
-        "No se detectó un mecanismo visible de consentimiento asociado al formulario."
+        "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
     )
 
 
@@ -332,3 +332,48 @@ def test_json_files_are_valid_utf8_json():
     for filename in ("controls.json", "scoring.json", "actions.json"):
         with (privacy_dir / filename).open(encoding="utf-8") as source:
             assert isinstance(json.load(source), dict)
+
+@pytest.mark.parametrize(
+    ("visible", "expected_result", "expected_summary"),
+    [
+        (
+            {"privacy_link": True, "privacy_information": True},
+            "detected",
+            "Se detectó un formulario con un enlace visible relacionado con privacidad.",
+        ),
+        (
+            {"privacy_information": True},
+            "detected",
+            "Se detectó información visible relacionada con privacidad asociada al formulario.",
+        ),
+        (
+            {"privacy_information": False, "consent_mechanism": True},
+            "partial",
+            "Se detectó una señal visible de consentimiento o aceptación asociada al formulario, sin información de privacidad reconocida en el contexto revisado.",
+        ),
+        (
+            {"privacy_information": False, "consent_mechanism": False},
+            "not_detected",
+            "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación.",
+        ),
+    ],
+)
+def test_prv104_evidence_summary_matches_observable_state(
+    visible, expected_result, expected_summary
+):
+    source_url = "https://example.com/contact"
+    evidence = {
+        **visible,
+        "source_urls": [source_url],
+        "visible_evidence": {
+            "type": "personal_data_form",
+            "source_url": source_url,
+            **visible,
+        },
+    }
+    result = evaluate_control(
+        "PRV-104", evidence, {"PRV-101": "detected"}
+    )
+
+    assert result["result"] == expected_result
+    assert result["evidence_summary"] == expected_summary

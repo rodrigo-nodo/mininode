@@ -221,7 +221,7 @@ def test_visible_evidence_summaries_are_conservative_and_control_scoped():
     prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
     prv104 = evaluate_control("PRV-104", adapted["PRV-104"], {"PRV-101": prv101})
     assert prv101["evidence_summary"] == "Formulario que solicita correo electrónico y mensaje."
-    assert prv104["evidence_summary"] == "Se detectó un formulario con enlace a política de privacidad."
+    assert prv104["evidence_summary"] == "Se detectó un formulario con un enlace visible relacionado con privacidad."
     assert prv101["source_url"] == adapted["PRV-101"]["visible_evidence"]["source_url"]
 
     unknown = FormEvidence(

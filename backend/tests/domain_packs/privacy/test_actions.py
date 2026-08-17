@@ -6,7 +6,10 @@ from pathlib import Path
 BACKEND_SRC = Path(__file__).resolve().parents[3] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
-from mininode_api.domain_packs.privacy.evaluator import load_controls  # noqa: E402
+from mininode_api.domain_packs.privacy.evaluator import (  # noqa: E402
+    evaluate_control,
+    load_controls,
+)
 from mininode_api.domain_packs.privacy.prioritization import (  # noqa: E402
     load_actions,
     prioritize_findings,
@@ -15,13 +18,12 @@ from mininode_api.domain_packs.privacy.prioritization import (  # noqa: E402
 
 EXPECTED_ACTIONS = {
     "PRV-001": {"not_detected"},
-    "PRV-002": {"partial", "not_detected"},
+    "PRV-002": {"partial"},
     "PRV-104": {"partial", "not_detected"},
-    "PRV-201": {"partial", "not_detected"},
+    "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
     "PRV-501": {"partial", "not_detected"},
 }
-ORPHAN_ACTIONS = {("PRV-002", "not_detected"), ("PRV-201", "partial")}
 LEGACY_FIELDS = {
     "control_code", "name", "priority", "finding", "recommendation",
     "source_url", "evidence_summary",
@@ -37,18 +39,8 @@ def test_action_catalog_integrity_and_approved_results():
     controls = {control["code"]: control for control in load_controls()}
     assert set(catalog["actions"]) <= set(controls)
     assert "PRV-101" not in catalog["actions"]
-    observed_orphans = {
-        (code, outcome)
-        for code, outcomes in catalog["actions"].items()
-        for outcome in outcomes
-        if outcome not in controls[code]["criteria"]
-    }
-    assert observed_orphans == ORPHAN_ACTIONS
     for code, outcomes in catalog["actions"].items():
-        reachable = {
-            outcome for outcome in outcomes if (code, outcome) not in ORPHAN_ACTIONS
-        }
-        assert reachable <= set(controls[code]["criteria"])
+        assert set(outcomes) <= set(controls[code]["criteria"])
         assert set(outcomes) <= {"partial", "not_detected"}
         for action in outcomes.values():
             assert set(action) == {"action_steps", "validation_step"}
@@ -58,6 +50,80 @@ def test_action_catalog_integrity_and_approved_results():
             assert action["validation_step"].strip()
 
 
+def test_every_action_is_actionable_and_reachable_through_active_pipeline():
+    catalog = load_actions()["actions"]
+    scenarios = {
+        "PRV-001": [({"policy_visible": False}, None)],
+        "PRV-002": [(
+            {"policy_accessible": False, "policy_content_relevant": False},
+            {"PRV-001": "detected"},
+        )],
+        "PRV-104": [
+            ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),
+            ({"privacy_information": False, "consent_mechanism": False}, {"PRV-101": "detected"}),
+        ],
+        "PRV-201": [({"cookies_observed": True, "cookie_information": False}, None)],
+        "PRV-301": [({"contact_channel_visible": False}, None)],
+        "PRV-501": [
+            ({"https": True, "tls_valid": True, "mixed_content": True}, None),
+            ({"https": False, "tls_valid": False}, None),
+        ],
+    }
+    produced = {
+        code: {
+            evaluate_control(code, evidence, previous)["result"]
+            for evidence, previous in cases
+        }
+        for code, cases in scenarios.items()
+    }
+
+    for code, outcomes in catalog.items():
+        for outcome in outcomes:
+            assert outcome in produced[code]
+            prioritized = prioritize_findings([
+                {"control_code": code, "result": outcome, "confidence": "high"}
+            ])
+            assert prioritized and prioritized[0]["control_code"] == code
+
+
+def test_aligned_action_plans_are_exact():
+    actions = load_actions()["actions"]
+    assert "not_detected" not in actions["PRV-002"]
+    assert "partial" not in actions["PRV-201"]
+    assert actions["PRV-002"]["partial"] == {
+        "action_steps": [
+            "Abrir el enlace o referencia de privacidad detectado.",
+            "Comprobar que el destino puede cargarse públicamente y que corresponde a información de privacidad.",
+            "Corregir el enlace, redirección o página de destino cuando corresponda.",
+        ],
+        "validation_step": "Volver a abrir el enlace desde una página pública y comprobar que el destino carga correctamente y presenta información relacionada con privacidad.",
+    }
+    assert actions["PRV-104"]["partial"] == {
+        "action_steps": [
+            "Revisar qué información recibe la persona antes de enviar el formulario.",
+            "Incorporar junto al formulario información visible sobre el tratamiento de los datos.",
+            "Mantener la señal de consentimiento o aceptación separada de esa información y evaluar su uso según el contexto cuando corresponda.",
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad puede identificarse antes del envío y que cualquier señal adicional de consentimiento o aceptación se presenta de forma separada y visible.",
+    }
+    assert actions["PRV-104"]["not_detected"] == {
+        "action_steps": [
+            "Definir qué información sobre el tratamiento de datos debe presentarse junto al formulario.",
+            "Incorporar esa información de forma visible antes del envío.",
+            "Evaluar separadamente si el contexto requiere algún mecanismo adicional de consentimiento o aceptación.",
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad es visible antes del envío y que cualquier mecanismo adicional, cuando corresponda, puede identificarse claramente.",
+    }
+    assert actions["PRV-201"]["not_detected"] == {
+        "action_steps": [
+            "Revisar qué cookies o tecnologías asociadas está utilizando el sitio dentro de su funcionamiento real.",
+            "Incorporar información visible sobre el uso de cookies cuando corresponda.",
+            "Verificar que esa información pueda encontrarse fácilmente durante una visita normal al sitio.",
+        ],
+        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que, cuando se observan cookies, también puede identificarse información visible relacionada con su uso.",
+    }
+
+
 def test_action_catalog_has_no_placeholders_dynamic_interpolation_or_defensive_terms():
     forbidden_terms = re.compile(
         r"\b(cumple|incumple|ilegal|obligatorio|garantiza)\b"
@@ -65,11 +131,13 @@ def test_action_catalog_has_no_placeholders_dynamic_interpolation_or_defensive_t
         re.IGNORECASE,
     )
     placeholders = ("{{", "}}", "${", "<%", "%>", "source_url", "evidence_summary")
+    unmeasured_terms = ("incomplet", "ambigu", "poco visible")
     for outcomes in load_actions()["actions"].values():
         for action in outcomes.values():
             texts = [*action["action_steps"], action["validation_step"]]
             assert all(not forbidden_terms.search(text) for text in texts)
             assert all(marker not in text for text in texts for marker in placeholders)
+            assert all(term not in text.lower() for text in texts for term in unmeasured_terms)
 
 
 def test_enrichment_preserves_legacy_priority_contract_and_selection():

@@ -602,7 +602,7 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
     assert "?" not in priority["source_url"]
     assert "#" not in priority["source_url"]
     assert priority["evidence_summary"] == (
-        "No se detectó un mecanismo visible de consentimiento asociado al formulario."
+        "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
     )
     serialized = str(body)
     assert "persona@example.com" not in serialized

@@ -14,55 +14,39 @@
     "PRV-002": {
       "partial": {
         "action_steps": [
-          "Revisar el enlace de privacidad detectado y localizar el problema de acceso, claridad o pertinencia.",
-          "Corregir la URL, redirección o contenido de destino según corresponda.",
-          "Mantener el enlace visible desde las páginas donde ya está publicado."
+          "Abrir el enlace o referencia de privacidad detectado.",
+          "Comprobar que el destino puede cargarse públicamente y que corresponde a información de privacidad.",
+          "Corregir el enlace, redirección o página de destino cuando corresponda."
         ],
-        "validation_step": "Seguir el enlace desde una página pública y comprobar que carga correctamente y presenta contenido claramente relacionado con privacidad."
-      },
-      "not_detected": {
-        "action_steps": [
-          "Revisar el destino del enlace de privacidad identificado.",
-          "Corregir el enlace o publicar una página de privacidad utilizable.",
-          "Confirmar que el destino puede abrirse públicamente sin autenticación."
-        ],
-        "validation_step": "Abrir el enlace desde una página pública y comprobar que el destino carga y contiene información claramente relacionada con privacidad."
+        "validation_step": "Volver a abrir el enlace desde una página pública y comprobar que el destino carga correctamente y presenta información relacionada con privacidad."
       }
     },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
-          "Definir qué información necesita recibir la persona antes de enviar el formulario.",
-          "Mostrar junto al formulario información clara sobre el uso de los datos y facilitar acceso a información más completa cuando corresponda.",
-          "Evaluar si el tratamiento requiere un mecanismo específico de consentimiento y, solo cuando corresponda, incorporarlo antes del envío."
+          "Definir qué información sobre el tratamiento de datos debe presentarse junto al formulario.",
+          "Incorporar esa información de forma visible antes del envío.",
+          "Evaluar separadamente si el contexto requiere algún mecanismo adicional de consentimiento o aceptación."
         ],
-        "validation_step": "Abrir la página del formulario y comprobar, antes del envío, que la información relevante es visible, que los enlaces asociados funcionan y que cualquier mecanismo aplicable puede identificarse claramente."
+        "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad es visible antes del envío y que cualquier mecanismo adicional, cuando corresponda, puede identificarse claramente."
       },
       "partial": {
         "action_steps": [
-          "Revisar la información o mecanismo ya visible junto al formulario e identificar qué parte está incompleta o poco clara.",
-          "Completar la información sobre el uso de los datos y facilitar acceso a información más completa cuando corresponda.",
-          "Evaluar si el mecanismo de consentimiento existente es adecuado para el contexto y ajustarlo solo cuando corresponda."
+          "Revisar qué información recibe la persona antes de enviar el formulario.",
+          "Incorporar junto al formulario información visible sobre el tratamiento de los datos.",
+          "Mantener la señal de consentimiento o aceptación separada de esa información y evaluar su uso según el contexto cuando corresponda."
         ],
-        "validation_step": "Abrir la página del formulario y comprobar que la información visible antes del envío es clara, accesible y coherente con el mecanismo disponible."
+        "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad puede identificarse antes del envío y que cualquier señal adicional de consentimiento o aceptación se presenta de forma separada y visible."
       }
     },
     "PRV-201": {
       "not_detected": {
         "action_steps": [
-          "Revisar con quien administra el sitio qué cookies o tecnologías similares se utilizan y para qué finalidad.",
-          "Incorporar información visible sobre su uso cuando corresponda.",
-          "Evaluar si corresponde ofrecer mecanismos de gestión de preferencias."
+          "Revisar qué cookies o tecnologías asociadas está utilizando el sitio dentro de su funcionamiento real.",
+          "Incorporar información visible sobre el uso de cookies cuando corresponda.",
+          "Verificar que esa información pueda encontrarse fácilmente durante una visita normal al sitio."
         ],
-        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que la información sobre cookies aparece cuando corresponde y que las opciones disponibles pueden utilizarse."
-      },
-      "partial": {
-        "action_steps": [
-          "Revisar la información de cookies actualmente visible e identificar qué aspecto está incompleto o poco claro.",
-          "Completar la explicación sobre el uso de cookies o tecnologías similares.",
-          "Revisar las opciones de preferencias disponibles y ajustarlas cuando corresponda."
-        ],
-        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que la información es clara y que las preferencias disponibles funcionan de acuerdo con la configuración esperada."
+        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que, cuando se observan cookies, también puede identificarse información visible relacionada con su uso."
       }
     },
     "PRV-301": {
