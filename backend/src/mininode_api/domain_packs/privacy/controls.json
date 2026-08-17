@@ -35,11 +35,10 @@
         "respuesta HTTP satisfactoria",
         "contenido claramente relacionado con privacidad o tratamiento de datos"
       ],
-      "base_recommendation": "Verificar que el enlace sea visible, funcione correctamente y dirija a contenido pertinente.",
+      "base_recommendation": "Revisar que el enlace de privacidad sea accesible y dirija a contenido claramente relacionado con privacidad.",
       "criteria": {
         "detected": "PRV-001 fue detectado, el enlace abre correctamente y el contenido corresponde claramente a una política de privacidad o tratamiento de datos personales.",
-        "partial": "La política existe, pero presenta problemas de acceso, claridad o contenido.",
-        "not_detected": "Existe un enlace que aparenta corresponder a una política, pero no conduce a una política utilizable.",
+        "partial": "Se detectó un enlace o referencia de privacidad, pero durante la inspección no se confirmó que su destino fuera accesible y estuviera relacionado con privacidad.",
         "not_applicable": "PRV-001 = not_detected.",
         "not_evaluable": "Una limitación técnica impide comprobar la política."
       }
@@ -67,7 +66,7 @@
     {
       "code": "PRV-104",
       "domain": "Formularios",
-      "name": "Información o consentimiento asociado al formulario",
+      "name": "Información de privacidad asociada al formulario",
       "impact": "muy_alto",
       "automatable": "parcial",
       "type": "conditional_evaluation",
@@ -80,13 +79,13 @@
         "checkbox",
         "mecanismo de consentimiento cuando corresponda"
       ],
-      "base_recommendation": "Incorporar información clara sobre el tratamiento de datos y un mecanismo de consentimiento cuando corresponda.",
+      "base_recommendation": "Incorporar información visible sobre el tratamiento de datos junto al formulario y evaluar si corresponde algún mecanismo adicional de consentimiento o aceptación.",
       "criteria": {
-        "detected": "El formulario muestra información clara sobre el tratamiento de datos y, cuando corresponde, incorpora un mecanismo de consentimiento visible antes del envío.",
-        "partial": "Existe algún texto, enlace, checkbox o aviso relacionado con privacidad, pero es incompleto, ambiguo, poco visible o no cubre claramente el tratamiento o consentimiento necesario.",
-        "not_detected": "El formulario solicita datos potencialmente personales y no se identifica información asociada sobre su tratamiento ni mecanismo de consentimiento cuando corresponde.",
-        "not_applicable": "PRV-101 = not_detected.",
-        "not_evaluable": "Una limitación técnica impide revisar adecuadamente el contenido o comportamiento del formulario."
+        "detected": "Se detectó información visible relacionada con privacidad asociada al formulario revisado.",
+        "partial": "Se detectó una señal visible de consentimiento o aceptación, pero no se detectó información de privacidad asociada al formulario revisado.",
+        "not_detected": "No se detectó información de privacidad ni una señal visible de consentimiento o aceptación asociada al formulario revisado.",
+        "not_applicable": "No se detectó un formulario que solicite datos potencialmente personales dentro del alcance revisado.",
+        "not_evaluable": "No fue posible obtener evidencia suficiente para evaluar este control."
       }
     },
     {
@@ -102,13 +101,12 @@
         "texto informativo sobre cookies",
         "panel o mecanismo de preferencias cuando corresponda"
       ],
-      "base_recommendation": "Informar el uso de cookies y habilitar mecanismos de gestión de preferencias cuando corresponda.",
+      "base_recommendation": "Incorporar información visible sobre el uso de cookies cuando corresponda al funcionamiento real del sitio.",
       "criteria": {
-        "detected": "Se detecta información visible sobre el uso de cookies y, cuando corresponde, existe un mecanismo para informar o gestionar las preferencias del usuario.",
-        "partial": "Existe banner, aviso o información sobre cookies, pero es incompleta, poco clara o el mecanismo de gestión disponible parece limitado.",
-        "not_detected": "Se detectan cookies o tecnologías relevantes, pero no se identifica información visible ni mecanismo asociado cuando corresponde.",
-        "not_applicable": "No se detectan cookies o tecnologías que hagan necesario evaluar este control dentro del alcance del diagnóstico.",
-        "not_evaluable": "Una limitación técnica impide determinar adecuadamente el uso de cookies o revisar los mecanismos asociados."
+        "detected": "Se detectaron cookies en las respuestas inspeccionadas y una señal visible de información sobre cookies.",
+        "not_detected": "Se detectaron cookies en las respuestas inspeccionadas, pero no se detectó una señal visible de información sobre cookies.",
+        "not_applicable": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico.",
+        "not_evaluable": "No fue posible obtener evidencia suficiente para evaluar la información visible sobre cookies."
       }
     },
     {
@@ -148,7 +146,7 @@
       "base_recommendation": "Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros.",
       "criteria": {
         "detected": "El sitio es accesible mediante HTTPS y presenta un certificado TLS válido para el dominio evaluado.",
-        "partial": "El sitio utiliza HTTPS, pero se detecta una anomalía visible relevante, por ejemplo mixed content o redirecciones inconsistentes entre HTTP y HTTPS.",
+        "partial": "El sitio utiliza HTTPS, pero se detectó mixed content en las páginas inspeccionadas.",
         "not_detected": "El sitio se encuentra disponible mediante HTTP sin una protección HTTPS válida, o HTTPS presenta un certificado inválido que impide establecer una conexión segura normal.",
         "not_evaluable": "Una limitación técnica impide comprobar de manera confiable HTTPS/TLS."
       }
