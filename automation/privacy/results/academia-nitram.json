@@ -1,0 +1,7 @@
+{
+  "error": true,
+  "site": "academia-nitram",
+  "url": "https://www.academianitram.com/",
+  "http_status": "422",
+  "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
+}
