@@ -1,0 +1,58 @@
+name: Privacy Diagnose Bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: Batch label used in artifact filenames
+        required: false
+        default: manual
+        type: string
+      urls:
+        description: Public website URLs, one per line
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Mininode API secret
+        shell: bash
+        env:
+          MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MININODE_API_KEY:-}" ]; then
+            echo "::error::MININODE_API_KEY is not available to this workflow"
+            exit 1
+          fi
+
+      - name: Run Privacy batch
+        env:
+          MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
+          PRIVACY_URLS: ${{ inputs.urls }}
+          PRIVACY_BATCH_LABEL: ${{ inputs.label }}
+          PRIVACY_ENDPOINT: https://mininode.io/api/privacy/diagnose
+          PRIVACY_OUTPUT_DIR: automation/privacy/results
+        run: python automation/privacy/run_diagnose_batch.py
+
+      - name: Upload Privacy results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-diagnose-${{ inputs.label }}-${{ github.run_id }}
+          path: automation/privacy/results/
+          if-no-files-found: warn
+          retention-days: 14
