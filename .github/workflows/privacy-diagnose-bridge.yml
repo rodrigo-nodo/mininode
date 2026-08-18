@@ -26,7 +26,7 @@ jobs:
       (
         github.event.issue.pull_request == null &&
         github.event.comment.body == '/privacy-run' &&
-        github.actor == 'rodrigo-nodo'
+        github.event.issue.user.login == 'rodrigo-nodo'
       )
     runs-on: ubuntu-latest
     steps:
