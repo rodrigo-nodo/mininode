@@ -24,7 +24,7 @@ jobs:
         env:
           MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
         run: |
-          set -euo pipefail
+          set -u -o pipefail
           mkdir -p automation/privacy/results
           for request in automation/privacy/requests/*.json; do
             [ -e "$request" ] || continue
@@ -42,12 +42,30 @@ jobs:
             while IFS=$'\t' read -r name url; do
               [ -n "$url" ] || continue
               echo "Diagnosing $url"
-              curl --fail-with-body --silent --show-error \
+              tmp="$(mktemp)"
+              http_code="$(curl --silent --show-error \
                 -X POST 'https://api.mininode.io/privacy/diagnose' \
                 -H 'Content-Type: application/json' \
                 -H "X-Api-Key: ${MININODE_API_KEY}" \
                 --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
-                -o "automation/privacy/results/${name}.json"
+                -o "$tmp" -w '%{http_code}')" || http_code="000"
+              if [[ "$http_code" =~ ^2 ]]; then
+                mv "$tmp" "automation/privacy/results/${name}.json"
+              else
+                python - "$name" "$url" "$http_code" "$tmp" <<'PY'
+          import json, sys
+          name,url,status,tmp=sys.argv[1:]
+          try:
+              body=open(tmp, encoding='utf-8', errors='replace').read()
+          except Exception:
+              body=''
+          out={'error': True, 'site': name, 'url': url, 'http_status': status, 'response': body}
+          with open(f'automation/privacy/results/{name}.json','w',encoding='utf-8') as f:
+              json.dump(out,f,ensure_ascii=False,indent=2)
+          PY
+                rm -f "$tmp"
+                echo "ERROR $http_code for $url; continuing batch"
+              fi
             done < /tmp/privacy-sites.tsv
           done
 
@@ -61,5 +79,5 @@ jobs:
             echo 'No new results to commit.'
             exit 0
           fi
-          git commit -m 'test: store privacy diagnosis result'
+          git commit -m 'test: store privacy diagnosis batch results'
           git push origin HEAD:automation/privacy-github-test
