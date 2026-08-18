@@ -1,0 +1,50 @@
+name: Privacy Diagnose Bridge
+
+on:
+  push:
+    branches:
+      - automation/privacy-github-test
+    paths:
+      - 'automation/privacy/requests/*.json'
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: automation/privacy-github-test
+
+      - name: Run Privacy diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p automation/privacy/results
+          for request in automation/privacy/requests/*.json; do
+            [ -e "$request" ] || continue
+            name="$(basename "$request" .json)"
+            url="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["url"])' "$request")"
+            echo "Diagnosing $url"
+            curl --fail-with-body --silent --show-error \
+              -X POST 'https://mininode.io/api/privacy/diagnose' \
+              -H 'Content-Type: application/json' \
+              --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
+              -o "automation/privacy/results/${name}.json"
+          done
+
+      - name: Commit results
+        shell: bash
+        run: |
+          if git diff --quiet -- automation/privacy/results; then
+            echo 'No new results to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add automation/privacy/results
+          git commit -m 'test: store privacy diagnosis result'
+          git push origin HEAD:automation/privacy-github-test
