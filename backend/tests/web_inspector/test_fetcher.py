@@ -242,6 +242,79 @@ def test_initial_dns_failure_is_distinct_from_an_unsafe_target():
 
     assert result.pages[0].error.code == "dns_failure"
     assert result.pages[0].failure_phase == "initial_validation"
+    assert result.pages[0].dns_attempt_count == 2
+    assert result.pages[0].dns_failure_category == "resolver_failure"
+
+
+@pytest.mark.parametrize(
+    ("target", "failed_hostname", "effective_hostname"),
+    [
+        ("https://example.com/path", "example.com", "www.example.com"),
+        ("https://www.example.com/path", "www.example.com", "example.com"),
+    ],
+)
+def test_initial_dns_failure_uses_one_apex_www_fallback(
+    target, failed_hostname, effective_hostname
+):
+    resolved = []
+    requested = []
+
+    def resolver(hostname, port):
+        resolved.append(hostname)
+        if hostname == failed_hostname:
+            raise fetcher_module.DNSResolutionError(
+                "DNS resolution failed", hostname=hostname,
+                dns_attempt_count=1, dns_failure_category="hostname_not_found"
+            )
+        return {"93.184.216.34"}
+
+    def handler(request):
+        requested.append(str(request.url))
+        content_type = "text/plain" if request.url.path == "/robots.txt" else "text/html"
+        return httpx.Response(200, text="ok", headers={"content-type": content_type})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(target, [target])
+
+    assert result.target_url == target
+    assert result.pages[0].requested_url == target
+    assert result.pages[0].final_url == target.replace(failed_hostname, effective_hostname)
+    assert result.pages[0].effective_hostname == effective_hostname
+    assert all(effective_hostname in url for url in requested)
+    assert resolved[:2] == [failed_hostname, effective_hostname]
+
+
+def test_fallback_to_private_address_remains_blocked_without_fetch():
+    requested = []
+
+    def resolver(hostname, port):
+        if hostname == "example.com":
+            raise fetcher_module.DNSResolutionError("not found", hostname=hostname)
+        return {"127.0.0.1"}
+
+    result = WebFetcher(
+        client=client_for(lambda request: requested.append(request)), resolver=resolver
+    ).fetch("https://example.com/", ["https://example.com/"])
+
+    page = result.pages[0]
+    assert page.error.code == "blocked_by_ssrf"
+    assert page.effective_hostname == "www.example.com"
+    assert page.rejected_addresses == ("127.0.0.1",)
+    assert requested == []
+
+
+def test_unsafe_initial_target_never_triggers_www_fallback():
+    hostnames = []
+
+    def resolver(hostname, port):
+        hostnames.append(hostname)
+        return {"127.0.0.1"}
+
+    result = WebFetcher(client=client_for(lambda request: None), resolver=resolver).fetch(
+        "https://example.com/", ["https://example.com/"]
+    )
+
+    assert result.pages[0].error.code == "blocked_by_ssrf"
+    assert hostnames == ["example.com"]
 
 
 def test_connect_timeout_falls_back_while_budget_remains():

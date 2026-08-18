@@ -82,6 +82,33 @@ def normalize_url(url: str) -> str:
     return urlunsplit((scheme, netloc, path, query, ""))
 
 
+def _alternate_www_url(url: str) -> str | None:
+    """Return the sole allowed apex/www alternative, preserving the URL."""
+
+    parsed = urlsplit(url)
+    hostname = parsed.hostname
+    if not hostname:
+        return None
+    try:
+        ipaddress.ip_address(hostname)
+        return None
+    except ValueError:
+        pass
+    alternate = hostname[4:] if hostname.lower().startswith("www.") else f"www.{hostname}"
+    if not alternate:
+        return None
+    port = f":{parsed.port}" if parsed.port is not None else ""
+    return urlunsplit((parsed.scheme, f"{alternate}{port}", parsed.path, parsed.query, parsed.fragment))
+
+
+def _replace_hostname(url: str, source: str | None, target: str | None) -> str:
+    parsed = urlsplit(url)
+    if not source or not target or (parsed.hostname or "").lower() != source.lower():
+        return url
+    port = f":{parsed.port}" if parsed.port is not None else ""
+    return urlunsplit((parsed.scheme, f"{target}{port}", parsed.path, parsed.query, parsed.fragment))
+
+
 class WebFetcher:
     """Fetch at most five same-host HTML pages without crawling."""
 
@@ -120,6 +147,7 @@ class WebFetcher:
         *,
         deadline: float | None = None,
     ) -> InspectionFetchResult:
+        started = time.monotonic()
         candidates = list(candidate_urls)
         limited = len(candidates) > MAX_URLS
         candidates = candidates[:MAX_URLS]
@@ -134,10 +162,29 @@ class WebFetcher:
                 normalized.append(value)
                 seen.add(value)
 
+        requested_hostname: str | None = None
+        effective_hostname: str | None = None
+        dns_attempt_count = 0
         try:
             normalized_target = normalize_url(target_url)
-            allowed_hostname = urlsplit(normalized_target).hostname
-            validate_url(normalized_target, self._resolver)
+            requested_hostname = urlsplit(normalized_target).hostname
+            effective_target = normalized_target
+            try:
+                validate_url(effective_target, self._resolver)
+            except DNSResolutionError as initial_exc:
+                dns_attempt_count += initial_exc.dns_attempt_count
+                alternate = _alternate_www_url(normalized_target)
+                if alternate is None:
+                    raise
+                effective_hostname = urlsplit(alternate).hostname
+                try:
+                    validate_url(alternate, self._resolver)
+                except DNSResolutionError as fallback_exc:
+                    fallback_exc.dns_attempt_count += dns_attempt_count
+                    raise fallback_exc
+                effective_target = alternate
+            effective_hostname = urlsplit(effective_target).hostname
+            allowed_hostname = effective_hostname
         except SSRFGuardError as exc:
             error = self._guard_error(target_url, exc)
             page = FetchPageResult(
@@ -147,14 +194,19 @@ class WebFetcher:
                 failure_phase="initial_validation",
                 resolved_addresses=exc.resolved_addresses,
                 rejected_addresses=exc.rejected_addresses,
+                elapsed_ms=int((time.monotonic() - started) * 1000),
+                requested_hostname=requested_hostname or exc.hostname,
+                effective_hostname=effective_hostname,
+                dns_attempt_count=exc.dns_attempt_count,
+                dns_failure_category=exc.dns_failure_category,
             )
             return InspectionFetchResult(target_url, len(normalized), pages=[page], errors=[error], limited=limited)
 
         result = InspectionFetchResult(normalized_target, len(normalized), limited=limited)
-        started = time.monotonic()
         deadline = deadline if deadline is not None else started + self._inspection_budget
-        robots = self._cached_robots(normalized_target, allowed_hostname, deadline)
+        robots = self._cached_robots(effective_target, allowed_hostname, deadline)
         for requested_url in normalized:
+            fetch_url = _replace_hostname(requested_url, requested_hostname, effective_hostname)
             if time.monotonic() >= deadline:
                 error = FetchError("timeout", "Inspection time budget exceeded", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
@@ -165,7 +217,10 @@ class WebFetcher:
                 error = FetchError("robots_disallowed", "robots.txt disallows this path", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
             else:
-                page = self._fetch_page(requested_url, allowed_hostname, deadline=deadline)
+                page = self._fetch_page(fetch_url, allowed_hostname, deadline=deadline)
+                page.requested_url = requested_url
+                page.requested_hostname = requested_hostname
+                page.effective_hostname = effective_hostname
             result.pages.append(page)
             if page.error:
                 result.errors.append(page.error)
@@ -390,7 +445,7 @@ class WebFetcher:
                     transport_error_class=type(exc).__name__,
                 )
             except DNSResolutionError as exc:
-                return self._error_page(
+                page = self._error_page(
                     requested_url,
                     current_url,
                     None,
@@ -400,6 +455,11 @@ class WebFetcher:
                     str(exc),
                     failure_phase="redirect_validation" if redirects else "home_fetch",
                 )
+                page.requested_hostname = urlsplit(requested_url).hostname
+                page.effective_hostname = urlsplit(current_url).hostname
+                page.dns_attempt_count = exc.dns_attempt_count
+                page.dns_failure_category = exc.dns_failure_category
+                return page
             except SSRFGuardError as exc:
                 error = self._guard_error(current_url, exc)
                 return FetchPageResult(
@@ -412,6 +472,10 @@ class WebFetcher:
                     failure_phase="redirect_validation" if redirects else "home_fetch",
                     resolved_addresses=exc.resolved_addresses,
                     rejected_addresses=exc.rejected_addresses,
+                    requested_hostname=urlsplit(requested_url).hostname,
+                    effective_hostname=urlsplit(current_url).hostname,
+                    dns_attempt_count=exc.dns_attempt_count,
+                    dns_failure_category=exc.dns_failure_category,
                 )
             except httpx.HTTPError as exc:
                 certificate_error = self._is_certificate_error(exc)

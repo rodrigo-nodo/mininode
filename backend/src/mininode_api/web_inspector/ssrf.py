@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
 from collections.abc import Callable, Iterable
 from urllib.parse import urlsplit
 
@@ -18,11 +19,15 @@ class SSRFGuardError(ValueError):
         hostname: str | None = None,
         resolved_addresses: Iterable[str] = (),
         rejected_addresses: Iterable[str] = (),
+        dns_attempt_count: int = 0,
+        dns_failure_category: str | None = None,
     ) -> None:
         super().__init__(message)
         self.hostname = hostname
         self.resolved_addresses = tuple(sorted(resolved_addresses))
         self.rejected_addresses = tuple(sorted(rejected_addresses))
+        self.dns_attempt_count = dns_attempt_count
+        self.dns_failure_category = dns_failure_category
 
 
 class UnsupportedSchemeError(SSRFGuardError):
@@ -43,17 +48,60 @@ class DNSResolutionError(SSRFGuardError):
 
 Resolver = Callable[[str, int], Iterable[str]]
 
+DNS_MAX_ATTEMPTS = 2
+DNS_RETRY_DELAY_SECONDS = 0.05
+DNS_RETRY_BUDGET_SECONDS = 0.25
+
+
+def _dns_failure_category(exc: socket.gaierror) -> str:
+    code = exc.errno
+    if code == getattr(socket, "EAI_AGAIN", None):
+        return "temporary_failure"
+    if code in {
+        getattr(socket, "EAI_NONAME", None),
+        getattr(socket, "EAI_NODATA", None),
+    }:
+        return "hostname_not_found"
+    return "resolver_failure"
+
 
 def system_resolver(hostname: str, port: int) -> set[str]:
     """Resolve every address so the guard can reject mixed public/private DNS."""
 
-    try:
-        answers = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
-    except socket.gaierror as exc:
-        raise DNSResolutionError(f"DNS resolution failed for {hostname}", hostname=hostname) from exc
+    attempts = 0
+    started = time.monotonic()
+    while True:
+        attempts += 1
+        try:
+            answers = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+            break
+        except socket.gaierror as exc:
+            category = _dns_failure_category(exc)
+            retry_fits_budget = (
+                time.monotonic() - started + DNS_RETRY_DELAY_SECONDS
+                < DNS_RETRY_BUDGET_SECONDS
+            )
+            if (
+                category == "temporary_failure"
+                and attempts < DNS_MAX_ATTEMPTS
+                and retry_fits_budget
+            ):
+                time.sleep(DNS_RETRY_DELAY_SECONDS)
+                continue
+            raise DNSResolutionError(
+                f"DNS resolution failed for {hostname}",
+                hostname=hostname,
+                dns_attempt_count=attempts,
+                dns_failure_category=category,
+            ) from exc
     addresses = {answer[4][0] for answer in answers}
     if not addresses:
-        raise DNSResolutionError(f"DNS returned no addresses for {hostname}", hostname=hostname)
+        raise DNSResolutionError(
+            f"DNS returned no addresses for {hostname}",
+            hostname=hostname,
+            dns_attempt_count=attempts,
+            dns_failure_category="no_addresses",
+        )
     return addresses
 
 
@@ -95,9 +143,24 @@ def validate_url(url: str, resolver: Resolver = system_resolver) -> set[str]:
         except DNSResolutionError:
             raise
         except (OSError, socket.gaierror) as exc:
-            raise DNSResolutionError(f"DNS resolution failed for {hostname}", hostname=hostname) from exc
+            category = (
+                _dns_failure_category(exc)
+                if isinstance(exc, socket.gaierror)
+                else "resolver_failure"
+            )
+            raise DNSResolutionError(
+                f"DNS resolution failed for {hostname}",
+                hostname=hostname,
+                dns_attempt_count=1,
+                dns_failure_category=category,
+            ) from exc
     if not addresses:
-        raise DNSResolutionError(f"DNS returned no addresses for {hostname}", hostname=hostname)
+        raise DNSResolutionError(
+            f"DNS returned no addresses for {hostname}",
+            hostname=hostname,
+            dns_attempt_count=1,
+            dns_failure_category="no_addresses",
+        )
     unsafe = sorted(address for address in addresses if not is_public_address(address))
     if unsafe:
         raise UnsafeTargetError(
