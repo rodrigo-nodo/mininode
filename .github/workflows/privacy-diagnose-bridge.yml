@@ -12,12 +12,22 @@ on:
         description: Public website URLs, one per line
         required: true
         type: string
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   diagnose:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.issue.pull_request == null &&
+        github.event.comment.body == '/privacy-run' &&
+        github.actor == 'rodrigo-nodo'
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,11 +49,42 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve batch input
+        id: batch
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_URLS: ${{ inputs.urls }}
+          DISPATCH_LABEL: ${{ inputs.label }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            URLS="$DISPATCH_URLS"
+            LABEL="${DISPATCH_LABEL:-manual}"
+          else
+            URLS="$(printf '%s\n' "$ISSUE_BODY" | grep -Eo 'https?://[^[:space:]<>`)]+/?' || true)"
+            LABEL="issue-${ISSUE_NUMBER}"
+          fi
+
+          if [ -z "${URLS//[$'\t\r\n ']/}" ]; then
+            echo "::error::No URLs found for Privacy batch"
+            exit 1
+          fi
+
+          {
+            echo 'urls<<EOF'
+            printf '%s\n' "$URLS"
+            echo EOF
+            echo "label=$LABEL"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Privacy batch
         env:
           MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
-          PRIVACY_URLS: ${{ inputs.urls }}
-          PRIVACY_BATCH_LABEL: ${{ inputs.label }}
+          PRIVACY_URLS: ${{ steps.batch.outputs.urls }}
+          PRIVACY_BATCH_LABEL: ${{ steps.batch.outputs.label }}
           PRIVACY_ENDPOINT: https://mininode.io/api/privacy/diagnose
           PRIVACY_OUTPUT_DIR: automation/privacy/results
         run: python automation/privacy/run_diagnose_batch.py
@@ -52,7 +93,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-diagnose-${{ inputs.label }}-${{ github.run_id }}
+          name: privacy-diagnose-${{ steps.batch.outputs.label }}-${{ github.run_id }}
           path: automation/privacy/results/
           if-no-files-found: warn
           retention-days: 14
