@@ -1,0 +1,132 @@
+name: Codex Issue Worker
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: codex-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/codex' &&
+      github.actor == 'rodrigo-nodo'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Create work branch
+        id: branch
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          BRANCH="codex/issue-${ISSUE_NUMBER}-${RUN_ID}"
+          git switch -c "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Run Codex
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ':workspace'
+          prompt: |
+            Implement the GitHub issue below in repository ${{ github.repository }}.
+
+            Issue #${{ github.event.issue.number }}
+            Title: ${{ github.event.issue.title }}
+
+            Body:
+            ---
+            ${{ github.event.issue.body }}
+            ---
+
+            Requirements for this run:
+            - Work only inside the checked-out repository.
+            - Follow the repository's existing architecture and conventions.
+            - Make the smallest focused change that satisfies the issue.
+            - Do not weaken security controls unless the issue explicitly requires it.
+            - Do not modify GitHub Actions workflows unless the issue explicitly asks for that.
+            - Run the relevant tests available in the repository.
+            - Do not commit, push, create a PR, merge, or modify GitHub issues. The workflow handles Git operations after you finish.
+            - At the end, leave the workspace with the implementation and tests completed.
+
+      - name: Commit and push changes
+        id: publish
+        shell: bash
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "codex: implement issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        if: steps.publish.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          CODEX_FINAL_MESSAGE: ${{ steps.codex.outputs.final-message }}
+        run: |
+          set -euo pipefail
+          BODY_FILE="$(mktemp)"
+          {
+            printf 'Automated Codex implementation for #%s.\n\n' "$ISSUE_NUMBER"
+            printf 'Closes #%s\n\n' "$ISSUE_NUMBER"
+            printf '## Codex summary\n\n%s\n' "$CODEX_FINAL_MESSAGE"
+            printf '\n---\nCreated by the Codex Issue Worker. Human review is required before merge.\n'
+          } > "$BODY_FILE"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "codex: ${ISSUE_TITLE}" \
+            --body-file "$BODY_FILE"
+
+      - name: Report no changes
+        if: steps.publish.outputs.changed != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'Codex finished but produced no repository changes. Review the workflow run and Codex final message before retrying.'
+            })
