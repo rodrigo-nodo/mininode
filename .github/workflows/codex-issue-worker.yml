@@ -48,6 +48,18 @@ jobs:
           git switch -c "$BRANCH"
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
+      - name: Validate OpenAI API secret
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY is not available to this workflow"
+            exit 1
+          fi
+          echo "OPENAI_API_KEY is available"
+
       - name: Run Codex
         id: codex
         uses: openai/codex-action@v1
