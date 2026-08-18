@@ -28,15 +28,27 @@ jobs:
           mkdir -p automation/privacy/results
           for request in automation/privacy/requests/*.json; do
             [ -e "$request" ] || continue
-            name="$(basename "$request" .json)"
-            url="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["url"])' "$request")"
-            echo "Diagnosing $url"
-            curl --fail-with-body --silent --show-error \
-              -X POST 'https://api.mininode.io/privacy/diagnose' \
-              -H 'Content-Type: application/json' \
-              -H "X-Api-Key: ${MININODE_API_KEY}" \
-              --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
-              -o "automation/privacy/results/${name}.json"
+            python - "$request" <<'PY' > /tmp/privacy-sites.tsv
+          import json, sys, re
+          data=json.load(open(sys.argv[1], encoding='utf-8'))
+          if 'sites' in data:
+              for s in data['sites']:
+                  slug=s.get('slug') or re.sub(r'[^a-z0-9]+','-',s.get('name','site').lower()).strip('-')
+                  print(f"{slug}\t{s['url']}")
+          elif 'url' in data:
+              name=sys.argv[1].rsplit('/',1)[-1].rsplit('.',1)[0]
+              print(f"{name}\t{data['url']}")
+          PY
+            while IFS=$'\t' read -r name url; do
+              [ -n "$url" ] || continue
+              echo "Diagnosing $url"
+              curl --fail-with-body --silent --show-error \
+                -X POST 'https://api.mininode.io/privacy/diagnose' \
+                -H 'Content-Type: application/json' \
+                -H "X-Api-Key: ${MININODE_API_KEY}" \
+                --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
+                -o "automation/privacy/results/${name}.json"
+            done < /tmp/privacy-sites.tsv
           done
 
       - name: Commit results
