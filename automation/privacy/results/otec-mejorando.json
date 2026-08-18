@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "OTEC Mejorando Capacitación",
+    "rubro": "Educación",
+    "description": "OTEC de capacitación presencial, e-learning y a distancia.",
+    "size_estimate": "Micro/Pequeña",
+    "url": "https://mejorando.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

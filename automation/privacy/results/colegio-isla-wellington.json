@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Colegio Isla Wellington",
+    "rubro": "Educación",
+    "description": "Colegio particular de educación escolar en La Florida.",
+    "size_estimate": "Pequeña",
+    "url": "https://colegioislawellington.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

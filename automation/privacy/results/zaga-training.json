@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Zaga Training",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://zagatraining.cl/"
+  },
   "error": true,
-  "site": "zaga-training",
-  "url": "https://zagatraining.cl/",
   "http_status": "422",
   "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
 }

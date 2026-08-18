@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Colegio Sochides Renca",
+    "rubro": "Educación",
+    "description": "Colegio particular de educación escolar en Renca.",
+    "size_estimate": "Pequeña",
+    "url": "https://colegiosochides.cl/"
+  },
+  "error": true,
+  "http_status": "422",
+  "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
+}

@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Manada Fitness",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://manadafitness.cl/"
+  },
   "error": true,
-  "site": "manada-fitness",
-  "url": "https://manadafitness.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

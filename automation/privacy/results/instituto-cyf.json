@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Instituto CyF Capacitación",
+    "rubro": "Educación",
+    "description": "Instituto de capacitación y formación profesional.",
+    "size_estimate": "Micro/Pequeña",
+    "url": "https://institutocyf.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

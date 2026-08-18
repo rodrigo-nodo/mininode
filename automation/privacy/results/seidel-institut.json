@@ -1,0 +1,151 @@
+{
+  "metadata": {
+    "company": "Seidel Institut",
+    "rubro": "Educación",
+    "description": "Instituto de idiomas con cursos de inglés, francés y alemán.",
+    "size_estimate": "Pequeña",
+    "url": "https://seidel.cl/"
+  },
+  "diagnosis": {
+    "controls": [
+      {
+        "control_code": "PRV-001",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_visible": false
+          }
+        ],
+        "reason": "No se identifica una política o referencia equivalente en las páginas públicas revisadas."
+      },
+      {
+        "control_code": "PRV-002",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_link_found": false
+          }
+        ],
+        "reason": "PRV-001 = not_detected."
+      },
+      {
+        "control_code": "PRV-101",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "personal_data_form": false
+          }
+        ],
+        "reason": "Se revisan las páginas públicas consideradas y no se identifican formularios que soliciten datos potencialmente personales."
+      },
+      {
+        "control_code": "PRV-104",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "privacy_information": false
+          },
+          {
+            "consent_required": false
+          },
+          {
+            "consent_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "privacy_link": false
+          }
+        ],
+        "reason": "No se detectó un formulario que solicite datos potencialmente personales dentro del alcance revisado."
+      },
+      {
+        "control_code": "PRV-201",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "cookie_information": false
+          },
+          {
+            "preferences_required": false
+          },
+          {
+            "preference_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "cookie_banner": false
+          },
+          {
+            "relevant_cookies": false
+          }
+        ],
+        "reason": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico."
+      },
+      {
+        "control_code": "PRV-301",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "contact_channel_visible": true
+          }
+        ],
+        "reason": "Se identifica al menos un canal de contacto público y accesible."
+      },
+      {
+        "control_code": "PRV-501",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "https": true
+          },
+          {
+            "tls_valid": true
+          },
+          {
+            "mixed_content": false
+          },
+          {
+            "inconsistent_redirects": false
+          }
+        ],
+        "reason": "El sitio es accesible mediante HTTPS y presenta un certificado TLS válido para el dominio evaluado."
+      }
+    ],
+    "score": 56,
+    "status": "En preparación",
+    "coverage": 100,
+    "evaluated_controls": 3,
+    "applicable_controls": 3,
+    "priorities": [
+      {
+        "control_code": "PRV-001",
+        "name": "Política de privacidad visible",
+        "priority": "Alta",
+        "finding": "No se identifica una política o referencia equivalente en las páginas públicas revisadas.",
+        "recommendation": "Publicar una política de privacidad accesible desde las páginas principales del sitio.",
+        "action_steps": [
+          "Preparar o revisar la información de privacidad que corresponda al sitio.",
+          "Publicarla en una página pública claramente identificada.",
+          "Incorporar un enlace visible desde páginas principales, por ejemplo navegación o pie de página."
+        ],
+        "validation_step": "Abrir una página principal en una sesión nueva, localizar el enlace de privacidad y comprobar que conduce a contenido relacionado con privacidad."
+      }
+    ],
+    "scope": {
+      "pages_requested": 2,
+      "pages_analyzed": 2,
+      "limited": false
+    }
+  }
+}

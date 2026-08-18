@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Colegio El Alba de Macul",
+    "rubro": "Educación",
+    "description": "Colegio particular subvencionado con educación prebásica, básica y media.",
+    "size_estimate": "Pequeña/Mediana",
+    "url": "https://colegioelalbademacul.com/"
+  },
+  "error": true,
+  "http_status": "422",
+  "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
+}

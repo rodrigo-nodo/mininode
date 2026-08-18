@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Vital Motriz",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://vitalmotriz.cl/"
+  },
   "error": true,
-  "site": "vital-motriz",
-  "url": "https://vitalmotriz.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

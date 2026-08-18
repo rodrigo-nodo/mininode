@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Ferretería Duttyup",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://ferreteriaduttyup.cl/"
+  },
   "error": true,
-  "site": "ferreteria-duttyup",
-  "url": "https://ferreteriaduttyup.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

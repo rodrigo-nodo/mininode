@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Outlet Running",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://outletrunning.cl/"
+  },
   "error": true,
-  "site": "outlet-running",
-  "url": "https://outletrunning.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

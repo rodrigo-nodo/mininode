@@ -1,1 +1,177 @@
-{"controls":[{"control_code":"PRV-001","result":"not_detected","confidence":"high","evidence":[{"policy_visible":false}],"reason":"No se identifica una política o referencia equivalente en las páginas públicas revisadas."},{"control_code":"PRV-002","result":"not_applicable","confidence":"high","evidence":[{"policy_link_found":false}],"reason":"PRV-001 = not_detected."},{"control_code":"PRV-101","result":"not_detected","confidence":"high","evidence":[{"personal_data_form":false}],"reason":"Se revisan las páginas públicas consideradas y no se identifican formularios que soliciten datos potencialmente personales."},{"control_code":"PRV-104","result":"not_applicable","confidence":"high","evidence":[{"privacy_information":false},{"consent_required":false},{"consent_mechanism":false},{"information_complete":false},{"privacy_link":false}],"reason":"No se detectó un formulario que solicite datos potencialmente personales dentro del alcance revisado."},{"control_code":"PRV-201","result":"not_applicable","confidence":"high","evidence":[{"cookie_information":false},{"preferences_required":false},{"preference_mechanism":false},{"information_complete":false},{"cookie_banner":false},{"relevant_cookies":false}],"reason":"No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico."},{"control_code":"PRV-301","result":"not_detected","confidence":"high","evidence":[{"contact_channel_visible":false}],"reason":"No se identifica ningún canal de contacto público en las páginas revisadas."},{"control_code":"PRV-501","result":"partial","confidence":"high","evidence":[{"https":true},{"tls_valid":true},{"mixed_content":true},{"inconsistent_redirects":false}],"reason":"El sitio utiliza HTTPS, pero se detectó mixed content en las páginas inspeccionadas."}],"score":22,"status":"Preparación inicial","coverage":100,"evaluated_controls":3,"applicable_controls":3,"priorities":[{"control_code":"PRV-001","name":"Política de privacidad visible","priority":"Alta","finding":"No se identifica una política o referencia equivalente en las páginas públicas revisadas.","recommendation":"Publicar una política de privacidad accesible desde las páginas principales del sitio.","action_steps":["Preparar o revisar la información de privacidad que corresponda al sitio.","Publicarla en una página pública claramente identificada.","Incorporar un enlace visible desde páginas principales, por ejemplo navegación o pie de página."],"validation_step":"Abrir una página principal en una sesión nueva, localizar el enlace de privacidad y comprobar que conduce a contenido relacionado con privacidad."},{"control_code":"PRV-501","name":"Uso de HTTPS","priority":"Alta","finding":"El sitio utiliza HTTPS, pero se detectó mixed content en las páginas inspeccionadas.","recommendation":"Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros.","action_steps":["Revisar los recursos o redirecciones que todavía utilizan HTTP dentro del sitio HTTPS.","Reemplazar recursos inseguros por versiones HTTPS cuando estén disponibles.","Comprobar que las redirecciones mantienen HTTPS de forma consistente."],"validation_step":"Abrir el sitio en HTTPS y comprobar que el navegador no informa recursos inseguros y que las redirecciones mantienen una conexión segura."},{"control_code":"PRV-301","name":"Canal de contacto visible","priority":"Baja","finding":"No se identifica ningún canal de contacto público en las páginas revisadas.","recommendation":"Publicar un canal de contacto claro y fácilmente accesible.","action_steps":["Definir un canal público de contacto que la organización pueda atender regularmente.","Publicarlo con una etiqueta clara en una ubicación fácil de encontrar.","Comprobar que el canal puede utilizarse sin depender de información no visible para la persona usuaria."],"validation_step":"Localizar el canal desde una página principal y realizar una prueba controlada para comprobar que está accesible y operativo."}],"scope":{"pages_requested":1,"pages_analyzed":1,"limited":false}}
+{
+  "metadata": {
+    "company": "Acción CrossFit",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://resp.accioncrossfit.cl/"
+  },
+  "diagnosis": {
+    "controls": [
+      {
+        "control_code": "PRV-001",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_visible": false
+          }
+        ],
+        "reason": "No se identifica una política o referencia equivalente en las páginas públicas revisadas."
+      },
+      {
+        "control_code": "PRV-002",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_link_found": false
+          }
+        ],
+        "reason": "PRV-001 = not_detected."
+      },
+      {
+        "control_code": "PRV-101",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "personal_data_form": false
+          }
+        ],
+        "reason": "Se revisan las páginas públicas consideradas y no se identifican formularios que soliciten datos potencialmente personales."
+      },
+      {
+        "control_code": "PRV-104",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "privacy_information": false
+          },
+          {
+            "consent_required": false
+          },
+          {
+            "consent_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "privacy_link": false
+          }
+        ],
+        "reason": "No se detectó un formulario que solicite datos potencialmente personales dentro del alcance revisado."
+      },
+      {
+        "control_code": "PRV-201",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "cookie_information": false
+          },
+          {
+            "preferences_required": false
+          },
+          {
+            "preference_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "cookie_banner": false
+          },
+          {
+            "relevant_cookies": false
+          }
+        ],
+        "reason": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico."
+      },
+      {
+        "control_code": "PRV-301",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "contact_channel_visible": false
+          }
+        ],
+        "reason": "No se identifica ningún canal de contacto público en las páginas revisadas."
+      },
+      {
+        "control_code": "PRV-501",
+        "result": "partial",
+        "confidence": "high",
+        "evidence": [
+          {
+            "https": true
+          },
+          {
+            "tls_valid": true
+          },
+          {
+            "mixed_content": true
+          },
+          {
+            "inconsistent_redirects": false
+          }
+        ],
+        "reason": "El sitio utiliza HTTPS, pero se detectó mixed content en las páginas inspeccionadas."
+      }
+    ],
+    "score": 22,
+    "status": "Preparación inicial",
+    "coverage": 100,
+    "evaluated_controls": 3,
+    "applicable_controls": 3,
+    "priorities": [
+      {
+        "control_code": "PRV-001",
+        "name": "Política de privacidad visible",
+        "priority": "Alta",
+        "finding": "No se identifica una política o referencia equivalente en las páginas públicas revisadas.",
+        "recommendation": "Publicar una política de privacidad accesible desde las páginas principales del sitio.",
+        "action_steps": [
+          "Preparar o revisar la información de privacidad que corresponda al sitio.",
+          "Publicarla en una página pública claramente identificada.",
+          "Incorporar un enlace visible desde páginas principales, por ejemplo navegación o pie de página."
+        ],
+        "validation_step": "Abrir una página principal en una sesión nueva, localizar el enlace de privacidad y comprobar que conduce a contenido relacionado con privacidad."
+      },
+      {
+        "control_code": "PRV-501",
+        "name": "Uso de HTTPS",
+        "priority": "Alta",
+        "finding": "El sitio utiliza HTTPS, pero se detectó mixed content en las páginas inspeccionadas.",
+        "recommendation": "Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros.",
+        "action_steps": [
+          "Revisar los recursos o redirecciones que todavía utilizan HTTP dentro del sitio HTTPS.",
+          "Reemplazar recursos inseguros por versiones HTTPS cuando estén disponibles.",
+          "Comprobar que las redirecciones mantienen HTTPS de forma consistente."
+        ],
+        "validation_step": "Abrir el sitio en HTTPS y comprobar que el navegador no informa recursos inseguros y que las redirecciones mantienen una conexión segura."
+      },
+      {
+        "control_code": "PRV-301",
+        "name": "Canal de contacto visible",
+        "priority": "Baja",
+        "finding": "No se identifica ningún canal de contacto público en las páginas revisadas.",
+        "recommendation": "Publicar un canal de contacto claro y fácilmente accesible.",
+        "action_steps": [
+          "Definir un canal público de contacto que la organización pueda atender regularmente.",
+          "Publicarlo con una etiqueta clara en una ubicación fácil de encontrar.",
+          "Comprobar que el canal puede utilizarse sin depender de información no visible para la persona usuaria."
+        ],
+        "validation_step": "Localizar el canal desde una página principal y realizar una prueba controlada para comprobar que está accesible y operativo."
+      }
+    ],
+    "scope": {
+      "pages_requested": 1,
+      "pages_analyzed": 1,
+      "limited": false
+    }
+  }
+}

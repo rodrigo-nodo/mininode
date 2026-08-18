@@ -1,0 +1,159 @@
+{
+  "metadata": {
+    "company": "Stamford Chile",
+    "rubro": "Educación",
+    "description": "Academia de inglés y capacitación en idiomas.",
+    "size_estimate": "Micro/Pequeña",
+    "url": "https://stamford.cl/"
+  },
+  "diagnosis": {
+    "controls": [
+      {
+        "control_code": "PRV-001",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_visible": true
+          }
+        ],
+        "reason": "Se identifica un enlace o referencia visible claramente asociada a una política de privacidad o tratamiento de datos personales."
+      },
+      {
+        "control_code": "PRV-002",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_link_found": true
+          },
+          {
+            "policy_accessible": true
+          },
+          {
+            "policy_content_relevant": true
+          }
+        ],
+        "reason": "PRV-001 fue detectado, el enlace abre correctamente y el contenido corresponde claramente a una política de privacidad o tratamiento de datos personales."
+      },
+      {
+        "control_code": "PRV-101",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "personal_data_form": true
+          },
+          {
+            "source_urls": [
+              "https://stamford.cl/",
+              "https://stamford.cl/politica-de-privacidad-y-datos/"
+            ]
+          }
+        ],
+        "reason": "Se identifica al menos un formulario público que solicita uno o más datos potencialmente personales.",
+        "source_url": "https://stamford.cl/",
+        "evidence_summary": "Formulario que solicita nombre, correo electrónico, teléfono y mensaje."
+      },
+      {
+        "control_code": "PRV-104",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "privacy_information": true
+          },
+          {
+            "consent_required": false
+          },
+          {
+            "consent_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "privacy_link": true
+          },
+          {
+            "source_urls": [
+              "https://stamford.cl/",
+              "https://stamford.cl/politica-de-privacidad-y-datos/"
+            ]
+          }
+        ],
+        "reason": "Se detectó información visible relacionada con privacidad asociada al formulario revisado.",
+        "source_url": "https://stamford.cl/",
+        "evidence_summary": "Se detectó un formulario con un enlace visible relacionado con privacidad."
+      },
+      {
+        "control_code": "PRV-201",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "cookie_information": true
+          },
+          {
+            "preferences_required": false
+          },
+          {
+            "preference_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "cookie_banner": true
+          },
+          {
+            "relevant_cookies": false
+          }
+        ],
+        "reason": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico."
+      },
+      {
+        "control_code": "PRV-301",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "contact_channel_visible": true
+          }
+        ],
+        "reason": "Se identifica al menos un canal de contacto público y accesible."
+      },
+      {
+        "control_code": "PRV-501",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "https": true
+          },
+          {
+            "tls_valid": true
+          },
+          {
+            "mixed_content": false
+          },
+          {
+            "inconsistent_redirects": false
+          }
+        ],
+        "reason": "El sitio es accesible mediante HTTPS y presenta un certificado TLS válido para el dominio evaluado."
+      }
+    ],
+    "score": 100,
+    "status": "Alta preparación visible",
+    "coverage": 100,
+    "evaluated_controls": 5,
+    "applicable_controls": 5,
+    "priorities": [],
+    "scope": {
+      "pages_requested": 2,
+      "pages_analyzed": 2,
+      "limited": false
+    }
+  }
+}

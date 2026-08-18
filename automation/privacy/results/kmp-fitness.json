@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "KMP Fitness",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://kmpfitness.cl/"
+  },
   "error": true,
-  "site": "kmp-fitness",
-  "url": "https://kmpfitness.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Jardín Infantil y Sala Cuna Los Nenitos",
+    "rubro": "Educación",
+    "description": "Sala cuna, jardín infantil y cuidado de párvulos.",
+    "size_estimate": "Pequeña",
+    "url": "https://www.losnenitos.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

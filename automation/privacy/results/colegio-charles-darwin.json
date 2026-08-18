@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Colegio Charles Darwin",
+    "rubro": "Educación",
+    "description": "Colegio particular con educación escolar en Renca.",
+    "size_estimate": "Pequeña",
+    "url": "https://colegiocharlesdarwin.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

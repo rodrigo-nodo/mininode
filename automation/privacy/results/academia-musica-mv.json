@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Academia de Música M&V",
+    "rubro": "Educación",
+    "description": "Academia local de música y clases instrumentales.",
+    "size_estimate": "Micro",
+    "url": "https://academiademusicamyv.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

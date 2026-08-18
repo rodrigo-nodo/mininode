@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Pazinha Chocolates",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://pazinhachocolates.cl/"
+  },
   "error": true,
-  "site": "pazinha-chocolates",
-  "url": "https://pazinhachocolates.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

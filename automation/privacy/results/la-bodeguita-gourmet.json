@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "La Bodeguita Gourmet",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://labodeguitagourmet.cl/"
+  },
   "error": true,
-  "site": "la-bodeguita-gourmet",
-  "url": "https://labodeguitagourmet.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

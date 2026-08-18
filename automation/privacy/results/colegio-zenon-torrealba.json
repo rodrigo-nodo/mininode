@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "company": "Colegio Zenón Torrealba",
+    "rubro": "Educación",
+    "description": "Colegio particular de enseñanza básica en Quinta Normal.",
+    "size_estimate": "Pequeña",
+    "url": "https://colegiozenontorrealba.cl/"
+  },
+  "error": true,
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}

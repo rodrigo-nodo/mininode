@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "CrossFit Andares",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://crossfitandares.cl/"
+  },
   "error": true,
-  "site": "crossfit-andares",
-  "url": "https://crossfitandares.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

@@ -1,0 +1,186 @@
+{
+  "metadata": {
+    "company": "OTEC INC",
+    "rubro": "Educación",
+    "description": "Organismo de capacitación ligado a formación empresarial.",
+    "size_estimate": "Pequeña",
+    "url": "https://www.otecinc.cl/"
+  },
+  "diagnosis": {
+    "controls": [
+      {
+        "control_code": "PRV-001",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_visible": true
+          }
+        ],
+        "reason": "Se identifica un enlace o referencia visible claramente asociada a una política de privacidad o tratamiento de datos personales."
+      },
+      {
+        "control_code": "PRV-002",
+        "result": "partial",
+        "confidence": "high",
+        "evidence": [
+          {
+            "policy_link_found": true
+          },
+          {
+            "policy_accessible": false
+          },
+          {
+            "policy_content_relevant": false
+          }
+        ],
+        "reason": "Se detectó un enlace o referencia de privacidad, pero durante la inspección no se confirmó que su destino fuera accesible y estuviera relacionado con privacidad."
+      },
+      {
+        "control_code": "PRV-101",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "personal_data_form": true
+          },
+          {
+            "source_urls": [
+              "https://www.otecinc.cl/"
+            ]
+          }
+        ],
+        "reason": "Se identifica al menos un formulario público que solicita uno o más datos potencialmente personales.",
+        "source_url": "https://www.otecinc.cl/",
+        "evidence_summary": "Formulario que solicita nombre, correo electrónico y teléfono."
+      },
+      {
+        "control_code": "PRV-104",
+        "result": "not_detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "privacy_information": false
+          },
+          {
+            "consent_required": false
+          },
+          {
+            "consent_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "privacy_link": false
+          },
+          {
+            "source_urls": [
+              "https://www.otecinc.cl/"
+            ]
+          }
+        ],
+        "reason": "No se detectó información de privacidad ni una señal visible de consentimiento o aceptación asociada al formulario revisado.",
+        "source_url": "https://www.otecinc.cl/",
+        "evidence_summary": "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
+      },
+      {
+        "control_code": "PRV-201",
+        "result": "not_applicable",
+        "confidence": "high",
+        "evidence": [
+          {
+            "cookie_information": false
+          },
+          {
+            "preferences_required": false
+          },
+          {
+            "preference_mechanism": false
+          },
+          {
+            "information_complete": false
+          },
+          {
+            "cookie_banner": false
+          },
+          {
+            "relevant_cookies": false
+          }
+        ],
+        "reason": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico."
+      },
+      {
+        "control_code": "PRV-301",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "contact_channel_visible": true
+          }
+        ],
+        "reason": "Se identifica al menos un canal de contacto público y accesible."
+      },
+      {
+        "control_code": "PRV-501",
+        "result": "detected",
+        "confidence": "high",
+        "evidence": [
+          {
+            "https": true
+          },
+          {
+            "tls_valid": true
+          },
+          {
+            "mixed_content": false
+          },
+          {
+            "inconsistent_redirects": false
+          }
+        ],
+        "reason": "El sitio es accesible mediante HTTPS y presenta un certificado TLS válido para el dominio evaluado."
+      }
+    ],
+    "score": 67,
+    "status": "En preparación",
+    "coverage": 100,
+    "evaluated_controls": 5,
+    "applicable_controls": 5,
+    "priorities": [
+      {
+        "control_code": "PRV-104",
+        "name": "Información de privacidad asociada al formulario",
+        "priority": "Alta",
+        "finding": "No se detectó información de privacidad ni una señal visible de consentimiento o aceptación asociada al formulario revisado.",
+        "recommendation": "Incorporar información visible sobre el tratamiento de datos junto al formulario y evaluar si corresponde algún mecanismo adicional de consentimiento o aceptación.",
+        "source_url": "https://www.otecinc.cl/",
+        "evidence_summary": "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación.",
+        "action_steps": [
+          "Definir qué información sobre el tratamiento de datos debe presentarse junto al formulario.",
+          "Incorporar esa información de forma visible antes del envío.",
+          "Evaluar separadamente si el contexto requiere algún mecanismo adicional de consentimiento o aceptación."
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad es visible antes del envío y que cualquier mecanismo adicional, cuando corresponda, puede identificarse claramente."
+      },
+      {
+        "control_code": "PRV-002",
+        "name": "Política de privacidad accesible",
+        "priority": "Media",
+        "finding": "Se detectó un enlace o referencia de privacidad, pero durante la inspección no se confirmó que su destino fuera accesible y estuviera relacionado con privacidad.",
+        "recommendation": "Revisar que el enlace de privacidad sea accesible y dirija a contenido claramente relacionado con privacidad.",
+        "action_steps": [
+          "Abrir el enlace o referencia de privacidad detectado.",
+          "Comprobar que el destino puede cargarse públicamente y que corresponde a información de privacidad.",
+          "Corregir el enlace, redirección o página de destino cuando corresponda."
+        ],
+        "validation_step": "Volver a abrir el enlace desde una página pública y comprobar que el destino carga correctamente y presenta información relacionada con privacidad."
+      }
+    ],
+    "scope": {
+      "pages_requested": 3,
+      "pages_analyzed": 1,
+      "limited": true
+    }
+  }
+}

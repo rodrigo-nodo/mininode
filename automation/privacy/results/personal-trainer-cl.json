@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Personal Trainer Ñuñoa",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://personal-trainer.cl/"
+  },
   "error": true,
-  "site": "personal-trainer-cl",
-  "url": "https://personal-trainer.cl/",
   "http_status": "422",
   "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
 }

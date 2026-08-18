@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Primal Training Center",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://primaltrainingcenter.cl/"
+  },
   "error": true,
-  "site": "primal-training-center",
-  "url": "https://primaltrainingcenter.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

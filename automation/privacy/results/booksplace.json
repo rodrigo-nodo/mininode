@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "BooksPlace",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://booksplace.cl/"
+  },
   "error": true,
-  "site": "booksplace",
-  "url": "https://booksplace.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }

@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "MercadoTenis",
+    "rubro": "E-commerce",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://mercadotenis.cl/"
+  },
   "error": true,
-  "site": "mercadotenis",
-  "url": "https://mercadotenis.cl/",
   "http_status": "422",
   "response": "{\"error\":\"inspection_failed\",\"message\":\"No fue posible inspeccionar el sitio solicitado.\"}"
 }

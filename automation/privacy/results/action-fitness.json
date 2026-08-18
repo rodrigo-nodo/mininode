@@ -1,7 +1,12 @@
 {
+  "metadata": {
+    "company": "Action Fitness",
+    "rubro": "Gimnasios",
+    "description": "",
+    "size_estimate": "",
+    "url": "https://actionfitness.cl/"
+  },
   "error": true,
-  "site": "action-fitness",
-  "url": "https://actionfitness.cl/",
   "http_status": "400",
   "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
 }
