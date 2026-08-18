@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
 
 jobs:
   diagnose:
@@ -97,3 +97,29 @@ jobs:
           path: automation/privacy/results/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Post compact result to source issue
+        if: always() && github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL: ${{ steps.batch.outputs.label }}
+        run: |
+          set -euo pipefail
+          CSV="automation/privacy/results/privacy-diagnose-${LABEL}.csv"
+          COMMENT="$(mktemp)"
+          {
+            echo "Privacy batch completed."
+            echo
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            if [ -f "$CSV" ]; then
+              echo '```csv'
+              cat "$CSV"
+              echo '```'
+            else
+              echo "No CSV summary was produced."
+            fi
+          } > "$COMMENT"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$COMMENT"
