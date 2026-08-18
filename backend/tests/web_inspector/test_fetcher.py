@@ -227,7 +227,21 @@ def test_mixed_dns_is_blocked_before_any_address_attempt():
     )._fetch_page("https://example.com/", "example.com")
 
     assert page.error.code == "blocked_by_ssrf"
+    assert page.resolved_addresses == ("127.0.0.1", "93.184.216.34")
+    assert page.rejected_addresses == ("127.0.0.1",)
     assert attempts == []
+
+
+def test_initial_dns_failure_is_distinct_from_an_unsafe_target():
+    def unavailable(hostname, port):
+        raise OSError("resolver unavailable")
+
+    result = WebFetcher(client=client_for(lambda request: None), resolver=unavailable).fetch(
+        "https://example.com/", ["https://example.com/"]
+    )
+
+    assert result.pages[0].error.code == "dns_failure"
+    assert result.pages[0].failure_phase == "initial_validation"
 
 
 def test_connect_timeout_falls_back_while_budget_remains():
@@ -309,6 +323,20 @@ def test_certificate_connect_error_does_not_fall_back():
     assert page.tls_valid is False
     assert page.transport_error_class == "ConnectError"
     assert attempts == ["93.184.216.33"]
+
+
+def test_generic_tls_failure_is_distinct_from_http_failure():
+    def handler(request):
+        raise httpx.ConnectError("handshake failed", request=request) from ssl.SSLError()
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.error.code == "tls_error"
+    assert page.error.message == "TLS connection failed"
+    assert page.transport_error_class == "ConnectError"
+    assert page.tls_valid is False
 
 
 @pytest.mark.parametrize(
@@ -703,6 +731,7 @@ def test_www_redirect_to_private_or_mixed_dns_is_blocked_without_connection():
         )
 
         assert result.pages[0].error.code == "blocked_by_ssrf"
+        assert result.pages[0].failure_phase == "redirect_validation"
         assert requested_hosts == ["example.com", "example.com"]
 
 

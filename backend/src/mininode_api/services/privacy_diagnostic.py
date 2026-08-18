@@ -68,7 +68,7 @@ def _home_failure(result: InspectionFetchResult) -> None:
     event = {
         "event": "privacy_home_inspection_failed",
         "hostname": hostname,
-        "phase": "home_fetch",
+        "phase": page.failure_phase if page and page.failure_phase else "home_fetch",
         "error_code": error.code if error else "inspection_failed",
         "failure_class": "controlled_fetch_error",
         "network_family": page.network_family if page else None,
@@ -76,6 +76,8 @@ def _home_failure(result: InspectionFetchResult) -> None:
         "redirect_count": page.redirect_count if page else 0,
         "status_code": page.status_code if page else None,
         "elapsed_ms": page.elapsed_ms if page else 0,
+        "resolved_addresses": list(page.resolved_addresses) if page else [],
+        "rejected_addresses": list(page.rejected_addresses) if page else [],
     }
     logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:
@@ -84,6 +86,16 @@ def _home_failure(result: InspectionFetchResult) -> None:
         raise PrivacyInspectionError("unsafe_target")
     if error.code == "robots_disallowed":
         raise PrivacyInspectionError("inspection_blocked")
+    failure_codes = {
+        "dns_failure": "dns_resolution_failed",
+        "timeout": "request_timeout",
+        "tls_certificate_error": "tls_failure",
+        "tls_error": "tls_failure",
+        "http_error": "http_fetch_failed",
+        "unsupported_content_type": "unsupported_content_type",
+    }
+    if error.code in failure_codes:
+        raise PrivacyInspectionError(failure_codes[error.code])
     raise PrivacyInspectionError("inspection_failed")
 
 

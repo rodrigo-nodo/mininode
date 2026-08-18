@@ -737,8 +737,8 @@ def test_home_timeout_returns_no_artificial_diagnostic(monkeypatch):
 
     assert response.status_code == 422
     assert response.json() == {
-        "error": "inspection_failed",
-        "message": "No fue posible inspeccionar el sitio solicitado.",
+        "error": "request_timeout",
+        "message": "El sitio no respondió dentro del tiempo permitido.",
     }
     assert "score" not in response.json()
     assert "traceback" not in response.text.lower()
@@ -779,8 +779,8 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     ]
     assert response.status_code == 422
     assert response.json() == {
-        "error": "inspection_failed",
-        "message": "No fue posible inspeccionar el sitio solicitado.",
+        "error": "dns_resolution_failed",
+        "message": "No fue posible resolver el hostname solicitado.",
     }
     assert events == [
         {
@@ -791,7 +791,9 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
             "hostname": "example.com",
             "network_family": "ipv6",
             "phase": "home_fetch",
+            "rejected_addresses": [],
             "redirect_count": 1,
+            "resolved_addresses": [],
             "status_code": 503,
             "transport_error_class": "ConnectError",
         }
@@ -807,6 +809,27 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
         "private-query",
     ):
         assert sensitive_value not in rendered
+
+
+@pytest.mark.parametrize(
+    ("internal_code", "public_code"),
+    [
+        ("dns_failure", "dns_resolution_failed"),
+        ("timeout", "request_timeout"),
+        ("tls_certificate_error", "tls_failure"),
+        ("tls_error", "tls_failure"),
+        ("http_error", "http_fetch_failed"),
+        ("unsupported_content_type", "unsupported_content_type"),
+        ("unexpected", "inspection_failed"),
+    ],
+)
+def test_home_fetch_failure_classes_are_preserved(monkeypatch, internal_code, public_code):
+    client, _ = client_with(monkeypatch, {HOME: failed_page(HOME, internal_code)})
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 422
+    assert response.json()["error"] == public_code
 
 
 def test_success_does_not_log_home_failure(monkeypatch, caplog):

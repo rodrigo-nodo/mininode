@@ -140,7 +140,14 @@ class WebFetcher:
             validate_url(normalized_target, self._resolver)
         except SSRFGuardError as exc:
             error = self._guard_error(target_url, exc)
-            page = FetchPageResult(requested_url=target_url, error=error)
+            page = FetchPageResult(
+                requested_url=target_url,
+                error=error,
+                network_family=self._address_families(exc.resolved_addresses),
+                failure_phase="initial_validation",
+                resolved_addresses=exc.resolved_addresses,
+                rejected_addresses=exc.rejected_addresses,
+            )
             return InspectionFetchResult(target_url, len(normalized), pages=[page], errors=[error], limited=limited)
 
         result = InspectionFetchResult(normalized_target, len(normalized), limited=limited)
@@ -344,7 +351,7 @@ class WebFetcher:
                     except httpx.ConnectTimeout as exc:
                         last_connection_error = exc
                     except httpx.ConnectError as exc:
-                        if self._is_certificate_error(exc):
+                        if self._is_tls_error(exc):
                             raise
                         last_connection_error = exc
                 else:
@@ -391,6 +398,7 @@ class WebFetcher:
                     started,
                     "dns_failure",
                     str(exc),
+                    failure_phase="redirect_validation" if redirects else "home_fetch",
                 )
             except SSRFGuardError as exc:
                 error = self._guard_error(current_url, exc)
@@ -400,21 +408,29 @@ class WebFetcher:
                     elapsed_ms=int((time.monotonic() - started) * 1000),
                     redirect_count=redirects,
                     error=error,
-                    network_family=network_family,
+                    network_family=network_family or self._address_families(exc.resolved_addresses),
+                    failure_phase="redirect_validation" if redirects else "home_fetch",
+                    resolved_addresses=exc.resolved_addresses,
+                    rejected_addresses=exc.rejected_addresses,
                 )
             except httpx.HTTPError as exc:
                 certificate_error = self._is_certificate_error(exc)
+                tls_error = self._is_tls_error(exc)
                 return self._error_page(
                     requested_url,
                     current_url,
                     None,
                     redirects,
                     started,
-                    "tls_certificate_error" if certificate_error else "http_error",
-                    "TLS certificate verification failed" if certificate_error else str(exc),
+                    "tls_certificate_error" if certificate_error else "tls_error" if tls_error else "http_error",
+                    "TLS certificate verification failed"
+                    if certificate_error
+                    else "TLS connection failed"
+                    if tls_error
+                    else str(exc),
                     network_family=network_family,
                     transport_error_class=type(exc).__name__,
-                    tls_valid=False if certificate_error else None,
+                    tls_valid=False if tls_error else None,
                 )
 
     @staticmethod
@@ -429,11 +445,26 @@ class WebFetcher:
         return False
 
     @staticmethod
-    def _guard_error(url: str, exc: SSRFGuardError) -> FetchError:
-        return FetchError("blocked_by_ssrf", str(exc), url)
+    def _is_tls_error(exc: BaseException) -> bool:
+        current: BaseException | None = exc
+        while current is not None:
+            if isinstance(current, ssl.SSLError):
+                return True
+            current = current.__cause__ or current.__context__
+        return False
 
     @staticmethod
-    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None, tls_valid: bool | None = None) -> FetchPageResult:
+    def _address_families(addresses: Iterable[str]) -> str | None:
+        families = sorted({f"ipv{ipaddress.ip_address(address).version}" for address in addresses})
+        return ",".join(families) or None
+
+    @staticmethod
+    def _guard_error(url: str, exc: SSRFGuardError) -> FetchError:
+        code = "dns_failure" if isinstance(exc, DNSResolutionError) else "blocked_by_ssrf"
+        return FetchError(code, str(exc), url)
+
+    @staticmethod
+    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None, tls_valid: bool | None = None, failure_phase: str = "home_fetch") -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -445,4 +476,5 @@ class WebFetcher:
             network_family=network_family,
             transport_error_class=transport_error_class,
             tls_valid=tls_valid,
+            failure_phase=failure_phase,
         )
