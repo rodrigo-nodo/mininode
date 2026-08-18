@@ -32,6 +32,10 @@ class FetchPageResult:
     failure_phase: str | None = None
     resolved_addresses: tuple[str, ...] = ()
     rejected_addresses: tuple[str, ...] = ()
+    requested_hostname: str | None = None
+    effective_hostname: str | None = None
+    dns_attempt_count: int = 0
+    dns_failure_category: str | None = None
 
 
 @dataclass

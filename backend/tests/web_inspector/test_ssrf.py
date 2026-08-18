@@ -1,5 +1,8 @@
+import socket
+
 import pytest
 
+from mininode_api.web_inspector import ssrf as ssrf_module
 from mininode_api.web_inspector.ssrf import (
     DNSResolutionError,
     InvalidTargetError,
@@ -7,6 +10,55 @@ from mininode_api.web_inspector.ssrf import (
     UnsupportedSchemeError,
     validate_url,
 )
+
+
+def test_system_resolver_retries_temporary_failure_then_succeeds(monkeypatch):
+    attempts = []
+
+    def getaddrinfo(*args, **kwargs):
+        attempts.append(args)
+        if len(attempts) == 1:
+            raise socket.gaierror(socket.EAI_AGAIN, "temporary")
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 443))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    monkeypatch.setattr(ssrf_module.time, "sleep", lambda delay: None)
+
+    assert ssrf_module.system_resolver("example.com", 443) == {"93.184.216.34"}
+    assert len(attempts) == 2
+
+
+def test_system_resolver_classifies_repeated_temporary_failure(monkeypatch):
+    attempts = []
+
+    def getaddrinfo(*args, **kwargs):
+        attempts.append(args)
+        raise socket.gaierror(socket.EAI_AGAIN, "temporary")
+
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    monkeypatch.setattr(ssrf_module.time, "sleep", lambda delay: None)
+
+    with pytest.raises(DNSResolutionError) as raised:
+        ssrf_module.system_resolver("example.com", 443)
+
+    assert raised.value.dns_attempt_count == 2
+    assert raised.value.dns_failure_category == "temporary_failure"
+    assert len(attempts) == 2
+
+
+def test_system_resolver_does_not_retry_an_unsafe_answer(monkeypatch):
+    attempts = []
+
+    def getaddrinfo(*args, **kwargs):
+        attempts.append(args)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("127.0.0.1", 443))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+
+    with pytest.raises(UnsafeTargetError):
+        validate_url("https://example.com")
+
+    assert len(attempts) == 1
 
 
 def public_resolver(hostname: str, port: int) -> set[str]:
