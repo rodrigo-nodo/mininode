@@ -31,17 +31,20 @@ jobs:
             python - "$request" <<'PY' > /tmp/privacy-sites.tsv
           import json, sys, re
           data=json.load(open(sys.argv[1], encoding='utf-8'))
+          rubro=data.get('rubro','')
           if 'sites' in data:
               for s in data['sites']:
                   slug=s.get('slug') or re.sub(r'[^a-z0-9]+','-',s.get('name','site').lower()).strip('-')
-                  print(f"{slug}\t{s['url']}")
+                  fields=[slug,s.get('url',''),s.get('name',''),rubro,s.get('description',''),s.get('size_estimate','')]
+                  print('\t'.join(str(x).replace('\t',' ').replace('\n',' ') for x in fields))
           elif 'url' in data:
               name=sys.argv[1].rsplit('/',1)[-1].rsplit('.',1)[0]
-              print(f"{name}\t{data['url']}")
+              fields=[name,data.get('url',''),data.get('name',name),rubro,data.get('description',''),data.get('size_estimate','')]
+              print('\t'.join(str(x).replace('\t',' ').replace('\n',' ') for x in fields))
           PY
-            while IFS=$'\t' read -r name url; do
+            while IFS=$'\t' read -r slug url company rubro description size_estimate; do
               [ -n "$url" ] || continue
-              echo "Diagnosing $url"
+              echo "Diagnosing $company ($url)"
               tmp="$(mktemp)"
               http_code="$(curl --silent --show-error \
                 -X POST 'https://api.mininode.io/privacy/diagnose' \
@@ -49,21 +52,33 @@ jobs:
                 -H "X-Api-Key: ${MININODE_API_KEY}" \
                 --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
                 -o "$tmp" -w '%{http_code}')" || http_code="000"
-              if [[ "$http_code" =~ ^2 ]]; then
-                mv "$tmp" "automation/privacy/results/${name}.json"
-              else
-                python - "$name" "$url" "$http_code" "$tmp" <<'PY'
+              python - "$slug" "$url" "$company" "$rubro" "$description" "$size_estimate" "$http_code" "$tmp" <<'PY'
           import json, sys
-          name,url,status,tmp=sys.argv[1:]
+          slug,url,company,rubro,description,size_estimate,status,tmp=sys.argv[1:]
+          metadata={
+              'company': company,
+              'rubro': rubro,
+              'description': description,
+              'size_estimate': size_estimate,
+              'url': url,
+          }
           try:
-              body=open(tmp, encoding='utf-8', errors='replace').read()
+              raw=open(tmp,encoding='utf-8',errors='replace').read()
           except Exception:
-              body=''
-          out={'error': True, 'site': name, 'url': url, 'http_status': status, 'response': body}
-          with open(f'automation/privacy/results/{name}.json','w',encoding='utf-8') as f:
+              raw=''
+          if status.startswith('2'):
+              try:
+                  diagnosis=json.loads(raw)
+              except Exception:
+                  diagnosis={'raw_response':raw}
+              out={'metadata':metadata,'diagnosis':diagnosis}
+          else:
+              out={'metadata':metadata,'error':True,'http_status':status,'response':raw}
+          with open(f'automation/privacy/results/{slug}.json','w',encoding='utf-8') as f:
               json.dump(out,f,ensure_ascii=False,indent=2)
           PY
-                rm -f "$tmp"
+              rm -f "$tmp"
+              if [[ ! "$http_code" =~ ^2 ]]; then
                 echo "ERROR $http_code for $url; continuing batch"
               fi
             done < /tmp/privacy-sites.tsv
