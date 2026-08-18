@@ -21,6 +21,8 @@ jobs:
 
       - name: Run Privacy diagnosis
         shell: bash
+        env:
+          MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
         run: |
           set -euo pipefail
           mkdir -p automation/privacy/results
@@ -30,8 +32,9 @@ jobs:
             url="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["url"])' "$request")"
             echo "Diagnosing $url"
             curl --fail-with-body --silent --show-error \
-              -X POST 'https://mininode.io/api/privacy/diagnose' \
+              -X POST 'https://api.mininode.io/privacy/diagnose' \
               -H 'Content-Type: application/json' \
+              -H "X-Api-Key: ${MININODE_API_KEY}" \
               --data "$(python -c 'import json,sys; print(json.dumps({"url":sys.argv[1]}))' "$url")" \
               -o "automation/privacy/results/${name}.json"
           done
