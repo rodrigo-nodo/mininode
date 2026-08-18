@@ -1,0 +1,7 @@
+{
+  "error": true,
+  "site": "santiago-strength-conditioning",
+  "url": "https://santiagostrength.com/",
+  "http_status": "400",
+  "response": "{\"error\":\"unsafe_target\",\"message\":\"El destino solicitado no es seguro para inspección.\"}"
+}
