@@ -29,6 +29,9 @@ class FetchPageResult:
     error: FetchError | None = None
     network_family: str | None = None
     transport_error_class: str | None = None
+    failure_phase: str | None = None
+    resolved_addresses: tuple[str, ...] = ()
+    rejected_addresses: tuple[str, ...] = ()
 
 
 @dataclass

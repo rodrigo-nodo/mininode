@@ -11,6 +11,19 @@ from urllib.parse import urlsplit
 class SSRFGuardError(ValueError):
     """Base class for rejected or unresolvable destinations."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        hostname: str | None = None,
+        resolved_addresses: Iterable[str] = (),
+        rejected_addresses: Iterable[str] = (),
+    ) -> None:
+        super().__init__(message)
+        self.hostname = hostname
+        self.resolved_addresses = tuple(sorted(resolved_addresses))
+        self.rejected_addresses = tuple(sorted(rejected_addresses))
+
 
 class UnsupportedSchemeError(SSRFGuardError):
     pass
@@ -37,10 +50,10 @@ def system_resolver(hostname: str, port: int) -> set[str]:
     try:
         answers = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise DNSResolutionError(f"DNS resolution failed for {hostname}") from exc
+        raise DNSResolutionError(f"DNS resolution failed for {hostname}", hostname=hostname) from exc
     addresses = {answer[4][0] for answer in answers}
     if not addresses:
-        raise DNSResolutionError(f"DNS returned no addresses for {hostname}")
+        raise DNSResolutionError(f"DNS returned no addresses for {hostname}", hostname=hostname)
     return addresses
 
 
@@ -71,7 +84,7 @@ def validate_url(url: str, resolver: Resolver = system_resolver) -> set[str]:
         raise InvalidTargetError("URL must include a hostname")
     hostname = hostname.rstrip(".").lower()
     if hostname == "localhost" or hostname.endswith(".localhost"):
-        raise UnsafeTargetError(f"Unsafe target hostname: {hostname}")
+        raise UnsafeTargetError(f"Unsafe target hostname: {hostname}", hostname=hostname)
     effective_port = port or (443 if parsed.scheme.lower() == "https" else 80)
     try:
         literal = ipaddress.ip_address(hostname)
@@ -82,10 +95,15 @@ def validate_url(url: str, resolver: Resolver = system_resolver) -> set[str]:
         except DNSResolutionError:
             raise
         except (OSError, socket.gaierror) as exc:
-            raise DNSResolutionError(f"DNS resolution failed for {hostname}") from exc
+            raise DNSResolutionError(f"DNS resolution failed for {hostname}", hostname=hostname) from exc
     if not addresses:
-        raise DNSResolutionError(f"DNS returned no addresses for {hostname}")
+        raise DNSResolutionError(f"DNS returned no addresses for {hostname}", hostname=hostname)
     unsafe = sorted(address for address in addresses if not is_public_address(address))
     if unsafe:
-        raise UnsafeTargetError(f"Target resolves to a non-public address: {', '.join(unsafe)}")
+        raise UnsafeTargetError(
+            f"Target resolves to a non-public address: {', '.join(unsafe)}",
+            hostname=hostname,
+            resolved_addresses=addresses,
+            rejected_addresses=unsafe,
+        )
     return addresses

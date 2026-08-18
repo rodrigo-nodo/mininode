@@ -25,6 +25,11 @@ _ERRORS = {
     "invalid_url": (400, "La URL debe usar HTTP o HTTPS y contener un hostname válido."),
     "unsafe_target": (400, "El destino solicitado no es seguro para inspección."),
     "inspection_blocked": (422, "El sitio no permite inspeccionar la página inicial."),
+    "dns_resolution_failed": (422, "No fue posible resolver el hostname solicitado."),
+    "request_timeout": (422, "El sitio no respondió dentro del tiempo permitido."),
+    "tls_failure": (422, "No fue posible verificar la conexión segura del sitio."),
+    "http_fetch_failed": (422, "No fue posible obtener la página inicial del sitio."),
+    "unsupported_content_type": (422, "La página inicial no contiene un formato compatible."),
     "inspection_failed": (422, "No fue posible inspeccionar el sitio solicitado."),
 }
 

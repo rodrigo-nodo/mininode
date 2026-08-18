@@ -1,6 +1,7 @@
 import pytest
 
 from mininode_api.web_inspector.ssrf import (
+    DNSResolutionError,
     InvalidTargetError,
     UnsafeTargetError,
     UnsupportedSchemeError,
@@ -52,5 +53,16 @@ def test_rejects_hostname_resolving_to_private_ip():
 
 
 def test_rejects_mixed_public_and_private_dns_answers():
-    with pytest.raises(UnsafeTargetError):
+    with pytest.raises(UnsafeTargetError) as raised:
         validate_url("https://example.com", lambda hostname, port: {"93.184.216.34", "127.0.0.1"})
+    assert raised.value.resolved_addresses == ("127.0.0.1", "93.184.216.34")
+    assert raised.value.rejected_addresses == ("127.0.0.1",)
+
+
+def test_dns_resolution_failure_has_a_distinct_error():
+    def failing_resolver(hostname, port):
+        raise OSError("resolver unavailable")
+
+    with pytest.raises(DNSResolutionError) as raised:
+        validate_url("https://example.com", failing_resolver)
+    assert raised.value.hostname == "example.com"
