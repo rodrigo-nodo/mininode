@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from mininode_api.web_inspector import fetcher as fetcher_module
-from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
+from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, REQUEST_HEADERS, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
 
@@ -335,6 +335,29 @@ def test_connect_timeout_falls_back_while_budget_remains():
     assert attempts == ["93.184.216.33", "93.184.216.34"]
 
 
+def test_connect_timeout_attempts_are_bounded_to_leave_budget_for_next_ip(monkeypatch):
+    now = [0.0]
+    timeouts = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        timeout = request.extensions["timeout"]["connect"]
+        timeouts.append(timeout)
+        if len(timeouts) == 1:
+            now[0] += timeout
+            raise httpx.ConnectTimeout("timed out", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+        inspection_budget=10.0,
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.html == "ok"
+    assert timeouts == [5.0, 5.0]
+
+
 def test_does_not_start_fallback_after_inspection_budget_expires(monkeypatch):
     now = [0.0]
     attempts = []
@@ -645,6 +668,25 @@ def test_sets_declared_user_agent_and_fetches_sequentially():
     assert order == [("/robots.txt", USER_AGENT), ("/one", USER_AGENT), ("/two", USER_AGENT)]
 
 
+def test_browser_compatible_headers_are_stateless_and_used_once():
+    observed = []
+
+    def handler(request):
+        observed.append(dict(request.headers))
+        return httpx.Response(403, text="refused", headers={"content-type": "text/html"})
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.error.code == "http_error"
+    assert page.status_code == 403
+    assert len(observed) == 1
+    for name, value in REQUEST_HEADERS.items():
+        assert observed[0][name.lower()] == value
+    assert not {"cookie", "authorization", "referer"} & observed[0].keys()
+
+
 def test_stops_after_five_redirects():
     def handler(request):
         if request.url.path == "/robots.txt":
@@ -784,6 +826,52 @@ def test_www_to_apex_redirect_succeeds_with_revalidation():
     assert result.pages[0].final_url == "https://example.com/final"
     assert result.pages[0].error is None
     assert calls[-1] == "example.com"
+
+
+def test_reviewed_cross_domain_redirect_is_revalidated_and_pinned():
+    resolved = []
+    requested = []
+
+    def resolver(hostname, port):
+        resolved.append(hostname)
+        return {"93.184.216.35" if hostname == "insucapchile.cl" else "93.184.216.34"}
+
+    def handler(request):
+        requested.append((request.url.host, request.extensions[VALIDATED_IP_EXTENSION]))
+        if request.url.host == "insucap.cl":
+            return httpx.Response(302, headers={"location": "https://insucapchile.cl/"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(client=client_for(handler), resolver=resolver)._fetch_page(
+        "https://insucap.cl/", "insucap.cl"
+    )
+
+    assert page.html == "ok"
+    assert resolved == ["insucap.cl", "insucapchile.cl"]
+    assert requested == [
+        ("insucap.cl", "93.184.216.34"),
+        ("insucapchile.cl", "93.184.216.35"),
+    ]
+
+
+def test_reviewed_cross_domain_redirect_to_unsafe_ip_remains_blocked():
+    requested = []
+
+    def resolver(hostname, port):
+        return {"127.0.0.1"} if hostname == "insucapchile.cl" else {"93.184.216.34"}
+
+    def handler(request):
+        requested.append(request.url.host)
+        return httpx.Response(302, headers={"location": "https://insucapchile.cl/"})
+
+    page = WebFetcher(client=client_for(handler), resolver=resolver)._fetch_page(
+        "https://insucap.cl/", "insucap.cl"
+    )
+
+    assert page.error.code == "blocked_by_ssrf"
+    assert page.effective_hostname == "insucapchile.cl"
+    assert page.rejected_addresses == ("127.0.0.1",)
+    assert requested == ["insucap.cl"]
 
 
 def test_www_redirect_to_private_or_mixed_dns_is_blocked_without_connection():

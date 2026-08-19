@@ -20,6 +20,8 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 - Las protecciones SSRF son obligatorias.
 - Nunca permitir destinos privados, loopback, link-local, reservados, mezclas público/privado u otros destinos prohibidos solo para aumentar cobertura.
 - Validar redirects antes de seguirlos.
+- Los redirects externos permanecen bloqueados salvo pares de migración revisados
+  explícitamente; incluso esos destinos se resuelven y validan de forma independiente.
 - Preferir un fallback seguro o un error preciso antes que debilitar SSRF.
 - Mantener privada la telemetría técnica/diagnóstica; no exponer detalles internos de red en la respuesta pública de Privacy.
 
