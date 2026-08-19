@@ -85,7 +85,7 @@ jobs:
           MININODE_API_KEY: ${{ secrets.MININODE_API_KEY }}
           PRIVACY_URLS: ${{ steps.batch.outputs.urls }}
           PRIVACY_BATCH_LABEL: ${{ steps.batch.outputs.label }}
-          PRIVACY_ENDPOINT: https://mininode.io/api/privacy/diagnose
+          PRIVACY_ENDPOINT: https://api.mininode.io/privacy/diagnose
           PRIVACY_OUTPUT_DIR: automation/privacy/results
         run: python automation/privacy/run_diagnose_batch.py
 
