@@ -1,118 +1,63 @@
-# Mininode MVP Factory
+# Mininode - Codex repository guide
 
-## Propósito
+## Purpose
 
-Este repositorio puede usarse como una fábrica liviana de MVPs para Mininode. La idea es crear pequeños productos o experimentos de forma controlada usando lenguaje natural, IA y Pull Requests.
+Mininode is developed through small, reviewable Pull Requests. Use natural-language issues as the task specification and make the smallest change required to satisfy them.
 
-El flujo base es:
+## Default workflow
 
-1. Idea en lenguaje natural.
-2. IA propone o crea cambios.
-3. Se crea una rama de trabajo.
-4. Se abre un Pull Request hacia `main`.
-5. Cloudflare genera un Preview.
-6. Se revisa el Preview.
-7. Se aprueba y se hace merge a `main`.
-8. Producción se actualiza automáticamente.
+1. Read this file.
+2. Read the GitHub Issue completely.
+3. Identify the product/area named by the Issue.
+4. Read only the focused context for that area when it exists.
+5. Inspect the files directly related to the task first.
+6. Expand exploration only when imports, call paths, tests, or failures require it.
+7. Implement and run relevant tests.
+8. Leave Git operations and PR creation to the automation.
 
-## Regla principal
+## Repository map
 
-Todo cambio debe ir por Pull Request hacia `main`.
+- `frontend/` - static HTML/CSS/JavaScript and Cloudflare-facing frontend code.
+- `backend/` - Python/FastAPI backend deployed on Render.
+- `.github/workflows/` - GitHub Actions automation. Do not modify unless the Issue explicitly requests it.
+- `docs/codex/` - short task context for Codex. Read the relevant file, not every file.
 
-No se debe modificar `main` directamente. Producción solo cambia cuando un Pull Request revisado se fusiona en `main`.
+## Focused context routing
 
-## Convención para nuevos MVPs
+- Mininode Privacy / Privacy Web Inspector -> read `docs/codex/privacy.md`.
+- Other areas -> rely on the Issue and inspect only the relevant code unless another focused context file is explicitly referenced.
 
-Los MVPs pequeños deben partir como rutas estáticas dentro de `frontend/`.
+## Rules
 
-Convención:
+- All product changes go through a Pull Request to `main`.
+- Never modify `main` directly.
+- Prefer small, reversible changes.
+- Do not inventory or summarize the entire repository unless the Issue explicitly asks for architecture/repository analysis.
+- Do not read unrelated product documentation merely for background.
+- Treat the Issue as the source of task-specific facts already investigated by ChatGPT/human review; do not rediscover them unless validation is necessary to implement safely.
+- Preserve existing architecture and conventions.
+- Run focused tests first; broaden testing when the affected dependency surface requires it.
+- Do not weaken security controls unless the Issue explicitly requires a reviewed security change.
+- Do not modify `.github/workflows/*`, infrastructure, secrets, deployment configuration, database, authentication, or payments unless explicitly in scope.
+
+## Frontend-only MVP convention
+
+For a new small static MVP, prefer:
 
 ```text
 frontend/<nombre_mvp>/index.html
 ```
 
-Ejemplo:
+Start frontend-only when the Issue does not require backend capabilities.
 
-```text
-/factory_demo -> frontend/factory_demo/index.html
-```
+## Pull Request quality
 
-Siempre que sea posible, partir frontend-only. Esto reduce riesgo, costo y complejidad.
+The resulting change should make it easy to answer:
 
-## Restricciones por defecto
+- What changed?
+- Why was it needed?
+- How was it tested?
+- Which files changed?
+- Did anything outside the Issue scope change?
 
-Salvo instrucción explícita, no se debe tocar:
-
-- `backend/`
-- base de datos
-- migraciones
-- modelos
-- Render
-- Cloudflare
-- variables de entorno
-- `frontend/functions/`
-- login
-- pagos
-- APIs
-- configuración de infraestructura
-
-## Estilo de cambios
-
-Los cambios deben ser:
-
-- pequeños
-- revisables
-- reversibles
-- consistentes con el estilo visual de Mininode
-- fáciles de probar desde Cloudflare Preview
-
-Si un cambio requiere backend, base de datos, autenticación, pagos, workers, secrets o infraestructura, debe declararse explícitamente antes de implementarlo.
-
-## Checklist para crear un nuevo MVP
-
-Antes de implementar, confirmar:
-
-- [ ] Nombre de la ruta, por ejemplo `/costos_saas`.
-- [ ] Objetivo del MVP.
-- [ ] Usuario o problema que atiende.
-- [ ] Si puede ser frontend-only.
-- [ ] Archivos esperados a modificar.
-- [ ] Confirmación de que no requiere backend.
-- [ ] Confirmación de que no requiere base de datos.
-- [ ] Confirmación de que no requiere variables de entorno.
-- [ ] Confirmación de que no requiere cambios en Cloudflare o Render.
-
-## Checklist antes de abrir Pull Request
-
-Antes de abrir un PR, confirmar:
-
-- [ ] La rama no es `main`.
-- [ ] El cambio está en una rama con nombre claro.
-- [ ] El PR apunta hacia `main`.
-- [ ] El resumen explica qué cambió.
-- [ ] El resumen explica cómo probarlo.
-- [ ] El diff contiene solo archivos esperados.
-- [ ] No se tocaron archivos restringidos sin instrucción explícita.
-
-## Checklist antes de merge
-
-Antes de hacer merge a `main`, confirmar:
-
-- [ ] El PR fue revisado.
-- [ ] Cloudflare Preview funciona.
-- [ ] La ruta nueva carga correctamente.
-- [ ] No hay cambios inesperados.
-- [ ] No se modificó backend, base de datos, Render, Cloudflare ni variables de entorno, salvo que el PR lo indique explícitamente.
-- [ ] El cambio es suficientemente pequeño para revertirlo si algo falla.
-
-## Criterio de escalamiento
-
-Un MVP puede escalar de nivel cuando demuestra utilidad.
-
-Ruta sugerida:
-
-1. Celular: idea, instrucción, PR simple y revisión básica.
-2. Tablet: revisión visual, previews, GitHub, Cloudflare y Render.
-3. Notebook: depuración, backend, base de datos, pagos, login o infraestructura.
-
-No agregar complejidad antes de validar utilidad.
+Human review is required before merge.
