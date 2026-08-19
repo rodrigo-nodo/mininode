@@ -784,8 +784,10 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     }
     assert events == [
         {
+            "attempted_network_families": [],
             "elapsed_ms": 123,
             "error_code": "dns_failure",
+            "effective_hostname": "example.com",
             "event": "privacy_home_inspection_failed",
             "failure_class": "controlled_fetch_error",
             "hostname": "example.com",
@@ -795,6 +797,7 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
             "redirect_count": 1,
             "resolved_addresses": [],
             "status_code": 503,
+            "ssrf_rejection_reason": None,
             "transport_error_class": "ConnectError",
         }
     ]
