@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -35,12 +35,18 @@ _ERRORS = {
 
 
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
-def diagnose_privacy(request: PrivacyDiagnosticRequest):
+def diagnose_privacy(
+    request: PrivacyDiagnosticRequest,
+    x_mininode_diagnostics: str | None = Header(default=None, alias="X-Mininode-Diagnostics"),
+):
     try:
         return diagnose_privacy_url(request.url)
     except PrivacyInspectionError as exc:
         status_code, message = _ERRORS[exc.code]
-        return JSONResponse(status_code=status_code, content={"error": exc.code, "message": message})
+        content = {"error": exc.code, "message": message}
+        if x_mininode_diagnostics == "1" and exc.diagnostic is not None:
+            content["diagnostic"] = exc.diagnostic
+        return JSONResponse(status_code=status_code, content=content)
     except Exception:
         logger.exception("Unexpected Privacy Diagnostic failure")
         return JSONResponse(
