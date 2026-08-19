@@ -77,13 +77,20 @@ jobs:
             ${{ github.event.issue.body }}
             ---
 
+            Context discipline for this run:
+            - Read `AGENTS.md` first and follow its context-routing instructions.
+            - If the issue concerns Mininode Privacy or the Privacy Web Inspector, read `docs/codex/privacy.md` before exploring code.
+            - Treat facts and diagnostics already stated in the issue as established input. Reproduce them only when needed to implement or test safely.
+            - Start with files directly related to the issue. Do not inventory or summarize the entire repository.
+            - Expand to other files only when imports, call paths, tests, or a concrete failure require it.
+
             Requirements for this run:
             - Work only inside the checked-out repository.
             - Follow the repository's existing architecture and conventions.
             - Make the smallest focused change that satisfies the issue.
             - Do not weaken security controls unless the issue explicitly requires it.
             - Do not modify GitHub Actions workflows unless the issue explicitly asks for that.
-            - Run the relevant tests available in the repository.
+            - Run focused relevant tests first; broaden only when the affected dependency surface requires it.
             - Do not commit, push, create a PR, merge, or modify GitHub issues. The workflow handles Git operations after you finish.
             - At the end, leave the workspace with the implementation and tests completed.
 
