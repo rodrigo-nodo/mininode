@@ -1,63 +1,71 @@
-# Mininode - Codex repository guide
+# Mininode - Guía de trabajo para agentes de código
 
-## Purpose
+## Propósito
 
-Mininode is developed through small, reviewable Pull Requests. Use natural-language issues as the task specification and make the smallest change required to satisfy them.
+Mininode se desarrolla mediante cambios pequeños, revisables y reversibles. Las Issues en lenguaje natural definen la tarea y el agente debe realizar el cambio mínimo necesario para cumplirlas.
 
-## Default workflow
+## Flujo de trabajo
 
-1. Read this file.
-2. Read the GitHub Issue completely.
-3. Identify the product/area named by the Issue.
-4. Read only the focused context for that area when it exists.
-5. Inspect the files directly related to the task first.
-6. Expand exploration only when imports, call paths, tests, or failures require it.
-7. Implement and run relevant tests.
-8. Leave Git operations and PR creation to the automation.
+1. Leer este archivo.
+2. Leer completamente la Issue.
+3. Identificar el producto o área afectada.
+4. Leer solo el contexto necesario para esa tarea.
+5. Revisar primero los archivos directamente relacionados.
+6. Ampliar la exploración solo si imports, llamadas, pruebas o errores lo requieren.
+7. Implementar y ejecutar las pruebas relevantes.
+8. Dejar commit, push y creación del Pull Request a la automatización.
 
-## Repository map
+## Contexto disponible
 
-- `frontend/` - static HTML/CSS/JavaScript and Cloudflare-facing frontend code.
-- `backend/` - Python/FastAPI backend deployed on Render.
-- `.github/workflows/` - GitHub Actions automation. Do not modify unless the Issue explicitly requests it.
-- `docs/codex/` - short task context for Codex. Read the relevant file, not every file.
+- `docs/architecture.md` - contexto general y arquitectura estable de Mininode. Consultarlo cuando la tarea necesite comprender plataforma, dominios, frontend/backend, despliegue o estructura general.
+- `docs/privacy.md` - contexto específico de Mininode Privacy y Privacy Web Inspector. Leerlo para tareas de Privacy.
 
-## Focused context routing
+No leer todos los documentos por defecto. La Issue determina qué contexto es necesario.
 
-- Mininode Privacy / Privacy Web Inspector -> read `docs/codex/privacy.md`.
-- Other areas -> rely on the Issue and inspect only the relevant code unless another focused context file is explicitly referenced.
+## Mapa básico del repositorio
 
-## Rules
+- `frontend/` - HTML/CSS/JavaScript y código frontend servido mediante Cloudflare Pages.
+- `backend/` - backend Python/FastAPI desplegado en Render.
+- `.github/workflows/` - automatización GitHub Actions. No modificar salvo que la Issue lo solicite explícitamente.
+- `docs/` - contexto estable de arquitectura y productos.
 
-- All product changes go through a Pull Request to `main`.
-- Never modify `main` directly.
-- Prefer small, reversible changes.
-- Do not inventory or summarize the entire repository unless the Issue explicitly asks for architecture/repository analysis.
-- Do not read unrelated product documentation merely for background.
-- Treat the Issue as the source of task-specific facts already investigated by ChatGPT/human review; do not rediscover them unless validation is necessary to implement safely.
-- Preserve existing architecture and conventions.
-- Run focused tests first; broaden testing when the affected dependency surface requires it.
-- Do not weaken security controls unless the Issue explicitly requires a reviewed security change.
-- Do not modify `.github/workflows/*`, infrastructure, secrets, deployment configuration, database, authentication, or payments unless explicitly in scope.
+## Enrutamiento de contexto
 
-## Frontend-only MVP convention
+- Tarea general de arquitectura, infraestructura o integración Mininode -> leer `docs/architecture.md`.
+- Mininode Privacy / Privacy Web Inspector -> leer `docs/privacy.md`; leer `docs/architecture.md` solo si la tarea necesita contexto general adicional.
+- Otras áreas -> usar la Issue y revisar únicamente el código relacionado, salvo que se indique otro documento de contexto.
 
-For a new small static MVP, prefer:
+## Reglas
+
+- Todo cambio de producto debe pasar por Pull Request hacia `main`.
+- Nunca modificar `main` directamente.
+- Preferir cambios pequeños y reversibles.
+- No inventariar ni resumir todo el repositorio salvo que la Issue solicite explícitamente un análisis de arquitectura/repositorio.
+- No leer documentación de productos no relacionados solo como contexto general.
+- Tratar los hechos y diagnósticos entregados en la Issue como información ya investigada por ChatGPT/revisión humana; no redescubrirlos salvo que sea necesario validarlos para implementar con seguridad.
+- Mantener la arquitectura y convenciones existentes.
+- Ejecutar primero pruebas focalizadas; ampliar las pruebas cuando la superficie afectada lo requiera.
+- No debilitar controles de seguridad salvo que la Issue solicite explícitamente un cambio de seguridad revisado.
+- No modificar workflows, infraestructura, secrets, configuración de despliegue, base de datos, autenticación o pagos salvo que estén explícitamente dentro del alcance.
+
+## Convención para MVP frontend-only
+
+Para un MVP estático pequeño, preferir:
 
 ```text
 frontend/<nombre_mvp>/index.html
 ```
 
-Start frontend-only when the Issue does not require backend capabilities.
+Partir frontend-only cuando la Issue no requiera capacidades backend.
 
-## Pull Request quality
+## Calidad del Pull Request
 
-The resulting change should make it easy to answer:
+El resultado debe permitir responder fácilmente:
 
-- What changed?
-- Why was it needed?
-- How was it tested?
-- Which files changed?
-- Did anything outside the Issue scope change?
+- ¿Qué cambió?
+- ¿Por qué era necesario?
+- ¿Cómo se probó?
+- ¿Qué archivos cambiaron?
+- ¿Cambió algo fuera del alcance de la Issue?
 
-Human review is required before merge.
+El merge requiere revisión humana.
