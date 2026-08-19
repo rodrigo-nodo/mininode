@@ -89,8 +89,10 @@ def _page_diagnostic(result: InspectionFetchResult) -> dict:
         "dns_attempt_count": page.dns_attempt_count if page else 0,
         "dns_failure_category": page.dns_failure_category if page else None,
         "network_family": page.network_family if page else None,
+        "attempted_network_families": list(page.attempted_network_families) if page else [],
         "resolved_addresses": list(page.resolved_addresses) if page else [],
         "rejected_addresses": list(page.rejected_addresses) if page else [],
+        "ssrf_rejection_reason": page.ssrf_rejection_reason if page else None,
         "transport_error_class": page.transport_error_class if page else None,
         "tls_valid": page.tls_valid if page else None,
         "redirect_count": page.redirect_count if page else 0,
@@ -106,16 +108,19 @@ def _home_failure(result: InspectionFetchResult) -> None:
     event = {
         "event": "privacy_home_inspection_failed",
         "hostname": diagnostic["requested_hostname"],
+        "effective_hostname": diagnostic["effective_hostname"],
         "phase": diagnostic["failure_phase"],
         "error_code": diagnostic["internal_error_code"],
         "failure_class": "controlled_fetch_error",
         "network_family": diagnostic["network_family"],
+        "attempted_network_families": diagnostic["attempted_network_families"],
         "transport_error_class": diagnostic["transport_error_class"],
         "redirect_count": diagnostic["redirect_count"],
         "status_code": diagnostic["status_code"],
         "elapsed_ms": diagnostic["elapsed_ms"],
         "resolved_addresses": diagnostic["resolved_addresses"],
         "rejected_addresses": diagnostic["rejected_addresses"],
+        "ssrf_rejection_reason": diagnostic["ssrf_rejection_reason"],
     }
     logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:

@@ -28,6 +28,7 @@ class FetchPageResult:
     tls_valid: bool | None = None
     error: FetchError | None = None
     network_family: str | None = None
+    attempted_network_families: tuple[str, ...] = ()
     transport_error_class: str | None = None
     failure_phase: str | None = None
     resolved_addresses: tuple[str, ...] = ()
@@ -36,6 +37,7 @@ class FetchPageResult:
     effective_hostname: str | None = None
     dns_attempt_count: int = 0
     dns_failure_category: str | None = None
+    ssrf_rejection_reason: str | None = None
 
 
 @dataclass

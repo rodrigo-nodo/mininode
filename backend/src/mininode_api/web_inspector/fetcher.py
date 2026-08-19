@@ -22,12 +22,21 @@ from .ssrf import (
 )
 from .transport import PinnedHTTPTransport, VALIDATED_IP_EXTENSION
 
-USER_AGENT = "Mininode-Web-Inspector/0.1"
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+REQUEST_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-CL,es;q=0.9,en;q=0.7",
+}
 ROBOTS_USER_AGENT = "Mininode-Web-Inspector"
 MAX_URLS = 5
 MAX_REDIRECTS = 5
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 REQUEST_TIMEOUT_SECONDS = 10.0
+CONNECT_ATTEMPT_TIMEOUT_SECONDS = 4.0
 INSPECTION_BUDGET_SECONDS = 30.0
 HTML_CONTENT_TYPES = {"text/html", "application/xhtml+xml"}
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
@@ -123,7 +132,7 @@ class WebFetcher:
             transport=PinnedHTTPTransport(),
             follow_redirects=False,
             timeout=REQUEST_TIMEOUT_SECONDS,
-            headers={"User-Agent": USER_AGENT},
+            headers=REQUEST_HEADERS,
         )
         self._owns_client = client is None
         self._resolver = resolver
@@ -262,6 +271,7 @@ class WebFetcher:
         redirects = 0
         cookie_names: list[str] = []
         network_family: str | None = None
+        attempted_network_families: list[str] = []
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
@@ -283,6 +293,7 @@ class WebFetcher:
                             "timeout",
                             "Inspection time budget exceeded",
                             network_family=network_family,
+                            attempted_network_families=tuple(attempted_network_families),
                             transport_error_class=(
                                 type(last_connection_error).__name__
                                 if last_connection_error
@@ -290,13 +301,18 @@ class WebFetcher:
                             ),
                         )
                     network_family = f"ipv{ipaddress.ip_address(pinned_ip).version}"
+                    attempted_network_families.append(network_family)
                     try:
+                        request_timeout = httpx.Timeout(
+                            min(REQUEST_TIMEOUT_SECONDS, remaining),
+                            connect=min(CONNECT_ATTEMPT_TIMEOUT_SECONDS, remaining),
+                        )
                         response_context = self._client.stream(
                             "GET",
                             current_url,
-                            headers={"User-Agent": USER_AGENT},
+                            headers=REQUEST_HEADERS,
                             follow_redirects=False,
-                            timeout=min(REQUEST_TIMEOUT_SECONDS, remaining),
+                            timeout=request_timeout,
                             extensions={VALIDATED_IP_EXTENSION: pinned_ip},
                         )
                         with response_context as response:
@@ -402,6 +418,7 @@ class WebFetcher:
                                     else None
                                 ),
                                 network_family=network_family,
+                                attempted_network_families=tuple(attempted_network_families),
                             )
                     except httpx.ConnectTimeout as exc:
                         last_connection_error = exc
@@ -430,6 +447,7 @@ class WebFetcher:
                         code,
                         message,
                         network_family=network_family,
+                        attempted_network_families=tuple(attempted_network_families),
                         transport_error_class=type(last_connection_error).__name__,
                     )
             except httpx.TimeoutException as exc:
@@ -442,6 +460,7 @@ class WebFetcher:
                     "timeout",
                     "Request timed out",
                     network_family=network_family,
+                    attempted_network_families=tuple(attempted_network_families),
                     transport_error_class=type(exc).__name__,
                 )
             except DNSResolutionError as exc:
@@ -469,6 +488,7 @@ class WebFetcher:
                     redirect_count=redirects,
                     error=error,
                     network_family=network_family or self._address_families(exc.resolved_addresses),
+                    attempted_network_families=tuple(attempted_network_families),
                     failure_phase="redirect_validation" if redirects else "home_fetch",
                     resolved_addresses=exc.resolved_addresses,
                     rejected_addresses=exc.rejected_addresses,
@@ -476,6 +496,7 @@ class WebFetcher:
                     effective_hostname=urlsplit(current_url).hostname,
                     dns_attempt_count=exc.dns_attempt_count,
                     dns_failure_category=exc.dns_failure_category,
+                    ssrf_rejection_reason=self._ssrf_rejection_reason(exc, redirects),
                 )
             except httpx.HTTPError as exc:
                 certificate_error = self._is_certificate_error(exc)
@@ -493,6 +514,7 @@ class WebFetcher:
                     if tls_error
                     else str(exc),
                     network_family=network_family,
+                    attempted_network_families=tuple(attempted_network_families),
                     transport_error_class=type(exc).__name__,
                     tls_valid=False if tls_error else None,
                 )
@@ -528,7 +550,15 @@ class WebFetcher:
         return FetchError(code, str(exc), url)
 
     @staticmethod
-    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, transport_error_class: str | None = None, tls_valid: bool | None = None, failure_phase: str = "home_fetch") -> FetchPageResult:
+    def _ssrf_rejection_reason(exc: SSRFGuardError, redirects: int) -> str:
+        if redirects and isinstance(exc, UnsafeTargetError) and not exc.rejected_addresses:
+            return "redirect_hostname_not_allowed"
+        if exc.rejected_addresses:
+            return "non_public_address"
+        return "invalid_target"
+
+    @staticmethod
+    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, attempted_network_families: tuple[str, ...] = (), transport_error_class: str | None = None, tls_valid: bool | None = None, failure_phase: str = "home_fetch") -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -538,6 +568,7 @@ class WebFetcher:
             redirect_count=redirects,
             error=FetchError(code, message, final_url),
             network_family=network_family,
+            attempted_network_families=attempted_network_families,
             transport_error_class=transport_error_class,
             tls_valid=tls_valid,
             failure_phase=failure_phase,

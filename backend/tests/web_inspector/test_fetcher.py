@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from mininode_api.web_inspector import fetcher as fetcher_module
-from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
+from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, REQUEST_HEADERS, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
 
@@ -333,6 +333,40 @@ def test_connect_timeout_falls_back_while_budget_remains():
 
     assert page.html == "ok"
     assert attempts == ["93.184.216.33", "93.184.216.34"]
+    assert page.attempted_network_families == ("ipv4", "ipv4")
+
+
+def test_request_uses_browser_compatible_headers_without_sensitive_state():
+    observed = {}
+
+    def handler(request):
+        observed.update(request.headers)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.html == "ok"
+    assert observed["user-agent"] == REQUEST_HEADERS["User-Agent"]
+    assert observed["accept"] == REQUEST_HEADERS["Accept"]
+    assert observed["accept-language"] == REQUEST_HEADERS["Accept-Language"]
+    for sensitive_header in ("cookie", "authorization", "referer"):
+        assert sensitive_header not in observed
+
+
+def test_403_remains_a_controlled_failure_with_browser_profile():
+    page = WebFetcher(
+        client=client_for(
+            lambda request: httpx.Response(
+                403, text="forbidden", headers={"content-type": "text/html"}
+            )
+        ),
+        resolver=public_resolver,
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.error.code == "http_error"
+    assert page.status_code == 403
 
 
 def test_does_not_start_fallback_after_inspection_budget_expires(monkeypatch):
@@ -375,7 +409,7 @@ def test_second_attempt_uses_only_remaining_inspection_budget(monkeypatch):
     )._fetch_page("https://example.com/", "example.com")
 
     assert page.html == "ok"
-    assert timeouts == [10.0, 5.0]
+    assert timeouts == [4.0, 4.0]
     assert timeouts[1] <= 30.0 - now[0]
 
 
@@ -575,6 +609,8 @@ def test_rejects_non_www_subdomains_and_external_redirects():
         )
 
         assert result.pages[0].error.code == "blocked_by_ssrf"
+        assert result.pages[0].effective_hostname == destination
+        assert result.pages[0].ssrf_rejection_reason == "redirect_hostname_not_allowed"
         assert requested_hosts == ["example.com", "example.com"]
 
     def www_handler(request):
