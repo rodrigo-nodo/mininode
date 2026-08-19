@@ -79,7 +79,8 @@ jobs:
 
             Context discipline for this run:
             - Read `AGENTS.md` first and follow its context-routing instructions.
-            - If the issue concerns Mininode Privacy or the Privacy Web Inspector, read `docs/codex/privacy.md` before exploring code.
+            - If the issue concerns Mininode Privacy or the Privacy Web Inspector, read `docs/privacy.md` before exploring code.
+            - Read `docs/architecture.md` only when the issue requires general Mininode architecture, deployment, domain, or cross-product context.
             - Treat facts and diagnostics already stated in the issue as established input. Reproduce them only when needed to implement or test safely.
             - Start with files directly related to the issue. Do not inventory or summarize the entire repository.
             - Expand to other files only when imports, call paths, tests, or a concrete failure require it.
