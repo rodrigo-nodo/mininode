@@ -108,6 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           CSV="automation/privacy/results/privacy-diagnose-${LABEL}.csv"
+          DIAGNOSTICS="automation/privacy/results/privacy-diagnose-${LABEL}-diagnostics.jsonl"
           COMMENT="$(mktemp)"
           {
             echo "Privacy batch completed."
@@ -120,6 +121,13 @@ jobs:
               echo '```'
             else
               echo "No CSV summary was produced."
+            fi
+            if [ -f "$DIAGNOSTICS" ]; then
+              echo
+              echo "Private technical diagnostics:"
+              echo '```jsonl'
+              cat "$DIAGNOSTICS"
+              echo '```'
             fi
           } > "$COMMENT"
           gh issue comment "$ISSUE_NUMBER" --body-file "$COMMENT"
