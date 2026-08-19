@@ -133,12 +133,27 @@ jobs:
       - name: Report no changes
         if: steps.publish.outputs.changed != 'true'
         uses: actions/github-script@v7
+        env:
+          CODEX_FINAL_MESSAGE: ${{ steps.codex.outputs.final-message }}
         with:
           github-token: ${{ github.token }}
           script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: 'Codex finished but produced no repository changes. Review the workflow run and Codex final message before retrying.'
-            })
+            const finalMessage = (process.env.CODEX_FINAL_MESSAGE || '').trim() ||
+              'Codex finished without repository changes and did not return a final message.';
+            const maxChunkLength = 60000;
+            const chunks = [];
+            for (let start = 0; start < finalMessage.length; start += maxChunkLength) {
+              chunks.push(finalMessage.slice(start, start + maxChunkLength));
+            }
+
+            for (let index = 0; index < chunks.length; index += 1) {
+              const heading = index === 0
+                ? 'Codex finished without repository changes.\n\n## Codex final message\n\n'
+                : `## Codex final message (continued ${index + 1}/${chunks.length})\n\n`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `${heading}${chunks[index]}`
+              });
+            }
