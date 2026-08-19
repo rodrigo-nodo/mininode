@@ -41,9 +41,10 @@ _CATEGORIES_BY_EXPANDABLE_CONTROL = {
 class PrivacyInspectionError(Exception):
     """A controlled failure inspecting the initial page."""
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, diagnostic: dict | None = None) -> None:
         super().__init__(code)
         self.code = code
+        self.diagnostic = diagnostic
 
 
 def validate_public_url_format(url: str) -> str:
@@ -61,31 +62,68 @@ def validate_public_url_format(url: str) -> str:
     return value
 
 
-def _home_failure(result: InspectionFetchResult) -> None:
+def _page_diagnostic(result: InspectionFetchResult) -> dict:
+    """Return a compact, non-sensitive technical snapshot for internal diagnostics."""
+
     page = result.pages[0] if result.pages else None
     error = page.error if page and page.error else None
-    hostname = (urlsplit(result.target_url).hostname or "").rstrip(".").lower() or None
-    event = {
-        "event": "privacy_home_inspection_failed",
-        "hostname": hostname,
-        "phase": page.failure_phase if page and page.failure_phase else "home_fetch",
-        "error_code": error.code if error else "inspection_failed",
-        "failure_class": "controlled_fetch_error",
+    requested_url = page.requested_url if page else result.target_url
+    requested_hostname = (
+        page.requested_hostname
+        if page and page.requested_hostname
+        else (urlsplit(requested_url).hostname or "").rstrip(".").lower() or None
+    )
+    effective_url = page.final_url if page else None
+    effective_hostname = (
+        page.effective_hostname
+        if page and page.effective_hostname
+        else ((urlsplit(effective_url).hostname or "").rstrip(".").lower() if effective_url else None)
+    )
+    return {
+        "requested_url": requested_url,
+        "final_url": effective_url,
+        "requested_hostname": requested_hostname,
+        "effective_hostname": effective_hostname,
+        "internal_error_code": error.code if error else "inspection_failed",
+        "failure_phase": page.failure_phase if page else "home_fetch",
+        "dns_attempt_count": page.dns_attempt_count if page else 0,
+        "dns_failure_category": page.dns_failure_category if page else None,
         "network_family": page.network_family if page else None,
+        "resolved_addresses": list(page.resolved_addresses) if page else [],
+        "rejected_addresses": list(page.rejected_addresses) if page else [],
         "transport_error_class": page.transport_error_class if page else None,
+        "tls_valid": page.tls_valid if page else None,
         "redirect_count": page.redirect_count if page else 0,
         "status_code": page.status_code if page else None,
         "elapsed_ms": page.elapsed_ms if page else 0,
-        "resolved_addresses": list(page.resolved_addresses) if page else [],
-        "rejected_addresses": list(page.rejected_addresses) if page else [],
+    }
+
+
+def _home_failure(result: InspectionFetchResult) -> None:
+    page = result.pages[0] if result.pages else None
+    error = page.error if page and page.error else None
+    diagnostic = _page_diagnostic(result)
+    event = {
+        "event": "privacy_home_inspection_failed",
+        "hostname": diagnostic["requested_hostname"],
+        "phase": diagnostic["failure_phase"],
+        "error_code": diagnostic["internal_error_code"],
+        "failure_class": "controlled_fetch_error",
+        "network_family": diagnostic["network_family"],
+        "transport_error_class": diagnostic["transport_error_class"],
+        "redirect_count": diagnostic["redirect_count"],
+        "status_code": diagnostic["status_code"],
+        "elapsed_ms": diagnostic["elapsed_ms"],
+        "resolved_addresses": diagnostic["resolved_addresses"],
+        "rejected_addresses": diagnostic["rejected_addresses"],
     }
     logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:
-        raise PrivacyInspectionError("inspection_failed")
+        raise PrivacyInspectionError("inspection_failed", diagnostic=diagnostic)
     if error.code == "blocked_by_ssrf":
-        raise PrivacyInspectionError("unsafe_target")
+        raise PrivacyInspectionError("unsafe_target", diagnostic=diagnostic)
     if error.code == "robots_disallowed":
-        raise PrivacyInspectionError("inspection_blocked")
+        raise PrivacyInspectionError("inspection_blocked", diagnostic=diagnostic)
     failure_codes = {
         "dns_failure": "dns_resolution_failed",
         "timeout": "request_timeout",
@@ -95,8 +133,8 @@ def _home_failure(result: InspectionFetchResult) -> None:
         "unsupported_content_type": "unsupported_content_type",
     }
     if error.code in failure_codes:
-        raise PrivacyInspectionError(failure_codes[error.code])
-    raise PrivacyInspectionError("inspection_failed")
+        raise PrivacyInspectionError(failure_codes[error.code], diagnostic=diagnostic)
+    raise PrivacyInspectionError("inspection_failed", diagnostic=diagnostic)
 
 
 def _result_map(diagnostic: dict) -> dict[str, str]:
@@ -220,9 +258,6 @@ def diagnose_privacy_url(
             combined.pages_fetched += result.pages_fetched
             combined.limited |= result.limited
             combined.limited |= combined.pages_requested >= MAX_PAGES_ATTEMPTED
-            # Controlled failures are operational evidence too: rebuilding the
-            # complete contract lets the adapter distinguish an untried link
-            # from an attempted but inaccessible destination before replacement.
             diagnostic = evaluate()
 
     diagnostic["scope"] = {
