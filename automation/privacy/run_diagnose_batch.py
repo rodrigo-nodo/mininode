@@ -9,6 +9,26 @@ import urllib.request
 from pathlib import Path
 
 
+DIAGNOSTIC_FIELDS = [
+    "requested_url",
+    "final_url",
+    "requested_hostname",
+    "effective_hostname",
+    "internal_error_code",
+    "failure_phase",
+    "dns_attempt_count",
+    "dns_failure_category",
+    "network_family",
+    "resolved_addresses",
+    "rejected_addresses",
+    "transport_error_class",
+    "tls_valid",
+    "redirect_count",
+    "status_code",
+    "elapsed_ms",
+]
+
+
 def parse_urls(raw: str) -> list[str]:
     seen = set()
     urls = []
@@ -30,6 +50,7 @@ def diagnose(url: str, endpoint: str, api_key: str, timeout: float = 60.0) -> di
         headers={
             "Content-Type": "application/json",
             "X-Api-Key": api_key,
+            "X-Mininode-Diagnostics": "1",
             "User-Agent": "mininode-privacy-diagnose-bridge/1.0",
         },
     )
@@ -49,6 +70,7 @@ def diagnose(url: str, endpoint: str, api_key: str, timeout: float = 60.0) -> di
             "success": False,
             "error_code": "transport_error",
             "detail": exc.__class__.__name__,
+            "diagnostic": {"transport_error_class": exc.__class__.__name__},
             "response": None,
         }
 
@@ -60,15 +82,18 @@ def diagnose(url: str, endpoint: str, api_key: str, timeout: float = 60.0) -> di
     success = bool(status is not None and 200 <= status < 300)
     error_code = None
     detail = None
-    if isinstance(body, dict) and not success:
-        error_code = body.get("code") or body.get("error_code")
-        raw_detail = body.get("detail")
-        if isinstance(raw_detail, dict):
-            error_code = error_code or raw_detail.get("code") or raw_detail.get("error_code")
-            detail = raw_detail.get("detail") or raw_detail.get("message")
-        elif raw_detail is not None:
-            detail = str(raw_detail)
-        detail = detail or body.get("message")
+    diagnostic = None
+    if isinstance(body, dict):
+        diagnostic = body.get("diagnostic") if isinstance(body.get("diagnostic"), dict) else None
+        if not success:
+            error_code = body.get("code") or body.get("error_code") or body.get("error")
+            raw_detail = body.get("detail")
+            if isinstance(raw_detail, dict):
+                error_code = error_code or raw_detail.get("code") or raw_detail.get("error_code")
+                detail = raw_detail.get("detail") or raw_detail.get("message")
+            elif raw_detail is not None:
+                detail = str(raw_detail)
+            detail = detail or body.get("message")
 
     return {
         "url": url,
@@ -76,22 +101,38 @@ def diagnose(url: str, endpoint: str, api_key: str, timeout: float = 60.0) -> di
         "success": success,
         "error_code": error_code,
         "detail": detail,
+        "diagnostic": diagnostic,
         "response": body,
     }
 
 
-def write_outputs(results: list[dict], output_dir: Path, label: str) -> tuple[Path, Path]:
+def write_outputs(results: list[dict], output_dir: Path, label: str) -> tuple[Path, Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     safe_label = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in label).strip("-") or "batch"
     json_path = output_dir / f"privacy-diagnose-{safe_label}.json"
     csv_path = output_dir / f"privacy-diagnose-{safe_label}.csv"
+    diagnostic_path = output_dir / f"privacy-diagnose-{safe_label}-diagnostics.jsonl"
     json_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=["url", "http_status", "success", "error_code", "detail"])
         writer.writeheader()
         for item in results:
             writer.writerow({key: item.get(key) for key in writer.fieldnames})
-    return json_path, csv_path
+    with diagnostic_path.open("w", encoding="utf-8") as handle:
+        for item in results:
+            diagnostic = item.get("diagnostic") or {}
+            row = {
+                "url": item.get("url"),
+                "http_status": item.get("http_status"),
+                "success": item.get("success"),
+                "error_code": item.get("error_code"),
+                "detail": item.get("detail"),
+            }
+            for key in DIAGNOSTIC_FIELDS:
+                if key in diagnostic:
+                    row[key] = diagnostic.get(key)
+            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return json_path, csv_path, diagnostic_path
 
 
 def main() -> int:
@@ -119,9 +160,10 @@ def main() -> int:
         results.append(result)
         print(f"  -> status={result['http_status']} success={result['success']} error={result['error_code']}")
 
-    json_path, csv_path = write_outputs(results, Path(args.output_dir), args.label)
+    json_path, csv_path, diagnostic_path = write_outputs(results, Path(args.output_dir), args.label)
     print(f"JSON: {json_path}")
     print(f"CSV: {csv_path}")
+    print(f"Diagnostics: {diagnostic_path}")
     failures = sum(not item["success"] for item in results)
     print(f"Completed {len(results)} diagnostics; failures={failures}")
     return 0
