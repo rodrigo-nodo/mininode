@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from mininode_api.web_inspector import fetcher as fetcher_module
-from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
+from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES, PER_ADDRESS_CONNECT_TIMEOUT_SECONDS, REQUEST_HEADERS, USER_AGENT, WebFetcher, normalize_url, same_site_hostname
 from mininode_api.web_inspector.transport import VALIDATED_IP_EXTENSION
 
 
@@ -375,8 +375,30 @@ def test_second_attempt_uses_only_remaining_inspection_budget(monkeypatch):
     )._fetch_page("https://example.com/", "example.com")
 
     assert page.html == "ok"
-    assert timeouts == [10.0, 5.0]
+    assert timeouts == [PER_ADDRESS_CONNECT_TIMEOUT_SECONDS, PER_ADDRESS_CONNECT_TIMEOUT_SECONDS]
     assert timeouts[1] <= 30.0 - now[0]
+
+
+def test_each_connect_attempt_is_bounded_by_remaining_total_budget(monkeypatch):
+    now = [0.0]
+    timeouts = []
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        timeouts.append(request.extensions["timeout"]["connect"])
+        if len(timeouts) == 1:
+            now[0] = 28.0
+            raise httpx.ConnectTimeout("timed out", request=request)
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com", deadline=30.0)
+
+    assert page.html == "ok"
+    assert timeouts == [PER_ADDRESS_CONNECT_TIMEOUT_SECONDS, 2.0]
+    assert page.attempted_addresses == ("93.184.216.33", "93.184.216.34")
 
 
 def test_certificate_connect_error_does_not_fall_back():
@@ -588,6 +610,56 @@ def test_rejects_non_www_subdomains_and_external_redirects():
     assert result.pages[0].error.code == "blocked_by_ssrf"
 
 
+def test_reviewed_cross_domain_redirect_is_revalidated_and_allowed():
+    resolved = []
+    requested_hosts = []
+
+    def resolver(hostname, port):
+        resolved.append(hostname)
+        return {"93.184.216.35" if hostname == "insucapchile.cl" else "93.184.216.34"}
+
+    def handler(request):
+        requested_hosts.append(request.url.host)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.host == "insucap.cl":
+            return httpx.Response(302, headers={"location": "https://insucapchile.cl/final"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+        "https://insucap.cl/", ["https://insucap.cl/"]
+    )
+
+    assert result.pages_fetched == 1
+    assert result.pages[0].final_url == "https://insucapchile.cl/final"
+    assert requested_hosts[-1] == "insucapchile.cl"
+    assert resolved[-1] == "insucapchile.cl"
+
+
+def test_reviewed_cross_domain_redirect_still_blocks_unsafe_destination():
+    requested_hosts = []
+
+    def resolver(hostname, port):
+        return {"127.0.0.1"} if hostname == "insucapchile.cl" else {"93.184.216.34"}
+
+    def handler(request):
+        requested_hosts.append(request.url.host)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        return httpx.Response(302, headers={"location": "https://insucapchile.cl/final"})
+
+    result = WebFetcher(client=client_for(handler), resolver=resolver).fetch(
+        "https://insucap.cl/", ["https://insucap.cl/"]
+    )
+
+    page = result.pages[0]
+    assert page.error.code == "blocked_by_ssrf"
+    assert page.failure_phase == "redirect_validation"
+    assert page.effective_hostname == "insucapchile.cl"
+    assert page.redirect_rejected_reason == "Target resolves to a non-public address: 127.0.0.1"
+    assert requested_hosts == ["insucap.cl", "insucap.cl"]
+
+
 def test_timeout_is_controlled_and_secondary_error_does_not_abort():
     def handler(request):
         if request.url.path == "/robots.txt":
@@ -643,6 +715,26 @@ def test_sets_declared_user_agent_and_fetches_sequentially():
         "https://example.com", ["https://example.com/one", "https://example.com/two"]
     )
     assert order == [("/robots.txt", USER_AGENT), ("/one", USER_AGENT), ("/two", USER_AGENT)]
+
+
+def test_browser_compatible_headers_have_no_sensitive_state_and_403_is_controlled():
+    observed = []
+
+    def handler(request):
+        observed.append({key.lower(): value for key, value in request.headers.items()})
+        return httpx.Response(403, text="refused", headers={"content-type": "text/html"})
+
+    page = WebFetcher(client=client_for(handler), resolver=public_resolver)._fetch_page(
+        "https://example.com/", "example.com"
+    )
+
+    assert page.error.code == "http_error"
+    assert page.status_code == 403
+    assert observed[0]["user-agent"] == REQUEST_HEADERS["User-Agent"]
+    assert observed[0]["accept"] == REQUEST_HEADERS["Accept"]
+    assert observed[0]["accept-language"] == REQUEST_HEADERS["Accept-Language"]
+    for sensitive in ("cookie", "authorization", "proxy-authorization", "referer"):
+        assert sensitive not in observed[0]
 
 
 def test_stops_after_five_redirects():

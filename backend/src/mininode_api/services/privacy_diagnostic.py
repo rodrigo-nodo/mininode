@@ -91,6 +91,8 @@ def _page_diagnostic(result: InspectionFetchResult) -> dict:
         "network_family": page.network_family if page else None,
         "resolved_addresses": list(page.resolved_addresses) if page else [],
         "rejected_addresses": list(page.rejected_addresses) if page else [],
+        "attempted_addresses": list(page.attempted_addresses) if page else [],
+        "redirect_rejected_reason": page.redirect_rejected_reason if page else None,
         "transport_error_class": page.transport_error_class if page else None,
         "tls_valid": page.tls_valid if page else None,
         "redirect_count": page.redirect_count if page else 0,
@@ -116,6 +118,8 @@ def _home_failure(result: InspectionFetchResult) -> None:
         "elapsed_ms": diagnostic["elapsed_ms"],
         "resolved_addresses": diagnostic["resolved_addresses"],
         "rejected_addresses": diagnostic["rejected_addresses"],
+        "attempted_addresses": diagnostic["attempted_addresses"],
+        "redirect_rejected_reason": diagnostic["redirect_rejected_reason"],
     }
     logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:

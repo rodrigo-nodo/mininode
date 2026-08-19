@@ -36,6 +36,8 @@ class FetchPageResult:
     effective_hostname: str | None = None
     dns_attempt_count: int = 0
     dns_failure_category: str | None = None
+    redirect_rejected_reason: str | None = None
+    attempted_addresses: tuple[str, ...] = ()
 
 
 @dataclass

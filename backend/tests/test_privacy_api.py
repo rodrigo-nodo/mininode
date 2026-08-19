@@ -784,6 +784,7 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     }
     assert events == [
         {
+            "attempted_addresses": [],
             "elapsed_ms": 123,
             "error_code": "dns_failure",
             "event": "privacy_home_inspection_failed",
@@ -792,6 +793,7 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
             "network_family": "ipv6",
             "phase": "home_fetch",
             "rejected_addresses": [],
+            "redirect_rejected_reason": None,
             "redirect_count": 1,
             "resolved_addresses": [],
             "status_code": 503,

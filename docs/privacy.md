@@ -20,7 +20,9 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 - Las protecciones SSRF son obligatorias.
 - Nunca permitir destinos privados, loopback, link-local, reservados, mezclas público/privado u otros destinos prohibidos solo para aumentar cobertura.
 - Validar redirects antes de seguirlos.
+- Los redirects entre dominios solo se permiten mediante aliases direccionales revisados; cada hostname se resuelve, valida y fija de forma independiente.
 - Preferir un fallback seguro o un error preciso antes que debilitar SSRF.
+- Cuando DNS entrega varias IP públicas ya validadas, limitar cada conexión para poder intentar otra dentro del mismo deadline global.
 - Mantener privada la telemetría técnica/diagnóstica; no exponer detalles internos de red en la respuesta pública de Privacy.
 
 ## Reglas de implementación
