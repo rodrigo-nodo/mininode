@@ -139,7 +139,34 @@ No reconstruir todo Mininode en cada ejecución.
 
 Los hechos y diagnósticos ya investigados deben incluirse resumidos en la Issue para evitar que Codex los redescubra innecesariamente.
 
-## 6. Costos de desarrollo IA
+## 6. Documentos de contexto relacionados
+
+El workflow se apoya en documentos separados para evitar cargar todo el contexto de Mininode en cada tarea:
+
+- `AGENTS.md` - reglas generales para los agentes de código y enrutamiento del contexto.
+- `docs/architecture.md` - arquitectura general y estable de Mininode.
+- `docs/privacy.md` - contexto específico y vigente de Mininode Privacy.
+- `docs/development-workflow.md` - proceso de desarrollo, automatización y criterios de costo.
+
+Cada documento tiene una responsabilidad distinta. Evitar duplicar información innecesariamente entre ellos.
+
+Cuando aparezca un nuevo producto que necesite contexto propio, puede crearse un documento específico dentro de `docs/` y registrarse en `AGENTS.md` para que los agentes sepan cuándo consultarlo.
+
+Ejemplo:
+
+```text
+AGENTS.md
+docs/
+├── architecture.md
+├── development-workflow.md
+├── privacy.md
+├── futuro-producto-a.md
+└── futuro-producto-b.md
+```
+
+La existencia de un documento no implica que deba cargarse en todas las tareas. La Issue y `AGENTS.md` determinan qué contexto corresponde consultar.
+
+## 7. Costos de desarrollo IA
 
 Separar:
 
@@ -159,7 +186,7 @@ Antes de la optimización de contexto:
 
 Esta línea base no representa todavía el costo normal de una tarea productiva.
 
-## 7. Métricas objetivo
+## 8. Métricas objetivo
 
 Medir progresivamente:
 
@@ -173,7 +200,7 @@ US$ / producto
 
 La métrica más útil debe evolucionar desde costo técnico por ejecución hacia costo real de desarrollo por funcionalidad/producto.
 
-## 8. Principio económico
+## 9. Principio económico
 
 No reemplazar Codex directo por API indiscriminadamente.
 
@@ -191,7 +218,7 @@ pedir → implementar → revisar → aprobar
 
 La automatización debe reducir trabajo manual suficiente para justificar su costo variable.
 
-## 9. Mantenimiento
+## 10. Mantenimiento
 
 Este documento es la fuente de verdad del workflow de desarrollo de Mininode.
 
