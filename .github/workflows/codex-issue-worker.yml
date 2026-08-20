@@ -77,23 +77,15 @@ jobs:
             ${{ github.event.issue.body }}
             ---
 
-            Context discipline for this run:
-            - Read `AGENTS.md` first and follow its context-routing instructions.
-            - If the issue concerns Mininode Privacy or the Privacy Web Inspector, read `docs/privacy.md` before exploring code.
-            - Read `docs/architecture.md` only when the issue requires general Mininode architecture, deployment, domain, or cross-product context.
-            - Treat facts and diagnostics already stated in the issue as established input. Reproduce them only when needed to implement or test safely.
-            - Start with files directly related to the issue. Do not inventory or summarize the entire repository.
-            - Expand to other files only when imports, call paths, tests, or a concrete failure require it.
-
-            Requirements for this run:
-            - Work only inside the checked-out repository.
-            - Follow the repository's existing architecture and conventions.
-            - Make the smallest focused change that satisfies the issue.
-            - Do not weaken security controls unless the issue explicitly requires it.
-            - Do not modify GitHub Actions workflows unless the issue explicitly asks for that.
-            - Run focused relevant tests first; broaden only when the affected dependency surface requires it.
-            - Do not commit, push, create a PR, merge, or modify GitHub issues. The workflow handles Git operations after you finish.
-            - At the end, leave the workspace with the implementation and tests completed.
+            Execution rules:
+            - Treat the Issue as the primary scope and read `AGENTS.md` for context routing.
+            - Use only the context selected by `AGENTS.md`; do not load unrelated documentation.
+            - If the Issue names target files, start only with those files. Do not inventory or broadly search the repository.
+            - Open another file only for a concrete dependency shown by an import, call path, related test, or observed error. If required context is still missing, stop and report it instead of exploring broadly.
+            - Make the smallest focused change that satisfies the Issue. Preserve existing architecture, conventions, and security controls unless the Issue explicitly changes them.
+            - Run focused relevant tests first. Do not broaden automatically to general suites or unrelated deterministic checks.
+            - Do not modify GitHub Actions, infrastructure, secrets, deployment, database, authentication, or payments unless explicitly in scope.
+            - Do not commit, push, create a PR, merge, or modify GitHub issues. Leave the workspace with the implementation and focused tests completed.
 
       - name: Commit and push changes
         id: publish
