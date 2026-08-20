@@ -42,6 +42,13 @@ HTML_CONTENT_TYPES = {"text/html", "application/xhtml+xml"}
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
+def _validated_address_order(address: str) -> tuple[int, int]:
+    """Order already-validated addresses deterministically, IPv4 before IPv6."""
+
+    parsed = ipaddress.ip_address(address)
+    return parsed.version, int(parsed)
+
+
 def same_site_hostname(a: str | None, b: str | None) -> bool:
     """Return whether two hostnames differ only by one leading ``www.``."""
 
@@ -281,7 +288,7 @@ class WebFetcher:
                 # single, fully validated DNS answer set. No DNS lookup occurs
                 # between attempts.
                 last_connection_error: httpx.ConnectError | httpx.ConnectTimeout | None = None
-                for pinned_ip in sorted(validated_addresses):
+                for pinned_ip in sorted(validated_addresses, key=_validated_address_order):
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
                         return self._error_page(
