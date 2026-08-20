@@ -93,7 +93,7 @@ def test_exhausted_shared_deadline_starts_no_new_network_request(monkeypatch):
     ("pinned_ip", "expected_family"),
     [("93.184.216.34", "ipv4"), ("2606:2800:220:1:248:1893:25c8:1946", "ipv6")],
 )
-def test_records_pinned_network_family_without_retaining_address(pinned_ip, expected_family):
+def test_records_validated_address_only_in_private_attempt_telemetry(pinned_ip, expected_family):
     def resolver(hostname, port):
         return {pinned_ip}
 
@@ -105,7 +105,16 @@ def test_records_pinned_network_family_without_retaining_address(pinned_ip, expe
     page = fetcher._fetch_page("https://example.com/", "example.com")
 
     assert page.network_family == expected_family
-    assert pinned_ip not in repr(page)
+    attempt = page.connection_attempts[0]
+    assert attempt == {
+        "address": pinned_ip,
+        "network_family": expected_family,
+        "phase": "connect",
+        "transport_error_class": None,
+        "duration_ms": attempt["duration_ms"],
+        "technical_detail": "connected",
+    }
+    assert attempt["duration_ms"] >= 0
 
 
 @pytest.mark.parametrize("error_type", [httpx.ConnectError, httpx.ConnectTimeout])
@@ -122,6 +131,50 @@ def test_records_safe_transport_error_class(error_type):
     assert page.network_family == "ipv4"
     assert page.transport_error_class == error_type.__name__
     assert raw_message not in page.transport_error_class
+    assert page.connection_attempts[0]["address"] == "93.184.216.34"
+    assert page.connection_attempts[0]["transport_error_class"] == error_type.__name__
+    assert page.connection_attempts[0]["technical_detail"] == (
+        "timed_out" if error_type is httpx.ConnectTimeout else "connection_failed"
+    )
+    assert raw_message not in repr(page.connection_attempts)
+
+
+def test_records_each_failed_address_attempt_without_changing_final_error(monkeypatch):
+    now = [10.0]
+    monkeypatch.setattr(fetcher_module.time, "monotonic", lambda: now[0])
+
+    def handler(request):
+        now[0] += 0.125
+        if request.extensions[VALIDATED_IP_EXTENSION].endswith("33"):
+            raise httpx.ConnectError("secret refusal detail", request=request)
+        raise httpx.ConnectTimeout("secret timeout detail", request=request)
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {"93.184.216.34", "93.184.216.33"},
+    )._fetch_page("https://example.com/", "example.com", deadline=30.0)
+
+    assert page.error.code == "timeout"
+    assert page.transport_error_class == "ConnectTimeout"
+    assert page.connection_attempts == (
+        {
+            "address": "93.184.216.33",
+            "network_family": "ipv4",
+            "phase": "connect",
+            "transport_error_class": "ConnectError",
+            "duration_ms": 125,
+            "technical_detail": "connection_failed",
+        },
+        {
+            "address": "93.184.216.34",
+            "network_family": "ipv4",
+            "phase": "connect",
+            "transport_error_class": "ConnectTimeout",
+            "duration_ms": 125,
+            "technical_detail": "timed_out",
+        },
+    )
+    assert "secret" not in repr(page.connection_attempts)
 
 
 def test_explicit_certificate_failure_is_normalized_without_raw_details():

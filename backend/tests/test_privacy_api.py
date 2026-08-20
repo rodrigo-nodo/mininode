@@ -744,6 +744,34 @@ def test_home_timeout_returns_no_artificial_diagnostic(monkeypatch):
     assert "traceback" not in response.text.lower()
 
 
+def test_connection_attempts_are_exposed_only_by_private_diagnostics_header(monkeypatch):
+    failed = failed_page(HOME)
+    failed.connection_attempts = (
+        {
+            "address": "93.184.216.34",
+            "network_family": "ipv4",
+            "phase": "connect",
+            "transport_error_class": "ConnectTimeout",
+            "duration_ms": 4000,
+            "technical_detail": "timed_out",
+        },
+    )
+    client, _ = client_with(monkeypatch, {HOME: failed})
+
+    public_response = client.post("/privacy/diagnose", json={"url": HOME})
+    private_response = client.post(
+        "/privacy/diagnose",
+        json={"url": HOME},
+        headers={"X-Mininode-Diagnostics": "1"},
+    )
+
+    assert "diagnostic" not in public_response.json()
+    assert "93.184.216.34" not in public_response.text
+    assert private_response.json()["diagnostic"]["connection_attempts"] == list(
+        failed.connection_attempts
+    )
+
+
 def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     secret = "super-secret-api-key"
     pinned_ip = "203.0.113.42"
@@ -785,6 +813,7 @@ def test_home_failure_logs_one_safe_structured_event(monkeypatch, caplog):
     assert events == [
         {
             "attempted_network_families": [],
+            "connection_attempts": [],
             "elapsed_ms": 123,
             "error_code": "dns_failure",
             "effective_hostname": "example.com",

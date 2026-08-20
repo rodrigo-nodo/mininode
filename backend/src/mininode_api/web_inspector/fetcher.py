@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import ipaddress
 import ssl
 import time
@@ -279,6 +280,7 @@ class WebFetcher:
         cookie_names: list[str] = []
         network_family: str | None = None
         attempted_network_families: list[str] = []
+        connection_attempts: list[dict[str, object]] = []
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
@@ -306,9 +308,11 @@ class WebFetcher:
                                 if last_connection_error
                                 else None
                             ),
+                            connection_attempts=tuple(connection_attempts),
                         )
                     network_family = f"ipv{ipaddress.ip_address(pinned_ip).version}"
                     attempted_network_families.append(network_family)
+                    attempt_started = time.monotonic()
                     try:
                         request_timeout = httpx.Timeout(
                             min(REQUEST_TIMEOUT_SECONDS, remaining),
@@ -323,6 +327,11 @@ class WebFetcher:
                             extensions={VALIDATED_IP_EXTENSION: pinned_ip},
                         )
                         with response_context as response:
+                            connection_attempts.append(
+                                self._connection_attempt(
+                                    pinned_ip, network_family, attempt_started
+                                )
+                            )
                             for header in response.headers.get_list("set-cookie"):
                                 name, separator, _ = header.partition("=")
                                 name = name.strip()
@@ -341,6 +350,7 @@ class WebFetcher:
                                         started,
                                         "too_many_redirects",
                                         "Maximum redirect count exceeded",
+                                        connection_attempts=tuple(connection_attempts),
                                     )
                                 current_url = normalize_url(
                                     urljoin(current_url, response.headers["location"])
@@ -366,6 +376,7 @@ class WebFetcher:
                                     "unsupported_content_type",
                                     f"Unsupported content type: {content_type or 'missing'}",
                                     content_type,
+                                    connection_attempts=tuple(connection_attempts),
                                 )
                             try:
                                 content_length = int(
@@ -383,6 +394,7 @@ class WebFetcher:
                                     "response_too_large",
                                     "Response exceeds 2 MB",
                                     content_type,
+                                    connection_attempts=tuple(connection_attempts),
                                 )
                             body = bytearray()
                             for chunk in response.iter_bytes():
@@ -396,6 +408,7 @@ class WebFetcher:
                                         "response_too_large",
                                         "Response exceeds 2 MB",
                                         content_type,
+                                        connection_attempts=tuple(connection_attempts),
                                     )
                                 body.extend(chunk)
                             if response.status_code >= 400:
@@ -408,6 +421,7 @@ class WebFetcher:
                                     "http_error",
                                     f"HTTP status {response.status_code}",
                                     content_type,
+                                    connection_attempts=tuple(connection_attempts),
                                 )
                             encoding = response.encoding or "utf-8"
                             return FetchPageResult(
@@ -426,10 +440,21 @@ class WebFetcher:
                                 ),
                                 network_family=network_family,
                                 attempted_network_families=tuple(attempted_network_families),
+                                connection_attempts=tuple(connection_attempts),
                             )
                     except httpx.ConnectTimeout as exc:
+                        connection_attempts.append(
+                            self._connection_attempt(
+                                pinned_ip, network_family, attempt_started, exc
+                            )
+                        )
                         last_connection_error = exc
                     except httpx.ConnectError as exc:
+                        connection_attempts.append(
+                            self._connection_attempt(
+                                pinned_ip, network_family, attempt_started, exc
+                            )
+                        )
                         if self._is_tls_error(exc):
                             raise
                         last_connection_error = exc
@@ -456,6 +481,7 @@ class WebFetcher:
                         network_family=network_family,
                         attempted_network_families=tuple(attempted_network_families),
                         transport_error_class=type(last_connection_error).__name__,
+                        connection_attempts=tuple(connection_attempts),
                     )
             except httpx.TimeoutException as exc:
                 return self._error_page(
@@ -469,6 +495,7 @@ class WebFetcher:
                     network_family=network_family,
                     attempted_network_families=tuple(attempted_network_families),
                     transport_error_class=type(exc).__name__,
+                    connection_attempts=tuple(connection_attempts),
                 )
             except DNSResolutionError as exc:
                 page = self._error_page(
@@ -504,6 +531,7 @@ class WebFetcher:
                     dns_attempt_count=exc.dns_attempt_count,
                     dns_failure_category=exc.dns_failure_category,
                     ssrf_rejection_reason=self._ssrf_rejection_reason(exc, redirects),
+                    connection_attempts=tuple(connection_attempts),
                 )
             except httpx.HTTPError as exc:
                 certificate_error = self._is_certificate_error(exc)
@@ -524,7 +552,54 @@ class WebFetcher:
                     attempted_network_families=tuple(attempted_network_families),
                     transport_error_class=type(exc).__name__,
                     tls_valid=False if tls_error else None,
+                    connection_attempts=tuple(connection_attempts),
                 )
+
+    @classmethod
+    def _connection_attempt(
+        cls,
+        address: str,
+        family: str,
+        started: float,
+        error: httpx.HTTPError | None = None,
+    ) -> dict[str, object]:
+        """Build private per-address telemetry without retaining raw exception text."""
+
+        tls_error = error is not None and cls._is_tls_error(error)
+        if isinstance(error, httpx.ConnectTimeout):
+            detail = "timed_out"
+        elif error is not None and cls._is_certificate_error(error):
+            detail = "certificate_verification_failed"
+        elif tls_error:
+            detail = "tls_handshake_failed"
+        elif error is not None:
+            detail = cls._safe_connection_detail(error)
+        else:
+            detail = "connected"
+        return {
+            "address": address,
+            "network_family": family,
+            "phase": "tls_handshake" if tls_error else "connect",
+            "transport_error_class": type(error).__name__ if error else None,
+            "duration_ms": max(0, int((time.monotonic() - started) * 1000)),
+            "technical_detail": detail,
+        }
+
+    @staticmethod
+    def _safe_connection_detail(exc: BaseException) -> str:
+        """Classify socket failures using a fixed vocabulary, never raw text."""
+
+        current: BaseException | None = exc
+        while current is not None:
+            if isinstance(current, ConnectionRefusedError):
+                return "connection_refused"
+            if isinstance(current, OSError):
+                if current.errno == errno.ENETUNREACH:
+                    return "network_unreachable"
+                if current.errno == errno.EHOSTUNREACH:
+                    return "host_unreachable"
+            current = current.__cause__ or current.__context__
+        return "connection_failed"
 
     @staticmethod
     def _is_certificate_error(exc: BaseException) -> bool:
@@ -565,7 +640,22 @@ class WebFetcher:
         return "invalid_target"
 
     @staticmethod
-    def _error_page(requested_url: str, final_url: str, status_code: int | None, redirects: int, started: float, code: str, message: str, content_type: str | None = None, network_family: str | None = None, attempted_network_families: tuple[str, ...] = (), transport_error_class: str | None = None, tls_valid: bool | None = None, failure_phase: str = "home_fetch") -> FetchPageResult:
+    def _error_page(
+        requested_url: str,
+        final_url: str,
+        status_code: int | None,
+        redirects: int,
+        started: float,
+        code: str,
+        message: str,
+        content_type: str | None = None,
+        network_family: str | None = None,
+        attempted_network_families: tuple[str, ...] = (),
+        transport_error_class: str | None = None,
+        tls_valid: bool | None = None,
+        failure_phase: str = "home_fetch",
+        connection_attempts: tuple[dict[str, object], ...] = (),
+    ) -> FetchPageResult:
         return FetchPageResult(
             requested_url=requested_url,
             final_url=final_url,
@@ -579,4 +669,5 @@ class WebFetcher:
             transport_error_class=transport_error_class,
             tls_valid=tls_valid,
             failure_phase=failure_phase,
+            connection_attempts=connection_attempts,
         )

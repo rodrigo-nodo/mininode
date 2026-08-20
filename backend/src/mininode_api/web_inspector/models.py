@@ -38,6 +38,7 @@ class FetchPageResult:
     dns_attempt_count: int = 0
     dns_failure_category: str | None = None
     ssrf_rejection_reason: str | None = None
+    connection_attempts: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass
