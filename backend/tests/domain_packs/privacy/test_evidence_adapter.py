@@ -374,6 +374,54 @@ def test_prv008_uses_own_policy_selected_after_provider_candidate():
 
 
 @pytest.mark.parametrize(
+    ("visible_text", "expected"),
+    [
+        ("Puede ejercer sus derechos de acceso, rectificación y eliminación.", "detected"),
+        ("Derechos del titular: puede solicitar el acceso a sus datos.", "detected"),
+        ("Puede solicitar la eliminación de sus datos.", "partial"),
+        ("Contáctenos para ejercer sus derechos.", "partial"),
+        ("Esta política explica nuestras prácticas de privacidad.", "not_detected"),
+    ],
+)
+def test_prv011_classifies_rights_only_in_selected_policy(visible_text, expected):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-011", adapted["PRV-011"], {"PRV-003": prv003})
+
+    assert result["result"] == expected
+    assert adapted["PRV-011"]["source_urls"] == [url]
+
+
+def test_prv011_gate_follows_prv003_without_cascade_penalty():
+    evidence = {"data_subject_rights": "none", "confidence": "high"}
+    assert evaluate_control("PRV-011", evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-011", evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+
+def test_prv011_uses_own_policy_selected_after_provider_candidate():
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence("https://hcaptcha.com/privacy", "Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence("https://hcaptcha.com/privacy", 200, "Privacy", "text/html", visible_text="You have rights of access, rectification, deletion and portability."),
+        PageEvidence(own_url, 200, "Política de privacidad", "text/html", visible_text="Puede ejercer sus derechos."),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-011", adapted["PRV-011"], {"PRV-003": prv003})
+
+    assert result["result"] == "partial"
+    assert adapted["PRV-011"]["source_urls"] == [own_url]
+
+
+@pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [
         ("email", "value", ""), ("tel", "value", ""), ("textarea", "value", ""),

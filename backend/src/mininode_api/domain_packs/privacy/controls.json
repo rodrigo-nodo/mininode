@@ -160,6 +160,30 @@
       }
     },
     {
+      "code": "PRV-011",
+      "domain": "Transparencia",
+      "name": "Derechos del titular",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, la información observable sobre derechos del titular aporta una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "sección explícita sobre derechos en el documento seleccionado por PRV-003",
+        "derechos concretos reconocibles del titular",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Describir en la política los derechos concretos que puede ejercer el titular.",
+      "criteria": {
+        "detected": "El documento seleccionado contiene una sección explícita con contenido reconocible o menciona varios derechos concretos del titular.",
+        "partial": "El documento seleccionado menciona un solo derecho concreto o contiene una referencia limitada o genérica a los derechos del titular.",
+        "not_detected": "No se identifica información observable sobre derechos del titular en el documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

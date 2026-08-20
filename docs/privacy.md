@@ -35,6 +35,9 @@ documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 PRV-008 evalúa las finalidades del tratamiento únicamente en el documento
 seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 
+PRV-011 evalúa los derechos del titular únicamente en el documento seleccionado
+por PRV-003, reutilizando su contenido ya inspeccionado.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.

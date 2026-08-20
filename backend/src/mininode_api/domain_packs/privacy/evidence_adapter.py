@@ -18,6 +18,7 @@ CONTROL_CODES = (
     "PRV-006",
     "PRV-007",
     "PRV-008",
+    "PRV-011",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -122,6 +123,22 @@ _GENERIC_PROCESSING_PURPOSE_TERMS = (
     "usamos datos", "usamos sus datos", "uso de datos",
     "procesamos datos", "procesamiento de datos", "process personal data",
     "processing of personal data", "use personal data", "use your data",
+)
+_CONCRETE_DATA_SUBJECT_RIGHTS = (
+    ("acceso", "derecho de acceso", "access", "right of access"),
+    ("rectificacion", "derecho de rectificacion", "rectify", "rectification"),
+    ("supresion", "eliminacion", "derecho de supresion", "delete", "deletion", "erasure"),
+    ("oposicion", "derecho de oposicion", "object", "objection"),
+    ("portabilidad", "derecho a la portabilidad", "portability"),
+    ("limitacion", "limitar el tratamiento", "restriction of processing"),
+)
+_DATA_SUBJECT_RIGHTS_SECTION_TERMS = (
+    "derechos del titular", "derechos de los titulares", "sus derechos sobre sus datos",
+    "derechos sobre datos personales", "data subject rights", "your privacy rights",
+)
+_GENERIC_DATA_SUBJECT_RIGHTS_TERMS = (
+    "sus derechos", "ejercer sus derechos", "ejercicio de derechos",
+    "derechos del interesado", "your rights", "exercise your rights",
 )
 
 
@@ -556,6 +573,55 @@ def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "processing_purposes": purposes, "confidence": confidence}
 
 
+def _data_subject_rights(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify rights only in PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"data_subject_rights": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "data_subject_rights": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    document = selected_page.visible_text or ""
+    concrete_count = sum(
+        _contains_phrase(document, set(equivalents))
+        for equivalents in _CONCRETE_DATA_SUBJECT_RIGHTS
+    )
+    explicit_section = _contains_phrase(document, _DATA_SUBJECT_RIGHTS_SECTION_TERMS)
+    generic_reference = _contains_phrase(document, _GENERIC_DATA_SUBJECT_RIGHTS_TERMS)
+    if concrete_count >= 2:
+        rights, confidence = "multiple", "high"
+    elif explicit_section and concrete_count:
+        rights, confidence = "section", "high"
+    elif concrete_count == 1:
+        rights, confidence = "single", "medium"
+    elif explicit_section or generic_reference:
+        rights, confidence = "generic", "medium"
+    else:
+        rights, confidence = "none", "high"
+    return {**evidence, "data_subject_rights": rights, "confidence": confidence}
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -653,6 +719,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv006 = _rights_channel(contract, prv003)
     prv007 = _data_categories(contract, prv003)
     prv008 = _processing_purposes(contract, prv003)
+    prv011 = _data_subject_rights(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -756,6 +823,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-006": prv006,
         "PRV-007": prv007,
         "PRV-008": prv008,
+        "PRV-011": prv011,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

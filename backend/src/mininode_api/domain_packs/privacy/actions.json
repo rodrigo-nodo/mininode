@@ -104,6 +104,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con al menos una finalidad concreta."
       }
     },
+    "PRV-011": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la política seleccionada e identificar qué derechos del titular se describen en ella.",
+          "Incorporar derechos concretos y reconocibles cuando correspondan al contenido de la política."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que pueden identificarse varios derechos concretos del titular."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia limitada o genérica a derechos observada en la política seleccionada.",
+          "Precisarla mediante varios derechos concretos y reconocibles del titular."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar varios derechos concretos del titular."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
