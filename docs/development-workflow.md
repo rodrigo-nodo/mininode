@@ -139,6 +139,10 @@ No reconstruir todo Mininode en cada ejecución.
 
 Los hechos y diagnósticos ya investigados deben incluirse resumidos en la Issue para evitar que Codex los redescubra innecesariamente.
 
+Para Issues acotadas, Codex API comienza exclusivamente por los archivos objetivo que indique la Issue. Solo amplía contexto ante una dependencia concreta (import, llamada, prueba relacionada o error observado); si aún falta información para implementar con seguridad, lo reporta en vez de explorar el repositorio indiscriminadamente. Ejecuta primero pruebas focalizadas y no amplía automáticamente a suites generales cuando las comprobaciones necesarias ya son suficientes.
+
+El Issue Worker no fija una lista universal de archivos o productos: delega el enrutamiento selectivo a la Issue y a `AGENTS.md`. Tampoco reduce globalmente el esfuerzo de razonamiento del modelo, porque el mismo worker puede recibir tareas de distinta complejidad y hacerlo podría degradar calidad o seguridad.
+
 ## 6. Documentos de contexto relacionados
 
 El workflow se apoya en documentos separados para evitar cargar todo el contexto de Mininode en cada tarea:

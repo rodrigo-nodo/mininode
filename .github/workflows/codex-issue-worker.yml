@@ -67,7 +67,7 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           permission-profile: ':workspace'
           prompt: |
-            Implement the GitHub issue below in repository ${{ github.repository }}.
+            Implement the scoped GitHub issue below in ${{ github.repository }}.
 
             Issue #${{ github.event.issue.number }}
             Title: ${{ github.event.issue.title }}
@@ -77,23 +77,15 @@ jobs:
             ${{ github.event.issue.body }}
             ---
 
-            Context discipline for this run:
-            - Read `AGENTS.md` first and follow its context-routing instructions.
-            - If the issue concerns Mininode Privacy or the Privacy Web Inspector, read `docs/privacy.md` before exploring code.
-            - Read `docs/architecture.md` only when the issue requires general Mininode architecture, deployment, domain, or cross-product context.
-            - Treat facts and diagnostics already stated in the issue as established input. Reproduce them only when needed to implement or test safely.
-            - Start with files directly related to the issue. Do not inventory or summarize the entire repository.
-            - Expand to other files only when imports, call paths, tests, or a concrete failure require it.
-
-            Requirements for this run:
-            - Work only inside the checked-out repository.
-            - Follow the repository's existing architecture and conventions.
-            - Make the smallest focused change that satisfies the issue.
-            - Do not weaken security controls unless the issue explicitly requires it.
-            - Do not modify GitHub Actions workflows unless the issue explicitly asks for that.
-            - Run focused relevant tests first; broaden only when the affected dependency surface requires it.
-            - Do not commit, push, create a PR, merge, or modify GitHub issues. The workflow handles Git operations after you finish.
-            - At the end, leave the workspace with the implementation and tests completed.
+            Execution rules:
+            - The issue is the source of scope. Read `AGENTS.md`, then only the product context it routes this issue to.
+            - If the issue names target files, start only with those. Otherwise start with directly related code and tests.
+            - Do not inventory the repository, explore to understand the project generally, or re-read sufficient context.
+            - Open another file only for a demonstrated import, call path, related test, or concrete error. If safe implementation still lacks information, stop and report what is missing instead of searching broadly.
+            - Accept issue facts and diagnostics unless verification is necessary for a safe change.
+            - Make the smallest change that satisfies the issue and preserve existing architecture, conventions, and security controls.
+            - Run focused tests first. Broaden only when a demonstrated dependency or failure requires it; leave unrelated broad deterministic checks to normal tooling.
+            - Stay inside the repository. Do not change workflows unless requested, and do not commit, push, open a PR, merge, or modify issues; later steps handle publication.
 
       - name: Commit and push changes
         id: publish
