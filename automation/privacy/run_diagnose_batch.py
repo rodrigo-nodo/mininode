@@ -28,6 +28,7 @@ DIAGNOSTIC_FIELDS = [
     "redirect_count",
     "status_code",
     "elapsed_ms",
+    "connection_attempts",
 ]
 
 
