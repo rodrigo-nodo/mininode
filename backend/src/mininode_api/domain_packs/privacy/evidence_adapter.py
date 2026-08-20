@@ -14,6 +14,11 @@ CONTROL_CODES = (
     "PRV-001",
     "PRV-002",
     "PRV-003",
+    "PRV-005",
+    "PRV-006",
+    "PRV-007",
+    "PRV-008",
+    "PRV-011",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -65,6 +70,31 @@ _VISIBLE_NAME_FIELDS = {
     "full name": "name",
     "nombre completo": "name",
 }
+_RESPONSIBLE_LABELS = ("responsable", "controlador", "controller", "titular del sitio")
+_LEGAL_ENTITY_TERMS = ("spa", "s a", "ltda", "limitada", "sociedad", "fundacion", "corporacion")
+_AMBIGUOUS_ORGANIZATIONS = ("nuestra empresa", "la empresa", "la organizacion", "este sitio")
+_DATA_CATEGORY_TERMS = (
+    "nombre", "apellido", "correo", "email", "telefono", "direccion", "rut", "dni",
+    "datos de cuenta", "datos de pago", "informacion de pago", "identificador",
+    "datos de navegacion", "informacion de navegacion", "cookies", "direccion ip",
+    "informacion enviada", "datos de contacto",
+)
+_PURPOSE_TERMS = (
+    "responder consultas", "atender consultas", "procesar compras", "procesar pagos",
+    "gestionar cuentas", "administrar cuentas", "prestar servicios", "proveer servicios",
+    "brindar servicios", "soporte", "marketing", "mercadotecnia", "analitica",
+    "seguridad", "administrar solicitudes", "gestionar solicitudes", "enviar comunicaciones",
+    "contactar", "mejorar nuestros servicios",
+)
+_GENERIC_USE_TERMS = (
+    "uso de datos", "usar sus datos", "usamos sus datos", "utilizamos sus datos",
+    "tratamos sus datos",
+)
+_RIGHT_TERMS = (
+    "acceso", "rectificacion", "actualizacion", "eliminacion", "supresion", "oposicion",
+    "portabilidad", "cancelacion", "revocacion",
+)
+_GENERIC_RIGHT_TERMS = ("derechos del titular", "sus derechos", "ejercicio de derechos")
 
 
 def _normalize(value: str) -> str:
@@ -300,6 +330,117 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
     }
 
 
+def _policy_document(contract: EvidenceContract, candidates: list[tuple[LinkEvidence, str]]):
+    """Return one already-inspected policy page; never expands inspection scope."""
+
+    pages = {
+        _normalized_url(observed): page
+        for page in contract.pages
+        for observed in (page.url, page.requested_url)
+        if observed
+    }
+    for link, _ in candidates:
+        page = pages.get(_normalized_url(link.url))
+        if page is not None:
+            return page
+    return None
+
+
+def _substantive_policy_evidence(contract: EvidenceContract, candidates) -> dict[str, dict]:
+    page = _policy_document(contract, candidates)
+    codes = ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011")
+    if page is None or not (page.visible_text or "").strip():
+        return {
+            code: {"technical_error": True, "confidence": "low"}
+            for code in codes
+        }
+
+    text = _normalize(f"{page.title or ''} {page.visible_text or ''}")
+    source = _public_source_url(page.url)
+    common = {"confidence": "high", "source_urls": [source] if source else []}
+    organization_terms = _organization_terms(contract)
+    raw_text = page.visible_text or ""
+    identification_text = re.sub(r"\b[^\s@]+@[^\s@]+\.[a-z]{2,}\b", "", raw_text, flags=re.I)
+    named_for_site = any(
+        _contains_phrase(identification_text, {term}) for term in organization_terms
+    )
+    labelled_responsible = _contains_phrase(text, _RESPONSIBLE_LABELS)
+    legal_entity = _contains_phrase(text, _LEGAL_ENTITY_TERMS)
+    named_legal_entity = bool(re.search(
+        r"\b[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ&.-]+(?:\s+[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ&.-]+){0,4}\s+(?:SpA|S\.?A\.?|Ltda\.?|Limitada)\b",
+        raw_text,
+    ))
+    responsible_name = re.search(
+        r"(?i:\bresponsable(?:\s+del\s+tratamiento)?\s*(?::|-|es)\s*)"
+        r"([A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ&.-]+)",
+        raw_text,
+    )
+    explicitly_named_responsible = bool(
+        responsible_name
+        and _normalize(responsible_name.group(1)) not in {"la", "nuestra", "este"}
+    )
+    ambiguous_organization = _contains_phrase(text, _AMBIGUOUS_ORGANIZATIONS)
+
+    email_match = re.search(r"\b[^\s@]+@[^\s@]+\.[a-z]{2,}\b", raw_text, re.I)
+    email = bool(email_match)
+    phone = bool(re.search(r"(?:\+?\d[\d\s().-]{7,}\d)", raw_text))
+    form_or_address = _contains_phrase(text, ("formulario", "direccion postal", "domicilio"))
+    channel = email or phone or form_or_address
+    explicit_channel = bool(channel and re.search(
+        r"(?:para\s+(?:ejercer|consultas?|solicitudes?)\b.{0,80}|"
+        r"(?:correo|email|contacto|formulario|direccion)\s+(?:de|para|sobre)\s+"
+        r"(?:privacidad|datos personales|derechos)|"
+        r"(?:privacidad|datos personales|derechos)\s*[:\-]\s*(?:correo|email|contacto|formulario|direccion))",
+        _normalize(raw_text),
+    ))
+    if email_match and re.search(r"(?:privacy|privacidad|datos|derechos)", email_match.group(), re.I):
+        explicit_channel = True
+    if form_or_address and _contains_phrase(text, (
+        "formulario de privacidad", "formulario para ejercer", "direccion de privacidad",
+        "direccion para ejercer", "domicilio para ejercer",
+    )):
+        explicit_channel = True
+
+    category_matches = sorted(term for term in _DATA_CATEGORY_TERMS if _contains_phrase(text, {term}))
+    category_context = _contains_phrase(text, (
+        "categorias de datos", "tipos de datos", "datos que recopilamos", "informacion que recopilamos",
+        "recopilamos", "recolectamos", "incluyen", "tales como",
+    ))
+    categories = category_matches if category_context or len(category_matches) >= 2 else []
+    purposes = sorted(term for term in _PURPOSE_TERMS if _contains_phrase(text, {term}))
+    rights = sorted(term for term in _RIGHT_TERMS if _contains_phrase(text, {term}))
+
+    return {
+        "PRV-005": {
+            **common,
+            "responsible_identification": (
+                "clear" if named_for_site or named_legal_entity or explicitly_named_responsible or (labelled_responsible and legal_entity)
+                else "ambiguous" if labelled_responsible or legal_entity or ambiguous_organization
+                else "none"
+            ),
+        },
+        "PRV-006": {
+            **common,
+            "rights_channel": "explicit" if explicit_channel else "generic" if channel else "none",
+        },
+        "PRV-007": {
+            **common,
+            "data_categories": categories,
+            "generic_personal_data": _contains_phrase(text, ("datos personales", "personal data")),
+        },
+        "PRV-008": {
+            **common,
+            "treatment_purposes": purposes,
+            "generic_data_use": _contains_phrase(text, _GENERIC_USE_TERMS),
+        },
+        "PRV-011": {
+            **common,
+            "holder_rights": rights,
+            "generic_rights_reference": _contains_phrase(text, _GENERIC_RIGHT_TERMS),
+        },
+    }
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -392,6 +533,12 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     if not sufficient:
         prv003["technical_error"] = True
         prv003["confidence"] = "low"
+    substantive = _substantive_policy_evidence(contract, candidates)
+    if not sufficient:
+        substantive = {
+            code: {"technical_error": True, "confidence": "low"}
+            for code in substantive
+        }
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -491,6 +638,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-001": prv001,
         "PRV-002": prv002,
         "PRV-003": prv003,
+        **substantive,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

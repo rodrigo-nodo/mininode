@@ -183,7 +183,7 @@ def test_valid_simple_site_runs_full_pipeline(monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 8
+    assert len(body["controls"]) == 13
     assert isinstance(body["score"], int)
     assert isinstance(body["status"], str)
     assert 0 <= body["coverage"] <= 100
@@ -903,7 +903,7 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch, caplog):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 8
+    assert len(body["controls"]) == 13
     assert body["scope"] == {"pages_requested": 3, "pages_analyzed": 2, "limited": False}
     assert captured["contract"].inspection.errors[0]["code"] == "timeout"
     controls = {item["control_code"]: item for item in body["controls"]}

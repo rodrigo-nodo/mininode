@@ -65,6 +65,106 @@
       }
     },
     {
+      "code": "PRV-005",
+      "domain": "Transparencia",
+      "name": "Identificación del responsable",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Evalúa señales observables de identificación solo cuando existe una política propia o atribuible.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": ["nombre o razón social", "identificación atribuible al responsable"],
+      "base_recommendation": "Identificar de forma clara en la política a la organización responsable del sitio.",
+      "criteria": {
+        "detected": "Se observa una identificación razonable y atribuible a la organización responsable.",
+        "partial": "Se observa una identificación genérica o ambigua que parece referirse a la organización.",
+        "not_detected": "No se observa una identificación del responsable en el documento evaluado.",
+        "not_applicable": "PRV-003 no detectó una política propia del responsable.",
+        "not_evaluable": "La evidencia técnica disponible no permite revisar la identificación del responsable."
+      }
+    },
+    {
+      "code": "PRV-006",
+      "domain": "Transparencia",
+      "name": "Canal para ejercer derechos",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Evalúa dentro de la política un canal asociado a privacidad, datos o derechos; no equivale al contacto general.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": ["correo, formulario o dirección", "asociación visible con privacidad, datos personales o derechos"],
+      "base_recommendation": "Incorporar en la política un canal claramente asociado a privacidad o al ejercicio de derechos.",
+      "criteria": {
+        "detected": "Se observa un canal claramente asociado a privacidad, datos personales o ejercicio de derechos.",
+        "partial": "Se observa un contacto en la política, pero su asociación con privacidad o derechos no resulta clara.",
+        "not_detected": "No se observa en la política un canal relacionado con privacidad o derechos.",
+        "not_applicable": "PRV-003 no detectó una política propia del responsable.",
+        "not_evaluable": "La evidencia técnica disponible no permite revisar canales en la política."
+      }
+    },
+    {
+      "code": "PRV-007",
+      "domain": "Transparencia",
+      "name": "Categorías de datos tratados",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Evalúa descripciones observables de tipos de datos solo en una política propia o atribuible.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": ["tipos o categorías reconocibles de datos personales"],
+      "base_recommendation": "Describir en la política los tipos o categorías de datos personales tratados.",
+      "criteria": {
+        "detected": "Se describen una o más categorías o tipos de datos de forma reconocible.",
+        "partial": "Se mencionan datos personales de forma genérica, sin categorías o tipos identificables.",
+        "not_detected": "No se observa una descripción de categorías o tipos de datos.",
+        "not_applicable": "PRV-003 no detectó una política propia del responsable.",
+        "not_evaluable": "La evidencia técnica disponible no permite revisar las categorías de datos."
+      }
+    },
+    {
+      "code": "PRV-008",
+      "domain": "Transparencia",
+      "name": "Finalidades del tratamiento",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Evalúa finalidades explícitas observables solo en una política propia o atribuible.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": ["finalidades concretas declaradas para el uso o tratamiento de datos"],
+      "base_recommendation": "Describir en la política finalidades concretas para las que se tratan los datos.",
+      "criteria": {
+        "detected": "Se observan una o más finalidades explícitas y reconocibles.",
+        "partial": "Se observa una referencia general al uso o tratamiento de datos sin una finalidad concreta.",
+        "not_detected": "No se observan finalidades declaradas en el documento evaluado.",
+        "not_applicable": "PRV-003 no detectó una política propia del responsable.",
+        "not_evaluable": "La evidencia técnica disponible no permite revisar las finalidades."
+      }
+    },
+    {
+      "code": "PRV-011",
+      "domain": "Transparencia",
+      "name": "Derechos del titular",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Evalúa información observable sobre derechos solo en una política propia o atribuible.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": ["derechos reconocibles como acceso, rectificación, eliminación, oposición o portabilidad"],
+      "base_recommendation": "Incorporar en la política información reconocible sobre los derechos del titular.",
+      "criteria": {
+        "detected": "Se describen claramente varios derechos del titular.",
+        "partial": "Se menciona un derecho o una referencia limitada al ejercicio de derechos.",
+        "not_detected": "No se observa información sobre derechos del titular.",
+        "not_applicable": "PRV-003 no detectó una política propia del responsable.",
+        "not_evaluable": "La evidencia técnica disponible no permite revisar la información sobre derechos."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",
@@ -73,10 +173,7 @@
       "type": "context",
       "type_justification": "Tener formularios no constituye por sí mismo una brecha; el control identifica un punto de recopilación y activa controles posteriores.",
       "score_weight": 0,
-      "expected_evidence": [
-        "formulario público",
-        "campos potencialmente personales como nombre, email, teléfono, RUT, dirección o texto libre"
-      ],
+      "expected_evidence": ["formulario público", "campos potencialmente personales como nombre, email, teléfono, RUT, dirección o texto libre"],
       "base_recommendation": "Revisar qué datos se solicitan y limitar la recopilación a aquellos necesarios para la finalidad informada.",
       "criteria": {
         "detected": "Se identifica al menos un formulario público que solicita uno o más datos potencialmente personales.",

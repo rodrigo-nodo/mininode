@@ -39,6 +39,26 @@
         "validation_step": "Abrir la política y comprobar que el documento permite atribuirla claramente a la organización evaluada."
       }
     },
+    "PRV-005": {
+      "not_detected": {"action_steps": ["Revisar cómo se identifica a la organización en la política.", "Incorporar un nombre o identificación atribuible al responsable."], "validation_step": "Abrir la política y comprobar que permite identificar a la organización responsable."},
+      "partial": {"action_steps": ["Revisar la identificación genérica observada en la política.", "Precisarla con un nombre o identificación atribuible a la organización."], "validation_step": "Abrir la política y comprobar que la identificación puede atribuirse claramente a la organización."}
+    },
+    "PRV-006": {
+      "not_detected": {"action_steps": ["Definir un canal público para consultas de privacidad o ejercicio de derechos.", "Publicarlo en la política con una asociación explícita a privacidad, datos personales o derechos."], "validation_step": "Abrir la política y comprobar que el canal y su finalidad pueden identificarse claramente."},
+      "partial": {"action_steps": ["Revisar el contacto genérico observado en la política.", "Indicar expresamente si ese canal atiende asuntos de privacidad o ejercicio de derechos."], "validation_step": "Comprobar en la política que el canal está asociado de forma visible a privacidad o derechos."}
+    },
+    "PRV-007": {
+      "not_detected": {"action_steps": ["Revisar los tipos de datos descritos en la política.", "Incorporar categorías reconocibles de los datos tratados."], "validation_step": "Abrir la política y comprobar que presenta al menos una categoría o tipo de dato reconocible."},
+      "partial": {"action_steps": ["Precisar la referencia genérica a datos personales.", "Describir tipos o categorías de datos de forma reconocible."], "validation_step": "Comprobar que la política permite identificar categorías de datos y no solo una referencia genérica."}
+    },
+    "PRV-008": {
+      "not_detected": {"action_steps": ["Revisar cómo se describe el uso de datos en la política.", "Incorporar una o más finalidades concretas y reconocibles."], "validation_step": "Abrir la política y comprobar que declara finalidades concretas del tratamiento."},
+      "partial": {"action_steps": ["Precisar la referencia general al uso o tratamiento de datos.", "Relacionarla con finalidades concretas y reconocibles."], "validation_step": "Comprobar que la política permite reconocer para qué se tratan los datos."}
+    },
+    "PRV-011": {
+      "not_detected": {"action_steps": ["Revisar la información sobre derechos incluida en la política.", "Incorporar derechos del titular mediante términos reconocibles."], "validation_step": "Abrir la política y comprobar que informa derechos del titular de forma reconocible."},
+      "partial": {"action_steps": ["Ampliar la referencia limitada a derechos observada en la política.", "Describir varios derechos mediante términos reconocibles."], "validation_step": "Comprobar que la política presenta varios derechos de forma clara."}
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [

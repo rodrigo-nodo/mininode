@@ -162,6 +162,53 @@ def test_prv003_no_policy_is_not_detected_and_failed_inspection_is_not_evaluable
     assert evaluate_control("PRV-003", failed)["result"] == "not_evaluable"
 
 
+def _substantive_results(text, *, contacts=None):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page], contacts=contacts))
+    previous = {"PRV-003": evaluate_control("PRV-003", adapted["PRV-003"])}
+    return {
+        code: evaluate_control(code, adapted[code], previous)["result"]
+        for code in ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011")
+    }
+
+
+def test_b1_substantive_controls_detect_explicit_policy_content():
+    results = _substantive_results(
+        "Example SpA es responsable. Para ejercer sus derechos escriba a privacidad@example.com. "
+        "Los datos que recopilamos incluyen nombre, correo y teléfono. Los usamos para responder "
+        "consultas y prestar servicios. Puede ejercer acceso, rectificación y eliminación."
+    )
+    assert set(results.values()) == {"detected"}
+
+
+def test_b1_substantive_controls_are_conservative_for_limited_content():
+    results = _substantive_results(
+        "Nuestra empresa trata datos personales. Utilizamos sus datos. Contacto: info@example.com. "
+        "Puede ejercer el derecho de acceso."
+    )
+    assert results == {
+        "PRV-005": "partial", "PRV-006": "partial", "PRV-007": "partial",
+        "PRV-008": "partial", "PRV-011": "partial",
+    }
+
+
+def test_b1_gate_avoids_cascade_and_preserves_technical_uncertainty():
+    codes = ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011")
+    for code in codes:
+        assert evaluate_control(code, {}, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+        assert evaluate_control(code, {}, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+
+def test_prv006_does_not_reuse_general_site_contact():
+    results = _substantive_results(
+        "Example SpA publica información general sobre datos personales.",
+        contacts=[ContactEvidence("https://example.com/contact", email="general@example.com")],
+    )
+    assert results["PRV-006"] == "not_detected"
+
+
 @pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [
