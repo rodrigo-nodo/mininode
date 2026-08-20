@@ -17,6 +17,7 @@ CONTROL_CODES = (
     "PRV-005",
     "PRV-006",
     "PRV-007",
+    "PRV-008",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -103,6 +104,24 @@ _CONCRETE_DATA_CATEGORIES = (
 )
 _GENERIC_PERSONAL_DATA_TERMS = (
     "datos personales", "informacion personal", "personal data", "personal information",
+)
+_CONCRETE_PROCESSING_PURPOSES = (
+    "responder consultas", "atender consultas", "gestionar cuentas",
+    "administrar cuentas", "procesar compras", "gestionar compras",
+    "procesar pagos", "gestionar pagos", "prestar servicios",
+    "proporcionar servicios", "brindar servicios", "dar soporte",
+    "prestar soporte", "mejorar la seguridad", "garantizar la seguridad",
+    "prevenir fraudes", "enviar comunicaciones", "enviar promociones",
+    "realizar marketing", "fines de marketing", "respond inquiries",
+    "manage accounts", "process purchases", "process payments",
+    "provide services", "provide support", "improve security",
+    "prevent fraud", "send communications", "marketing purposes",
+)
+_GENERIC_PROCESSING_PURPOSE_TERMS = (
+    "tratamos datos", "tratamos sus datos", "tratamiento de datos",
+    "usamos datos", "usamos sus datos", "uso de datos",
+    "procesamos datos", "procesamiento de datos", "process personal data",
+    "processing of personal data", "use personal data", "use your data",
 )
 
 
@@ -498,6 +517,45 @@ def _data_categories(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "data_categories": category, "confidence": confidence}
 
 
+def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify purposes only in PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"processing_purposes": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "processing_purposes": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    document = selected_page.visible_text or ""
+    if _contains_phrase(document, _CONCRETE_PROCESSING_PURPOSES):
+        purposes, confidence = "concrete", "high"
+    elif _contains_phrase(document, _GENERIC_PROCESSING_PURPOSE_TERMS):
+        purposes, confidence = "generic", "medium"
+    else:
+        purposes, confidence = "none", "high"
+    return {**evidence, "processing_purposes": purposes, "confidence": confidence}
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -594,6 +652,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv005 = _responsible_identification(contract, prv003)
     prv006 = _rights_channel(contract, prv003)
     prv007 = _data_categories(contract, prv003)
+    prv008 = _processing_purposes(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -696,6 +755,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-005": prv005,
         "PRV-006": prv006,
         "PRV-007": prv007,
+        "PRV-008": prv008,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

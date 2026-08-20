@@ -136,6 +136,30 @@
       }
     },
     {
+      "code": "PRV-008",
+      "domain": "Transparencia",
+      "name": "Finalidades del tratamiento",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, las finalidades concretas y observables del tratamiento aportan una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "finalidades concretas del tratamiento en el documento seleccionado por PRV-003",
+        "referencia genérica al uso o tratamiento de datos",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Describir en la política una o más finalidades concretas del tratamiento de datos personales.",
+      "criteria": {
+        "detected": "El documento seleccionado describe una o más finalidades concretas y observables del tratamiento.",
+        "partial": "El documento seleccionado contiene una referencia genérica al uso o tratamiento de datos, sin una finalidad suficientemente concreta.",
+        "not_detected": "No se identifican finalidades ni referencias observables al propósito del tratamiento en el documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

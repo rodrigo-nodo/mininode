@@ -32,6 +32,9 @@ canal separado del contacto general visible evaluado por PRV-301.
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
 documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 
+PRV-008 evalúa las finalidades del tratamiento únicamente en el documento
+seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.
