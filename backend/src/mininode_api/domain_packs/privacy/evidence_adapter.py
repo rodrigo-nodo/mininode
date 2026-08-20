@@ -13,6 +13,7 @@ from mininode_api.web_inspector.models import EvidenceContract, FormEvidence, Li
 CONTROL_CODES = (
     "PRV-001",
     "PRV-002",
+    "PRV-003",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -26,6 +27,17 @@ _PRIVACY_TERMS = (
     "proteccion de datos",
     "datos personales",
 )
+_KNOWN_PROVIDER_POLICIES = {
+    "hcaptcha.com": ("/privacy",),
+    "google.com": ("/policies/privacy", "/privacy", "/recaptcha/about"),
+    "www.google.com": ("/policies/privacy", "/privacy", "/recaptcha/about"),
+    "policies.google.com": ("/privacy",),
+    "g.co": ("/recaptcha",),
+    "facebook.com": ("/privacy", "/policy"),
+    "www.facebook.com": ("/privacy", "/policy"),
+    "stripe.com": ("/privacy",),
+    "www.shopify.com": ("/legal/privacy",),
+}
 _PERSONAL_TERMS = {
     "nombre", "name", "apellido", "surname", "rut", "run", "dni", "documento",
     "correo", "correo electronico", "email", "e mail", "celular", "movil",
@@ -184,6 +196,110 @@ def _inspection_sufficient(contract: EvidenceContract) -> bool:
     return contract.target.final_url is not None and contract.inspection.pages_analyzed > 0
 
 
+def _same_site(left: str, right: str) -> bool:
+    left = left.lower().removeprefix("www.")
+    right = right.lower().removeprefix("www.")
+    return left == right
+
+
+def _organization_terms(contract: EvidenceContract) -> tuple[str, ...]:
+    hostname = (contract.target.domain or urlsplit(contract.target.requested_url).hostname or "")
+    label = hostname.lower().removeprefix("www.").split(".")[0]
+    normalized = _normalize(label)
+    return (normalized,) if len(normalized) >= 4 else ()
+
+
+def _known_general_provider_policy(url: str) -> bool:
+    parts = urlsplit(url)
+    hostname = (parts.hostname or "").lower()
+    paths = _KNOWN_PROVIDER_POLICIES.get(hostname)
+    path = parts.path.rstrip("/").lower() or "/"
+    return bool(paths and any(path == expected or path.startswith(f"{expected}/") for expected in paths))
+
+
+def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkEvidence, str]]) -> dict:
+    """Attribute the best visible policy using only already-inspected evidence."""
+    if not candidates:
+        return {
+            "policy_attribution": "none",
+            "attribution_signals": ["no_policy_candidate"],
+            "confidence": "high" if _inspection_sufficient(contract) else "low",
+        }
+
+    pages = {
+        _normalized_url(observed): page
+        for page in contract.pages
+        for observed in (page.url, page.requested_url)
+        if observed
+    }
+    target_host = (contract.target.domain or urlsplit(contract.target.requested_url).hostname or "").lower()
+    organization_terms = _organization_terms(contract)
+    ambiguous = False
+    uninspected = False
+    third_party_urls: list[str] = []
+    ambiguous_urls: list[str] = []
+    uninspected_urls: list[str] = []
+    for link, _ in candidates:
+        hostname = (urlsplit(link.url).hostname or "").lower()
+        safe_url = _public_source_url(link.url)
+        if _same_site(hostname, target_host):
+            return {
+                "policy_attribution": "own",
+                "attribution_signals": ["same_site_hostname"],
+                "source_urls": [safe_url] if safe_url else [],
+                "confidence": "high",
+            }
+        if _known_general_provider_policy(link.url):
+            if safe_url:
+                third_party_urls.append(safe_url)
+            continue
+
+        page = pages.get(_normalized_url(link.url))
+        if page is None:
+            uninspected = True
+            if safe_url:
+                uninspected_urls.append(safe_url)
+            continue
+        document = _normalize(f"{page.title or ''} {page.visible_text or ''}")
+        attributed = any(
+            re.search(rf"(?:^|\s){re.escape(term)}(?:$|\s)", document)
+            for term in organization_terms
+        )
+        privacy_document = _contains_phrase(document, _PRIVACY_INFORMATION_TERMS)
+        if attributed and privacy_document:
+            return {
+                "policy_attribution": "own",
+                "attribution_signals": ["external_document_names_organization", "privacy_document"],
+                "source_urls": [safe_url] if safe_url else [],
+                "confidence": "high",
+            }
+        ambiguous = True
+        if safe_url:
+            ambiguous_urls.append(safe_url)
+
+    if third_party_urls and not ambiguous and not uninspected:
+        return {
+            "policy_attribution": "third_party",
+            "attribution_signals": ["known_provider_general_policy"],
+            "source_urls": sorted(set(third_party_urls)),
+            "confidence": "high",
+        }
+    if ambiguous:
+        return {
+            "policy_attribution": "ambiguous",
+            "attribution_signals": ["external_document_without_clear_attribution"],
+            "source_urls": sorted(set(ambiguous_urls)),
+            "confidence": "medium",
+        }
+    return {
+        "policy_attribution": "unknown",
+        "attribution_signals": ["external_policy_not_inspected"],
+        "source_urls": sorted(set(uninspected_urls)),
+        "technical_error": True,
+        "confidence": "low",
+    }
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -222,7 +338,7 @@ def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
 
 
 def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
-    """Return deterministic, minimized evidence for exactly seven controls."""
+    """Return deterministic, minimized evidence for the active controls."""
     sufficient = _inspection_sufficient(contract)
     candidates = [(link, confidence) for link in contract.links for matched, confidence in [_privacy_match(link)] if matched]
     policy_confidence = "high" if any(confidence == "high" for _, confidence in candidates) else "medium"
@@ -271,6 +387,11 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
             prv002["confidence"] = "low"
     elif not sufficient:
         prv002["technical_error"] = True
+
+    prv003 = _policy_attribution(contract, candidates)
+    if not sufficient:
+        prv003["technical_error"] = True
+        prv003["confidence"] = "low"
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -369,6 +490,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     return {
         "PRV-001": prv001,
         "PRV-002": prv002,
+        "PRV-003": prv003,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

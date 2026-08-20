@@ -44,6 +44,27 @@
       }
     },
     {
+      "code": "PRV-003",
+      "domain": "Transparencia",
+      "name": "Política propia del responsable",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "evaluation",
+      "type_justification": "La atribución observable de la política al sitio evaluado es una señal directa de transparencia y actúa como gate conceptual de la capa B1.",
+      "expected_evidence": [
+        "hostname y URL del enlace de privacidad",
+        "relación observable entre el documento inspeccionado y la organización evaluada",
+        "señales de política general de un proveedor conocido"
+      ],
+      "base_recommendation": "Publicar o enlazar una política de privacidad que pueda atribuirse claramente al responsable del sitio.",
+      "criteria": {
+        "detected": "Se identifica evidencia suficiente de que la política corresponde al responsable o sitio evaluado.",
+        "partial": "Se identifica una política, pero su atribución al responsable es ambigua o insuficiente.",
+        "not_detected": "No se identifica una política propia del responsable, o la referencia encontrada corresponde claramente a un tercero.",
+        "not_evaluable": "Una limitación técnica impide comprobar de forma confiable a quién corresponde la política."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

@@ -15,6 +15,12 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 - El trabajo actual de Web Inspector pertenece a la implementación backend existente de Privacy y sus pruebas.
 - Mantener el contrato de la API pública salvo que la Issue solicite explícitamente modificarlo.
 
+PRV-003 distingue de forma determinística una política propia del responsable de
+referencias a políticas generales de terceros. Un dominio externo no implica por sí
+solo que la política sea de un tercero: la atribución puede confirmarse mediante el
+documento ya inspeccionado. Las políticas canónicas de proveedores conocidos se
+consideran de tercero y el texto del enlace no puede sobreescribir esa señal.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.

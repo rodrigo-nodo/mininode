@@ -112,6 +112,56 @@ def test_prv002_uninspected_policy_does_not_fake_inaccessibility():
     assert "policy_accessible" not in evidence
 
 
+def test_prv003_same_site_policy_is_own():
+    link = LinkEvidence("https://example.com/privacy", "Privacidad", "https://example.com/")
+    evidence = adapt_evidence(contract(links=[link]))["PRV-003"]
+    assert evidence["policy_attribution"] == "own"
+    assert evaluate_control("PRV-003", evidence)["result"] == "detected"
+
+
+@pytest.mark.parametrize("url", [
+    "https://hcaptcha.com/privacy",
+    "https://www.google.com/policies/privacy/",
+])
+def test_prv003_known_provider_general_policy_is_third_party_despite_anchor(url):
+    link = LinkEvidence(
+        url, "Política de privacidad utilizada por Example", "https://example.com/"
+    )
+    evidence = adapt_evidence(contract(links=[link]))["PRV-003"]
+    assert evidence["policy_attribution"] == "third_party"
+    assert evidence["attribution_signals"] == ["known_provider_general_policy"]
+    assert evaluate_control("PRV-003", evidence)["result"] == "not_detected"
+
+
+def test_prv003_external_document_with_clear_attribution_is_own():
+    url = "https://policies.example.net/customer/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html", visible_text=(
+            "Esta política de privacidad describe el tratamiento de datos de Example."
+        )
+    )
+    evidence = adapt_evidence(contract(links=[link], pages=[page]))["PRV-003"]
+    assert evidence["policy_attribution"] == "own"
+    assert evaluate_control("PRV-003", evidence)["result"] == "detected"
+
+
+def test_prv003_external_document_without_clear_attribution_is_partial():
+    url = "https://policies.example.net/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html")
+    evidence = adapt_evidence(contract(links=[link], pages=[page]))["PRV-003"]
+    assert evidence["policy_attribution"] == "ambiguous"
+    assert evaluate_control("PRV-003", evidence)["result"] == "partial"
+
+
+def test_prv003_no_policy_is_not_detected_and_failed_inspection_is_not_evaluable():
+    absent = adapt_evidence(contract())["PRV-003"]
+    failed = adapt_evidence(contract(final_url=None, pages=[], pages_analyzed=0))["PRV-003"]
+    assert evaluate_control("PRV-003", absent)["result"] == "not_detected"
+    assert evaluate_control("PRV-003", failed)["result"] == "not_evaluable"
+
+
 @pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [

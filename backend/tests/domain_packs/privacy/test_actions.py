@@ -19,6 +19,7 @@ from mininode_api.domain_packs.privacy.prioritization import (  # noqa: E402
 EXPECTED_ACTIONS = {
     "PRV-001": {"not_detected"},
     "PRV-002": {"partial"},
+    "PRV-003": {"partial", "not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
@@ -58,6 +59,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
             {"policy_accessible": False, "policy_content_relevant": False},
             {"PRV-001": "detected"},
         )],
+        "PRV-003": [
+            ({"policy_attribution": "ambiguous"}, None),
+            ({"policy_attribution": "third_party"}, None),
+        ],
         "PRV-104": [
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),
             ({"privacy_information": False, "consent_mechanism": False}, {"PRV-101": "detected"}),

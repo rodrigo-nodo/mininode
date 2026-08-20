@@ -21,6 +21,24 @@
         "validation_step": "Volver a abrir el enlace desde una página pública y comprobar que el destino carga correctamente y presenta información relacionada con privacidad."
       }
     },
+    "PRV-003": {
+      "not_detected": {
+        "action_steps": [
+          "Preparar o identificar la política de privacidad correspondiente al responsable del sitio.",
+          "Publicarla o enlazarla de modo que su relación con la organización resulte clara.",
+          "Distinguirla de las políticas generales de proveedores utilizados por el sitio."
+        ],
+        "validation_step": "Abrir el enlace desde el sitio y comprobar que el documento identifica claramente a la organización evaluada como responsable de esa política."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar cómo se identifica al responsable en la política enlazada.",
+          "Incorporar en el documento señales claras que permitan relacionarlo con la organización evaluada.",
+          "Mantener separadas las referencias a políticas generales de proveedores."
+        ],
+        "validation_step": "Abrir la política y comprobar que el documento permite atribuirla claramente a la organización evaluada."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [

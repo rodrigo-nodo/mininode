@@ -33,6 +33,7 @@ PHONE_RE = re.compile(r"(?<!\w)\+?\d[\d\s().-]{5,}\d(?!\w)")
 @dataclass
 class PageExtraction:
     title: str | None
+    visible_text: str = ""
     links: list[LinkEvidence] = field(default_factory=list)
     forms: list[FormEvidence] = field(default_factory=list)
     contacts: list[ContactEvidence] = field(default_factory=list)
@@ -145,9 +146,13 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
     )
     for removable in soup.find_all(["script", "style", "template"]):
         removable.decompose()
-    visible = _text(soup).lower()
+    visible_text = _text(soup)
+    visible = visible_text.lower()
     return PageExtraction(
         title=title,
+        # Bounded document text lets domain packs retain deterministic signals
+        # without retaining the complete untrusted document.
+        visible_text=visible_text[:4000],
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -180,6 +185,7 @@ def build_evidence(
             title=extracted.title,
             content_type=page.content_type,
             requested_url=page.requested_url,
+            visible_text=extracted.visible_text,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)
