@@ -65,6 +65,29 @@
       }
     },
     {
+      "code": "PRV-005",
+      "domain": "Transparencia",
+      "name": "Identificación del responsable",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política propia seleccionada por PRV-003; una vez aplicable, la identificación observable del responsable aporta una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "identificación observable de la organización o responsable en el documento seleccionado por PRV-003",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Identificar de forma clara al responsable del sitio en su política de privacidad.",
+      "criteria": {
+        "detected": "El documento seleccionado identifica de manera clara y observable a la organización o responsable atribuible al sitio evaluado.",
+        "partial": "El documento seleccionado contiene una identificación genérica o ambigua de la organización o responsable.",
+        "not_detected": "No se identifica de forma observable a la organización o responsable en el documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

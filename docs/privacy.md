@@ -21,6 +21,10 @@ solo que la política sea de un tercero: la atribución puede confirmarse median
 documento ya inspeccionado. Las políticas canónicas de proveedores conocidos se
 consideran de tercero y el texto del enlace no puede sobreescribir esa señal.
 
+PRV-005 evalúa la identificación observable del responsable únicamente en el
+documento seleccionado por PRV-003 y reutiliza su contenido ya inspeccionado, sin
+realizar solicitudes adicionales ni usar referencias de políticas de terceros.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.
