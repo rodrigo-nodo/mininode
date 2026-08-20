@@ -26,6 +26,7 @@ EXPECTED = {
     "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
     "PRV-003": ("Política propia del responsable", "muy_alto", "evaluation"),
     "PRV-005": ("Identificación del responsable", "alto", "conditional_evaluation"),
+    "PRV-006": ("Canal para ejercer derechos", "muy_alto", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
@@ -48,6 +49,9 @@ def evaluated_scenario():
     results["PRV-005"] = evaluate_control(
         "PRV-005", {"responsible_identification": "clear"}, results
     )
+    results["PRV-006"] = evaluate_control(
+        "PRV-006", {"rights_channel": "explicit"}, results
+    )
     results["PRV-101"] = evaluate_control(
         "PRV-101", {"personal_data_form": True}
     )
@@ -68,7 +72,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 9
+    assert len(controls) == 10
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -81,6 +85,7 @@ def test_catalog_contains_required_metadata_and_dependencies():
     assert controls["PRV-101"]["score_weight"] == 0
     assert controls["PRV-002"]["dependency"] == "PRV-001"
     assert controls["PRV-005"]["dependency"] == "PRV-003"
+    assert controls["PRV-006"]["dependency"] == "PRV-003"
     assert controls["PRV-104"]["dependency"] == "PRV-101"
     for control in controls.values():
         assert control["expected_evidence"]
@@ -94,6 +99,10 @@ def test_catalog_criteria_match_active_evaluator_results():
         "PRV-002": {"detected", "partial", "not_applicable", "not_evaluable"},
         "PRV-003": {"detected", "partial", "not_detected", "not_evaluable"},
         "PRV-005": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-006": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
         },

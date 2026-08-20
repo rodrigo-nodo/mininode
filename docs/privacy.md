@@ -25,6 +25,10 @@ PRV-005 evalúa la identificación observable del responsable únicamente en el
 documento seleccionado por PRV-003 y reutiliza su contenido ya inspeccionado, sin
 realizar solicitudes adicionales ni usar referencias de políticas de terceros.
 
+PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
+seleccionado por PRV-003. Reutiliza contenido ya inspeccionado y mantiene este
+canal separado del contacto general visible evaluado por PRV-301.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.

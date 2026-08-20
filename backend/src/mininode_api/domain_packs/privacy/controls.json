@@ -88,6 +88,30 @@
       }
     },
     {
+      "code": "PRV-006",
+      "domain": "Transparencia",
+      "name": "Canal para ejercer derechos",
+      "impact": "muy_alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, la presencia observable de un canal asociado a privacidad, datos personales o ejercicio de derechos aporta una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "canal observable dentro del documento seleccionado por PRV-003",
+        "asociación observable del canal con privacidad, datos personales o ejercicio de derechos",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Incorporar en la política un canal claramente asociado a privacidad, datos personales o ejercicio de derechos.",
+      "criteria": {
+        "detected": "El documento seleccionado contiene un canal observable explícitamente asociado a privacidad, datos personales o ejercicio de derechos.",
+        "partial": "El documento seleccionado contiene un canal de contacto, pero su asociación con privacidad, datos personales o ejercicio de derechos es genérica o insuficientemente clara.",
+        "not_detected": "No se identifica un canal observable para ejercer derechos dentro del documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",
