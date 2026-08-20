@@ -162,6 +162,49 @@ def test_prv003_no_policy_is_not_detected_and_failed_inspection_is_not_evaluable
     assert evaluate_control("PRV-003", failed)["result"] == "not_evaluable"
 
 
+def test_substantive_b1_reuses_inspected_policy_document():
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html", visible_text=(
+            "Example recopila nombre y correo para responder consultas y prestar servicios. "
+            "Para ejercer sus derechos de acceso, rectificación y eliminación escriba al correo de privacidad."
+        ),
+    )
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    previous = {"PRV-003": evaluate_control("PRV-003", adapted["PRV-003"])}
+
+    assert evaluate_control("PRV-005", adapted["PRV-005"], previous)["result"] == "detected"
+    assert evaluate_control("PRV-006", adapted["PRV-006"], previous)["result"] == "detected"
+    assert evaluate_control("PRV-007", adapted["PRV-007"], previous)["result"] == "detected"
+    assert evaluate_control("PRV-008", adapted["PRV-008"], previous)["result"] == "detected"
+    assert evaluate_control("PRV-011", adapted["PRV-011"], previous)["result"] == "detected"
+    assert all(adapted[code]["source_urls"] == [url] for code in (
+        "PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011"
+    ))
+
+
+def test_prv006_does_not_reuse_general_site_contact():
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text="Example trata datos personales.")
+    contact = ContactEvidence("https://example.com/contact", email="hola@example.com")
+    adapted = adapt_evidence(contract(links=[link], pages=[page], contacts=[contact]))
+    previous = {"PRV-003": evaluate_control("PRV-003", adapted["PRV-003"])}
+
+    assert evaluate_control("PRV-301", adapted["PRV-301"])["result"] == "detected"
+    assert evaluate_control("PRV-006", adapted["PRV-006"], previous)["result"] == "not_detected"
+
+
+def test_uninspected_policy_content_is_not_evaluable_not_absent():
+    link = LinkEvidence("https://example.com/privacy", "Privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(links=[link]))
+    previous = {"PRV-003": evaluate_control("PRV-003", adapted["PRV-003"])}
+    assert previous["PRV-003"]["result"] == "detected"
+    for code in ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011"):
+        assert evaluate_control(code, adapted[code], previous)["result"] == "not_evaluable"
+
+
 @pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [

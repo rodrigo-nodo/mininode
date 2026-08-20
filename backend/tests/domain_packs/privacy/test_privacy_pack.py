@@ -25,6 +25,11 @@ EXPECTED = {
     "PRV-001": ("Política de privacidad visible", "muy_alto", "evaluation"),
     "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
     "PRV-003": ("Política propia del responsable", "muy_alto", "evaluation"),
+    "PRV-005": ("Identificación del responsable", "alto", "conditional_evaluation"),
+    "PRV-006": ("Canal para ejercer derechos", "muy_alto", "conditional_evaluation"),
+    "PRV-007": ("Categorías de datos tratados", "alto", "conditional_evaluation"),
+    "PRV-008": ("Finalidades del tratamiento", "muy_alto", "conditional_evaluation"),
+    "PRV-011": ("Derechos del titular", "muy_alto", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
@@ -44,6 +49,14 @@ def evaluated_scenario():
     results["PRV-003"] = evaluate_control(
         "PRV-003", {"policy_attribution": "own"}
     )
+    for code, evidence in {
+        "PRV-005": {"controller_identification": "clear"},
+        "PRV-006": {"rights_channel": "explicit"},
+        "PRV-007": {"data_categories": "explicit"},
+        "PRV-008": {"processing_purposes": "explicit"},
+        "PRV-011": {"holder_rights": "multiple"},
+    }.items():
+        results[code] = evaluate_control(code, evidence, results)
     results["PRV-101"] = evaluate_control(
         "PRV-101", {"personal_data_form": True}
     )
@@ -64,7 +77,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 8
+    assert len(controls) == 13
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -77,6 +90,8 @@ def test_catalog_contains_required_metadata_and_dependencies():
     assert controls["PRV-101"]["score_weight"] == 0
     assert controls["PRV-002"]["dependency"] == "PRV-001"
     assert controls["PRV-104"]["dependency"] == "PRV-101"
+    for code in ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011"):
+        assert controls[code]["dependency"] == "PRV-003"
     for control in controls.values():
         assert control["expected_evidence"]
         assert control["base_recommendation"]
@@ -88,6 +103,10 @@ def test_catalog_criteria_match_active_evaluator_results():
         "PRV-001": {"detected", "not_detected", "not_evaluable"},
         "PRV-002": {"detected", "partial", "not_applicable", "not_evaluable"},
         "PRV-003": {"detected", "partial", "not_detected", "not_evaluable"},
+        **{
+            code: {"detected", "partial", "not_detected", "not_applicable", "not_evaluable"}
+            for code in ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011")
+        },
         "PRV-101": {"detected", "not_detected", "not_evaluable"},
         "PRV-104": {
             "detected", "partial", "not_detected", "not_applicable",
@@ -102,6 +121,25 @@ def test_catalog_criteria_match_active_evaluator_results():
     assert {
         code: set(control["criteria"]) for code, control in controls.items()
     } == active_results
+
+
+@pytest.mark.parametrize("code", ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011"))
+def test_b1_substantive_controls_follow_prv003_gate(code):
+    assert evaluate_control(code, {}, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control(code, {}, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+
+@pytest.mark.parametrize(("code", "key", "values"), [
+    ("PRV-005", "controller_identification", (("clear", "detected"), ("generic", "partial"), ("none", "not_detected"))),
+    ("PRV-006", "rights_channel", (("explicit", "detected"), ("generic", "partial"), ("none", "not_detected"))),
+    ("PRV-007", "data_categories", (("explicit", "detected"), ("generic", "partial"), ("none", "not_detected"))),
+    ("PRV-008", "processing_purposes", (("explicit", "detected"), ("generic", "partial"), ("none", "not_detected"))),
+    ("PRV-011", "holder_rights", (("multiple", "detected"), ("limited", "partial"), ("none", "not_detected"))),
+])
+def test_b1_substantive_control_states(code, key, values):
+    for signal, expected in values:
+        result = evaluate_control(code, {key: signal}, {"PRV-003": "detected"})
+        assert result["result"] == expected
 
 
 def test_observable_findings_avoid_unmeasured_claims():
@@ -210,9 +248,9 @@ def test_not_evaluable_is_unscored_and_reduces_coverage():
     results = list(evaluated_scenario().values())
     results[-1] = {"control_code": "PRV-501", "result": "not_evaluable"}
     scored = score_privacy(results)
-    assert scored["evaluated_controls"] == 5
-    assert scored["applicable_controls"] == 6
-    assert scored["coverage"] == 83
+    assert scored["evaluated_controls"] == 10
+    assert scored["applicable_controls"] == 11
+    assert scored["coverage"] == 91
 
 
 def test_context_never_scores():
@@ -227,11 +265,11 @@ def test_context_never_scores():
 
 def test_integral_scenario_returns_the_approved_result():
     assert score_privacy(evaluated_scenario().values()) == {
-        "score": 74,
-        "status": "Preparación avanzada",
+        "score": 86,
+        "status": "Alta preparación visible",
         "coverage": 100,
-        "evaluated_controls": 6,
-        "applicable_controls": 6,
+        "evaluated_controls": 11,
+        "applicable_controls": 11,
     }
 
 

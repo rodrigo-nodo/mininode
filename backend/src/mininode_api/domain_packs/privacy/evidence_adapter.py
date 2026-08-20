@@ -14,6 +14,11 @@ CONTROL_CODES = (
     "PRV-001",
     "PRV-002",
     "PRV-003",
+    "PRV-005",
+    "PRV-006",
+    "PRV-007",
+    "PRV-008",
+    "PRV-011",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -65,6 +70,28 @@ _VISIBLE_NAME_FIELDS = {
     "full name": "name",
     "nombre completo": "name",
 }
+_GENERIC_CONTROLLER_TERMS = ("la empresa", "nuestra empresa", "la organizacion", "nosotros")
+_CHANNEL_TERMS = ("correo", "email", "e mail", "formulario", "direccion", "contactenos", "contactanos")
+_DATA_CATEGORY_TERMS = (
+    "nombre", "apellido", "correo", "email", "telefono", "direccion", "datos de cuenta",
+    "datos de pago", "identificadores", "navegacion", "cookies", "informacion enviada",
+)
+_GENERIC_DATA_TERMS = ("datos personales", "informacion personal")
+_PURPOSE_TERMS = (
+    "responder consultas", "procesar compras", "gestionar cuentas", "prestar servicios",
+    "brindar servicios", "proporcionar servicios", "soporte", "marketing", "seguridad",
+    "analitica", "administrar solicitudes", "gestionar solicitudes", "comunicarnos",
+)
+_GENERIC_USE_TERMS = ("uso de datos", "usar sus datos", "tratamiento de datos", "procesar sus datos")
+_RIGHT_TERMS = (
+    "acceso", "rectificacion", "actualizacion", "eliminacion", "supresion", "oposicion",
+    "portabilidad",
+)
+_RIGHTS_CHANNEL_PATTERNS = (
+    r"(?:correo|email|e mail|formulario|direccion) (?:de|para) (?:privacidad|datos personales|ejercer derechos|ejercicio de derechos)",
+    r"(?:ejercer|ejercicio de|solicitar) (?:sus )?derechos.{0,80}(?:correo|email|e mail|formulario|direccion)",
+    r"(?:correo|email|e mail|formulario|direccion).{0,80}(?:ejercer|ejercicio de|solicitudes de) (?:sus )?derechos",
+)
 
 
 def _normalize(value: str) -> str:
@@ -300,6 +327,64 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
     }
 
 
+def _policy_document(contract: EvidenceContract, candidates: list[tuple[LinkEvidence, str]]):
+    """Return the first already-inspected policy candidate in deterministic order."""
+    pages = {
+        _normalized_url(observed): page
+        for page in contract.pages
+        for observed in (page.url, page.requested_url)
+        if observed
+    }
+    for link, _ in candidates:
+        page = pages.get(_normalized_url(link.url))
+        if page is not None:
+            return page
+    return None
+
+
+def _substantive_policy_evidence(contract: EvidenceContract, candidates) -> dict[str, dict]:
+    page = _policy_document(contract, candidates)
+    codes = ("PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-011")
+    if page is None:
+        return {code: {"technical_error": True, "confidence": "low"} for code in codes}
+
+    document = _normalize(f"{page.title or ''} {page.visible_text or ''}")
+    source_urls = _inspected_source_urls(contract, [page.url])
+    common = {"confidence": "high", "source_urls": source_urls}
+    organization_terms = _organization_terms(contract)
+    clear_controller = bool(organization_terms and _contains_phrase(document, organization_terms))
+    generic_controller = _contains_phrase(document, _GENERIC_CONTROLLER_TERMS)
+
+    contacts_on_policy = any(contact.source_url == page.url for contact in contract.contacts)
+    channel_visible = contacts_on_policy or _contains_phrase(document, _CHANNEL_TERMS)
+    rights_channel_explicit = any(re.search(pattern, document) for pattern in _RIGHTS_CHANNEL_PATTERNS)
+
+    category_count = sum(_contains_phrase(document, (term,)) for term in _DATA_CATEGORY_TERMS)
+    generic_data = _contains_phrase(document, _GENERIC_DATA_TERMS)
+    purpose_explicit = _contains_phrase(document, _PURPOSE_TERMS)
+    purpose_generic = _contains_phrase(document, _GENERIC_USE_TERMS)
+    rights_count = sum(_contains_phrase(document, (term,)) for term in _RIGHT_TERMS)
+    generic_rights = _contains_phrase(document, ("derechos", "ejercer sus derechos"))
+
+    return {
+        "PRV-005": {**common, "controller_identification": (
+            "clear" if clear_controller else "generic" if generic_controller else "none"
+        )},
+        "PRV-006": {**common, "rights_channel": (
+            "explicit" if channel_visible and rights_channel_explicit else "generic" if channel_visible else "none"
+        )},
+        "PRV-007": {**common, "data_categories": (
+            "explicit" if category_count else "generic" if generic_data else "none"
+        )},
+        "PRV-008": {**common, "processing_purposes": (
+            "explicit" if purpose_explicit else "generic" if purpose_generic else "none"
+        )},
+        "PRV-011": {**common, "holder_rights": (
+            "multiple" if rights_count >= 2 else "limited" if rights_count == 1 or generic_rights else "none"
+        )},
+    }
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -392,6 +477,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     if not sufficient:
         prv003["technical_error"] = True
         prv003["confidence"] = "low"
+    substantive = _substantive_policy_evidence(contract, candidates)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -491,6 +577,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-001": prv001,
         "PRV-002": prv002,
         "PRV-003": prv003,
+        **substantive,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

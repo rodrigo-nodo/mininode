@@ -123,12 +123,14 @@ def evaluate_control(
 
     control = controls[control_code]
     confidence = evidence.get("confidence", "high")
+    dependency = control.get("dependency")
+    dependency_result = _previous_result(previous_results, dependency) if dependency else None
+    if dependency_result == "not_detected":
+        return _result(control, "not_applicable", evidence, confidence)
+    if dependency_result == "not_evaluable":
+        return _result(control, "not_evaluable", evidence, "low")
     if evidence.get("technical_error"):
         return _result(control, "not_evaluable", evidence, "low")
-
-    dependency = control.get("dependency")
-    if dependency and _previous_result(previous_results, dependency) == "not_detected":
-        return _result(control, "not_applicable", evidence, confidence)
 
     if control_code == "PRV-001":
         result = "detected" if evidence.get("policy_visible") else "not_detected"
@@ -147,6 +149,41 @@ def evaluate_control(
             result = "partial"
         else:
             result = "not_detected"
+    elif control_code == "PRV-005":
+        identification = evidence.get("controller_identification")
+        result = (
+            "detected" if identification == "clear"
+            else "partial" if identification == "generic"
+            else "not_detected"
+        )
+    elif control_code == "PRV-006":
+        channel = evidence.get("rights_channel")
+        result = (
+            "detected" if channel == "explicit"
+            else "partial" if channel == "generic"
+            else "not_detected"
+        )
+    elif control_code == "PRV-007":
+        categories = evidence.get("data_categories")
+        result = (
+            "detected" if categories == "explicit"
+            else "partial" if categories == "generic"
+            else "not_detected"
+        )
+    elif control_code == "PRV-008":
+        purposes = evidence.get("processing_purposes")
+        result = (
+            "detected" if purposes == "explicit"
+            else "partial" if purposes == "generic"
+            else "not_detected"
+        )
+    elif control_code == "PRV-011":
+        rights = evidence.get("holder_rights")
+        result = (
+            "detected" if rights == "multiple"
+            else "partial" if rights == "limited"
+            else "not_detected"
+        )
     elif control_code == "PRV-101":
         result = "detected" if evidence.get("personal_data_form") else "not_detected"
     elif control_code == "PRV-104":

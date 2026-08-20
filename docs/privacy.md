@@ -21,6 +21,12 @@ solo que la política sea de un tercero: la atribución puede confirmarse median
 documento ya inspeccionado. Las políticas canónicas de proveedores conocidos se
 consideran de tercero y el texto del enlace no puede sobreescribir esa señal.
 
+PRV-005, PRV-006, PRV-007, PRV-008 y PRV-011 evalúan de forma determinística señales
+de contenido en esa misma política ya inspeccionada. Dependen de PRV-003: quedan fuera
+del score cuando no se identifica una política propia y no convierten evidencia técnica
+insuficiente en ausencia de contenido. Esta capa no agrega páginas al alcance del
+Web Inspector; reutiliza la expansión adaptativa existente para documentos de privacidad.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.
