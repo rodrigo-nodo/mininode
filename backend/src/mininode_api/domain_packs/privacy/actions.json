@@ -88,6 +88,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con categorías o tipos concretos observables."
       }
     },
+    "PRV-008": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la política seleccionada e identificar las finalidades del tratamiento que se describen en ella.",
+          "Incorporar una o más finalidades concretas y observables cuando correspondan al contenido de la política."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que puede identificarse al menos una finalidad concreta del tratamiento."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica al uso o tratamiento de datos observada en la política seleccionada.",
+          "Precisar esa referencia mediante una o más finalidades concretas y observables."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con al menos una finalidad concreta."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [

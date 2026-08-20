@@ -327,6 +327,53 @@ def test_prv007_uses_own_policy_selected_after_provider_candidate():
 
 
 @pytest.mark.parametrize(
+    ("visible_text", "expected"),
+    [
+        ("Usamos sus datos para responder consultas.", "detected"),
+        ("Tratamos datos para gestionar cuentas, procesar pagos y prestar servicios.", "detected"),
+        ("Tratamos sus datos personales.", "partial"),
+        ("Esta política explica nuestras prácticas de privacidad.", "not_detected"),
+    ],
+)
+def test_prv008_classifies_purposes_only_in_selected_policy(visible_text, expected):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-008", adapted["PRV-008"], {"PRV-003": prv003})
+
+    assert result["result"] == expected
+    assert adapted["PRV-008"]["source_urls"] == [url]
+
+
+def test_prv008_gate_follows_prv003_without_cascade_penalty():
+    evidence = {"processing_purposes": "none", "confidence": "high"}
+    assert evaluate_control("PRV-008", evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-008", evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+
+def test_prv008_uses_own_policy_selected_after_provider_candidate():
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence("https://hcaptcha.com/privacy", "Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence("https://hcaptcha.com/privacy", 200, "Privacy", "text/html", visible_text="We process data to prevent fraud."),
+        PageEvidence(own_url, 200, "Política de privacidad", "text/html", visible_text="Tratamos sus datos personales."),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-008", adapted["PRV-008"], {"PRV-003": prv003})
+
+    assert result["result"] == "partial"
+    assert adapted["PRV-008"]["source_urls"] == [own_url]
+
+
+@pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [
         ("email", "value", ""), ("tel", "value", ""), ("textarea", "value", ""),
