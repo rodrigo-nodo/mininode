@@ -259,6 +259,29 @@ def _prv003_evidence(
             observations.append({**base, "attribution": "own", "signal": "same_site"})
             continue
 
+        normalized_url = _normalized_url(link.url)
+        page = pages.get(normalized_url)
+        provider = _provider_name(host)
+        if provider:
+            if page is not None:
+                document = f"{page.title or ''} {page.document_text}"
+                privacy_document = _contains_phrase(document, _PRIVACY_TERMS)
+                organization_mentioned = any(
+                    _contains_phrase(document, {signal}) for signal in organization_signals
+                )
+                if privacy_document and organization_mentioned:
+                    attributions.append("own")
+                    observations.append({
+                        **base,
+                        "attribution": "own",
+                        "signal": "provider_document_organization_mentioned",
+                        "provider": provider,
+                    })
+                    continue
+            attributions.append("third_party")
+            observations.append({**base, "attribution": "third_party", "provider": provider})
+            continue
+
         link_organization_mentioned = any(
             _contains_phrase(link.text, {signal}) for signal in organization_signals
         )
@@ -266,14 +289,7 @@ def _prv003_evidence(
             attributions.append("own")
             observations.append({**base, "attribution": "own", "signal": "organization_mentioned_in_link"})
             continue
-        provider = _provider_name(host)
-        if provider:
-            attributions.append("third_party")
-            observations.append({**base, "attribution": "third_party", "provider": provider})
-            continue
 
-        normalized_url = _normalized_url(link.url)
-        page = pages.get(normalized_url)
         if page is None:
             attributions.append("ambiguous")
             observations.append({**base, "attribution": "ambiguous", "signal": "external_document_not_in_scope"})
@@ -371,10 +387,6 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         failed_candidates = candidate_urls & error_urls
         if successful_candidates:
             prv002["policy_accessible"] = True
-            # A candidate link establishes visibility, but an HTTP success alone does
-            # not establish that the obtained page is relevant.  v0.1 only confirms
-            # relevance when the obtained page title supplies a clear corroborating
-            # signal; it never examines or retains full page content.
             relevant = any(
                 _normalized_url(link.url) in successful_pages
                 and _contains_phrase(
@@ -449,8 +461,6 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "confidence": "high" if sufficient else "low",
     }
     if sufficient:
-        # Keep the legacy key to preserve the API evidence shape. Its value means
-        # only that a cookie was observed in an inspected response.
         prv201["relevant_cookies"] = bool(
             contract.cookies.detected or contract.cookies.set_cookie_names
         )
