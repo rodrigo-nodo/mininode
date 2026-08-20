@@ -166,7 +166,58 @@ docs/
 
 La existencia de un documento no implica que deba cargarse en todas las tareas. La Issue y `AGENTS.md` determinan qué contexto corresponde consultar.
 
-## 7. Costos de desarrollo IA
+## 7. Protocolo operativo de interacción
+
+La interacción debe minimizar pasos manuales y comentarios intermedios innecesarios.
+
+### Principio
+
+> No narrar ni pedir a Rodrigo pasos que ChatGPT pueda ejecutar directamente con las herramientas disponibles.
+
+Flujo esperado:
+
+```text
+ChatGPT ejecuta
+   ↓
+GitHub Action
+   │
+   ├─ verde → continuar con la siguiente parte que ChatGPT pueda ejecutar
+   │
+   └─ rojo → diagnosticar directamente si es posible;
+             pedir a Rodrigo solo el dato o captura que no sea accesible
+   ↓
+PR listo
+   ↓
+ChatGPT revisa
+   ↓
+entrega link directo al PR + acción esperada
+   ↓
+Rodrigo valida / mergea
+   ↓
+"listo"
+   ↓
+ChatGPT continúa
+```
+
+Reglas operativas:
+
+- Después de iniciar una ejecución automatizada, evitar narrar cada paso interno.
+- Si ChatGPT puede consultar directamente el estado o error de GitHub Actions, debe hacerlo sin pedir una captura.
+- Si no puede observar el resultado de la Action, Rodrigo puede indicar **"verde"** o **"rojo"** como señal mínima.
+- Ante **verde**, ChatGPT continúa automáticamente con su parte del flujo sin pedir confirmaciones innecesarias.
+- Ante **rojo**, ChatGPT investiga el fallo y solicita únicamente información que no pueda obtener directamente.
+- Cuando exista un PR, ChatGPT debe revisarlo antes de recomendar merge.
+- Cuando el PR esté listo para intervención humana, ChatGPT debe entregar siempre el link directo al PR.
+- La respuesta debe indicar claramente una única acción esperada cuando corresponda: **mergear**, **no mergear**, **esperar** o **enviar el dato faltante**.
+- Después de que Rodrigo indique que el merge está listo, ChatGPT continúa con la validación o siguiente paso acordado.
+
+El objetivo es acercarse progresivamente a:
+
+```text
+Rodrigo pide → sistema ejecuta → Rodrigo aprueba
+```
+
+## 8. Costos de desarrollo IA
 
 Separar:
 
@@ -186,7 +237,7 @@ Antes de la optimización de contexto:
 
 Esta línea base no representa todavía el costo normal de una tarea productiva.
 
-## 8. Métricas objetivo
+## 9. Métricas objetivo
 
 Medir progresivamente:
 
@@ -200,7 +251,7 @@ US$ / producto
 
 La métrica más útil debe evolucionar desde costo técnico por ejecución hacia costo real de desarrollo por funcionalidad/producto.
 
-## 9. Principio económico
+## 10. Principio económico
 
 No reemplazar Codex directo por API indiscriminadamente.
 
@@ -218,7 +269,7 @@ pedir → implementar → revisar → aprobar
 
 La automatización debe reducir trabajo manual suficiente para justificar su costo variable.
 
-## 10. Mantenimiento
+## 11. Mantenimiento
 
 Este documento es la fuente de verdad del workflow de desarrollo de Mininode.
 
@@ -228,6 +279,7 @@ Actualizarlo cuando cambie de forma estable:
 - la división de responsabilidades;
 - el criterio Codex API vs Codex directo vs ejecución mecánica;
 - la estrategia de contexto;
+- el protocolo operativo de interacción;
 - las métricas o criterios de costo.
 
 No usarlo como historial detallado de PRs o ejecuciones.
