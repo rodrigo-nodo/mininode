@@ -4,7 +4,9 @@
 
 Este documento define cómo se decide y ejecuta el trabajo de desarrollo de Mininode, buscando minimizar intervención manual y controlar el costo de IA.
 
-## 1. Workflow principal
+## 1. Workflows principales
+
+### Flujo A - Automático / Codex API
 
 ```text
 Rodrigo
@@ -19,7 +21,7 @@ GitHub Action
    ↓
 Codex API implementa
    ↓
-rama + commit + PR
+rama + commit + PR automático
    ↓
 ChatGPT revisa
    ↓
@@ -30,12 +32,38 @@ MERGE
 
 Objetivo: Rodrigo indica qué quiere y luego interviene principalmente para validar/aprobar el resultado.
 
+### Flujo B - Codex directo
+
+```text
+Rodrigo
+   ↓
+ChatGPT genera prompt
+   ↓
+Rodrigo copia prompt a Codex directo
+   ↓
+Codex implementa y deja cambios/commit listos
+   ↓
+Rodrigo publica el PR
+   ↓
+Rodrigo entrega el resultado a ChatGPT
+   ↓
+ChatGPT revisa directamente el PR en GitHub
+   ↓
+Rodrigo valida / mergea
+```
+
+En el Flujo B, Codex directo **no debe recibir la instrucción de crear o publicar el PR**. Su responsabilidad termina dejando la implementación y, cuando corresponda, el commit listo.
+
+Al entregar un prompt para Codex directo, ChatGPT debe recordar a Rodrigo que, si la ejecución termina correctamente, **Rodrigo debe publicar el PR** y luego entregar el resultado a ChatGPT para revisión.
+
+La falta de `make_pr`, autenticación de `gh` o remote Git en el entorno de Codex directo no se considera un fallo de la tarea si los cambios/commit quedaron correctamente preparados.
+
 ## 2. Roles
 
-- **Rodrigo** - define necesidad y valida el resultado como Product Owner.
-- **ChatGPT** - analiza, diseña cuando corresponde, convierte el trabajo en Issues implementables y revisa el PR.
-- **Codex API** - ejecuta automáticamente Issues suficientemente definidas.
-- **Codex directo** - se usa principalmente para trabajo exploratorio o complejo que todavía requiere descubrir/diseñar la solución.
+- **Rodrigo** - define necesidad, realiza los traspasos manuales del Flujo B, publica su PR y valida el resultado como Product Owner.
+- **ChatGPT** - analiza, diseña cuando corresponde, convierte el trabajo en Issues implementables o prompts para Codex directo y revisa el PR.
+- **Codex API** - ejecuta automáticamente Issues suficientemente definidas mediante el Flujo A.
+- **Codex directo** - se usa principalmente para trabajo exploratorio o complejo y deja los cambios preparados para que Rodrigo publique el PR mediante el Flujo B.
 - **Backend / GitHub Actions** - ejecutan trabajo mecánico, batch o diagnóstico que no necesita razonamiento de programación en cada ejecución.
 
 ## 3. Regla de decisión
@@ -174,7 +202,7 @@ La interacción debe minimizar pasos manuales y comentarios intermedios innecesa
 
 > No narrar ni pedir a Rodrigo pasos que ChatGPT pueda ejecutar directamente con las herramientas disponibles.
 
-Flujo esperado:
+### Flujo A
 
 ```text
 ChatGPT ejecuta
@@ -199,7 +227,17 @@ Rodrigo valida / mergea
 ChatGPT continúa
 ```
 
-Reglas operativas:
+### Flujo B
+
+- ChatGPT entrega el prompt para Codex directo sin pedirle a Codex que publique el PR.
+- En la misma respuesta, ChatGPT recuerda a Rodrigo: **si Codex termina correctamente, publica el PR y pásame el resultado**.
+- Rodrigo copia el prompt a Codex directo.
+- Codex deja cambios/commit preparados.
+- Rodrigo publica el PR.
+- Rodrigo entrega a ChatGPT el resumen de Codex o indica que el PR está listo.
+- ChatGPT revisa el PR directamente en GitHub y entrega la acción esperada.
+
+Reglas operativas generales:
 
 - Después de iniciar una ejecución automatizada, evitar narrar cada paso interno.
 - Si ChatGPT puede consultar directamente el estado o error de GitHub Actions, debe hacerlo sin pedir una captura.
@@ -208,7 +246,7 @@ Reglas operativas:
 - Ante **rojo**, ChatGPT investiga el fallo y solicita únicamente información que no pueda obtener directamente.
 - Cuando exista un PR, ChatGPT debe revisarlo antes de recomendar merge.
 - Cuando el PR esté listo para intervención humana, ChatGPT debe entregar siempre el link directo al PR.
-- La respuesta debe indicar claramente una única acción esperada cuando corresponda: **mergear**, **no mergear**, **esperar** o **enviar el dato faltante**.
+- La respuesta debe indicar claramente una única acción esperada cuando corresponda: **mergear**, **no mergear**, **esperar**, **publicar PR** o **enviar el dato faltante**.
 - Después de que Rodrigo indique que el merge está listo, ChatGPT continúa con la validación o siguiente paso acordado.
 
 El objetivo es acercarse progresivamente a:
