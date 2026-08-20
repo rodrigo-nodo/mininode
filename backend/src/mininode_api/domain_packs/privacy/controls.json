@@ -112,6 +112,30 @@
       }
     },
     {
+      "code": "PRV-007",
+      "domain": "Transparencia",
+      "name": "Categorías de datos tratados",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, las categorías observables de datos tratados aportan una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "categorías o tipos concretos de datos personales en el documento seleccionado por PRV-003",
+        "referencia genérica a datos personales o información personal",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Describir en la política las categorías o tipos concretos de datos personales tratados.",
+      "criteria": {
+        "detected": "El documento seleccionado describe una o más categorías o tipos concretos de datos personales tratados.",
+        "partial": "El documento seleccionado contiene una referencia genérica a datos personales o información personal, sin categorías o tipos suficientemente concretos.",
+        "not_detected": "No se identifican categorías ni referencias observables a tipos de datos tratados en el documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

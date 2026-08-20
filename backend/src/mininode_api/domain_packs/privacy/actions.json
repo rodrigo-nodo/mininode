@@ -72,6 +72,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la finalidad del canal puede identificarse claramente en el mismo contexto."
       }
     },
+    "PRV-007": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la política seleccionada e identificar las categorías o tipos de datos personales que se describen en ella.",
+          "Incorporar ejemplos concretos de los datos tratados cuando correspondan al contenido de la política."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que pueden identificarse categorías o tipos concretos de datos personales tratados."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica a datos personales observada en la política seleccionada.",
+          "Precisar esa referencia mediante categorías o tipos concretos de datos tratados."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con categorías o tipos concretos observables."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
