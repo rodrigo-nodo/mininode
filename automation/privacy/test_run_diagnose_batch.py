@@ -14,7 +14,7 @@ def test_parse_urls_deduplicates_and_ignores_blanks():
     assert privacy_batch.parse_urls(raw) == ["https://a.example/", "https://b.example/"]
 
 
-def test_write_outputs_creates_json_and_csv(tmp_path):
+def test_write_outputs_creates_json_csv_and_private_diagnostics(tmp_path):
     results = [
         {
             "url": "https://a.example/",
@@ -30,14 +30,25 @@ def test_write_outputs_creates_json_and_csv(tmp_path):
             "success": False,
             "error_code": "unsafe_target",
             "detail": "Target is not allowed",
+            "diagnostic": {
+                "attempted_network_families": ["ipv4", "ipv6"],
+                "ssrf_rejection_reason": "redirect_hostname_not_allowed",
+            },
             "response": {"detail": {"code": "unsafe_target"}},
         },
     ]
 
-    json_path, csv_path = privacy_batch.write_outputs(results, tmp_path, "education-14")
+    json_path, csv_path, diagnostic_path = privacy_batch.write_outputs(
+        results, tmp_path, "education-14"
+    )
 
     assert json.loads(json_path.read_text(encoding="utf-8")) == results
     with csv_path.open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["url"] == "https://a.example/"
     assert rows[1]["error_code"] == "unsafe_target"
+    diagnostics = [
+        json.loads(line) for line in diagnostic_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert diagnostics[1]["attempted_network_families"] == ["ipv4", "ipv6"]
+    assert diagnostics[1]["ssrf_rejection_reason"] == "redirect_hostname_not_allowed"

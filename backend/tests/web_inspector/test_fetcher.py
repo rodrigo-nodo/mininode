@@ -149,8 +149,8 @@ def test_explicit_certificate_failure_is_normalized_without_raw_details():
     [
         (
             {"2606:2800:220:1:248:1893:25c8:1946", "93.184.216.34"},
-            ["2606:2800:220:1:248:1893:25c8:1946", "93.184.216.34"],
-            "ipv4",
+            ["93.184.216.34", "2606:2800:220:1:248:1893:25c8:1946"],
+            "ipv6",
         ),
         (
             {"93.184.216.34", "93.184.216.33"},
@@ -177,6 +177,26 @@ def test_retries_validated_addresses_in_sorted_order(
     assert page.html == "ok"
     assert page.network_family == expected_family
     assert attempts == expected_attempts
+
+
+def test_prefers_validated_ipv4_when_both_families_are_reachable():
+    attempts = []
+
+    def handler(request):
+        attempts.append(request.extensions[VALIDATED_IP_EXTENSION])
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    page = WebFetcher(
+        client=client_for(handler),
+        resolver=lambda hostname, port: {
+            "2606:2800:220:1:248:1893:25c8:1946",
+            "93.184.216.34",
+        },
+    )._fetch_page("https://example.com/", "example.com")
+
+    assert page.html == "ok"
+    assert attempts == ["93.184.216.34"]
+    assert page.attempted_network_families == ("ipv4",)
 
 
 def test_returns_last_connection_failure_after_each_validated_address_once():
