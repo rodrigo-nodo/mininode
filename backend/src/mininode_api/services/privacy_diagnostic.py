@@ -98,6 +98,7 @@ def _page_diagnostic(result: InspectionFetchResult) -> dict:
         "redirect_count": page.redirect_count if page else 0,
         "status_code": page.status_code if page else None,
         "elapsed_ms": page.elapsed_ms if page else 0,
+        "connection_attempts": list(page.connection_attempts) if page else [],
     }
 
 
@@ -121,6 +122,7 @@ def _home_failure(result: InspectionFetchResult) -> None:
         "resolved_addresses": diagnostic["resolved_addresses"],
         "rejected_addresses": diagnostic["rejected_addresses"],
         "ssrf_rejection_reason": diagnostic["ssrf_rejection_reason"],
+        "connection_attempts": diagnostic["connection_attempts"],
     }
     logger.warning(json.dumps(event, separators=(",", ":"), sort_keys=True))
     if error is None:
