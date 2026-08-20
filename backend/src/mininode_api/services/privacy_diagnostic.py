@@ -26,12 +26,14 @@ MAX_PAGES_ATTEMPTED = 5
 _CATEGORY_ORDER = ("privacy", "contact", "action")
 _EXPANDABLE_RESULTS_BY_CONTROL = {
     "PRV-002": frozenset({"partial", "not_evaluable"}),
+    "PRV-003": frozenset({"partial", "not_evaluable"}),
     "PRV-301": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),
 }
 _CATEGORIES_BY_EXPANDABLE_CONTROL = {
     "PRV-002": frozenset({"privacy"}),
+    "PRV-003": frozenset({"privacy"}),
     "PRV-101": frozenset({"contact", "action"}),
     "PRV-104": frozenset({"contact", "action"}),
     "PRV-301": frozenset({"contact"}),

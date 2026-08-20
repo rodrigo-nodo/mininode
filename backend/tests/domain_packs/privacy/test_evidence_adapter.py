@@ -112,6 +112,83 @@ def test_prv002_uninspected_policy_does_not_fake_inaccessibility():
     assert "policy_accessible" not in evidence
 
 
+def test_prv003_same_site_policy_is_own():
+    link = LinkEvidence("https://example.com/privacy", "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(links=[link]))
+
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "detected"
+    assert adapted["PRV-003"]["attribution_signals"][0]["signal"] == "same_site"
+
+
+@pytest.mark.parametrize("url", [
+    "https://www.hcaptcha.com/privacy",
+    "https://policies.google.com/privacy",
+])
+def test_prv003_known_provider_only_is_not_own_while_prv001_stays_detected(url):
+    link = LinkEvidence(url, "Privacy Policy", "https://example.com/")
+    adapted = adapt_evidence(contract(links=[link]))
+
+    assert evaluate_control("PRV-001", adapted["PRV-001"])["result"] == "detected"
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_detected"
+    assert adapted["PRV-003"]["policy_attribution"] == "third_party"
+
+
+def test_prv003_external_policy_with_clear_organization_attribution_is_own():
+    url = "https://legal.examplecdn.net/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad de Example", "text/html",
+        document_text="Example es responsable de esta política de privacidad.",
+    )
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "detected"
+    assert adapted["PRV-003"]["attribution_signals"][0]["signal"] == "organization_mentioned"
+
+
+def test_prv003_external_policy_can_be_attributed_by_visible_link_text():
+    link = LinkEvidence(
+        "https://legal.examplecdn.net/privacy",
+        "Política de privacidad de Example",
+        "https://example.com/",
+    )
+    adapted = adapt_evidence(contract(links=[link]))
+
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "detected"
+    assert adapted["PRV-003"]["attribution_signals"][0]["signal"] == "organization_mentioned_in_link"
+
+
+def test_prv003_external_policy_without_clear_attribution_is_partial():
+    url = "https://legal.examplecdn.net/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html",
+        document_text="Información general sobre privacidad y datos personales.",
+    )
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "partial"
+
+
+def test_prv003_without_policy_is_not_detected():
+    adapted = adapt_evidence(contract())
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_detected"
+
+
+def test_prv003_uninspected_external_policy_is_partial_without_expanding_scope():
+    link = LinkEvidence(
+        "https://legal.examplecdn.net/privacy", "Política de privacidad",
+        "https://example.com/",
+    )
+    adapted = adapt_evidence(contract(links=[link]))
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "partial"
+
+
+def test_prv003_inspection_limitation_is_not_evaluable():
+    adapted = adapt_evidence(contract(final_url=None, pages=[], pages_analyzed=0))
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_evaluable"
+
+
 @pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [

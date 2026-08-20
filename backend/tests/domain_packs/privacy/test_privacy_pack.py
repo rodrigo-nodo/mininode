@@ -24,6 +24,7 @@ from mininode_api.domain_packs.privacy.scoring import (  # noqa: E402
 EXPECTED = {
     "PRV-001": ("Política de privacidad visible", "muy_alto", "evaluation"),
     "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
+    "PRV-003": ("Política propia del responsable", "muy_alto", "evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
@@ -39,6 +40,9 @@ def evaluated_scenario():
         "PRV-002",
         {"policy_link_found": True, "policy_accessible": True},
         results,
+    )
+    results["PRV-003"] = evaluate_control(
+        "PRV-003", {"policy_attribution": "own"}
     )
     results["PRV-101"] = evaluate_control(
         "PRV-101", {"personal_data_form": True}
@@ -58,9 +62,9 @@ def evaluated_scenario():
     return results
 
 
-def test_catalog_matches_the_seven_approved_controls_exactly():
+def test_catalog_matches_the_eight_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 7
+    assert len(controls) == 8
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -83,6 +87,7 @@ def test_catalog_criteria_match_active_evaluator_results():
     active_results = {
         "PRV-001": {"detected", "not_detected", "not_evaluable"},
         "PRV-002": {"detected", "partial", "not_applicable", "not_evaluable"},
+        "PRV-003": {"detected", "partial", "not_detected", "not_evaluable"},
         "PRV-101": {"detected", "not_detected", "not_evaluable"},
         "PRV-104": {
             "detected", "partial", "not_detected", "not_applicable",
@@ -205,9 +210,9 @@ def test_not_evaluable_is_unscored_and_reduces_coverage():
     results = list(evaluated_scenario().values())
     results[-1] = {"control_code": "PRV-501", "result": "not_evaluable"}
     scored = score_privacy(results)
-    assert scored["evaluated_controls"] == 4
-    assert scored["applicable_controls"] == 5
-    assert scored["coverage"] == 80
+    assert scored["evaluated_controls"] == 5
+    assert scored["applicable_controls"] == 6
+    assert scored["coverage"] == 83
 
 
 def test_context_never_scores():
@@ -222,11 +227,11 @@ def test_context_never_scores():
 
 def test_integral_scenario_returns_the_approved_result():
     assert score_privacy(evaluated_scenario().values()) == {
-        "score": 67,
-        "status": "En preparación",
+        "score": 74,
+        "status": "Preparación avanzada",
         "coverage": 100,
-        "evaluated_controls": 5,
-        "applicable_controls": 5,
+        "evaluated_controls": 6,
+        "applicable_controls": 6,
     }
 
 

@@ -139,6 +139,14 @@ def evaluate_control(
             result = "detected"
         else:
             result = "partial"
+    elif control_code == "PRV-003":
+        attribution = evidence.get("policy_attribution")
+        if attribution == "own":
+            result = "detected"
+        elif attribution == "ambiguous":
+            result = "partial"
+        else:
+            result = "not_detected"
     elif control_code == "PRV-101":
         result = "detected" if evidence.get("personal_data_form") else "not_detected"
     elif control_code == "PRV-104":

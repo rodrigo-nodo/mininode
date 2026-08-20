@@ -73,6 +73,7 @@ class PageEvidence:
     title: str | None
     content_type: str | None
     requested_url: str | None = None
+    document_text: str = ""
 
 
 @dataclass(frozen=True)

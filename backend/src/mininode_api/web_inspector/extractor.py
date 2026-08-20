@@ -33,6 +33,7 @@ PHONE_RE = re.compile(r"(?<!\w)\+?\d[\d\s().-]{5,}\d(?!\w)")
 @dataclass
 class PageExtraction:
     title: str | None
+    document_text: str = ""
     links: list[LinkEvidence] = field(default_factory=list)
     forms: list[FormEvidence] = field(default_factory=list)
     contacts: list[ContactEvidence] = field(default_factory=list)
@@ -146,8 +147,17 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
     for removable in soup.find_all(["script", "style", "template"]):
         removable.decompose()
     visible = _text(soup).lower()
+    metadata = " ".join(
+        str(tag.get("content") or "")
+        for tag in soup.find_all("meta")
+        if str(tag.get("name") or tag.get("property") or "").lower()
+        in {"description", "og:title", "og:description"}
+    )
+    headings = " ".join(_text(tag) for tag in soup.find_all(["h1", "h2"]))
+    document_text = " ".join(f"{title or ''} {metadata} {headings} {visible}".split())[:4000]
     return PageExtraction(
         title=title,
+        document_text=document_text,
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -180,6 +190,7 @@ def build_evidence(
             title=extracted.title,
             content_type=page.content_type,
             requested_url=page.requested_url,
+            document_text=extracted.document_text,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)
