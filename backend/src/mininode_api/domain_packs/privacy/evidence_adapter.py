@@ -16,6 +16,7 @@ CONTROL_CODES = (
     "PRV-003",
     "PRV-005",
     "PRV-006",
+    "PRV-007",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -91,6 +92,18 @@ _CHANNEL_WORDS = (
 )
 _EMAIL_PATTERN = re.compile(r"\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.I)
 _PHONE_PATTERN = re.compile(r"(?:\+?\d[\d ()-]{6,}\d)")
+_CONCRETE_DATA_CATEGORIES = (
+    "nombre", "name", "apellido", "surname", "correo", "correo electronico",
+    "email", "e mail", "telefono", "phone", "celular", "movil", "direccion",
+    "address", "rut", "run", "dni", "documento de identidad", "datos de pago",
+    "payment data", "tarjeta de credito", "credit card", "datos bancarios",
+    "bank details", "navegacion", "browsing data", "direccion ip", "ip address",
+    "cookies", "cookie", "geolocalizacion", "location data", "fecha de nacimiento",
+    "date of birth",
+)
+_GENERIC_PERSONAL_DATA_TERMS = (
+    "datos personales", "informacion personal", "personal data", "personal information",
+)
 
 
 def _normalize(value: str) -> str:
@@ -446,6 +459,45 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "rights_channel": channel, "confidence": confidence}
 
 
+def _data_categories(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify data categories only in PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"data_categories": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "data_categories": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    document = selected_page.visible_text or ""
+    if _contains_phrase(document, _CONCRETE_DATA_CATEGORIES):
+        category, confidence = "concrete", "high"
+    elif _contains_phrase(document, _GENERIC_PERSONAL_DATA_TERMS):
+        category, confidence = "generic", "medium"
+    else:
+        category, confidence = "none", "high"
+    return {**evidence, "data_categories": category, "confidence": confidence}
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -541,6 +593,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
 
     prv005 = _responsible_identification(contract, prv003)
     prv006 = _rights_channel(contract, prv003)
+    prv007 = _data_categories(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -642,6 +695,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-003": prv003,
         "PRV-005": prv005,
         "PRV-006": prv006,
+        "PRV-007": prv007,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

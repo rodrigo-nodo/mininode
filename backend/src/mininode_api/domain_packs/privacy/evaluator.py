@@ -123,7 +123,7 @@ def evaluate_control(
 
     control = controls[control_code]
     confidence = evidence.get("confidence", "high")
-    if control_code in {"PRV-005", "PRV-006"}:
+    if control_code in {"PRV-005", "PRV-006", "PRV-007"}:
         dependency_result = _previous_result(previous_results, "PRV-003")
         if dependency_result == "not_detected":
             return _result(control, "not_applicable", evidence, confidence)
@@ -166,6 +166,14 @@ def evaluate_control(
         if channel == "explicit":
             result = "detected"
         elif channel == "generic":
+            result = "partial"
+        else:
+            result = "not_detected"
+    elif control_code == "PRV-007":
+        categories = evidence.get("data_categories")
+        if categories == "concrete":
+            result = "detected"
+        elif categories == "generic":
             result = "partial"
         else:
             result = "not_detected"
