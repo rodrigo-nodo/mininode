@@ -123,6 +123,12 @@ def evaluate_control(
 
     control = controls[control_code]
     confidence = evidence.get("confidence", "high")
+    if control_code == "PRV-005":
+        dependency_result = _previous_result(previous_results, "PRV-003")
+        if dependency_result == "not_detected":
+            return _result(control, "not_applicable", evidence, confidence)
+        if dependency_result == "not_evaluable":
+            return _result(control, "not_evaluable", evidence, "low")
     if evidence.get("technical_error"):
         return _result(control, "not_evaluable", evidence, "low")
 
@@ -144,6 +150,14 @@ def evaluate_control(
         if attribution == "own":
             result = "detected"
         elif attribution == "ambiguous":
+            result = "partial"
+        else:
+            result = "not_detected"
+    elif control_code == "PRV-005":
+        identification = evidence.get("responsible_identification")
+        if identification == "clear":
+            result = "detected"
+        elif identification == "ambiguous":
             result = "partial"
         else:
             result = "not_detected"

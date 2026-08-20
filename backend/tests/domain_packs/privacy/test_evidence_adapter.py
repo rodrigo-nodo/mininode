@@ -163,6 +163,76 @@ def test_prv003_no_policy_is_not_detected_and_failed_inspection_is_not_evaluable
 
 
 @pytest.mark.parametrize(
+    ("visible_text", "expected"),
+    [
+        ("Esta política corresponde a Example SpA.", "detected"),
+        ("Esta política describe cómo nuestra organización trata los datos.", "partial"),
+        ("Esta política describe el tratamiento de datos personales.", "not_detected"),
+    ],
+)
+def test_prv005_identifies_responsible_in_selected_policy(visible_text, expected):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html", visible_text=visible_text
+    )
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": prv003})
+
+    assert result["result"] == expected
+    assert adapted["PRV-005"]["source_urls"] == [url]
+
+
+def test_prv005_gate_follows_prv003_without_cascade_penalty():
+    evidence = {"responsible_identification": "none", "confidence": "high"}
+    assert evaluate_control(
+        "PRV-005", evidence, {"PRV-003": "not_detected"}
+    )["result"] == "not_applicable"
+    assert evaluate_control(
+        "PRV-005", evidence, {"PRV-003": "not_evaluable"}
+    )["result"] == "not_evaluable"
+
+
+def test_prv005_uninspected_selected_policy_is_not_evaluable():
+    link = LinkEvidence(
+        "https://example.com/privacy", "Privacidad", "https://example.com/"
+    )
+    adapted = adapt_evidence(contract(links=[link]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": prv003})
+
+    assert result["result"] == "not_evaluable"
+
+
+def test_prv005_uses_own_policy_selected_after_provider_candidate():
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence("https://hcaptcha.com/privacy", "Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence(
+            "https://hcaptcha.com/privacy", 200, "Privacy", "text/html",
+            visible_text="hCaptcha is operated by Intuition Machines, Inc.",
+        ),
+        PageEvidence(
+            own_url, 200, "Política de privacidad", "text/html",
+            visible_text="Example SpA es responsable de este sitio.",
+        ),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+    result = evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": prv003})
+
+    assert prv003["result"] == "detected"
+    assert result["result"] == "detected"
+    assert adapted["PRV-005"]["source_urls"] == [own_url]
+
+
+@pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [
         ("email", "value", ""), ("tel", "value", ""), ("textarea", "value", ""),

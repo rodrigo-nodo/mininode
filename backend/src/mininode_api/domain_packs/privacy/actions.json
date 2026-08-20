@@ -39,6 +39,23 @@
         "validation_step": "Abrir la política y comprobar que el documento permite atribuirla claramente a la organización evaluada."
       }
     },
+    "PRV-005": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar cómo se presenta al responsable en la política seleccionada.",
+          "Incorporar una identificación observable de la organización, como su razón social o nombre comercial.",
+          "Distinguir esa identificación de los nombres de proveedores externos mencionados en el documento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que puede identificarse claramente a la organización responsable del sitio."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica al responsable observada en la política seleccionada.",
+          "Precisar esa referencia mediante una razón social, nombre de empresa, nombre comercial u otra identificación clara atribuible al sitio."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite atribuir claramente el documento a la organización responsable del sitio."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [

@@ -20,6 +20,7 @@ EXPECTED_ACTIONS = {
     "PRV-001": {"not_detected"},
     "PRV-002": {"partial"},
     "PRV-003": {"partial", "not_detected"},
+    "PRV-005": {"partial", "not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
@@ -62,6 +63,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
         "PRV-003": [
             ({"policy_attribution": "ambiguous"}, None),
             ({"policy_attribution": "third_party"}, None),
+        ],
+        "PRV-005": [
+            ({"responsible_identification": "ambiguous"}, {"PRV-003": "detected"}),
+            ({"responsible_identification": "none"}, {"PRV-003": "detected"}),
         ],
         "PRV-104": [
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),
