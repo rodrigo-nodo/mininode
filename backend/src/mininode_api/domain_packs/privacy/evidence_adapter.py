@@ -15,6 +15,7 @@ CONTROL_CODES = (
     "PRV-002",
     "PRV-003",
     "PRV-005",
+    "PRV-006",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -77,6 +78,19 @@ _GENERIC_RESPONSIBLE_TERMS = (
     "la empresa", "nuestra empresa", "nuestra organizacion", "la organizacion",
     "este sitio", "este sitio web", "el responsable", "responsable del sitio",
 )
+_RIGHTS_CONTEXT_TERMS = (
+    "ejercer derechos", "ejercicio de derechos", "derechos de acceso",
+    "derechos arcop", "derechos arco", "solicitudes de privacidad",
+    "derechos", "privacidad", "proteccion de datos", "datos personales",
+    "privacy", "privacy request",
+    "data protection", "data subject rights",
+)
+_CHANNEL_WORDS = (
+    "correo", "email", "e mail", "telefono", "phone", "formulario de contacto",
+    "direccion postal", "domicilio", "escriba", "contacte", "contactenos",
+)
+_EMAIL_PATTERN = re.compile(r"\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.I)
+_PHONE_PATTERN = re.compile(r"(?:\+?\d[\d ()-]{6,}\d)")
 
 
 def _normalize(value: str) -> str:
@@ -371,6 +385,67 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
     }
 
 
+def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
+    """Inspect only PRV-003's selected policy and retain channel classification only."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"rights_channel": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "rights_channel": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    raw_document = selected_page.visible_text or ""
+    segments = [
+        segment
+        for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", raw_document)
+        if segment.strip()
+    ]
+
+    def has_channel(value: str) -> bool:
+        return bool(
+            _EMAIL_PATTERN.search(value)
+            or _PHONE_PATTERN.search(value)
+            or _contains_phrase(value, _CHANNEL_WORDS)
+        )
+
+    channel_segments = [
+        f"{segments[index - 1]} {segment}" if index else segment
+        for index, segment in enumerate(segments)
+        if has_channel(segment)
+    ]
+    explicit = any(
+        _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
+        for segment in channel_segments
+    )
+    if explicit:
+        channel, confidence = "explicit", "high"
+    elif channel_segments:
+        channel, confidence = "generic", "medium"
+    else:
+        channel, confidence = "none", "high"
+    return {**evidence, "rights_channel": channel, "confidence": confidence}
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -465,6 +540,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         prv003["confidence"] = "low"
 
     prv005 = _responsible_identification(contract, prv003)
+    prv006 = _rights_channel(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -565,6 +641,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-002": prv002,
         "PRV-003": prv003,
         "PRV-005": prv005,
+        "PRV-006": prv006,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

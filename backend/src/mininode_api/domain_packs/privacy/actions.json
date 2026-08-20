@@ -56,6 +56,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite atribuir claramente el documento a la organización responsable del sitio."
       }
     },
+    "PRV-006": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la política seleccionada e incorporar un canal observable para solicitudes relacionadas con privacidad, datos personales o ejercicio de derechos.",
+          "Identificar de forma visible la finalidad de ese canal dentro del documento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que el canal y su asociación con privacidad, datos personales o ejercicio de derechos pueden identificarse en el documento."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar el canal de contacto observado en la política seleccionada.",
+          "Precisar junto al canal que puede utilizarse para solicitudes relacionadas con privacidad, datos personales o ejercicio de derechos."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la finalidad del canal puede identificarse claramente en el mismo contexto."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
