@@ -22,11 +22,7 @@
       if (!response.ok) throw new Error('Content unavailable');
 
       const markdown = await response.text();
-      const rendered = window.marked.parse(markdown, {
-        gfm: true,
-        headerIds: false,
-        mangle: false
-      });
+      const rendered = window.marked.parse(markdown, { gfm: true });
       const sanitized = window.DOMPurify.sanitize(rendered, {
         USE_PROFILES: { html: true }
       });
