@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Una guía práctica para entender cómo los pequeños negocios tratan datos personales antes de pensar en cumplimiento.">
   <title>Privacidad para pequeños negocios — Mininode Learn</title>
+  <script src="../../assets/js/core-theme.js"></script>
   <link rel="stylesheet" href="../../styles.css">
   <link rel="stylesheet" href="../learn.css">
   <script src="../../assets/js/core-head.js" defer></script>
@@ -13,9 +14,16 @@
   <script src="../vendor/purify.min.js" defer></script>
   <script src="../reader.js" defer></script>
 </head>
-<body>
+<body class="learn-theme-page">
   <div data-include="../../partials/header-nav.html"></div>
   <main class="learn-page">
+    <div class="learn-tools">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+        <span class="theme-toggle__icon theme-toggle__icon--dark" aria-hidden="true">☾</span>
+        <span class="theme-toggle__icon theme-toggle__icon--light" aria-hidden="true">☀</span>
+        <span data-theme-label>Oscuro</span>
+      </button>
+    </div>
     <article class="learn-reader" id="ebook" data-markdown-source="../content/001-privacidad-para-pequenos-negocios.md" aria-busy="true">
       <div class="learn-loading" role="status">Abriendo el micro-ebook…</div>
     </article>
