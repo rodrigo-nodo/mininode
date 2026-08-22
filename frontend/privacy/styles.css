@@ -130,6 +130,29 @@
   color: #c5ceda;
 }
 
+.privacy-learn {
+  margin: 22px auto 0;
+}
+
+.privacy-learn p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0 0 2px;
+}
+
+.privacy-learn a {
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+}
+
+.privacy-learn a:hover,
+.privacy-learn a:focus-visible {
+  color: var(--primary);
+}
+
 .privacy-help {
   background: transparent;
   border: 0;
