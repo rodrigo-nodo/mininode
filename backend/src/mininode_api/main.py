@@ -110,6 +110,12 @@ def create_app() -> FastAPI:
     except Exception as e:
         logging.exception("Failed to include privacy router: %s", e)
 
+    try:
+        from mininode_api.api.learn import router as learn_router
+        app.include_router(learn_router)
+    except Exception as e:
+        logging.exception("Failed to include Learn router: %s", e)
+
     # Analyze: intenta incluir router; si no existe, define fallback /analyze/summary
     analyze_router_included = False
     try:

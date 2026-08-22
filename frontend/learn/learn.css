@@ -153,10 +153,55 @@
 .learn-reader hr { border: 0; border-top: 1px solid var(--learn-border); margin: 72px 0; }
 .learn-reader a { color: var(--learn-link); text-underline-offset: 4px; }
 
-.learn-reader h2:last-of-type {
+.learn-reader > h2:last-of-type {
   border-top: 1px solid var(--learn-border);
   padding-top: 64px;
 }
+
+.learn-feedback {
+  border-top: 1px solid var(--learn-border);
+  margin: 72px 0;
+  padding-top: 56px;
+}
+
+.learn-feedback h2 { font-size: clamp(1.45rem, 4vw, 1.85rem); margin: 0 0 14px; }
+.learn-stars { display: flex; gap: 4px; }
+.learn-stars button {
+  background: transparent;
+  border: 0;
+  color: var(--learn-link);
+  cursor: pointer;
+  font-size: 2rem;
+  line-height: 1;
+  padding: 4px;
+}
+.learn-stars button:focus-visible,
+.learn-topics input:focus-visible,
+.learn-comment textarea:focus-visible,
+.learn-comment button:focus-visible { outline: 3px solid var(--learn-link); outline-offset: 3px; }
+.learn-stars button:disabled { cursor: default; opacity: 1; }
+.learn-feedback__privacy,
+.learn-feedback__status,
+.learn-comment p { color: var(--learn-muted) !important; font-family: Inter, ui-sans-serif, system-ui, sans-serif !important; font-size: .82rem !important; margin: 9px 0 !important; }
+.learn-feedback__status { min-height: 1.3em; }
+.learn-topics { border: 0; margin: 28px 0 0; padding: 0; }
+.learn-topics legend,
+.learn-comment label { color: var(--learn-fg); font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+.learn-topics legend span,
+.learn-comment label span { color: var(--learn-muted); font-size: .78rem; font-weight: 500; }
+.learn-topics label { color: var(--learn-fg); display: block; font-size: .92rem; margin: 9px 0; }
+.learn-topics input { accent-color: var(--learn-link); }
+.learn-comment { margin-top: 28px; }
+.learn-comment label { display: block; }
+.learn-comment textarea {
+  background: var(--learn-bg); border: 1px solid var(--learn-border); border-radius: 8px;
+  color: var(--learn-fg); display: block; font: inherit; max-width: 100%; padding: 10px; resize: vertical; width: 100%;
+}
+.learn-comment button {
+  background: transparent; border: 1px solid var(--learn-link); border-radius: 8px; color: var(--learn-link);
+  cursor: pointer; font: inherit; font-size: .85rem; font-weight: 700; padding: 8px 12px;
+}
+.learn-comment button:hover { background: var(--learn-link-soft); }
 
 .learn-reader p:last-child a {
   background: var(--learn-bg);
