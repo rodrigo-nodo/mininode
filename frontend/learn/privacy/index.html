@@ -27,6 +27,37 @@
     <article class="learn-reader" id="ebook" data-markdown-source="../content/001-privacidad-para-pequenos-negocios.md" aria-busy="true">
       <div class="learn-loading" role="status">Abriendo el micro-ebook…</div>
     </article>
+    <template id="learn-feedback-template">
+      <section class="learn-feedback" aria-labelledby="feedback-title">
+        <h2 id="feedback-title">¿Qué tan útil fue esta guía?</h2>
+        <div class="learn-stars" role="radiogroup" aria-label="Valoración de la guía">
+          <button type="button" data-rating="1" role="radio" aria-checked="false" aria-label="1 estrella">☆</button>
+          <button type="button" data-rating="2" role="radio" aria-checked="false" aria-label="2 estrellas">☆</button>
+          <button type="button" data-rating="3" role="radio" aria-checked="false" aria-label="3 estrellas">☆</button>
+          <button type="button" data-rating="4" role="radio" aria-checked="false" aria-label="4 estrellas">☆</button>
+          <button type="button" data-rating="5" role="radio" aria-checked="false" aria-label="5 estrellas">☆</button>
+        </div>
+        <p class="learn-feedback__privacy">Sin registro · Sin nombre · Sin correo</p>
+        <p class="learn-feedback__status" role="status" aria-live="polite"></p>
+        <div class="learn-feedback__followup" hidden>
+          <fieldset class="learn-topics">
+            <legend>¿Qué tema te gustaría entender mejor? <span>Opcional</span></legend>
+            <label><input type="radio" name="learn-topic" value="Datos que maneja el negocio"> Datos que maneja el negocio</label>
+            <label><input type="radio" name="learn-topic" value="Sitio web y formularios"> Sitio web y formularios</label>
+            <label><input type="radio" name="learn-topic" value="Excel, WhatsApp y archivos"> Excel, WhatsApp y archivos</label>
+            <label><input type="radio" name="learn-topic" value="Políticas y documentos"> Políticas y documentos</label>
+            <label><input type="radio" name="learn-topic" value="Seguridad"> Seguridad</label>
+            <label><input type="radio" name="learn-topic" value="Nueva ley"> Nueva ley</label>
+          </fieldset>
+          <form class="learn-comment" hidden>
+            <label for="learn-comment">¿Qué faltó o qué podría explicarse mejor? <span>Opcional</span></label>
+            <textarea id="learn-comment" maxlength="500" rows="3"></textarea>
+            <p>No incluyas datos personales.</p>
+            <button type="submit">Enviar comentario</button>
+          </form>
+        </div>
+      </section>
+    </template>
     <div class="learn-error" id="learn-error" role="alert" hidden>
       <h1>Esta lectura no está disponible por el momento.</h1>
       <p>Por favor, vuelve a intentarlo más tarde o regresa a Mininode Privacy.</p>
