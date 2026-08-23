@@ -16,10 +16,11 @@ FastAPI app packaged as `mininode_api` under `backend/src`.
   - Debian/Ubuntu: `sudo apt-get install tesseract-ocr`
   - macOS (brew): `brew install tesseract`
   - Windows: instalar binario oficial y agregar a PATH
-- Env vars opcionales:
+- Variables de entorno:
   - `OPENAI_API_KEY` para llamadas reales (mini visión / fallback)
   - `API_KEY` o `API_KEYS` (coma-separado) para exigir `X-Api-Key`
   - `ALLOWED_ORIGINS` para CORS (coma-separado)
+  - `DATABASE_URL` es obligatoria para inicializar y persistir Mininode Learn en PostgreSQL
 
 ## Pipeline (Capture)
 - Orden (Fase 1):
