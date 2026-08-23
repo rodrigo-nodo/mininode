@@ -32,7 +32,8 @@
     }
 
     async function updateFeedback(payload) {
-      const response = await fetch(`/api/learn/feedback/${saved.id}`, {
+      if (!saved?.feedback_id) throw new Error('Feedback has not been created');
+      const response = await fetch(`/api/learn/feedback/${saved.feedback_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -40,32 +41,43 @@
       if (!response.ok) throw new Error('Feedback update failed');
     }
 
-    if (saved?.id && Number.isInteger(saved.rating)) {
+    if (saved?.feedback_id && Number.isInteger(saved.rating)) {
       showRating(saved.rating);
-      stars.forEach((star) => { star.disabled = true; });
       status.textContent = 'Tu valoración ya fue registrada. Gracias.';
     }
 
     stars.forEach((star) => star.addEventListener('click', async () => {
-      if (saved?.id) return;
       const rating = Number(star.dataset.rating);
+      const previousRating = saved?.rating;
       showRating(rating);
       stars.forEach((item) => { item.disabled = true; });
-      status.textContent = 'Registrando…';
+      status.textContent = saved?.feedback_id ? 'Actualizando…' : 'Registrando…';
       try {
-        const response = await fetch('/api/learn/feedback', {
-          method: 'POST',
+        const isUpdate = Boolean(saved?.feedback_id);
+        const endpoint = isUpdate
+          ? `/api/learn/feedback/${saved.feedback_id}`
+          : '/api/learn/feedback';
+        const payload = isUpdate
+          ? { rating, ...(rating > 3 ? { comment: null } : {}) }
+          : { content_key: EBOOK_ID, rating };
+        const response = await fetch(endpoint, {
+          method: isUpdate ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ebook_id: EBOOK_ID, rating })
+          body: JSON.stringify(payload)
         });
         if (!response.ok) throw new Error('Feedback submission failed');
-        const result = await response.json();
-        saved = { id: result.id, rating };
+        const result = isUpdate ? null : await response.json();
+        saved = { feedback_id: saved?.feedback_id || result.feedback_id, rating };
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_error) { /* Storage is optional. */ }
-        status.textContent = 'Gracias. Tu valoración fue registrada.';
+        if (rating > 3) comment.querySelector('textarea').value = '';
+        status.textContent = isUpdate
+          ? 'Gracias. Tu valoración fue actualizada.'
+          : 'Gracias. Tu valoración fue registrada.';
       } catch (_error) {
+        if (previousRating) showRating(previousRating);
+        status.textContent = 'No pudimos guardar tu valoración. Inténtalo nuevamente.';
+      } finally {
         stars.forEach((item) => { item.disabled = false; });
-        status.textContent = 'No pudimos registrar tu valoración. Inténtalo nuevamente.';
       }
     }));
 
@@ -87,8 +99,6 @@
       if (!value) return;
       try {
         await updateFeedback({ comment: value });
-        textarea.disabled = true;
-        comment.querySelector('button').disabled = true;
         status.textContent = 'Gracias por ayudarnos a mejorar.';
       } catch (_error) {
         status.textContent = 'No pudimos guardar el comentario. Inténtalo nuevamente.';

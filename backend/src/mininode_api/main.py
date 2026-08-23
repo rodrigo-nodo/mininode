@@ -3,11 +3,27 @@
 from __future__ import annotations
 import os
 import logging
+from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI, Header, HTTPException, Depends, Response
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from mininode_api.services import learn_feedback
+
+    try:
+        learn_feedback.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Learn feedback database initialization failed; feedback remains unavailable"
+        )
+    else:
+        app.state.learn_feedback_ready = True
+    yield
 
 
 def configure_application_logging() -> None:
@@ -34,7 +50,8 @@ def configure_application_logging() -> None:
 
 # Patrón app factory: facilita tests, evita efectos colaterales al importar.
 def create_app() -> FastAPI:
-    app = FastAPI(title="Mininode API", version="0.1.0")
+    app = FastAPI(title="Mininode API", version="0.1.0", lifespan=lifespan)
+    app.state.learn_feedback_ready = False
 
     # CORS desde env (coma-separado)
     origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
@@ -110,11 +127,8 @@ def create_app() -> FastAPI:
     except Exception as e:
         logging.exception("Failed to include privacy router: %s", e)
 
-    try:
-        from mininode_api.api.learn import router as learn_router
-        app.include_router(learn_router)
-    except Exception as e:
-        logging.exception("Failed to include Learn router: %s", e)
+    from mininode_api.api.learn import router as learn_router
+    app.include_router(learn_router)
 
     # Analyze: intenta incluir router; si no existe, define fallback /analyze/summary
     analyze_router_included = False
