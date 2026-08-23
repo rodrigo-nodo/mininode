@@ -50,6 +50,12 @@ class FeedbackCreated(BaseModel):
     feedback_id: UUID
 
 
+class FeedbackState(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    topic: Topic | None
+    has_comment: bool
+
+
 def require_feedback_database(request: Request) -> None:
     if not getattr(request.app.state, "learn_feedback_ready", False):
         raise HTTPException(status_code=503, detail="Learn feedback is unavailable")
@@ -69,6 +75,15 @@ def submit_feedback(body: FeedbackCreate):
     return {"feedback_id": feedback_id}
 
 
+@router.get("/feedback/{feedback_id}", response_model=FeedbackState, dependencies=_DEPENDENCIES)
+def retrieve_feedback(feedback_id: UUID):
+    try:
+        rating, topic, has_comment = learn_feedback.get_feedback(feedback_id)
+    except learn_feedback.FeedbackNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"rating": rating, "topic": topic, "has_comment": has_comment}
+
+
 @router.patch("/feedback/{feedback_id}", status_code=204, dependencies=_DEPENDENCIES)
 def amend_feedback(feedback_id: UUID, body: FeedbackUpdate):
     changes = body.model_dump(exclude_unset=True)
@@ -78,5 +93,3 @@ def amend_feedback(feedback_id: UUID, body: FeedbackUpdate):
         learn_feedback.update_feedback(feedback_id, **changes)
     except learn_feedback.FeedbackNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except learn_feedback.InvalidFeedbackError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
