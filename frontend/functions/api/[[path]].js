@@ -18,8 +18,9 @@ export const onRequest = async (ctx) => {
 
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
-  const isFeedbackUpdate = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
-  if (!ALLOWED.has(destPathPublic) && !isFeedbackUpdate) {
+  const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
+  const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(request.method.toUpperCase());
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },

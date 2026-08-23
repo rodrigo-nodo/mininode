@@ -64,10 +64,6 @@ class FeedbackNotFoundError(Exception):
     """The requested content or feedback row does not exist."""
 
 
-class InvalidFeedbackError(Exception):
-    """The requested update is inconsistent with the resulting rating."""
-
-
 def _database_url() -> str:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -107,6 +103,23 @@ def create_feedback(*, content_key: str, rating: int) -> UUID:
     return feedback_id
 
 
+def get_feedback(feedback_id: UUID) -> tuple[int, str | None, bool]:
+    """Return only the fields needed to restore the anonymous feedback UI."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT rating, topic, comment IS NOT NULL
+            FROM learn.feedback
+            WHERE id = %s
+            """,
+            (feedback_id,),
+        )
+        feedback = cursor.fetchone()
+        if feedback is None:
+            raise FeedbackNotFoundError("Feedback not found")
+        return feedback
+
+
 def update_feedback(
     feedback_id: UUID,
     *,
@@ -116,17 +129,12 @@ def update_feedback(
 ) -> None:
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            "SELECT rating, comment FROM learn.feedback WHERE id = %s FOR UPDATE",
+            "SELECT 1 FROM learn.feedback WHERE id = %s FOR UPDATE",
             (feedback_id,),
         )
         current = cursor.fetchone()
         if current is None:
             raise FeedbackNotFoundError("Feedback not found")
-
-        resulting_rating = current[0] if rating is UNSET else rating
-        resulting_comment = current[1] if comment is UNSET else comment
-        if resulting_comment is not None and resulting_rating > 3:
-            raise InvalidFeedbackError("Comments are only accepted for ratings from 1 to 3")
 
         assignments: list[str] = []
         values: list[object] = []

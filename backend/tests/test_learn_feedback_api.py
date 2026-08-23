@@ -135,19 +135,39 @@ def test_patch_updates_same_row_and_only_updated_at(monkeypatch):
     assert params == [2, "Más ejemplos", feedback_id]
 
 
-def test_comment_validation_uses_resulting_rating(monkeypatch):
+@pytest.mark.parametrize("rating", [1, 2, 3, 4, 5])
+def test_comments_are_allowed_for_every_rating(monkeypatch, rating):
     feedback_id = uuid4()
-    fake_update_connection(monkeypatch, current=(5, None))
-    with pytest.raises(learn_feedback.InvalidFeedbackError):
-        learn_feedback.update_feedback(feedback_id, comment="Faltó detalle")
-
-    fake_update_connection(monkeypatch, current=(1, None))
-    with pytest.raises(learn_feedback.InvalidFeedbackError):
-        learn_feedback.update_feedback(feedback_id, rating=5, comment="Faltó detalle")
-
-    statements = fake_update_connection(monkeypatch, current=(5, None))
-    learn_feedback.update_feedback(feedback_id, rating=2, comment="Faltó detalle")
+    statements = fake_update_connection(monkeypatch, current=(rating, "Comentario previo"))
+    learn_feedback.update_feedback(feedback_id, rating=rating, comment="Faltó detalle")
     assert len(statements) == 2
+
+
+def test_rating_change_preserves_topic_and_comment(monkeypatch):
+    statements = fake_update_connection(monkeypatch, current=(2, "Comentario previo"))
+    learn_feedback.update_feedback(uuid4(), rating=5)
+    update_sql, params = statements[1]
+    assert "rating = %s" in update_sql
+    assert "topic = %s" not in update_sql and "comment = %s" not in update_sql
+    assert params[0] == 5
+
+
+def test_topic_change_preserves_rating(monkeypatch):
+    statements = fake_update_connection(monkeypatch, current=(4, None))
+    learn_feedback.update_feedback(uuid4(), topic="security")
+    update_sql, params = statements[1]
+    assert "topic = %s" in update_sql and "rating = %s" not in update_sql
+    assert params[0] == "security"
+
+
+def test_get_feedback_returns_minimum_state(monkeypatch):
+    statements = fake_update_connection(monkeypatch, current=(4, "security", True))
+    feedback_id = uuid4()
+    assert learn_feedback.get_feedback(feedback_id) == (4, "security", True)
+    sql, params = statements[0]
+    assert "rating, topic, comment IS NOT NULL" in sql
+    assert "comment," not in sql
+    assert params == (feedback_id,)
 
 
 def test_rating_is_created_with_content_key(client, monkeypatch):
@@ -167,6 +187,23 @@ def test_rating_is_created_with_content_key(client, monkeypatch):
     assert response.status_code == 201
     assert response.json() == {"feedback_id": str(feedback_id)}
     assert calls == [{"content_key": learn_feedback.CONTENT_KEY, "rating": 5}]
+
+
+def test_get_existing_feedback_exposes_no_comment_text(client, monkeypatch):
+    feedback_id = uuid4()
+    monkeypatch.setattr(learn_feedback, "get_feedback", lambda value: (4, "security", True))
+    response = client.get(f"/learn/feedback/{feedback_id}")
+    assert response.status_code == 200
+    assert response.json() == {"rating": 4, "topic": "security", "has_comment": True}
+    assert "comment" not in response.json()
+
+
+def test_get_missing_feedback_returns_404(client, monkeypatch):
+    def missing(_feedback_id):
+        raise learn_feedback.FeedbackNotFoundError("Feedback not found")
+
+    monkeypatch.setattr(learn_feedback, "get_feedback", missing)
+    assert client.get(f"/learn/feedback/{uuid4()}").status_code == 404
 
 
 @pytest.mark.parametrize("rating", [0, 6, 1.5, "five"])

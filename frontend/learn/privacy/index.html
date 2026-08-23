@@ -49,12 +49,15 @@
             <label><input type="radio" name="learn-topic" value="security"> Seguridad</label>
             <label><input type="radio" name="learn-topic" value="new_law"> Nueva ley</label>
           </fieldset>
+          <p class="learn-topic-summary" hidden>Tema elegido: <strong></strong> · <button type="button">Cambiar</button></p>
+          <button class="learn-comment-toggle" type="button" hidden>+ Agregar un comentario</button>
           <form class="learn-comment" hidden>
             <label for="learn-comment">¿Qué faltó o qué podría explicarse mejor? <span>Opcional</span></label>
             <textarea id="learn-comment" maxlength="500" rows="3"></textarea>
             <p>No incluyas datos personales.</p>
             <button type="submit">Enviar comentario</button>
           </form>
+          <p class="learn-comment-sent" hidden>✓ Comentario enviado</p>
         </div>
       </section>
     </template>

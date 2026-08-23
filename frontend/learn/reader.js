@@ -5,6 +5,25 @@
   const errorMessage = document.querySelector('#learn-error');
   const EBOOK_ID = '001-privacidad-para-pequenos-negocios';
   const STORAGE_KEY = `mininode-learn-feedback:${EBOOK_ID}`;
+  const REQUEST_TIMEOUT_MS = 70000;
+  const TOPIC_LABELS = {
+    business_data: 'Datos que maneja el negocio',
+    website_forms: 'Sitio web y formularios',
+    files: 'Excel, WhatsApp y archivos',
+    policies: 'Políticas y documentos',
+    security: 'Seguridad',
+    new_law: 'Nueva ley'
+  };
+
+  async function request(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   function initializeFeedback() {
     const template = document.querySelector('#learn-feedback-template');
@@ -17,9 +36,29 @@
     const stars = [...feedback.querySelectorAll('[data-rating]')];
     const status = feedback.querySelector('.learn-feedback__status');
     const followup = feedback.querySelector('.learn-feedback__followup');
+    const topics = feedback.querySelector('.learn-topics');
+    const topicSummary = feedback.querySelector('.learn-topic-summary');
     const comment = feedback.querySelector('.learn-comment');
-    let saved;
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (_error) { saved = null; }
+    const commentToggle = feedback.querySelector('.learn-comment-toggle');
+    const commentSent = feedback.querySelector('.learn-comment-sent');
+    let state = null;
+    let feedbackId = null;
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      feedbackId = typeof stored === 'string' ? stored : stored?.feedback_id;
+    } catch (_error) { feedbackId = null; }
+
+    function persistId(id) {
+      feedbackId = id;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ feedback_id: id })); } catch (_error) { /* Storage is optional. */ }
+    }
+
+    function clearId() {
+      feedbackId = null;
+      state = null;
+      try { localStorage.removeItem(STORAGE_KEY); } catch (_error) { /* Storage is optional. */ }
+    }
 
     function showRating(rating) {
       stars.forEach((star) => {
@@ -27,13 +66,35 @@
         star.textContent = Number(star.dataset.rating) <= rating ? '★' : '☆';
         star.setAttribute('aria-checked', String(selected));
       });
+    }
+
+    function renderState({ expandTopics = false, expandComment = false } = {}) {
+      if (!state) {
+        showRating(0);
+        followup.hidden = true;
+        status.textContent = '';
+        return;
+      }
+      showRating(state.rating);
       followup.hidden = false;
-      comment.hidden = rating > 3;
+      status.textContent = '✓ Gracias por tu feedback.';
+      feedback.querySelectorAll('[name="learn-topic"]').forEach((option) => {
+        option.checked = option.value === state.topic;
+      });
+      topics.hidden = Boolean(state.topic) && !expandTopics;
+      topicSummary.hidden = !state.topic || expandTopics;
+      if (state.topic) topicSummary.querySelector('strong').textContent = TOPIC_LABELS[state.topic];
+
+      commentSent.hidden = !state.has_comment;
+      comment.hidden = state.has_comment || (state.rating > 3 && !expandComment);
+      commentToggle.hidden = state.has_comment || state.rating <= 3 || expandComment;
+      comment.querySelector('label').hidden = state.rating > 3;
+      comment.querySelector('textarea').placeholder = state.rating > 3 ? 'Escribe un comentario...' : '';
     }
 
     async function updateFeedback(payload) {
-      if (!saved?.feedback_id) throw new Error('Feedback has not been created');
-      const response = await fetch(`/api/learn/feedback/${saved.feedback_id}`, {
+      if (!feedbackId) throw new Error('Feedback has not been created');
+      const response = await request(`/api/learn/feedback/${feedbackId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -41,40 +102,26 @@
       if (!response.ok) throw new Error('Feedback update failed');
     }
 
-    if (saved?.feedback_id && Number.isInteger(saved.rating)) {
-      showRating(saved.rating);
-      status.textContent = 'Tu valoración ya fue registrada. Gracias.';
-    }
-
     stars.forEach((star) => star.addEventListener('click', async () => {
       const rating = Number(star.dataset.rating);
-      const previousRating = saved?.rating;
+      const previousState = state && { ...state };
       showRating(rating);
       stars.forEach((item) => { item.disabled = true; });
-      status.textContent = saved?.feedback_id ? 'Actualizando…' : 'Registrando…';
+      status.textContent = feedbackId ? 'Actualizando…' : 'Registrando…';
       try {
-        const isUpdate = Boolean(saved?.feedback_id);
-        const endpoint = isUpdate
-          ? `/api/learn/feedback/${saved.feedback_id}`
-          : '/api/learn/feedback';
-        const payload = isUpdate
-          ? { rating, ...(rating > 3 ? { comment: null } : {}) }
-          : { content_key: EBOOK_ID, rating };
-        const response = await fetch(endpoint, {
+        const isUpdate = Boolean(feedbackId);
+        const response = await request(isUpdate ? `/api/learn/feedback/${feedbackId}` : '/api/learn/feedback', {
           method: isUpdate ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(isUpdate ? { rating } : { content_key: EBOOK_ID, rating })
         });
         if (!response.ok) throw new Error('Feedback submission failed');
-        const result = isUpdate ? null : await response.json();
-        saved = { feedback_id: saved?.feedback_id || result.feedback_id, rating };
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_error) { /* Storage is optional. */ }
-        if (rating > 3) comment.querySelector('textarea').value = '';
-        status.textContent = isUpdate
-          ? 'Gracias. Tu valoración fue actualizada.'
-          : 'Gracias. Tu valoración fue registrada.';
+        if (!isUpdate) persistId((await response.json()).feedback_id);
+        state = { rating, topic: state?.topic || null, has_comment: state?.has_comment || false };
+        renderState();
       } catch (_error) {
-        if (previousRating) showRating(previousRating);
+        state = previousState;
+        if (state) showRating(state.rating);
         status.textContent = 'No pudimos guardar tu valoración. Inténtalo nuevamente.';
       } finally {
         stars.forEach((item) => { item.disabled = false; });
@@ -83,27 +130,62 @@
 
     feedback.querySelectorAll('[name="learn-topic"]').forEach((option) => {
       option.addEventListener('change', async () => {
+        topics.disabled = true;
         try {
           await updateFeedback({ topic: option.value });
-          status.textContent = 'Gracias. Guardamos tu preferencia.';
+          state.topic = option.value;
+          renderState();
         } catch (_error) {
+          topics.disabled = false;
           status.textContent = 'No pudimos guardar el tema. Inténtalo nuevamente.';
+        } finally {
+          topics.disabled = false;
         }
       });
     });
+
+    topicSummary.querySelector('button').addEventListener('click', () => renderState({ expandTopics: true }));
+    commentToggle.addEventListener('click', () => renderState({ expandComment: true }));
 
     comment.addEventListener('submit', async (event) => {
       event.preventDefault();
       const textarea = comment.querySelector('textarea');
       const value = textarea.value.trim();
       if (!value) return;
+      const submit = comment.querySelector('button');
+      submit.disabled = true;
       try {
         await updateFeedback({ comment: value });
-        status.textContent = 'Gracias por ayudarnos a mejorar.';
+        state.has_comment = true;
+        textarea.value = '';
+        renderState();
       } catch (_error) {
         status.textContent = 'No pudimos guardar el comentario. Inténtalo nuevamente.';
+      } finally {
+        submit.disabled = false;
       }
     });
+
+    async function restoreFeedback() {
+      if (!feedbackId) return;
+      status.textContent = 'Recuperando tu feedback…';
+      try {
+        const response = await request(`/api/learn/feedback/${feedbackId}`);
+        if (response.status === 404) {
+          clearId();
+          renderState();
+          return;
+        }
+        if (!response.ok) throw new Error('Feedback retrieval failed');
+        state = await response.json();
+        persistId(feedbackId);
+        renderState();
+      } catch (_error) {
+        status.textContent = 'No pudimos recuperar tu feedback. Puedes intentarlo nuevamente.';
+      }
+    }
+
+    restoreFeedback();
   }
 
   function showError() {
@@ -116,25 +198,14 @@
       showError();
       return;
     }
-
     try {
-      const response = await fetch(reader.dataset.markdownSource, {
-        headers: { Accept: 'text/markdown' }
-      });
+      const response = await fetch(reader.dataset.markdownSource, { headers: { Accept: 'text/markdown' } });
       if (!response.ok) throw new Error('Content unavailable');
-
-      const markdown = await response.text();
-      const rendered = window.marked.parse(markdown, { gfm: true });
-      const sanitized = window.DOMPurify.sanitize(rendered, {
-        USE_PROFILES: { html: true }
-      });
-
-      reader.innerHTML = sanitized;
+      const rendered = window.marked.parse(await response.text(), { gfm: true });
+      reader.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
       reader.setAttribute('aria-busy', 'false');
       initializeFeedback();
-    } catch (_error) {
-      showError();
-    }
+    } catch (_error) { showError(); }
   }
 
   renderBook();
