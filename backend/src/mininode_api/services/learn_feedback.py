@@ -103,12 +103,12 @@ def create_feedback(*, content_key: str, rating: int) -> UUID:
     return feedback_id
 
 
-def get_feedback(feedback_id: UUID) -> tuple[int, str | None, bool]:
+def get_feedback(feedback_id: UUID) -> tuple[int, str | None, str | None]:
     """Return only the fields needed to restore the anonymous feedback UI."""
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT rating, topic, comment IS NOT NULL
+            SELECT rating, topic, comment
             FROM learn.feedback
             WHERE id = %s
             """,

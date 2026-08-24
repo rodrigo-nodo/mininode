@@ -161,12 +161,11 @@ def test_topic_change_preserves_rating(monkeypatch):
 
 
 def test_get_feedback_returns_minimum_state(monkeypatch):
-    statements = fake_update_connection(monkeypatch, current=(4, "security", True))
+    statements = fake_update_connection(monkeypatch, current=(4, "security", "Más ejemplos"))
     feedback_id = uuid4()
-    assert learn_feedback.get_feedback(feedback_id) == (4, "security", True)
+    assert learn_feedback.get_feedback(feedback_id) == (4, "security", "Más ejemplos")
     sql, params = statements[0]
-    assert "rating, topic, comment IS NOT NULL" in sql
-    assert "comment," not in sql
+    assert "SELECT rating, topic, comment FROM learn.feedback" in sql
     assert params == (feedback_id,)
 
 
@@ -189,13 +188,21 @@ def test_rating_is_created_with_content_key(client, monkeypatch):
     assert calls == [{"content_key": learn_feedback.CONTENT_KEY, "rating": 5}]
 
 
-def test_get_existing_feedback_exposes_no_comment_text(client, monkeypatch):
+def test_get_existing_feedback_exposes_only_restorable_state(client, monkeypatch):
     feedback_id = uuid4()
-    monkeypatch.setattr(learn_feedback, "get_feedback", lambda value: (4, "security", True))
+    monkeypatch.setattr(learn_feedback, "get_feedback", lambda value: (4, "security", "Más ejemplos"))
     response = client.get(f"/learn/feedback/{feedback_id}")
     assert response.status_code == 200
-    assert response.json() == {"rating": 4, "topic": "security", "has_comment": True}
-    assert "comment" not in response.json()
+    assert response.json() == {"rating": 4, "topic": "security", "comment": "Más ejemplos"}
+    assert "has_comment" not in response.json()
+
+
+def test_get_existing_feedback_exposes_null_without_comment(client, monkeypatch):
+    feedback_id = uuid4()
+    monkeypatch.setattr(learn_feedback, "get_feedback", lambda value: (4, "security", None))
+    response = client.get(f"/learn/feedback/{feedback_id}")
+    assert response.status_code == 200
+    assert response.json() == {"rating": 4, "topic": "security", "comment": None}
 
 
 def test_get_missing_feedback_returns_404(client, monkeypatch):

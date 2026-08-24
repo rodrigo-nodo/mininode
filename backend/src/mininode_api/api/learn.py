@@ -53,7 +53,7 @@ class FeedbackCreated(BaseModel):
 class FeedbackState(BaseModel):
     rating: int = Field(ge=1, le=5)
     topic: Topic | None
-    has_comment: bool
+    comment: str | None = Field(max_length=500)
 
 
 def require_feedback_database(request: Request) -> None:
@@ -78,10 +78,10 @@ def submit_feedback(body: FeedbackCreate):
 @router.get("/feedback/{feedback_id}", response_model=FeedbackState, dependencies=_DEPENDENCIES)
 def retrieve_feedback(feedback_id: UUID):
     try:
-        rating, topic, has_comment = learn_feedback.get_feedback(feedback_id)
+        rating, topic, comment = learn_feedback.get_feedback(feedback_id)
     except learn_feedback.FeedbackNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"rating": rating, "topic": topic, "has_comment": has_comment}
+    return {"rating": rating, "topic": topic, "comment": comment}
 
 
 @router.patch("/feedback/{feedback_id}", status_code=204, dependencies=_DEPENDENCIES)

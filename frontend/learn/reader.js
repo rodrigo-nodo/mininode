@@ -41,6 +41,7 @@
     const comment = feedback.querySelector('.learn-comment');
     const commentToggle = feedback.querySelector('.learn-comment-toggle');
     const commentSent = feedback.querySelector('.learn-comment-sent');
+    const commentValue = feedback.querySelector('.learn-comment-value');
     let state = null;
     let feedbackId = null;
 
@@ -91,9 +92,12 @@
       topicSummary.hidden = !state.topic || expandTopics;
       if (state.topic) topicSummary.querySelector('strong').textContent = TOPIC_LABELS[state.topic];
 
-      commentSent.hidden = !state.has_comment;
-      comment.hidden = state.has_comment || (state.rating > 3 && !expandComment);
-      commentToggle.hidden = state.has_comment || state.rating <= 3 || expandComment;
+      const hasComment = state.comment !== null;
+      commentSent.hidden = !hasComment;
+      commentValue.hidden = !hasComment;
+      commentValue.textContent = hasComment ? `“${state.comment}”` : '';
+      comment.hidden = hasComment || (state.rating > 3 && !expandComment);
+      commentToggle.hidden = hasComment || state.rating <= 3 || expandComment;
       comment.querySelector('label').hidden = state.rating > 3;
       comment.querySelector('textarea').placeholder = state.rating > 3 ? 'Escribe un comentario...' : '';
     }
@@ -123,7 +127,7 @@
         });
         if (!response.ok) throw new Error('Feedback submission failed');
         if (!isUpdate) persistId((await response.json()).feedback_id);
-        state = { rating, topic: state?.topic || null, has_comment: state?.has_comment || false };
+        state = { rating, topic: state?.topic || null, comment: state?.comment ?? null };
         renderState();
       } catch (_error) {
         state = previousState;
@@ -162,7 +166,7 @@
       submit.disabled = true;
       try {
         await updateFeedback({ comment: value });
-        state.has_comment = true;
+        state.comment = value;
         textarea.value = '';
         renderState();
       } catch (_error) {
