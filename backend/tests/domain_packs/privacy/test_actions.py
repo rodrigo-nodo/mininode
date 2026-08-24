@@ -24,6 +24,7 @@ EXPECTED_ACTIONS = {
     "PRV-006": {"partial", "not_detected"},
     "PRV-007": {"partial", "not_detected"},
     "PRV-008": {"partial", "not_detected"},
+    "PRV-010": {"partial", "not_detected"},
     "PRV-011": {"partial", "not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
@@ -83,6 +84,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
         "PRV-008": [
             ({"processing_purposes": "generic"}, {"PRV-003": "detected"}),
             ({"processing_purposes": "none"}, {"PRV-003": "detected"}),
+        ],
+        "PRV-010": [
+            ({"data_recipients": "generic"}, {"PRV-003": "detected"}),
+            ({"data_recipients": "none"}, {"PRV-003": "detected"}),
         ],
         "PRV-011": [
             ({"data_subject_rights": "generic"}, {"PRV-003": "detected"}),
