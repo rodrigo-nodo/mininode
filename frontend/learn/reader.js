@@ -60,6 +60,12 @@
       try { localStorage.removeItem(STORAGE_KEY); } catch (_error) { /* Storage is optional. */ }
     }
 
+    function setControlsDisabled(disabled) {
+      feedback.querySelectorAll('button, input, textarea').forEach((control) => {
+        control.disabled = disabled;
+      });
+    }
+
     function showRating(rating) {
       stars.forEach((star) => {
         const selected = Number(star.dataset.rating) === rating;
@@ -168,6 +174,7 @@
 
     async function restoreFeedback() {
       if (!feedbackId) return;
+      setControlsDisabled(true);
       status.textContent = 'Recuperando tu feedback…';
       try {
         const response = await request(`/api/learn/feedback/${feedbackId}`);
@@ -182,6 +189,8 @@
         renderState();
       } catch (_error) {
         status.textContent = 'No pudimos recuperar tu feedback. Puedes intentarlo nuevamente.';
+      } finally {
+        setControlsDisabled(false);
       }
     }
 

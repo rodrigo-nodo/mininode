@@ -31,6 +31,21 @@ def test_reader_restores_and_closes_persisted_feedback():
     assert "state.rating <= 3" in script
 
 
+def test_restore_temporarily_disables_all_feedback_controls():
+    script = (ROOT / "reader.js").read_text()
+    restore = script[script.index("async function restoreFeedback"):script.index("restoreFeedback();")]
+    assert "setControlsDisabled(true)" in restore
+    assert "finally" in restore
+    assert "setControlsDisabled(false)" in restore
+    assert "querySelectorAll('button, input, textarea')" in script
+
+
+def test_comment_keeps_an_accessible_name_when_visual_label_is_hidden():
+    html = (ROOT / "privacy" / "index.html").read_text()
+    assert 'aria-label="Comentario opcional"' in html
+    assert "¿Qué faltó o qué podría explicarse mejor? <span>Opcional</span>" in html
+
+
 def test_topics_use_stable_codes_and_theme_styles_remain():
     html = (ROOT / "privacy" / "index.html").read_text()
     css = (ROOT / "learn.css").read_text()
