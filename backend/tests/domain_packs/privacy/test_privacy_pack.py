@@ -25,6 +25,7 @@ EXPECTED = {
     "PRV-001": ("Política de privacidad visible", "muy_alto", "evaluation"),
     "PRV-002": ("Política de privacidad accesible", "medio", "conditional_evaluation"),
     "PRV-003": ("Política propia del responsable", "muy_alto", "evaluation"),
+    "PRV-004": ("Fecha o versión de la política", "bajo", "context"),
     "PRV-005": ("Identificación del responsable", "alto", "conditional_evaluation"),
     "PRV-006": ("Canal para ejercer derechos", "muy_alto", "conditional_evaluation"),
     "PRV-007": ("Categorías de datos tratados", "alto", "conditional_evaluation"),
@@ -83,7 +84,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 15
+    assert len(controls) == 16
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -94,6 +95,8 @@ def test_catalog_contains_required_metadata_and_dependencies():
     controls = {control["code"]: control for control in load_controls()}
     assert controls["PRV-101"]["type"] == "context"
     assert controls["PRV-101"]["score_weight"] == 0
+    assert controls["PRV-004"]["score_weight"] == 0
+    assert controls["PRV-004"]["dependency"] == "PRV-003"
     assert controls["PRV-002"]["dependency"] == "PRV-001"
     assert controls["PRV-005"]["dependency"] == "PRV-003"
     assert controls["PRV-006"]["dependency"] == "PRV-003"
@@ -112,6 +115,7 @@ def test_catalog_criteria_match_active_evaluator_results():
         "PRV-001": {"detected", "not_detected", "not_evaluable"},
         "PRV-002": {"detected", "partial", "not_applicable", "not_evaluable"},
         "PRV-003": {"detected", "partial", "not_detected", "not_evaluable"},
+        "PRV-004": {"detected", "partial", "not_detected", "not_applicable", "not_evaluable"},
         "PRV-005": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
@@ -434,3 +438,12 @@ def test_prv104_evidence_summary_matches_observable_state(
 
     assert result["result"] == expected_result
     assert result["evidence_summary"] == expected_summary
+
+
+def test_prv004_context_does_not_modify_privacy_score():
+    baseline = [{"control_code": "PRV-001", "result": "detected"}]
+    expected = score_privacy(baseline)
+    for result in ("detected", "partial", "not_detected"):
+        assert score_privacy([
+            *baseline, {"control_code": "PRV-004", "result": result}
+        ]) == expected

@@ -20,6 +20,7 @@ EXPECTED_ACTIONS = {
     "PRV-001": {"not_detected"},
     "PRV-002": {"partial"},
     "PRV-003": {"partial", "not_detected"},
+    "PRV-004": {"partial", "not_detected"},
     "PRV-005": {"partial", "not_detected"},
     "PRV-006": {"partial", "not_detected"},
     "PRV-007": {"partial", "not_detected"},
@@ -69,6 +70,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
         "PRV-003": [
             ({"policy_attribution": "ambiguous"}, None),
             ({"policy_attribution": "third_party"}, None),
+        ],
+        "PRV-004": [
+            ({"policy_document_reference": "ambiguous"}, {"PRV-003": "detected"}),
+            ({"policy_document_reference": "none"}, {"PRV-003": "detected"}),
         ],
         "PRV-005": [
             ({"responsible_identification": "ambiguous"}, {"PRV-003": "detected"}),
@@ -120,6 +125,11 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
     for code, outcomes in catalog.items():
         for outcome in outcomes:
             assert outcome in produced[code]
+            if code == "PRV-004":
+                assert prioritize_findings([
+                    {"control_code": code, "result": outcome, "confidence": "high"}
+                ]) == []
+                continue
             prioritized = prioritize_findings([
                 {"control_code": code, "result": outcome, "confidence": "high"}
             ])

@@ -828,3 +828,68 @@ def test_prv501_missing_target_transport_is_technical_error(transport):
     evidence = adapt_evidence(contract(transport=transport))["PRV-501"]
     assert evidence["technical_error"] is True
     assert evaluate_control("PRV-501", evidence)["result"] == "not_evaluable"
+
+@pytest.mark.parametrize("visible_text", [
+    "Última actualización: 15 de marzo de 2026",
+    "Actualizado el 15/03/2026",
+    "Vigente desde enero de 2026",
+    "Versión 2.1",
+    "Last updated: March 15, 2026",
+    "Effective date: January 1, 2026",
+    "Privacy Policy v3",
+])
+def test_prv004_detects_contextual_date_or_version(visible_text):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+    result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": prv003})
+    assert result["result"] == "detected"
+    assert adapted["PRV-004"]["source_urls"] == [url]
+
+
+@pytest.mark.parametrize("visible_text", [
+    "© 2026 Example SpA",
+    "Esta política explica cómo tratamos sus datos personales.",
+    "15/03/2026",
+])
+def test_prv004_does_not_treat_uncontextualized_dates_as_document_dates(visible_text):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "not_detected"
+
+
+def test_prv004_uses_gate_and_requires_selected_document():
+    evidence = {"policy_document_reference": "none", "confidence": "high"}
+    assert evaluate_control("PRV-004", evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-004", evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+    url = "https://example.com/privacy"
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(url, "Privacidad", "https://example.com/")]
+    ))
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+@pytest.mark.parametrize(("provider_text", "own_text", "expected"), [
+    ("Last updated: March 15, 2026", "Política sobre datos personales.", "not_detected"),
+    ("Privacy policy without a date.", "Última actualización: 2026-01-10", "detected"),
+])
+def test_prv004_uses_only_policy_selected_after_hcaptcha(provider_text, own_text, expected):
+    provider_url = "https://www.hcaptcha.com/privacy"
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence(provider_url, "Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence(provider_url, 200, "hCaptcha Privacy", "text/html", visible_text=provider_text),
+        PageEvidence(own_url, 200, "Política de privacidad", "text/html", visible_text=own_text),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+    result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": prv003})
+    assert result["result"] == expected
+    assert adapted["PRV-004"]["source_urls"] == [own_url]
