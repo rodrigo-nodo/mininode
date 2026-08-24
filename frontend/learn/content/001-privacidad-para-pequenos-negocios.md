@@ -2,7 +2,7 @@
 
 Entender qué ocurre con los datos personales antes de pensar en cumplir
 
-**Mininode Learn · Micro-ebook 001**
+**Mininode Learn · Micro-ebook 001 · Lectura aprox. 30 min**
 
 ## Antes de hablar de leyes, conviene mirar la operación
 
