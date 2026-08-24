@@ -52,7 +52,7 @@ def test_action_catalog_integrity_and_approved_results():
         assert set(outcomes) <= {"partial", "not_detected"}
         for action in outcomes.values():
             assert set(action) == {"action_steps", "validation_step"}
-            assert 1 <= len(action["action_steps"]) <= 4
+            assert 2 <= len(action["action_steps"]) <= 4
             assert all(isinstance(step, str) and step.strip() for step in action["action_steps"])
             assert isinstance(action["validation_step"], str)
             assert action["validation_step"].strip()
