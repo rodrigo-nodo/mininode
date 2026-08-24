@@ -146,7 +146,8 @@
       },
       "partial": {
         "action_steps": [
-          "Precisar la referencia genérica a conservación o retención indicando un plazo, evento o criterio temporal reconocible."
+          "Identificar la referencia genérica a conservación o retención observada en la política seleccionada.",
+          "Precisarla indicando un plazo, evento o criterio temporal reconocible."
         ],
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar un plazo, evento o criterio temporal de conservación."
       }
