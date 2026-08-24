@@ -187,7 +187,7 @@ def evaluate_control(
             result = "not_detected"
     elif control_code == "PRV-010":
         recipients = evidence.get("data_recipients")
-        if recipients == "explicit":
+        if recipients in {"explicit", "explicit_none"}:
             result = "detected"
         elif recipients == "generic":
             result = "partial"

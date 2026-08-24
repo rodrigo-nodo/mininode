@@ -403,16 +403,26 @@ def test_prv011_gate_follows_prv003_without_cascade_penalty():
 
 
 @pytest.mark.parametrize(
-    ("visible_text", "expected"),
+    ("visible_text", "expected_evidence", "expected_result"),
     [
-        ("Compartimos datos con proveedores de servicios de pago y hosting.", "detected"),
-        ("We disclose personal data to service providers and processors.", "detected"),
-        ("Podemos compartir información con terceros.", "partial"),
-        ("Nuestros proveedores ofrecen servicios. No vendemos datos.", "not_detected"),
-        ("Esta política explica nuestras prácticas de privacidad.", "not_detected"),
+        ("No compartimos datos personales con terceros.", "explicit_none", "detected"),
+        ("We do not share personal data with third parties.", "explicit_none", "detected"),
+        ("We don't disclose personal information to third parties.", "explicit_none", "detected"),
+        ("Podemos compartir información con terceros.", "generic", "partial"),
+        ("Compartimos datos con proveedores de servicios de pago y hosting.", "explicit", "detected"),
+        ("We disclose personal data to service providers and processors.", "explicit", "detected"),
+        (
+            "En general no compartimos datos con terceros. Podemos compartirlos con proveedores de pago.",
+            "explicit",
+            "detected",
+        ),
+        ("Nuestros proveedores ofrecen servicios. No vendemos datos.", "none", "not_detected"),
+        ("Esta política explica nuestras prácticas de privacidad.", "none", "not_detected"),
     ],
 )
-def test_prv010_classifies_recipients_only_in_selected_policy(visible_text, expected):
+def test_prv010_classifies_recipients_only_in_selected_policy(
+    visible_text, expected_evidence, expected_result
+):
     url = "https://example.com/privacy"
     link = LinkEvidence(url, "Privacidad", "https://example.com/")
     page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
@@ -421,7 +431,8 @@ def test_prv010_classifies_recipients_only_in_selected_policy(visible_text, expe
 
     result = evaluate_control("PRV-010", adapted["PRV-010"], {"PRV-003": prv003})
 
-    assert result["result"] == expected
+    assert adapted["PRV-010"]["data_recipients"] == expected_evidence
+    assert result["result"] == expected_result
     assert adapted["PRV-010"]["source_urls"] == [url]
 
 
