@@ -373,6 +373,76 @@ def test_prv008_uses_own_policy_selected_after_provider_candidate():
     assert adapted["PRV-008"]["source_urls"] == [own_url]
 
 
+@pytest.mark.parametrize(("visible_text", "classification", "outcome"), [
+    ("Tratamos sus datos sobre la base de su consentimiento.", "explicit", "detected"),
+    ("El tratamiento es necesario para la ejecución del contrato.", "explicit", "detected"),
+    ("Tratamos sus datos para cumplir una obligación legal.", "explicit", "detected"),
+    ("Nuestro interés legítimo constituye una base para determinados tratamientos.", "explicit", "detected"),
+    ("We process personal data based on your consent.", "explicit", "detected"),
+    ("We process data where necessary to perform a contract.", "explicit", "detected"),
+    ("We process data to comply with a legal obligation.", "explicit", "detected"),
+    ("We rely on our legitimate interests for this processing.", "explicit", "detected"),
+    ("Tratamos sus datos cuando existe una base aplicable.", "generic", "partial"),
+    ("We process data where permitted.", "generic", "partial"),
+    ("Esta política explica cómo protegemos su información.", "none", "not_detected"),
+    ("Puede contratar nuestros servicios en línea.", "none", "not_detected"),
+    ("Al continuar acepta el uso de cookies.", "none", "not_detected"),
+    ("Tratamos los datos proporcionados con su consentimiento.", "explicit", "detected"),
+    ("No utilizamos el interés legítimo como base para tratar sus datos.", "none", "not_detected"),
+    ("Tratamos datos con su consentimiento, para ejecutar un contrato y para cumplir obligaciones legales.", "explicit", "detected"),
+])
+def test_prv009_classifies_only_declared_bases_in_processing_context(
+    visible_text, classification, outcome
+):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+    result = evaluate_control("PRV-009", adapted["PRV-009"], {"PRV-003": prv003})
+
+    assert adapted["PRV-009"]["declared_processing_basis"] == classification
+    assert adapted["PRV-009"]["source_urls"] == [url]
+    assert result["result"] == outcome
+
+
+def test_prv009_gate_and_missing_selected_document_are_not_penalized():
+    evidence = {"declared_processing_basis": "explicit"}
+    assert evaluate_control("PRV-009", evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-009", evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(links=[link], pages=[]))
+    assert adapted["PRV-009"]["technical_error"] is True
+    assert evaluate_control("PRV-009", adapted["PRV-009"], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+@pytest.mark.parametrize(("provider_text", "own_text", "expected"), [
+    ("We process personal data based on consent.", "Información general de privacidad.", "not_detected"),
+    ("Privacy information without a declared basis.", "Tratamos sus datos con su consentimiento.", "detected"),
+])
+def test_prv009_uses_only_policy_selected_after_provider_candidate(
+    provider_text, own_text, expected
+):
+    provider_url = "https://hcaptcha.com/privacy"
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence(provider_url, "hCaptcha Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence(provider_url, 200, "Privacy", "text/html", visible_text=provider_text),
+        PageEvidence(own_url, 200, "Política de privacidad", "text/html", visible_text=own_text),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+    result = evaluate_control("PRV-009", adapted["PRV-009"], {"PRV-003": prv003})
+
+    assert result["result"] == expected
+    assert adapted["PRV-009"]["source_urls"] == [own_url]
+
+
 @pytest.mark.parametrize(
     ("visible_text", "expected"),
     [

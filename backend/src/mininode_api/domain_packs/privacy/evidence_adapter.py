@@ -19,6 +19,7 @@ CONTROL_CODES = (
     "PRV-006",
     "PRV-007",
     "PRV-008",
+    "PRV-009",
     "PRV-010",
     "PRV-011",
     "PRV-012",
@@ -148,6 +149,34 @@ _GENERIC_PROCESSING_PURPOSE_TERMS = (
     "usamos datos", "usamos sus datos", "uso de datos",
     "procesamos datos", "procesamiento de datos", "process personal data",
     "processing of personal data", "use personal data", "use your data",
+)
+_PROCESSING_BASIS_CONTEXT_TERMS = (
+    "tratamiento", "tratamientos", "tratar", "tratamos", "procesamiento",
+    "procesar", "procesamos", "datos", "informacion personal", "processing",
+    "process", "personal data", "data",
+)
+_EXPLICIT_PROCESSING_BASIS_PATTERNS = tuple(
+    re.compile(pattern) for pattern in (
+        r"\b(?:base|fundamento)\b.{0,50}\b(?:consentimiento|contrato|obligacion(?:es)? (?:legal(?:es)?|normativa(?:s)?)|interes(?:es)? (?:legitimo(?:s)?|vital(?:es)?)|interes publico)\b",
+        r"\b(?:consentimiento|ejecucion (?:del|de un) contrato|cumplimiento (?:del|de un) contrato|medidas precontractuales|obligacion(?:es)? (?:legal(?:es)?|normativa(?:s)?)|interes(?:es)? (?:legitimo(?:s)?|vital(?:es)?)|interes publico)\b.{0,80}\b(?:tratamiento|tratamientos|tratar|tratamos|procesamiento|procesar|procesamos|datos)\b",
+        r"\b(?:tratamiento|tratamientos|tratar|tratamos|procesamiento|procesar|procesamos|datos)\b.{0,80}\b(?:consentimiento|ejecutar (?:el|un) contrato|ejecucion (?:del|de un) contrato|cumplir (?:una |con )?obligacion(?:es)? (?:legal(?:es)?|normativa(?:s)?)|interes(?:es)? (?:legitimo(?:s)?|vital(?:es)?)|interes publico)\b",
+        r"\b(?:legal basis|lawful basis|basis for processing)\b.{0,50}\b(?:consent|contract|legal obligation|legitimate interests?|vital interests?|public interest)\b",
+        r"\b(?:consent|contractual necessity|necessary to perform a contract|legal obligation|legitimate interests?|vital interests?|public interest)\b.{0,80}\b(?:processing|process|personal data|data)\b",
+        r"\b(?:processing|process|personal data|data)\b.{0,80}\b(?:based on (?:your )?consent|necessary to perform a contract|legal obligation|legitimate interests?|vital interests?|public interest)\b",
+        r"\brely on\b.{0,40}\b(?:consent|contract|legal obligation|legitimate interests?|vital interests?|public interest)\b.{0,40}\b(?:processing|process|data)\b",
+    )
+)
+_GENERIC_PROCESSING_BASIS_PATTERNS = tuple(
+    re.compile(pattern) for pattern in (
+        r"\b(?:tratamiento|tratar|tratamos|procesamiento|procesar|procesamos|datos)\b.{0,70}\b(?:base|fundamento|autorizacion|permiso|justificacion)\b",
+        r"\b(?:base|fundamento|autorizacion|permiso|justificacion)\b.{0,70}\b(?:tratamiento|tratar|tratamos|procesamiento|procesar|procesamos|datos)\b",
+        r"\b(?:processing|process|personal data|data)\b.{0,70}\b(?:basis|permitted|permission|justification)\b",
+        r"\b(?:basis|permitted|permission|justification)\b.{0,70}\b(?:processing|process|personal data|data)\b",
+    )
+)
+_NEGATED_PROCESSING_BASIS_PATTERN = re.compile(
+    r"\b(?:no|nunca|jamas|not|never|do not|does not|don t|doesn t)\b.{0,50}"
+    r"\b(?:base|fundamento|consentimiento|contrato|obligacion|interes|basis|consent|contract|obligation|interest)\b"
 )
 _RECIPIENT_COMMUNICATION_TERMS = (
     "compartir", "compartimos", "compartirlos", "compartirlas", "compartirse",
@@ -708,6 +737,62 @@ def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "processing_purposes": purposes, "confidence": confidence}
 
 
+def _declared_processing_basis(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify only bases observably declared in PRV-003's selected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"declared_processing_basis": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "declared_processing_basis": "unknown",
+            "technical_error": True, "confidence": "low",
+        }
+
+    segments = [
+        _normalize(segment) for segment in
+        re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+        if segment.strip()
+    ]
+    positive_segments = [
+        segment for segment in segments
+        if _contains_phrase(segment, _PROCESSING_BASIS_CONTEXT_TERMS)
+        and not _NEGATED_PROCESSING_BASIS_PATTERN.search(segment)
+    ]
+    if any(
+        pattern.search(segment)
+        for segment in positive_segments
+        for pattern in _EXPLICIT_PROCESSING_BASIS_PATTERNS
+    ):
+        basis, confidence = "explicit", "high"
+    elif any(
+        pattern.search(segment)
+        for segment in positive_segments
+        for pattern in _GENERIC_PROCESSING_BASIS_PATTERNS
+    ):
+        basis, confidence = "generic", "medium"
+    else:
+        basis, confidence = "none", "high"
+    return {**evidence, "declared_processing_basis": basis, "confidence": confidence}
+
+
 def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify recipients only in PRV-003's selected inspected policy."""
 
@@ -963,6 +1048,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv006 = _rights_channel(contract, prv003)
     prv007 = _data_categories(contract, prv003)
     prv008 = _processing_purposes(contract, prv003)
+    prv009 = _declared_processing_basis(contract, prv003)
     prv010 = _data_recipients(contract, prv003)
     prv011 = _data_subject_rights(contract, prv003)
     prv012 = _data_retention(contract, prv003)
@@ -1070,6 +1156,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-006": prv006,
         "PRV-007": prv007,
         "PRV-008": prv008,
+        "PRV-009": prv009,
         "PRV-010": prv010,
         "PRV-011": prv011,
         "PRV-012": prv012,

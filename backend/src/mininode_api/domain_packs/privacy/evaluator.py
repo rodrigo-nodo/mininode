@@ -123,7 +123,7 @@ def evaluate_control(
 
     control = controls[control_code]
     confidence = evidence.get("confidence", "high")
-    if control_code in {"PRV-004", "PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-010", "PRV-011", "PRV-012"}:
+    if control_code in {"PRV-004", "PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-009", "PRV-010", "PRV-011", "PRV-012"}:
         dependency_result = _previous_result(previous_results, "PRV-003")
         if dependency_result == "not_detected":
             return _result(control, "not_applicable", evidence, confidence)
@@ -190,6 +190,14 @@ def evaluate_control(
         if purposes == "concrete":
             result = "detected"
         elif purposes == "generic":
+            result = "partial"
+        else:
+            result = "not_detected"
+    elif control_code == "PRV-009":
+        basis = evidence.get("declared_processing_basis")
+        if basis == "explicit":
+            result = "detected"
+        elif basis == "generic":
             result = "partial"
         else:
             result = "not_detected"
