@@ -35,6 +35,11 @@ documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 PRV-008 evalúa las finalidades del tratamiento únicamente en el documento
 seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 
+PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
+únicamente en el documento seleccionado por PRV-003. Usa señales textuales
+determinísticas en contexto de comunicación de datos, sin ampliar la inspección ni
+evaluar jurídicamente esa comunicación.
+
 PRV-011 evalúa los derechos del titular únicamente en el documento seleccionado
 por PRV-003, reutilizando su contenido ya inspeccionado.
 

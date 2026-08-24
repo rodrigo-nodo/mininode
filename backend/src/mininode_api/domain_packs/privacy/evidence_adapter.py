@@ -18,6 +18,7 @@ CONTROL_CODES = (
     "PRV-006",
     "PRV-007",
     "PRV-008",
+    "PRV-010",
     "PRV-011",
     "PRV-101",
     "PRV-104",
@@ -123,6 +124,26 @@ _GENERIC_PROCESSING_PURPOSE_TERMS = (
     "usamos datos", "usamos sus datos", "uso de datos",
     "procesamos datos", "procesamiento de datos", "process personal data",
     "processing of personal data", "use personal data", "use your data",
+)
+_RECIPIENT_COMMUNICATION_TERMS = (
+    "compartir", "compartimos", "compartirse", "comunicar", "comunicamos",
+    "transferir", "transferimos", "revelar", "revelamos", "proporcionar",
+    "proporcionamos", "share", "shared", "sharing", "disclose", "disclosed",
+    "transfer", "transferred", "provide", "provided",
+)
+_GENERIC_RECIPIENT_TERMS = (
+    "terceros", "tercero", "third parties", "third party", "proveedores",
+    "proveedor", "providers", "provider", "destinatarios", "destinatario",
+    "recipients", "recipient", "otras organizaciones", "other organizations",
+)
+_EXPLICIT_RECIPIENT_CATEGORIES = (
+    "proveedores de servicios", "service providers", "encargados",
+    "encargado del tratamiento", "procesadores", "processors",
+    "proveedores tecnologicos", "technology providers", "servicios de pago",
+    "payment services", "proveedores de pago", "payment providers", "hosting",
+    "infraestructura", "infrastructure", "analitica", "analytics", "marketing",
+    "entidades relacionadas", "related entities", "autoridades", "authorities",
+    "socios comerciales", "business partners",
 )
 _CONCRETE_DATA_SUBJECT_RIGHTS = (
     ("acceso", "derecho de acceso", "access", "right of access"),
@@ -573,6 +594,55 @@ def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "processing_purposes": purposes, "confidence": confidence}
 
 
+def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify recipients only in PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"data_recipients": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "data_recipients": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+    communication_segments = [
+        segment for segment in segments
+        if _contains_phrase(segment, _RECIPIENT_COMMUNICATION_TERMS)
+        and _contains_phrase(
+            segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
+        )
+    ]
+    if any(
+        _contains_phrase(segment, _EXPLICIT_RECIPIENT_CATEGORIES)
+        for segment in communication_segments
+    ):
+        recipients, confidence = "explicit", "high"
+    elif communication_segments:
+        recipients, confidence = "generic", "medium"
+    else:
+        recipients, confidence = "none", "high"
+    return {**evidence, "data_recipients": recipients, "confidence": confidence}
+
+
 def _data_subject_rights(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify rights only in PRV-003's selected inspected policy."""
 
@@ -719,6 +789,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv006 = _rights_channel(contract, prv003)
     prv007 = _data_categories(contract, prv003)
     prv008 = _processing_purposes(contract, prv003)
+    prv010 = _data_recipients(contract, prv003)
     prv011 = _data_subject_rights(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
@@ -823,6 +894,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-006": prv006,
         "PRV-007": prv007,
         "PRV-008": prv008,
+        "PRV-010": prv010,
         "PRV-011": prv011,
         "PRV-101": prv101,
         "PRV-104": prv104,

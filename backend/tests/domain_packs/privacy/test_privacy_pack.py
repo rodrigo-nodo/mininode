@@ -28,6 +28,9 @@ EXPECTED = {
     "PRV-005": ("Identificación del responsable", "alto", "conditional_evaluation"),
     "PRV-006": ("Canal para ejercer derechos", "muy_alto", "conditional_evaluation"),
     "PRV-007": ("Categorías de datos tratados", "alto", "conditional_evaluation"),
+    "PRV-008": ("Finalidades del tratamiento", "muy_alto", "conditional_evaluation"),
+    "PRV-010": ("Destinatarios o terceros", "alto", "conditional_evaluation"),
+    "PRV-011": ("Derechos del titular", "muy_alto", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
@@ -56,6 +59,9 @@ def evaluated_scenario():
     results["PRV-007"] = evaluate_control(
         "PRV-007", {"data_categories": "concrete"}, results
     )
+    results["PRV-010"] = evaluate_control(
+        "PRV-010", {"data_recipients": "explicit"}, results
+    )
     results["PRV-101"] = evaluate_control(
         "PRV-101", {"personal_data_form": True}
     )
@@ -76,7 +82,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 11
+    assert len(controls) == 14
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -91,6 +97,7 @@ def test_catalog_contains_required_metadata_and_dependencies():
     assert controls["PRV-005"]["dependency"] == "PRV-003"
     assert controls["PRV-006"]["dependency"] == "PRV-003"
     assert controls["PRV-007"]["dependency"] == "PRV-003"
+    assert controls["PRV-010"]["dependency"] == "PRV-003"
     assert controls["PRV-104"]["dependency"] == "PRV-101"
     for control in controls.values():
         assert control["expected_evidence"]
@@ -112,6 +119,18 @@ def test_catalog_criteria_match_active_evaluator_results():
             "not_evaluable",
         },
         "PRV-007": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-008": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-010": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-011": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
         },
@@ -237,9 +256,9 @@ def test_not_evaluable_is_unscored_and_reduces_coverage():
     results = list(evaluated_scenario().values())
     results[-1] = {"control_code": "PRV-501", "result": "not_evaluable"}
     scored = score_privacy(results)
-    assert scored["evaluated_controls"] == 6
-    assert scored["applicable_controls"] == 7
-    assert scored["coverage"] == 86
+    assert scored["evaluated_controls"] == 9
+    assert scored["applicable_controls"] == 10
+    assert scored["coverage"] == 90
 
 
 def test_context_never_scores():
@@ -254,11 +273,11 @@ def test_context_never_scores():
 
 def test_integral_scenario_returns_the_approved_result():
     assert score_privacy(evaluated_scenario().values()) == {
-        "score": 77,
+        "score": 84,
         "status": "Preparación avanzada",
         "coverage": 100,
-        "evaluated_controls": 7,
-        "applicable_controls": 7,
+        "evaluated_controls": 10,
+        "applicable_controls": 10,
     }
 
 

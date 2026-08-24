@@ -104,6 +104,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con al menos una finalidad concreta."
       }
     },
+    "PRV-010": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar si la organización comunica datos a proveedores u otros terceros.",
+          "Si corresponde, describir en la política las categorías de destinatarios de forma reconocible."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar si pueden identificarse categorías de destinatarios o terceros en el contexto de la comunicación de datos."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica a terceros o proveedores observada en la política seleccionada.",
+          "Precisar esa referencia indicando categorías o contexto de la comunicación de datos."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar categorías o contexto de los destinatarios mencionados."
+      }
+    },
     "PRV-011": {
       "not_detected": {
         "action_steps": [
