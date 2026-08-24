@@ -1,4 +1,6 @@
+import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -9,6 +11,39 @@ HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_human_status_uses_backend_score_boundaries(self):
+        function = re.search(
+            r"const getHumanStatus = \(score\) => \{.*?\n\};",
+            APP,
+            re.DOTALL,
+        ).group()
+        boundaries = [0, 39, 40, 69, 70, 84, 85, 100]
+        script = f"{function}\nconsole.log(JSON.stringify({boundaries}.map(getHumanStatus)));"
+        result = subprocess.run(
+            ["node", "-e", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(json.loads(result.stdout), [
+            "Hay aspectos importantes por mejorar",
+            "Hay aspectos importantes por mejorar",
+            "Hay aspectos que puedes mejorar",
+            "Hay aspectos que puedes mejorar",
+            "Bien",
+            "Bien",
+            "Bien",
+            "Bien",
+        ])
+
+    def test_human_status_does_not_interpret_backend_status_text(self):
+        function = APP.split("const getHumanStatus", 1)[1].split("const renderPriorities", 1)[0]
+
+        self.assertNotIn("status", function)
+        self.assertNotIn("includes", function)
+        self.assertIn("getHumanStatus(score)", APP)
+
     def test_configures_the_complete_matrix_in_five_areas(self):
         config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
         codes = re.findall(r"code: '(PRV-\d+)'", config)
