@@ -9,10 +9,9 @@ const analyzedUrl = document.querySelector('#analyzed-url');
 const privacyScore = document.querySelector('#privacy-score');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
-const diagnosticStatus = document.querySelector('#diagnostic-status');
-const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
 const diagnosticScope = document.querySelector('#diagnostic-scope');
-const detectedSignals = document.querySelector('#detected-signals');
+const diagnosticAreas = document.querySelector('#diagnostic-areas');
+const diagnosticControls = document.querySelector('#diagnostic-controls');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
 const correctionOffer = document.querySelector('#privacy-correction-offer');
 const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
@@ -26,12 +25,42 @@ let lastFocusedElement = null;
 let isDiagnosing = false;
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
-const signalLabels = {
-  'PRV-001': 'Política de privacidad visible',
-  'PRV-101': 'Formularios que recopilan datos personales',
-  'PRV-201': 'Uso de cookies o información sobre cookies observada',
-  'PRV-301': 'Canal de contacto visible',
-  'PRV-501': 'HTTPS activo',
+const privacyAreas = [
+  {
+    name: 'Transparencia',
+    controls: [
+      { code: 'PRV-001', name: 'Política de privacidad visible' },
+      { code: 'PRV-002', name: 'Política de privacidad accesible' },
+      { code: 'PRV-003', name: 'Política atribuible al negocio' },
+      { code: 'PRV-004', name: 'Fecha o versión de la política', informational: true },
+      { code: 'PRV-005', name: 'Identificación del responsable' },
+      { code: 'PRV-006', name: 'Canal para ejercer derechos' },
+      { code: 'PRV-007', name: 'Categorías de datos tratados' },
+      { code: 'PRV-008', name: 'Finalidades del tratamiento' },
+      { code: 'PRV-009', name: 'Base declarada del tratamiento', informational: true },
+      { code: 'PRV-010', name: 'Destinatarios o terceros' },
+      { code: 'PRV-011', name: 'Derechos de las personas' },
+      { code: 'PRV-012', name: 'Conservación de datos' },
+    ],
+  },
+  {
+    name: 'Formularios',
+    controls: [
+      { code: 'PRV-101', name: 'Recopilación de datos personales' },
+      { code: 'PRV-104', name: 'Información o consentimiento en formularios' },
+    ],
+  },
+  { name: 'Cookies', controls: [{ code: 'PRV-201', name: 'Uso o información sobre cookies' }] },
+  { name: 'Contacto', controls: [{ code: 'PRV-301', name: 'Canal de contacto visible' }] },
+  { name: 'Seguridad', controls: [{ code: 'PRV-501', name: 'HTTPS activo' }] },
+];
+
+const resultLabels = {
+  detected: { label: 'Bien', className: 'good' },
+  partial: { label: 'Puede mejorar', className: 'improve' },
+  not_detected: { label: 'Necesita atención', className: 'attention' },
+  not_evaluable: { label: 'No pudimos revisarlo', className: 'neutral' },
+  not_applicable: { label: 'No aplica', className: 'neutral' },
 };
 
 const normalizeUrl = (value) => {
@@ -94,22 +123,73 @@ const appendTextElement = (parent, tagName, text, className) => {
   return element;
 };
 
-const renderSignals = (controls) => {
-  detectedSignals.replaceChildren();
+const getAreaResult = (area, controlsByCode) => {
+  const results = area.controls
+    .filter((control) => !control.informational)
+    .map((control) => controlsByCode.get(control.code)?.result)
+    .filter(Boolean);
 
-  const signals = (Array.isArray(controls) ? controls : [])
-    .filter(({ control_code: code, result }) => signalLabels[code]
-      && (result === 'detected' || (code === 'PRV-201' && result === 'partial')))
-    .slice(0, 5);
-
-  if (signals.length === 0) {
-    appendTextElement(detectedSignals, 'li', 'No se identificaron señales claras para resumir dentro del alcance inicial.');
-    return;
+  if (results.length === 0 || results.every((result) => result === 'not_evaluable')) {
+    return 'not_evaluable';
+  }
+  if (results.every((result) => result === 'not_applicable')) {
+    return 'not_applicable';
+  }
+  if (results.includes('not_detected')) {
+    return 'not_detected';
+  }
+  if (results.includes('partial')) {
+    return 'partial';
   }
 
-  signals.forEach(({ control_code: code }) => {
-    appendTextElement(detectedSignals, 'li', signalLabels[code]);
+  const evaluable = results.filter((result) => result !== 'not_evaluable' && result !== 'not_applicable');
+  return evaluable.length > 0 && evaluable.every((result) => result === 'detected')
+    ? 'detected'
+    : 'not_evaluable';
+};
+
+const renderAreasAndControls = (controls) => {
+  diagnosticAreas.replaceChildren();
+  diagnosticControls.replaceChildren();
+  const controlsByCode = new Map(
+    (Array.isArray(controls) ? controls : []).map((control) => [control.control_code, control]),
+  );
+
+  privacyAreas.forEach((area) => {
+    const areaResult = resultLabels[getAreaResult(area, controlsByCode)];
+    const areaSummary = appendTextElement(diagnosticAreas, 'article', '', 'privacy-area');
+    appendTextElement(areaSummary, 'h4', area.name);
+    appendTextElement(areaSummary, 'p', areaResult.label, `privacy-state privacy-state--${areaResult.className}`);
+
+    const areaDetail = appendTextElement(diagnosticControls, 'section', '', 'privacy-control-area');
+    appendTextElement(areaDetail, 'h4', `${area.name} · ${area.controls.length} ${area.controls.length === 1 ? 'punto' : 'puntos'}`);
+    const list = appendTextElement(areaDetail, 'ul', '', 'privacy-control-list');
+
+    area.controls.forEach((control) => {
+      const item = appendTextElement(list, 'li', '', 'privacy-control');
+      appendTextElement(item, 'span', control.name, 'privacy-control__name');
+      const result = resultLabels[controlsByCode.get(control.code)?.result] || resultLabels.not_evaluable;
+      const badges = appendTextElement(item, 'span', '', 'privacy-control__badges');
+      appendTextElement(badges, 'span', result.label, `privacy-state privacy-state--${result.className}`);
+      if (control.informational) {
+        appendTextElement(badges, 'span', 'Informativo · no afecta el resultado', 'privacy-state privacy-state--neutral');
+      }
+    });
   });
+};
+
+const getHumanStatus = (status) => {
+  const normalizedStatus = String(status).toLowerCase();
+  if (normalizedStatus.includes('alta') || normalizedStatus.includes('avanzada')) {
+    return 'Bien';
+  }
+  if (normalizedStatus.includes('inicial')) {
+    return 'Hay aspectos importantes por mejorar';
+  }
+  if (normalizedStatus.includes('preparación')) {
+    return 'Hay aspectos que puedes mejorar';
+  }
+  return 'Hay aspectos que puedes mejorar';
 };
 
 const renderPriorities = (priorities) => {
@@ -125,31 +205,20 @@ const renderPriorities = (priorities) => {
     return;
   }
 
-  visiblePriorities.forEach((priority) => {
+  visiblePriorities.forEach((priority, index) => {
     const item = appendTextElement(diagnosticPriorities, 'article', '', 'privacy-priority');
-    appendTextElement(item, 'h4', priority.name || 'Acción prioritaria');
-    if (priority.source_url) {
-      try {
-        const source = new URL(priority.source_url);
-        const page = source.pathname === '/' ? 'página principal' : source.pathname;
-        appendTextElement(item, 'p', `Detectado en: ${page}`);
-      } catch {
-        // Ignore malformed optional trace data rather than displaying it.
-      }
-    }
-    if (priority.evidence_summary) {
-      appendTextElement(item, 'p', `Evidencia: ${priority.evidence_summary}`);
-    }
-    if (priority.finding) {
-      appendTextElement(item, 'p', `Qué falta: ${priority.finding}`);
-    }
+    appendTextElement(item, 'span', String(index + 1), 'privacy-priority__number');
+    const content = appendTextElement(item, 'div', '', 'privacy-priority__content');
+    appendTextElement(content, 'h4', priority.name || 'Acción prioritaria');
     if (priority.recommendation) {
-      appendTextElement(item, 'p', `Qué hacer: ${priority.recommendation}`);
+      appendTextElement(content, 'p', priority.recommendation);
+    } else if (priority.finding) {
+      appendTextElement(content, 'p', priority.finding);
     }
 
     const actionSteps = Array.isArray(priority.action_steps) ? priority.action_steps : [];
     if (actionSteps.length > 0) {
-      const actionPlan = appendTextElement(item, 'details', '', 'privacy-action-plan');
+      const actionPlan = appendTextElement(content, 'details', '', 'privacy-action-plan');
       appendTextElement(actionPlan, 'summary', 'Ver primeros pasos');
 
       const actionPlanContent = appendTextElement(actionPlan, 'div', '', 'privacy-action-plan__content');
@@ -177,19 +246,17 @@ const renderCommercialOffer = (priorities) => {
 const renderDiagnostic = (diagnostic, websiteUrl) => {
   const score = diagnostic.score;
   const status = diagnostic.status;
-  const coverage = diagnostic.coverage;
   const pagesAnalyzed = diagnostic.scope?.pages_analyzed;
+  const humanStatus = getHumanStatus(status);
 
   analyzedUrl.textContent = websiteUrl;
-  scoreValue.textContent = `${score} / 100`;
-  scoreStatus.textContent = status;
-  diagnosticStatus.textContent = status;
-  diagnosticCoverage.textContent = `${coverage}%`;
+  scoreValue.textContent = score;
+  scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
     ? `${pagesAnalyzed} ${pagesAnalyzed === 1 ? 'página pública relevante analizada' : 'páginas públicas relevantes analizadas'}`
     : 'Muestra acotada de páginas públicas relevantes';
-  privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${status}.`);
-  renderSignals(diagnostic.controls);
+  privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${humanStatus}.`);
+  renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   renderCommercialOffer(diagnostic.priorities);
 };

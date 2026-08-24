@@ -46,14 +46,14 @@
 
     <article class="privacy-result" id="privacy-result" aria-live="polite" tabindex="-1" hidden>
       <div class="privacy-result__top">
-        <div>
-          <p class="privacy-result__label">Resultado inicial</p>
-          <h2>Diagnóstico inicial</h2>
+        <div class="privacy-result__intro">
+          <h2>Tu diagnóstico de privacidad</h2>
+          <p class="privacy-result__status" id="score-status">—</p>
+          <p class="privacy-result__reviewed">Revisamos 17 puntos de tu sitio en 5 áreas.</p>
         </div>
         <div class="privacy-score" id="privacy-score" aria-label="Privacy Score">
-          <span>Privacy Score</span>
-          <strong id="score-value">— / 100</strong>
-          <em id="score-status">—</em>
+          <strong id="score-value">—</strong>
+          <span>de 100</span>
         </div>
       </div>
 
@@ -63,39 +63,36 @@
           <dd id="analyzed-url">—</dd>
         </div>
         <div>
-          <dt>Estado</dt>
-          <dd id="diagnostic-status">—</dd>
-        </div>
-        <div>
-          <dt>Controles evaluados</dt>
-          <dd id="diagnostic-coverage">—</dd>
-        </div>
-        <div>
-          <dt>Alcance inicial</dt>
+          <dt>Alcance</dt>
           <dd id="diagnostic-scope">—</dd>
         </div>
       </dl>
 
+      <section class="privacy-areas-section" aria-labelledby="areas-title">
+        <h3 id="areas-title">Resumen por área</h3>
+        <div class="privacy-areas" id="diagnostic-areas"></div>
+      </section>
+
+      <section class="privacy-actions" aria-labelledby="actions-title">
+        <h3 id="actions-title">3 cosas que haría primero</h3>
+        <div class="privacy-priorities" id="diagnostic-priorities"></div>
+      </section>
+
+      <details class="privacy-controls-detail">
+        <summary>
+          <span>Ver qué revisamos</span>
+          <small>17 puntos en 5 áreas</small>
+        </summary>
+        <div class="privacy-controls" id="diagnostic-controls"></div>
+      </details>
+
       <div class="privacy-result__note">
-        <p>Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales. No constituye una certificación legal ni una auditoría completa.</p>
-        <p>No representa un porcentaje de cumplimiento de la ley.</p>
-        <p>El diagnóstico inicial inspecciona una muestra acotada de páginas públicas relevantes del sitio.</p>
-      </div>
-      <p class="privacy-scope-note">Este diagnóstico revisa tu sitio web, no toda la operación de tu empresa. No determina por sí solo el cumplimiento de la ley.</p>
-
-      <div class="privacy-columns">
-        <section aria-labelledby="signals-title">
-          <h3 id="signals-title">Señales detectadas</h3>
-          <ul class="privacy-list privacy-list--plain" id="detected-signals"></ul>
-        </section>
-
-        <section aria-labelledby="actions-title">
-          <h3 id="actions-title">Prioridades</h3>
-          <div class="privacy-priorities" id="diagnostic-priorities"></div>
-        </section>
+        <p>Privacy Score es un indicador desarrollado por Mininode. No es una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.</p>
+        <p><strong>Este diagnóstico revisa tu sitio web, no toda la operación de tu empresa.</strong></p>
       </div>
 
-      <div id="privacy-correction-offer" hidden>
+      <div class="privacy-help-offer" id="privacy-correction-offer" hidden>
+        <p class="privacy-help-offer__label">Ayuda opcional</p>
         <p class="privacy-upgrade-note">Si quieres avanzar sobre estas prioridades, podemos acompañarte en su corrección.</p>
 
         <div class="privacy-next">
@@ -125,7 +122,8 @@
         </aside>
       </div>
 
-      <div class="privacy-no-priorities" id="privacy-no-priorities" hidden>
+      <div class="privacy-no-priorities privacy-help-offer" id="privacy-no-priorities" hidden>
+        <p class="privacy-help-offer__label">Ayuda opcional</p>
         <p class="privacy-no-priorities__message">No necesitas un plan de corrección en este momento.</p>
         <aside class="privacy-secondary-offer" aria-labelledby="internal-review-title">
           <h3 id="internal-review-title">¿Quieres revisar más allá de tu sitio web?</h3>
