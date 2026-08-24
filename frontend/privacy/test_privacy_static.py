@@ -119,6 +119,12 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_app_script_is_cache_busted_with_the_result_markup(self):
         self.assertIn('<script src="app.js?v=106" defer></script>', HTML)
 
+    def test_local_stylesheet_is_cache_busted(self):
+        self.assertRegex(
+            HTML,
+            r'<link rel="stylesheet" href="styles\.css\?v=[^"&]+">',
+        )
+
     def test_flow_errors_are_distinguished_without_exposing_internal_codes(self):
         for code in ("api_request_failed", "invalid_api_response", "render_failed"):
             self.assertIn(f"reportFlowError('{code}'", APP)
