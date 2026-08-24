@@ -178,18 +178,14 @@ const renderAreasAndControls = (controls) => {
   });
 };
 
-const getHumanStatus = (status) => {
-  const normalizedStatus = String(status).toLowerCase();
-  if (normalizedStatus.includes('alta') || normalizedStatus.includes('avanzada')) {
+const getHumanStatus = (score) => {
+  if (score >= 70) {
     return 'Bien';
   }
-  if (normalizedStatus.includes('inicial')) {
-    return 'Hay aspectos importantes por mejorar';
-  }
-  if (normalizedStatus.includes('preparación')) {
+  if (score >= 40) {
     return 'Hay aspectos que puedes mejorar';
   }
-  return 'Hay aspectos que puedes mejorar';
+  return 'Hay aspectos importantes por mejorar';
 };
 
 const renderPriorities = (priorities) => {
@@ -245,9 +241,8 @@ const renderCommercialOffer = (priorities) => {
 
 const renderDiagnostic = (diagnostic, websiteUrl) => {
   const score = diagnostic.score;
-  const status = diagnostic.status;
   const pagesAnalyzed = diagnostic.scope?.pages_analyzed;
-  const humanStatus = getHumanStatus(status);
+  const humanStatus = getHumanStatus(score);
 
   analyzedUrl.textContent = websiteUrl;
   scoreValue.textContent = score;
