@@ -120,6 +120,22 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con al menos una finalidad concreta."
       }
     },
+    "PRV-009": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar si corresponde informar en la política seleccionada el fundamento o base declarada para el tratamiento descrito.",
+          "Cuando corresponda, incorporar esa referencia de forma explícita y observable."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar si puede identificarse el fundamento o base que el documento declara para el tratamiento."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica a una base, autorización, permiso o justificación observada en la política seleccionada.",
+          "Precisar, cuando corresponda, el fundamento o base que la política declara para el tratamiento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar de forma explícita el fundamento o base declarada."
+      }
+    },
     "PRV-010": {
       "not_detected": {
         "action_steps": [

@@ -185,6 +185,31 @@
       }
     },
     {
+      "code": "PRV-009",
+      "domain": "Transparencia",
+      "name": "Base declarada del tratamiento",
+      "impact": "bajo",
+      "automatable": "parcial",
+      "type": "context",
+      "score_weight": 0,
+      "type_justification": "Aporta contexto sobre las bases o fundamentos que la política declara de forma observable, sin valorar su corrección jurídica ni constituir una señal puntuable.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "base o fundamento explícito asociado al tratamiento en el documento seleccionado por PRV-003",
+        "referencia genérica a una base, autorización o permiso para el tratamiento",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Si corresponde al tratamiento descrito, considerar informar de forma explícita el fundamento o base que la política declara para tratar los datos.",
+      "criteria": {
+        "detected": "La política seleccionada declara explícitamente una o más bases o fundamentos reconocibles asociados al tratamiento de datos.",
+        "partial": "La política seleccionada contiene una referencia genérica a una base, autorización, permiso o justificación del tratamiento, sin identificar un fundamento suficientemente reconocible.",
+        "not_detected": "No se observa una base o fundamento declarado para el tratamiento en la política seleccionada.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-010",
       "domain": "Transparencia",
       "name": "Destinatarios o terceros",

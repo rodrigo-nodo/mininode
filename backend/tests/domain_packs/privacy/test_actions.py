@@ -25,6 +25,7 @@ EXPECTED_ACTIONS = {
     "PRV-006": {"partial", "not_detected"},
     "PRV-007": {"partial", "not_detected"},
     "PRV-008": {"partial", "not_detected"},
+    "PRV-009": {"partial", "not_detected"},
     "PRV-010": {"partial", "not_detected"},
     "PRV-011": {"partial", "not_detected"},
     "PRV-012": {"partial", "not_detected"},
@@ -91,6 +92,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
             ({"processing_purposes": "generic"}, {"PRV-003": "detected"}),
             ({"processing_purposes": "none"}, {"PRV-003": "detected"}),
         ],
+        "PRV-009": [
+            ({"declared_processing_basis": "generic"}, {"PRV-003": "detected"}),
+            ({"declared_processing_basis": "none"}, {"PRV-003": "detected"}),
+        ],
         "PRV-010": [
             ({"data_recipients": "generic"}, {"PRV-003": "detected"}),
             ({"data_recipients": "none"}, {"PRV-003": "detected"}),
@@ -125,7 +130,7 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
     for code, outcomes in catalog.items():
         for outcome in outcomes:
             assert outcome in produced[code]
-            if code == "PRV-004":
+            if code in {"PRV-004", "PRV-009"}:
                 assert prioritize_findings([
                     {"control_code": code, "result": outcome, "confidence": "high"}
                 ]) == []

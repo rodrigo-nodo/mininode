@@ -40,6 +40,12 @@ documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 PRV-008 evalúa las finalidades del tratamiento únicamente en el documento
 seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
 
+PRV-009 detecta de forma determinística y conservadora las bases o fundamentos
+que la política seleccionada por PRV-003 declara en contexto de tratamiento de
+datos. Es una señal contextual con peso cero: no evalúa la corrección jurídica ni
+la aplicabilidad de la base declarada, no amplía el crawling y no modifica el
+Privacy Score ni las prioridades sustantivas.
+
 PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
 únicamente en el documento seleccionado por PRV-003. Usa señales textuales
 determinísticas en contexto de comunicación de datos, incluidas declaraciones
