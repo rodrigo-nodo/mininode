@@ -87,6 +87,10 @@ assert.equal(
   17,
 );
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
+assert.equal(elements.get('privacy-correction-offer').hidden, false);
+assert.equal(elements.get('privacy-no-priorities').hidden, true);
+assert.match(html, /Quiero mejorar mi sitio/);
+assert.match(html, /Conocer Privacy Data/);
 assert.equal(elements.get('request-error').textContent, '');
 
 const controlsWithGaps = controls
@@ -109,5 +113,13 @@ assert.equal(transparencyItems[2].children[1].children[0].textContent, 'No pudim
 assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, priorities: [] }, 'https://example.com'));
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No se identificaron acciones prioritarias/);
+assert.equal(elements.get('privacy-correction-offer').hidden, true);
+assert.equal(elements.get('privacy-no-priorities').hidden, false);
+
+for (const score of [26, 100]) {
+  assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, score, priorities: [] }, 'https://example.com'));
+  assert.match(html, /<section class="privacy-data-next-step"/);
+  assert.match(html, /href="\/privacy\/data\/">Conocer Privacy Data<\/a>/);
+}
 assert.equal(context.isValidDiagnosticResponseForTest({ score: 50, controls: null, priorities: null }), true);
 assert.equal(context.isValidDiagnosticResponseForTest({ score: null }), false);

@@ -664,6 +664,31 @@
   margin: 0;
 }
 
+.privacy-data-next-step {
+  border-top: 1px solid var(--border);
+  margin-top: 34px;
+  padding-top: 30px;
+}
+
+.privacy-data-next-step h3,
+.privacy-data-next-step p {
+  margin: 0;
+}
+
+.privacy-data-next-step p {
+  color: var(--muted);
+  margin-top: 8px;
+  max-width: 62ch;
+}
+
+.privacy-data-next-step a {
+  color: var(--primary);
+  display: inline-block;
+  font-weight: 800;
+  margin-top: 16px;
+  text-underline-offset: 3px;
+}
+
 .privacy-modal[hidden] {
   display: none;
 }
