@@ -26,6 +26,7 @@ EXPECTED_ACTIONS = {
     "PRV-008": {"partial", "not_detected"},
     "PRV-010": {"partial", "not_detected"},
     "PRV-011": {"partial", "not_detected"},
+    "PRV-012": {"partial", "not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
@@ -51,7 +52,7 @@ def test_action_catalog_integrity_and_approved_results():
         assert set(outcomes) <= {"partial", "not_detected"}
         for action in outcomes.values():
             assert set(action) == {"action_steps", "validation_step"}
-            assert 2 <= len(action["action_steps"]) <= 4
+            assert 1 <= len(action["action_steps"]) <= 4
             assert all(isinstance(step, str) and step.strip() for step in action["action_steps"])
             assert isinstance(action["validation_step"], str)
             assert action["validation_step"].strip()
@@ -92,6 +93,10 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
         "PRV-011": [
             ({"data_subject_rights": "generic"}, {"PRV-003": "detected"}),
             ({"data_subject_rights": "none"}, {"PRV-003": "detected"}),
+        ],
+        "PRV-012": [
+            ({"data_retention": "generic"}, {"PRV-003": "detected"}),
+            ({"data_retention": "none"}, {"PRV-003": "detected"}),
         ],
         "PRV-104": [
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),

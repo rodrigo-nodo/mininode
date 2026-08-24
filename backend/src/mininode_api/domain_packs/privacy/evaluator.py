@@ -123,7 +123,7 @@ def evaluate_control(
 
     control = controls[control_code]
     confidence = evidence.get("confidence", "high")
-    if control_code in {"PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-010", "PRV-011"}:
+    if control_code in {"PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-010", "PRV-011", "PRV-012"}:
         dependency_result = _previous_result(previous_results, "PRV-003")
         if dependency_result == "not_detected":
             return _result(control, "not_applicable", evidence, confidence)
@@ -198,6 +198,14 @@ def evaluate_control(
         if rights in {"multiple", "section"}:
             result = "detected"
         elif rights in {"single", "generic"}:
+            result = "partial"
+        else:
+            result = "not_detected"
+    elif control_code == "PRV-012":
+        retention = evidence.get("data_retention")
+        if retention == "explicit":
+            result = "detected"
+        elif retention == "generic":
             result = "partial"
         else:
             result = "not_detected"

@@ -20,6 +20,7 @@ CONTROL_CODES = (
     "PRV-008",
     "PRV-010",
     "PRV-011",
+    "PRV-012",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -168,6 +169,30 @@ _DATA_SUBJECT_RIGHTS_SECTION_TERMS = (
 _GENERIC_DATA_SUBJECT_RIGHTS_TERMS = (
     "sus derechos", "ejercer sus derechos", "ejercicio de derechos",
     "derechos del interesado", "your rights", "exercise your rights",
+)
+_RETENTION_DATA_TERMS = (
+    "datos", "informacion", "data", "information", "personal data",
+    "personal information",
+)
+_RETENTION_TERMS = (
+    "conservar", "conservacion", "conservamos", "conservaremos", "conservaran",
+    "conservarse", "retener", "retencion", "retenemos", "mantener", "mantendremos",
+    "almacenar", "almacenamiento", "almacenados", "guardar", "eliminar", "eliminacion",
+    "eliminaremos", "eliminados", "retention", "retain", "retained", "storage", "store",
+    "stored", "keep", "deletion", "delete", "deleted",
+)
+_RETENTION_PERIOD_PATTERN = re.compile(
+    r"\b(?:durante|por|for)?\s*\d+\s+(?:dias?|mes(?:es)?|anos?|days?|months?|years?)\b"
+)
+_RETENTION_CRITERIA_PATTERNS = tuple(
+    re.compile(pattern) for pattern in (
+        r"\b(?:mientras|durante|hasta|while|during|until)\b.{0,80}\b(?:relacion|cuenta|account|servicio|service|contractual|contrato|cerrad[ao]|closed|activ[aoe])\b",
+        r"\b(?:mientras|durante|as long as|for as long as|while)\b.{0,80}\b(?:necesari[oa]s?|necessary|needed)\b",
+        r"\b(?:plazo|period|periodo|obligacion)\b.{0,80}\b(?:ley|legal|normativa|law|applicable law)\b",
+        r"\b(?:required by|exigido por)\b.{0,30}\b(?:law|ley|normativa)\b",
+        r"\b(?:despues de|after)\b.{0,60}\b(?:cerrar|cierre|closed?|closing)\b",
+        r"\b(?:cuando|when)\b.{0,60}\b(?:dejen? de ser|no longer)\b.{0,30}\b(?:necesari[oa]s?|necessary|needed)\b",
+    )
 )
 
 
@@ -710,6 +735,55 @@ def _data_subject_rights(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "data_subject_rights": rights, "confidence": confidence}
 
 
+def _data_retention(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify retention language only in PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"data_retention": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "data_retention": "unknown", "technical_error": True,
+            "confidence": "low",
+        }
+
+    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+    contextual = [
+        _normalize(segment) for segment in segments
+        if _contains_phrase(segment, _RETENTION_DATA_TERMS)
+        and _contains_phrase(segment, _RETENTION_TERMS)
+    ]
+    explicit = any(
+        _RETENTION_PERIOD_PATTERN.search(segment)
+        or any(pattern.search(segment) for pattern in _RETENTION_CRITERIA_PATTERNS)
+        for segment in contextual
+    )
+    if explicit:
+        retention, confidence = "explicit", "high"
+    elif contextual:
+        retention, confidence = "generic", "medium"
+    else:
+        retention, confidence = "none", "high"
+    return {**evidence, "data_retention": retention, "confidence": confidence}
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -809,6 +883,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv008 = _processing_purposes(contract, prv003)
     prv010 = _data_recipients(contract, prv003)
     prv011 = _data_subject_rights(contract, prv003)
+    prv012 = _data_retention(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -914,6 +989,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-008": prv008,
         "PRV-010": prv010,
         "PRV-011": prv011,
+        "PRV-012": prv012,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

@@ -208,6 +208,30 @@
       }
     },
     {
+      "code": "PRV-012",
+      "domain": "Transparencia",
+      "name": "Conservación de datos",
+      "impact": "medio",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, los plazos o criterios observables de conservación aportan una señal de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "referencia contextual a conservación, retención o eliminación de datos en el documento seleccionado por PRV-003",
+        "plazo, evento o criterio temporal reconocible",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Informar en la política cuánto tiempo se conservan los datos o qué criterio determina su conservación.",
+      "criteria": {
+        "detected": "El documento seleccionado informa de forma suficientemente concreta uno o más plazos, eventos o criterios de conservación de datos.",
+        "partial": "El documento seleccionado contiene una referencia genérica a conservación, retención, eliminación o almacenamiento de datos, sin un plazo o criterio temporal suficientemente reconocible.",
+        "not_detected": "No se observa información sobre duración, criterios de conservación o retención en el documento seleccionado.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

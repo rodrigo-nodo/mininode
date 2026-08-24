@@ -44,6 +44,11 @@ evaluar jurídicamente esa comunicación.
 PRV-011 evalúa los derechos del titular únicamente en el documento seleccionado
 por PRV-003, reutilizando su contenido ya inspeccionado.
 
+PRV-012 evalúa de forma observacional los plazos, eventos o criterios de
+conservación únicamente en el documento seleccionado por PRV-003. Usa señales
+textuales determinísticas y contextuales sobre datos, conservación y duración,
+sin ampliar la inspección ni valorar si el criterio es jurídicamente adecuado.
+
 ## Seguridad - invariantes
 
 - Las protecciones SSRF son obligatorias.
