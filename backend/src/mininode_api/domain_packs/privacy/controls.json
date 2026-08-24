@@ -65,6 +65,31 @@
       }
     },
     {
+      "code": "PRV-004",
+      "domain": "Transparencia",
+      "name": "Fecha o versión de la política",
+      "impact": "bajo",
+      "automatable": "si",
+      "type": "context",
+      "score_weight": 0,
+      "type_justification": "Aporta contexto sobre el mantenimiento documental observable, sin representar por sí mismo una señal sustantiva puntuable de transparencia.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "fecha contextualizada de actualización, publicación o vigencia en el documento seleccionado por PRV-003",
+        "identificador de versión reconocible en el documento seleccionado por PRV-003",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Incorporar una fecha de última actualización o un identificador de versión visible en la política y mantener esa referencia cuando cambie el documento.",
+      "criteria": {
+        "detected": "El documento seleccionado contiene una fecha o referencia de versión reconocible asociada a la política.",
+        "partial": "El documento seleccionado contiene una señal de actualización o versión, pero no una fecha o versión suficientemente reconocible.",
+        "not_detected": "No se observa una fecha de actualización, publicación o vigencia ni un identificador de versión asociado a la política seleccionada.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-005",
       "domain": "Transparencia",
       "name": "Identificación del responsable",

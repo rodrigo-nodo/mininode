@@ -39,6 +39,22 @@
         "validation_step": "Abrir la política y comprobar que el documento permite atribuirla claramente a la organización evaluada."
       }
     },
+    "PRV-004": {
+      "not_detected": {
+        "action_steps": [
+          "Incorporar una fecha de última actualización o un identificador de versión visible en la política seleccionada.",
+          "Mantener esa referencia actualizada cuando cambie el documento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la fecha o versión puede identificarse claramente en el documento."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la señal de actualización o versión observada en la política seleccionada.",
+          "Hacer explícita la fecha o versión para que pueda identificarse claramente como referencia del documento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia de fecha o versión resulta explícita y reconocible."
+      }
+    },
     "PRV-005": {
       "not_detected": {
         "action_steps": [

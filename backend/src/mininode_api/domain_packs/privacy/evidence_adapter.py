@@ -14,6 +14,7 @@ CONTROL_CODES = (
     "PRV-001",
     "PRV-002",
     "PRV-003",
+    "PRV-004",
     "PRV-005",
     "PRV-006",
     "PRV-007",
@@ -82,6 +83,28 @@ _IDENTIFICATION_CONTEXT_TERMS = (
 _GENERIC_RESPONSIBLE_TERMS = (
     "la empresa", "nuestra empresa", "nuestra organizacion", "la organizacion",
     "este sitio", "este sitio web", "el responsable", "responsable del sitio",
+)
+_POLICY_DATE_CONTEXT_TERMS = (
+    "ultima actualizacion", "actualizado", "fecha de actualizacion",
+    "fecha de publicacion", "vigente desde", "entrada en vigor", "revision",
+    "last updated", "updated", "effective date", "effective as of",
+    "published", "publication date", "revision", "revised",
+)
+_POLICY_DATE_PATTERN = re.compile(
+    r"\b(?:\d{1,2}(?:[/-]|\s)\d{1,2}(?:[/-]|\s)\d{4}|"
+    r"\d{4}(?:-|\s)\d{1,2}(?:-|\s)\d{1,2}|"
+    r"\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
+    r"septiembre|octubre|noviembre|diciembre)\s+de\s+\d{4}|"
+    r"(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|"
+    r"noviembre|diciembre)\s+(?:de\s+)?\d{4}|"
+    r"(?:january|february|march|april|may|june|july|august|september|october|"
+    r"november|december)(?:\s+\d{1,2},?)?\s+\d{4})\b",
+    re.I,
+)
+_POLICY_VERSION_PATTERN = re.compile(
+    r"\b(?:version|revision)\s*(?:n(?:o|umero)?\.?\s*)?v?\d+(?:\.\d+)*\b|"
+    r"\b(?:politica de privacidad|privacy policy)\s+v\s*\d+(?:\.\d+)*\b",
+    re.I,
 )
 _RIGHTS_CONTEXT_TERMS = (
     "ejercer derechos", "ejercicio de derechos", "derechos de acceso",
@@ -488,6 +511,64 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
     }
 
 
+def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify dating/version signals only in PRV-003's selected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {"policy_document_reference": "none", "confidence": "high"}
+
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, "policy_document_reference": "unknown",
+            "technical_error": True, "confidence": "low",
+        }
+
+    raw_document = f"{selected_page.title or ''}\n{selected_page.visible_text or ''}"
+    document = _normalize(raw_document)
+    if _POLICY_VERSION_PATTERN.search(document):
+        return {
+            **evidence, "policy_document_reference": "dated",
+            "reference_type": "version", "confidence": "high",
+        }
+    segments = [
+        _normalize(segment)
+        for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", raw_document)
+        if segment.strip()
+    ]
+    if any(
+        _POLICY_DATE_PATTERN.search(segment)
+        and _contains_phrase(segment, _POLICY_DATE_CONTEXT_TERMS)
+        for segment in segments
+    ):
+        return {
+            **evidence, "policy_document_reference": "dated",
+            "reference_type": "date", "confidence": "high",
+        }
+    if _contains_phrase(document, _POLICY_DATE_CONTEXT_TERMS):
+        return {
+            **evidence, "policy_document_reference": "ambiguous",
+            "confidence": "medium",
+        }
+    return {**evidence, "policy_document_reference": "none", "confidence": "high"}
+
+
 def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
     """Inspect only PRV-003's selected policy and retain channel classification only."""
 
@@ -877,6 +958,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         prv003["technical_error"] = True
         prv003["confidence"] = "low"
 
+    prv004 = _policy_date_or_version(contract, prv003)
     prv005 = _responsible_identification(contract, prv003)
     prv006 = _rights_channel(contract, prv003)
     prv007 = _data_categories(contract, prv003)
@@ -983,6 +1065,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-001": prv001,
         "PRV-002": prv002,
         "PRV-003": prv003,
+        "PRV-004": prv004,
         "PRV-005": prv005,
         "PRV-006": prv006,
         "PRV-007": prv007,
