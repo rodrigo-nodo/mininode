@@ -25,6 +25,7 @@ let lastFocusedElement = null;
 let isDiagnosing = false;
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
+const renderDiagnosticError = 'Recibimos el diagnóstico, pero no pudimos mostrar el resultado. Intenta nuevamente.';
 const privacyAreas = [
   {
     name: 'Transparencia',
@@ -152,7 +153,9 @@ const renderAreasAndControls = (controls) => {
   diagnosticAreas.replaceChildren();
   diagnosticControls.replaceChildren();
   const controlsByCode = new Map(
-    (Array.isArray(controls) ? controls : []).map((control) => [control.control_code, control]),
+    (Array.isArray(controls) ? controls : [])
+      .filter((control) => control && typeof control.control_code === 'string')
+      .map((control) => [control.control_code, control]),
   );
 
   privacyAreas.forEach((area) => {
@@ -190,7 +193,9 @@ const getHumanStatus = (score) => {
 
 const renderPriorities = (priorities) => {
   diagnosticPriorities.replaceChildren();
-  const visiblePriorities = (Array.isArray(priorities) ? priorities : []).slice(0, 3);
+  const visiblePriorities = (Array.isArray(priorities) ? priorities : [])
+    .filter((priority) => priority && typeof priority === 'object')
+    .slice(0, 3);
 
   if (visiblePriorities.length === 0) {
     appendTextElement(
@@ -254,6 +259,21 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   renderCommercialOffer(diagnostic.priorities);
+};
+
+const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
+  && typeof diagnostic === 'object'
+  && Number.isFinite(diagnostic.score);
+
+const reportFlowError = (code, error) => {
+  // Do not log the submitted URL, response payload, evidence, or form contents.
+  console.error(`[privacy] ${code}`, error);
+};
+
+const finishDiagnosis = () => {
+  isDiagnosing = false;
+  submitButton.disabled = false;
+  setSubmitText('Iniciar diagnóstico');
 };
 
 const getFocusableElements = () => {
@@ -348,44 +368,69 @@ form.addEventListener('submit', async (event) => {
   submitButton.disabled = true;
   submitButton.textContent = 'Analizando...';
 
+  let response;
   try {
-    const response = await fetch('/api/privacy/diagnose', {
+    response = await fetch('/api/privacy/diagnose', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ url: websiteUrl }),
     });
-    const diagnostic = await response.json().catch(() => ({}));
+  } catch (error) {
+    reportFlowError('api_request_failed', error);
+    loadingCard.hidden = true;
+    setRequestError(genericDiagnosticError);
+    requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    finishDiagnosis();
+    return;
+  }
 
-    if (!response.ok) {
-      const responseError = new Error(typeof diagnostic.message === 'string' && diagnostic.message.trim()
-        ? diagnostic.message
-        : genericDiagnosticError);
-      responseError.isUserFacing = true;
-      throw responseError;
-    }
+  let diagnostic;
+  try {
+    diagnostic = await response.json();
+  } catch (error) {
+    reportFlowError(response.ok ? 'invalid_api_response' : 'api_request_failed', error);
+    loadingCard.hidden = true;
+    setRequestError(genericDiagnosticError);
+    requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    finishDiagnosis();
+    return;
+  }
 
-    if (!Number.isFinite(diagnostic.score)
-      || !Number.isFinite(diagnostic.coverage)
-      || typeof diagnostic.status !== 'string') {
-      const invalidResponseError = new Error(genericDiagnosticError);
-      invalidResponseError.isUserFacing = true;
-      throw invalidResponseError;
-    }
+  if (!response.ok) {
+    reportFlowError('api_request_failed', new Error(`HTTP ${response.status}`));
+    loadingCard.hidden = true;
+    setRequestError(typeof diagnostic?.message === 'string' && diagnostic.message.trim()
+      ? diagnostic.message
+      : genericDiagnosticError);
+    requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    finishDiagnosis();
+    return;
+  }
 
+  if (!isValidDiagnosticResponse(diagnostic)) {
+    reportFlowError('invalid_api_response', new Error('Response does not match the Privacy diagnostic contract'));
+    loadingCard.hidden = true;
+    setRequestError(renderDiagnosticError);
+    requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    finishDiagnosis();
+    return;
+  }
+
+  try {
     renderDiagnostic(diagnostic, websiteUrl);
     loadingCard.hidden = true;
     resultCard.hidden = false;
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
+    reportFlowError('render_failed', error);
     loadingCard.hidden = true;
-    setRequestError(error instanceof Error && error.isUserFacing ? error.message : genericDiagnosticError);
+    resultCard.hidden = true;
+    setRequestError(renderDiagnosticError);
     requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } finally {
-    isDiagnosing = false;
-    submitButton.disabled = false;
-    setSubmitText('Iniciar diagnóstico');
+    finishDiagnosis();
   }
 });
 
