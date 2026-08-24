@@ -126,7 +126,8 @@ _GENERIC_PROCESSING_PURPOSE_TERMS = (
     "processing of personal data", "use personal data", "use your data",
 )
 _RECIPIENT_COMMUNICATION_TERMS = (
-    "compartir", "compartimos", "compartirse", "comunicar", "comunicamos",
+    "compartir", "compartimos", "compartirlos", "compartirlas", "compartirse",
+    "comunicar", "comunicamos",
     "transferir", "transferimos", "revelar", "revelamos", "proporcionar",
     "proporcionamos", "share", "shared", "sharing", "disclose", "disclosed",
     "transfer", "transferred", "provide", "provided",
@@ -144,6 +145,13 @@ _EXPLICIT_RECIPIENT_CATEGORIES = (
     "infraestructura", "infrastructure", "analitica", "analytics", "marketing",
     "entidades relacionadas", "related entities", "autoridades", "authorities",
     "socios comerciales", "business partners",
+)
+_NEGATED_COMMUNICATION_PATTERN = re.compile(
+    r"(?:^|\s)(?:(?:no|nunca|jamas)(?:\s+(?:los|las))?|do not|does not|"
+    r"don t|doesn t|never)\s+(?:compartir|compartimos|compartirlos|"
+    r"compartirlas|comunicar|comunicamos|transferir|transferimos|revelar|"
+    r"revelamos|proporcionar|proporcionamos|share|shares|disclose|discloses|"
+    r"transfer|transfers|provide|provides)(?:\s|$)"
 )
 _CONCRETE_DATA_SUBJECT_RIGHTS = (
     ("acceso", "derecho de acceso", "access", "right of access"),
@@ -631,13 +639,23 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
             segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
         )
     ]
+    negated_segments = [
+        segment for segment in communication_segments
+        if _NEGATED_COMMUNICATION_PATTERN.search(_normalize(segment))
+    ]
+    positive_segments = [
+        segment for segment in communication_segments
+        if segment not in negated_segments
+    ]
     if any(
         _contains_phrase(segment, _EXPLICIT_RECIPIENT_CATEGORIES)
-        for segment in communication_segments
+        for segment in positive_segments
     ):
         recipients, confidence = "explicit", "high"
-    elif communication_segments:
+    elif positive_segments:
         recipients, confidence = "generic", "medium"
+    elif negated_segments:
+        recipients, confidence = "explicit_none", "high"
     else:
         recipients, confidence = "none", "high"
     return {**evidence, "data_recipients": recipients, "confidence": confidence}

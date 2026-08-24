@@ -176,7 +176,7 @@
       ],
       "base_recommendation": "Describir en la política las categorías de destinatarios o terceros con los que se comparten o comunican datos, cuando corresponda.",
       "criteria": {
-        "detected": "El documento seleccionado menciona de forma explícita y reconocible una o más categorías de destinatarios o terceros con los que se comparten o comunican datos.",
+        "detected": "El documento seleccionado menciona de forma explícita y reconocible una o más categorías de destinatarios con los que se comparten o comunican datos, o declara explícitamente que no comunica datos a terceros o destinatarios.",
         "partial": "El documento seleccionado contiene una referencia genérica a compartir o comunicar información con terceros, proveedores u otros receptores, sin categorías o contexto suficiente.",
         "not_detected": "No se observa información sobre destinatarios, proveedores o terceros en el documento seleccionado.",
         "not_applicable": "PRV-003 = not_detected.",
