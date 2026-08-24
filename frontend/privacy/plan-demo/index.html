@@ -47,6 +47,7 @@
         <h2 id="summary-title"><span id="summary-count">—</span> mejoras recomendadas</h2>
       </div>
       <ul id="priority-summary" aria-label="Distribución de prioridades"></ul>
+      <p class="plan-summary__value">El diagnóstico gratuito muestra las principales prioridades. Este plan detalla todas las mejoras detectadas, cómo abordarlas y cómo comprobar cada corrección.</p>
     </section>
 
     <p class="plan-error" id="plan-error" role="alert" hidden>No fue posible cargar esta vista demo. Se puede intentar nuevamente más tarde.</p>
@@ -78,14 +79,23 @@
             <h4>Qué debería corregirse</h4>
             <p class="plan-item__recommendation"></p>
           </section>
-          <section>
-            <h4>Pasos recomendados</h4>
-            <ol class="plan-item__steps"></ol>
-          </section>
-          <section class="plan-item__validation">
-            <h4><span aria-hidden="true">✓</span> Cómo comprobarlo</h4>
-            <p></p>
-          </section>
+          <details class="plan-item__instructions">
+            <summary>
+              <span class="instructions-label instructions-label--closed">Ver instrucciones</span>
+              <span class="instructions-label instructions-label--open">Ocultar instrucciones</span>
+              <span class="instructions-indicator" aria-hidden="true"></span>
+            </summary>
+            <div class="plan-item__instructions-content">
+              <section>
+                <h4>Pasos recomendados</h4>
+                <ol class="plan-item__steps"></ol>
+              </section>
+              <section class="plan-item__validation">
+                <h4><span aria-hidden="true">✓</span> Cómo comprobarlo</h4>
+                <p></p>
+              </section>
+            </div>
+          </details>
         </div>
       </article>
     </template>

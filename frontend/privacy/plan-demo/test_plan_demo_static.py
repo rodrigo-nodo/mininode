@@ -32,6 +32,7 @@ class PlanDemoStaticTests(unittest.TestCase):
         self.assertEqual(FIXTURE["version"], "1")
         self.assertEqual(FIXTURE["actions_version"], ACTIONS_CATALOG["version"])
         self.assertEqual(FIXTURE["item_count"], len(FIXTURE["items"]))
+        self.assertEqual(FIXTURE["item_count"], 7)
         self.assertGreater(FIXTURE["item_count"], 3)
 
         controls = {
@@ -75,6 +76,35 @@ class PlanDemoStaticTests(unittest.TestCase):
         self.assertIn("plan.item_count", APP)
         self.assertIn("plan.items.reduce", APP)
         self.assertNotIn(".slice(", APP)
+
+    def test_detailed_instructions_use_native_collapsible_disclosure(self):
+        details = HTML.split('<details class="plan-item__instructions"', 1)[1]
+        self.assertNotIn(" open", details.split(">", 1)[0])
+        self.assertIn("<summary>", details)
+        self.assertIn("Ver instrucciones", details)
+        self.assertIn("Ocultar instrucciones", details)
+        self.assertIn("Pasos recomendados", details)
+        self.assertIn("Cómo comprobarlo", details)
+        self.assertLess(HTML.index("Qué se encontró"), HTML.index("<details"))
+        self.assertLess(HTML.index("Qué debería corregirse"), HTML.index("<details"))
+
+    def test_summary_explains_the_value_beyond_the_free_diagnostic(self):
+        self.assertIn(
+            "El diagnóstico gratuito muestra las principales prioridades.", HTML
+        )
+        self.assertIn("Este plan detalla todas las mejoras detectadas", HTML)
+
+    def test_prv_003_has_a_presentational_name_without_changing_contract(self):
+        prv_003 = next(
+            control for control in CONTROLS_CATALOG["controls"]
+            if control["code"] == "PRV-003"
+        )
+        self.assertEqual(prv_003["name"], "Política propia del responsable")
+        self.assertIn("'PRV-003'", APP)
+        self.assertIn(
+            "Política de privacidad claramente asociada a la empresa", APP
+        )
+        self.assertIn("displayNames[item.control_code] || item.name", APP)
 
     def test_demo_has_no_commercial_or_future_infrastructure(self):
         combined = (HTML + APP).lower()
