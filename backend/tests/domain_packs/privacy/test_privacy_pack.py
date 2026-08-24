@@ -31,6 +31,7 @@ EXPECTED = {
     "PRV-008": ("Finalidades del tratamiento", "muy_alto", "conditional_evaluation"),
     "PRV-010": ("Destinatarios o terceros", "alto", "conditional_evaluation"),
     "PRV-011": ("Derechos del titular", "muy_alto", "conditional_evaluation"),
+    "PRV-012": ("Conservación de datos", "medio", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
@@ -82,7 +83,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 14
+    assert len(controls) == 15
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -98,6 +99,7 @@ def test_catalog_contains_required_metadata_and_dependencies():
     assert controls["PRV-006"]["dependency"] == "PRV-003"
     assert controls["PRV-007"]["dependency"] == "PRV-003"
     assert controls["PRV-010"]["dependency"] == "PRV-003"
+    assert controls["PRV-012"]["dependency"] == "PRV-003"
     assert controls["PRV-104"]["dependency"] == "PRV-101"
     for control in controls.values():
         assert control["expected_evidence"]
@@ -131,6 +133,10 @@ def test_catalog_criteria_match_active_evaluator_results():
             "not_evaluable",
         },
         "PRV-011": {
+            "detected", "partial", "not_detected", "not_applicable",
+            "not_evaluable",
+        },
+        "PRV-012": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
         },

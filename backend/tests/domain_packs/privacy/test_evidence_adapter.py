@@ -486,6 +486,68 @@ def test_prv011_uses_own_policy_selected_after_provider_candidate():
 
 
 @pytest.mark.parametrize(
+    ("visible_text", "expected_evidence", "expected_result"),
+    [
+        ("Conservaremos sus datos durante 12 meses.", "explicit", "detected"),
+        ("Los datos se conservarán mientras exista una relación contractual.", "explicit", "detected"),
+        ("Conservaremos los datos mientras sean necesarios para prestar el servicio.", "explicit", "detected"),
+        ("Los datos se conservarán durante el plazo exigido por la normativa aplicable.", "explicit", "detected"),
+        ("We retain personal data for 24 months.", "explicit", "detected"),
+        ("We retain your data while your account is active.", "explicit", "detected"),
+        ("Conservamos sus datos de forma segura.", "generic", "partial"),
+        ("Podemos almacenar información personal.", "generic", "partial"),
+        ("Esta política explica nuestras prácticas de privacidad.", "none", "not_detected"),
+        ("Eliminaremos sus datos 30 días después de cerrar la cuenta.", "explicit", "detected"),
+        ("Podemos eliminar información.", "generic", "partial"),
+    ],
+)
+def test_prv012_classifies_retention_only_in_selected_policy(
+    visible_text, expected_evidence, expected_result
+):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Privacidad", "https://example.com/")
+    page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-012", adapted["PRV-012"], {"PRV-003": prv003})
+
+    assert adapted["PRV-012"]["data_retention"] == expected_evidence
+    assert result["result"] == expected_result
+    assert adapted["PRV-012"]["source_urls"] == [url]
+
+
+def test_prv012_gate_and_missing_selected_document_are_not_penalized():
+    evidence = {"data_retention": "none", "confidence": "high"}
+    assert evaluate_control("PRV-012", evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-012", evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+
+    url = "https://example.com/privacy"
+    adapted = adapt_evidence(contract(links=[LinkEvidence(url, "Privacidad", "https://example.com/")]))
+    assert adapted["PRV-012"]["source_urls"] == [url]
+    assert evaluate_control("PRV-012", adapted["PRV-012"], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+def test_prv012_uses_only_own_policy_selected_after_hcaptcha_candidate():
+    own_url = "https://example.com/privacy"
+    links = [
+        LinkEvidence("https://hcaptcha.com/privacy", "Privacy", "https://example.com/"),
+        LinkEvidence(own_url, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence("https://hcaptcha.com/privacy", 200, "Privacy", "text/html", visible_text="We retain personal data for 24 months."),
+        PageEvidence(own_url, 200, "Política de privacidad", "text/html", visible_text="Conservamos sus datos de forma segura."),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    result = evaluate_control("PRV-012", adapted["PRV-012"], {"PRV-003": prv003})
+
+    assert result["result"] == "partial"
+    assert adapted["PRV-012"]["source_urls"] == [own_url]
+
+
+@pytest.mark.parametrize(
     ("field_type", "name", "label"),
     [
         ("email", "value", ""), ("tel", "value", ""), ("textarea", "value", ""),

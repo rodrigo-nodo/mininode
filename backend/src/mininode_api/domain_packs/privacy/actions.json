@@ -136,6 +136,21 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar varios derechos concretos del titular."
       }
     },
+    "PRV-012": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar si la política informa cuánto tiempo se conservan los datos o qué criterio determina su conservación.",
+          "Si corresponde, describir un plazo o criterio reconocible de conservación."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que puede identificarse un plazo, evento o criterio temporal de conservación."
+      },
+      "partial": {
+        "action_steps": [
+          "Precisar la referencia genérica a conservación o retención indicando un plazo, evento o criterio temporal reconocible."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar un plazo, evento o criterio temporal de conservación."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
