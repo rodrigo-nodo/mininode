@@ -1,0 +1,104 @@
+{
+  "version": "1",
+  "actions_version": "1",
+  "initial_score": 26,
+  "item_count": 7,
+  "items": [
+    {
+      "control_code": "PRV-006",
+      "name": "Canal para ejercer derechos",
+      "priority": "Alta",
+      "result": "not_detected",
+      "finding": "No se identifica un canal observable para ejercer derechos dentro del documento seleccionado.",
+      "recommendation": "Incorporar en la política un canal claramente asociado a privacidad, datos personales o ejercicio de derechos.",
+      "action_steps": [
+        "Revisar la política seleccionada e incorporar un canal observable para solicitudes relacionadas con privacidad, datos personales o ejercicio de derechos.",
+        "Identificar de forma visible la finalidad de ese canal dentro del documento."
+      ],
+      "validation_step": "Abrir la política seleccionada y comprobar que el canal y su asociación con privacidad, datos personales o ejercicio de derechos pueden identificarse en el documento."
+    },
+    {
+      "control_code": "PRV-003",
+      "name": "Política propia del responsable",
+      "priority": "Alta",
+      "result": "partial",
+      "finding": "Se identifica una política, pero su atribución al responsable es ambigua o insuficiente.",
+      "recommendation": "Publicar o enlazar una política de privacidad que pueda atribuirse claramente al responsable del sitio.",
+      "action_steps": [
+        "Revisar cómo se identifica al responsable en la política enlazada.",
+        "Incorporar en el documento señales claras que permitan relacionarlo con la organización evaluada.",
+        "Mantener separadas las referencias a políticas generales de proveedores."
+      ],
+      "validation_step": "Abrir la política y comprobar que el documento permite atribuirla claramente a la organización evaluada."
+    },
+    {
+      "control_code": "PRV-104",
+      "name": "Información de privacidad asociada al formulario",
+      "priority": "Alta",
+      "result": "partial",
+      "finding": "Se detectó una señal visible de consentimiento o aceptación, pero no se detectó información de privacidad asociada al formulario revisado.",
+      "recommendation": "Incorporar información visible sobre el tratamiento de datos junto al formulario y evaluar si corresponde algún mecanismo adicional de consentimiento o aceptación.",
+      "action_steps": [
+        "Revisar qué información recibe la persona antes de enviar el formulario.",
+        "Incorporar junto al formulario información visible sobre el tratamiento de los datos.",
+        "Mantener la señal de consentimiento o aceptación separada de esa información y evaluar su uso según el contexto cuando corresponda."
+      ],
+      "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad puede identificarse antes del envío y que cualquier señal adicional de consentimiento o aceptación se presenta de forma separada y visible."
+    },
+    {
+      "control_code": "PRV-007",
+      "name": "Categorías de datos tratados",
+      "priority": "Alta",
+      "result": "partial",
+      "finding": "El documento seleccionado contiene una referencia genérica a datos personales o información personal, sin categorías o tipos suficientemente concretos.",
+      "recommendation": "Describir en la política las categorías o tipos concretos de datos personales tratados.",
+      "action_steps": [
+        "Revisar la referencia genérica a datos personales observada en la política seleccionada.",
+        "Precisar esa referencia mediante categorías o tipos concretos de datos tratados."
+      ],
+      "validation_step": "Abrir la política seleccionada y comprobar que la referencia genérica fue precisada con categorías o tipos concretos observables."
+    },
+    {
+      "control_code": "PRV-201",
+      "name": "Información visible sobre cookies",
+      "priority": "Media",
+      "result": "not_detected",
+      "finding": "Se detectaron cookies en las respuestas inspeccionadas, pero no se detectó una señal visible de información sobre cookies.",
+      "recommendation": "Incorporar información visible sobre el uso de cookies cuando corresponda al funcionamiento real del sitio.",
+      "action_steps": [
+        "Revisar qué cookies o tecnologías asociadas está utilizando el sitio dentro de su funcionamiento real.",
+        "Incorporar información visible sobre el uso de cookies cuando corresponda.",
+        "Verificar que esa información pueda encontrarse fácilmente durante una visita normal al sitio."
+      ],
+      "validation_step": "Visitar el sitio en una sesión nueva y comprobar que, cuando se observan cookies, también puede identificarse información visible relacionada con su uso."
+    },
+    {
+      "control_code": "PRV-002",
+      "name": "Política de privacidad accesible",
+      "priority": "Media",
+      "result": "partial",
+      "finding": "Se detectó un enlace o referencia de privacidad, pero durante la inspección no se confirmó que su destino fuera accesible y estuviera relacionado con privacidad.",
+      "recommendation": "Revisar que el enlace de privacidad sea accesible y dirija a contenido claramente relacionado con privacidad.",
+      "action_steps": [
+        "Abrir el enlace o referencia de privacidad detectado.",
+        "Comprobar que el destino puede cargarse públicamente y que corresponde a información de privacidad.",
+        "Corregir el enlace, redirección o página de destino cuando corresponda."
+      ],
+      "validation_step": "Volver a abrir el enlace desde una página pública y comprobar que el destino carga correctamente y presenta información relacionada con privacidad."
+    },
+    {
+      "control_code": "PRV-301",
+      "name": "Canal de contacto visible",
+      "priority": "Baja",
+      "result": "not_detected",
+      "finding": "No se identifica ningún canal de contacto público en las páginas revisadas.",
+      "recommendation": "Publicar un canal de contacto claro y fácilmente accesible.",
+      "action_steps": [
+        "Definir un canal público de contacto que la organización pueda atender regularmente.",
+        "Publicarlo con una etiqueta clara en una ubicación fácil de encontrar.",
+        "Comprobar que el canal puede utilizarse sin depender de información no visible para la persona usuaria."
+      ],
+      "validation_step": "Localizar el canal desde una página principal y realizar una prueba controlada para comprobar que está accesible y operativo."
+    }
+  ]
+}
