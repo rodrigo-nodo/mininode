@@ -97,7 +97,13 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=105" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=106" defer></script>', HTML)
+
+    def test_flow_errors_are_distinguished_without_exposing_internal_codes(self):
+        for code in ("api_request_failed", "invalid_api_response", "render_failed"):
+            self.assertIn(f"reportFlowError('{code}'", APP)
+            self.assertNotIn(code, HTML)
+        self.assertIn("Recibimos el diagnóstico, pero no pudimos mostrar el resultado.", APP)
 
 
 if __name__ == "__main__":

@@ -45,7 +45,7 @@ const context = {
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
-vm.runInNewContext(`${source}\nglobalThis.renderDiagnosticForTest = renderDiagnostic;`, context);
+vm.runInNewContext(`${source}\nglobalThis.renderDiagnosticForTest = renderDiagnostic; globalThis.isValidDiagnosticResponseForTest = isValidDiagnosticResponse;`, context);
 
 const codes = [
   'PRV-001', 'PRV-002', 'PRV-003', 'PRV-004', 'PRV-005', 'PRV-006',
@@ -55,16 +55,28 @@ const codes = [
 const controls = codes.map((control_code, index) => ({
   control_code,
   result: index === 3 ? 'not_evaluable' : index === 8 ? 'not_applicable' : 'detected',
+  confidence: 'high',
+  evidence: [],
+  reason: 'Resultado determinístico del control.',
 }));
 const baseDiagnostic = {
   score: 82,
   coverage: 94,
   status: 'Preparación avanzada',
   controls,
-  priorities: [{ name: 'Actualizar la política', recommendation: 'Publica una versión vigente.' }],
+  priorities: [{
+    control_code: 'PRV-001',
+    name: 'Actualizar la política',
+    priority: 'Alta',
+    finding: 'No se encontró una política visible.',
+    recommendation: 'Publica una versión vigente.',
+    action_steps: ['Publica la política.', 'Enlázala desde el pie de página.'],
+    validation_step: 'Comprueba que el enlace sea visible.',
+  }],
   scope: { pages_requested: 5, pages_analyzed: 4, limited: false },
 };
 
+assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, 82);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
@@ -77,6 +89,25 @@ assert.equal(
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('request-error').textContent, '');
 
+const controlsWithGaps = controls
+  .filter(({ control_code }) => control_code !== 'PRV-002')
+  .map((control) => control.control_code === 'PRV-003' ? { ...control, result: 'unexpected_result' } : control);
+assert.doesNotThrow(() => context.renderDiagnosticForTest({
+  ...baseDiagnostic,
+  controls: [null, ...controlsWithGaps, { control_code: 'PRV-999', result: 'detected' }],
+  priorities: [{ name: 'Prioridad sin campos opcionales' }, null],
+  scope: null,
+}, 'https://example.com'));
+assert.equal(
+  elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
+  17,
+);
+const transparencyItems = elements.get('diagnostic-controls').children[0].children[1].children;
+assert.equal(transparencyItems[1].children[1].children[0].textContent, 'No pudimos revisarlo');
+assert.equal(transparencyItems[2].children[1].children[0].textContent, 'No pudimos revisarlo');
+
 assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, priorities: [] }, 'https://example.com'));
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No se identificaron acciones prioritarias/);
+assert.equal(context.isValidDiagnosticResponseForTest({ score: 50, controls: null, priorities: null }), true);
+assert.equal(context.isValidDiagnosticResponseForTest({ score: null }), false);
