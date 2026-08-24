@@ -22,6 +22,39 @@ _VISIBLE_PRIORITY = {
 }
 
 
+def ordered_actionable_findings(results: Iterable[Mapping]) -> list[tuple[dict, Mapping, str]]:
+    """Return actionable findings in the stable Privacy priority order.
+
+    Context controls and controls with an explicit zero score weight are not
+    actionable.  Keeping this selection here makes the free priorities and the
+    full correction plan apply the same rules without changing their contracts.
+    """
+    controls = {control["code"]: control for control in load_controls()}
+    impact_weights = load_scoring()["impact_weights"]
+    eligible = []
+    for result in results:
+        code = result.get("control_code", result.get("code"))
+        control = controls.get(code)
+        outcome = result.get("result", result.get("status"))
+        if (
+            control
+            and control["type"] in _ELIGIBLE_TYPES
+            and control.get("score_weight", 1) > 0
+            and outcome in _ELIGIBLE_RESULTS
+        ):
+            eligible.append((control, result, outcome))
+
+    eligible.sort(
+        key=lambda item: (
+            -impact_weights[item[0]["impact"]],
+            0 if item[2] == "not_detected" else 1,
+            -_CONFIDENCE_ORDER.get(item[1].get("confidence", "low"), 1),
+            item[0]["code"],
+        )
+    )
+    return eligible
+
+
 @lru_cache(maxsize=1)
 def load_actions() -> dict:
     """Load and minimally validate the versioned deterministic action catalog."""
@@ -37,28 +70,7 @@ def load_actions() -> dict:
 
 def prioritize_findings(results: Iterable[Mapping], *, limit: int = 3) -> list[dict]:
     """Return up to three formal, consumer-facing improvement priorities."""
-    controls = {control["code"]: control for control in load_controls()}
-    impact_weights = load_scoring()["impact_weights"]
-    eligible = []
-    for result in results:
-        code = result.get("control_code", result.get("code"))
-        control = controls.get(code)
-        outcome = result.get("result", result.get("status"))
-        if (
-            control
-            and control["type"] in _ELIGIBLE_TYPES
-            and outcome in _ELIGIBLE_RESULTS
-        ):
-            eligible.append((control, result, outcome))
-
-    eligible.sort(
-        key=lambda item: (
-            -impact_weights[item[0]["impact"]],
-            0 if item[2] == "not_detected" else 1,
-            -_CONFIDENCE_ORDER.get(item[1].get("confidence", "low"), 1),
-            item[0]["code"],
-        )
-    )
+    eligible = ordered_actionable_findings(results)
     priorities = []
     for control, result, outcome in eligible[: min(max(limit, 0), 3)]:
         priority = {
