@@ -88,16 +88,28 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn(".slice(0, 3)", APP)
         self.assertIn("Array.isArray(priorities) && priorities.length > 0", APP)
         self.assertIn('/contact/?source=privacy&amp;intent=correction', HTML)
-        self.assertIn("Quiero mejorar mi sitio", HTML)
+        self.assertIn("Plan de corrección automático", HTML)
         self.assertIn("$49.900 CLP", HTML)
+        self.assertIn("Solicitar plan de corrección", HTML)
+        self.assertIn("La implementación técnica no está incluida.", HTML)
+        self.assertNotIn("acompañamiento para resolver dudas", HTML.lower())
+        self.assertIn("¿Necesita que alguien realice los cambios?", HTML)
+        self.assertIn("Consultar apoyo técnico", HTML)
         self.assertIn('id="privacy-no-priorities"', HTML)
 
     def test_privacy_data_is_an_unconditional_next_step(self):
         self.assertIn('href="/privacy/data/">Conocer Privacy Data</a>', HTML)
         self.assertEqual(HTML.count('href="/privacy/data/"'), 1)
+        self.assertIn("En desarrollo", HTML)
         privacy_data = HTML.split('<section class="privacy-data-next-step"', 1)[1]
         self.assertNotIn("score", privacy_data.split("</section>", 1)[0])
         self.assertNotIn("priorities", privacy_data.split("</section>", 1)[0])
+
+    def test_commercial_section_uses_privacy_identity_and_formal_language(self):
+        commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
+        self.assertNotRegex(commercial.lower(), r"\b(tu|te|quieres|obtén)\b")
+        self.assertIn("#176b78", (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower())
+        self.assertNotRegex(commercial.lower(), r"violet|purple|#6c4df4")
 
     def test_api_and_backend_score_remain_inputs(self):
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
