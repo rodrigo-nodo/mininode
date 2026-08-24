@@ -187,6 +187,10 @@
 .learn-topic-summary,
 .learn-comment-sent,
 .learn-comment p { color: var(--learn-muted) !important; font-family: Inter, ui-sans-serif, system-ui, sans-serif !important; font-size: .82rem !important; margin: 9px 0 !important; }
+.learn-reader .learn-comment-value {
+  color: var(--learn-fg); font-family: Georgia, 'Times New Roman', serif; font-size: .95rem;
+  font-style: italic; line-height: 1.5; margin: 6px 0 0;
+}
 .learn-feedback__status { min-height: 1.3em; }
 .learn-topics { border: 0; margin: 28px 0 0; padding: 0; }
 .learn-topics legend,

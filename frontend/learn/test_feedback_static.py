@@ -29,6 +29,20 @@ def test_reader_restores_and_closes_persisted_feedback():
     assert "✓ Comentario enviado" in html
     assert "state.rating > 3 && !expandComment" in script
     assert "state.rating <= 3" in script
+    assert "state.comment !== null" in script
+    assert "state.has_comment" not in script
+
+
+def test_persisted_comment_is_rendered_safely_after_patch_and_restore():
+    script = (ROOT / "reader.js").read_text()
+    html = (ROOT / "privacy" / "index.html").read_text()
+    assert '<p class="learn-comment-value" hidden></p>' in html
+    assert "commentValue.textContent = hasComment" in script
+    assert "commentValue.innerHTML" not in script
+    assert "state.comment = value" in script
+    assert "state = await response.json()" in script
+    assert "comment.hidden = hasComment" in script
+    assert "commentToggle.hidden = hasComment" in script
 
 
 def test_restore_temporarily_disables_all_feedback_controls():
