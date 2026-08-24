@@ -96,6 +96,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("const score = diagnostic.score;", APP)
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
+    def test_app_script_is_cache_busted_with_the_result_markup(self):
+        self.assertIn('<script src="app.js?v=105" defer></script>', HTML)
+
 
 if __name__ == "__main__":
     unittest.main()
