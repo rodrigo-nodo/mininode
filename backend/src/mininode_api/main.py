@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from mininode_api.services import learn_feedback
+    from mininode_api.services import learn_feedback, privacy_correction_plan
 
     try:
         learn_feedback.initialize_database()
@@ -23,6 +23,15 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.learn_feedback_ready = True
+
+    try:
+        privacy_correction_plan.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Privacy correction plan database initialization failed; plans remain unavailable"
+        )
+    else:
+        app.state.privacy_correction_plan_ready = True
     yield
 
 
@@ -52,6 +61,7 @@ def configure_application_logging() -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="Mininode API", version="0.1.0", lifespan=lifespan)
     app.state.learn_feedback_ready = False
+    app.state.privacy_correction_plan_ready = False
 
     # CORS desde env (coma-separado)
     origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")

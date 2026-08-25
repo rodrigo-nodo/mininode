@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
+from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from mininode_api.core.auth import require_api_key
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
+from mininode_api.services import privacy_correction_plan
 
 router = APIRouter(prefix="/privacy", tags=["Privacy"])
 logger = logging.getLogger(__name__)
@@ -19,6 +23,72 @@ class PrivacyDiagnosticRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: str
+
+
+class CorrectionPlanSnapshot(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    version: str = Field(min_length=1)
+    actions_version: str = Field(min_length=1)
+    initial_score: int = Field(ge=0, le=100)
+    item_count: int = Field(ge=0)
+    items: list[Any]
+
+
+class CreateCorrectionPlanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    site_url: str = Field(min_length=1)
+    plan: CorrectionPlanSnapshot
+
+
+class CreateCorrectionPlanResponse(BaseModel):
+    access_token: str
+    plan_path: str
+
+
+class StoredCorrectionPlanResponse(BaseModel):
+    id: UUID
+    site_url: str
+    created_at: datetime
+    plan: dict[str, Any]
+
+
+def _require_correction_plan_database(request: Request) -> None:
+    if not request.app.state.privacy_correction_plan_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de planes no disponible.",
+        )
+
+
+@router.post(
+    "/correction-plans",
+    status_code=status.HTTP_201_CREATED,
+    response_model=CreateCorrectionPlanResponse,
+    dependencies=[Depends(require_api_key), Depends(_require_correction_plan_database)],
+)
+def create_correction_plan(request: CreateCorrectionPlanRequest):
+    created = privacy_correction_plan.create_correction_plan(
+        site_url=request.site_url,
+        plan=request.plan.model_dump(),
+    )
+    return {
+        "access_token": created.access_token,
+        "plan_path": f"/privacy/plan/{created.access_token}",
+    }
+
+
+@router.get(
+    "/correction-plans/{access_token}",
+    response_model=StoredCorrectionPlanResponse,
+    dependencies=[Depends(_require_correction_plan_database)],
+)
+def get_correction_plan(access_token: str):
+    try:
+        return privacy_correction_plan.get_correction_plan(access_token)
+    except privacy_correction_plan.CorrectionPlanNotFoundError:
+        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
 
 
 _ERRORS = {
