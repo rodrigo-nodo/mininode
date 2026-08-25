@@ -149,3 +149,16 @@ def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
     assert "typeof item.title === 'string'" in script
     assert "typeof item.subtitle === 'string'" in script
     assert "if (!related.length) return" in script
+
+
+def test_brief_related_presentation_and_official_sources():
+    css = (ROOT / "learn.css").read_text()
+    markdown = (ROOT / "content" / "briefs" / "002-evidencia-de-cumplimiento.md").read_text()
+
+    assert ".learn-related ul { list-style: none" in css
+    assert ".learn-related strong { display: block; }" in css
+    assert ".learn-related span { display: block; }" in css
+    assert ".learn-related span { font-style: italic;" in css
+    assert ".learn-feedback--brief { margin: 56px 0 0;" in css
+    assert "https://www.bcn.cl/leychile/navegar?idNorma=1209272" in markdown
+    assert "https://www.bcn.cl/leychile/" in markdown

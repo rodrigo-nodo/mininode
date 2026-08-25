@@ -304,7 +304,14 @@
 .learn-reader__topics { display: flex; flex-wrap: wrap; gap: 8px; }
 .learn-reader--brief > h3 { font-size: var(--text-h3); margin-top: var(--space-12); }
 .learn-reader--brief > h3:last-of-type { border-top: 1px solid var(--learn-border); padding-top: 54px; }
-.learn-feedback--brief { margin-bottom: 0; }
+.learn-feedback--brief { margin: 56px 0 0; padding-top: var(--space-12); }
+.learn-related { margin-top: var(--space-8); }
+.learn-related h2 { font-size: clamp(1.45rem, 4vw, 1.85rem); margin: 0 0 var(--space-4); }
+.learn-related ul { list-style: none; margin: 0; padding: 0; }
+.learn-related a { display: block; }
+.learn-related strong { display: block; }
+.learn-related span { display: block; }
+.learn-related span { font-style: italic; margin-top: var(--space-1); }
 
 @media (max-width: 620px) {
   .learn-catalog { padding-top: var(--space-4); }
