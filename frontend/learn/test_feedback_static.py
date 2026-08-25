@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -95,3 +96,20 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "metadata + content" not in markdown
     assert "¿Te resultó útil?" not in markdown
     assert '"related": []' in relationships
+
+
+def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
+    script = (ROOT / "reader.js").read_text()
+    relationships = json.loads((ROOT / "content" / "relationships.json").read_text())
+    brief = relationships["briefs"]["001"]
+
+    assert brief["slug"] == "001-nueva-autoridad-de-datos"
+    assert brief["title"] == "Nueva autoridad de datos"
+    assert brief["subtitle"] == "El nuevo escenario de privacidad en Chile"
+    assert '/learn/briefs/${id}' not in script
+    assert '/learn/briefs/${item.slug}' in script
+    assert "catalog[id]" in script
+    assert "typeof item.slug === 'string'" in script
+    assert "typeof item.title === 'string'" in script
+    assert "typeof item.subtitle === 'string'" in script
+    assert "if (!related.length) return" in script

@@ -252,12 +252,19 @@
     try {
       const response = await fetch(reader.dataset.relationshipsSource);
       if (!response.ok) return;
-      const related = (await response.json()).briefs?.[metadata.id]?.related || [];
+      const catalog = (await response.json()).briefs || {};
+      const relatedIds = catalog[metadata.id]?.related;
+      if (!Array.isArray(relatedIds)) return;
+      const related = relatedIds.map((id) => ({ id, ...catalog[id] })).filter((item) =>
+        typeof item.id === 'string'
+        && typeof item.slug === 'string' && item.slug.length > 0
+        && typeof item.title === 'string' && item.title.length > 0
+        && typeof item.subtitle === 'string' && item.subtitle.length > 0);
       if (!related.length) return;
       const section = document.createElement('section');
       section.className = 'learn-related';
-      section.innerHTML = window.DOMPurify.sanitize(`<h2>Relacionado</h2><ul>${related.map((id) =>
-        `<li><a href="/learn/briefs/${id}">Mininode Brief ${id}</a></li>`).join('')}</ul>`);
+      section.innerHTML = window.DOMPurify.sanitize(`<h2>Relacionado</h2><ul>${related.map((item) =>
+        `<li><a href="/learn/briefs/${item.slug}"><strong>${item.id} - ${item.title}</strong><span>${item.subtitle}</span></a></li>`).join('')}</ul>`);
       reader.append(section);
     } catch (_error) { /* Relationships are optional supporting content. */ }
   }
