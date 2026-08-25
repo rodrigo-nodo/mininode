@@ -59,10 +59,35 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
     def test_controlled_error_states_are_distinct(self):
         self.assertIn("response.status === 404", APP)
+        self.assertIn("if (!response.ok) { showError('unavailable')", APP)
         self.assertIn("Plan no disponible", APP)
         self.assertIn("No pudimos cargar el Plan", APP)
         self.assertIn("No pudimos mostrar este Plan", APP)
+        self.assertIn("catch { showError('unavailable'); }", APP)
+        self.assertIn("catch { showError('invalid'); return; }", APP)
         self.assertIn('href="/privacy/"', HTML)
+
+    def test_request_timeout_always_finishes_loading(self):
+        self.assertIn("const requestTimeoutMs = 10000", APP)
+        self.assertIn("new AbortController()", APP)
+        self.assertIn("setTimeout(() => controller.abort(), requestTimeoutMs)", APP)
+        self.assertIn("signal: controller.signal", APP)
+        self.assertIn("finally {", APP)
+        self.assertIn("clearTimeout(timeoutId)", APP)
+        self.assertIn("elements.loading.hidden = true", APP)
+
+    def test_retry_cannot_start_concurrent_requests(self):
+        self.assertIn("if (requestInProgress) return", APP)
+        self.assertIn("elements.retry.disabled = true", APP)
+        self.assertIn("elements.retry.disabled = false", APP)
+        self.assertIn("elements.retry.addEventListener('click', loadPlan)", APP)
+
+    def test_proxy_keeps_correction_plan_get_narrow_and_public(self):
+        self.assertIn(r"^privacy\/correction-plans\/[A-Za-z0-9_-]+$", PROXY)
+        self.assertIn("isCorrectionPlan && request.method.toUpperCase() === 'GET'", PROXY)
+        self.assertIn("!isAllowedCorrectionPlan && !env.MININODE_API_KEY", PROXY)
+        self.assertIn("status: upstream.status", PROXY)
+        self.assertIn("upstream.headers.get('Content-Type')", PROXY)
 
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)

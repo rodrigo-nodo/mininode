@@ -6,6 +6,8 @@ const elements = {
 };
 const displayNames = { 'PRV-003': 'Política de privacidad claramente asociada a la empresa' };
 const requiredItemFields = ['control_code', 'name', 'priority', 'finding', 'recommendation', 'action_steps', 'validation_step'];
+const requestTimeoutMs = 10000;
+let requestInProgress = false;
 
 const accessTokenFromPath = () => {
   const match = window.location.pathname.match(/^\/privacy\/plan\/([^/]+)\/?$/);
@@ -47,16 +49,36 @@ const render = ({ site_url: siteUrl, plan }) => {
   plan.items.forEach(renderItem); elements.loading.hidden = true; elements.content.hidden = false;
 };
 const loadPlan = async () => {
-  const token = accessTokenFromPath(); if (!token) { showError('missing'); return; }
-  elements.error.hidden = true; elements.loading.hidden = false;
+  if (requestInProgress) return;
+  const token = accessTokenFromPath();
+  if (!token) { showError('missing'); return; }
+
+  requestInProgress = true;
+  elements.retry.disabled = true;
+  elements.error.hidden = true;
+  elements.content.hidden = true;
+  elements.loading.hidden = false;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
+
   try {
-    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, { method: 'GET', headers: { Accept: 'application/json' } });
+    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
     if (response.status === 404) { showError('missing'); return; }
     if (!response.ok) { showError('unavailable'); return; }
     let data;
     try { data = await response.json(); } catch { showError('invalid'); return; }
     if (!validPlanResponse(data)) { showError('invalid'); return; } render(data);
   } catch { showError('unavailable'); }
+  finally {
+    clearTimeout(timeoutId);
+    requestInProgress = false;
+    elements.retry.disabled = false;
+    elements.loading.hidden = true;
+  }
 };
 elements.retry.addEventListener('click', loadPlan);
 loadPlan();
