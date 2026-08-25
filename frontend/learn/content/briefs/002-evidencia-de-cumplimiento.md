@@ -129,5 +129,5 @@ Y permite avanzar desde un cumplimiento simplemente declarado hacia prácticas q
 
 ## Fuentes
 
-- Ley N.º 21.719 - Regula la protección y el tratamiento de los datos personales y crea la Agencia de Protección de Datos Personales.
-- Biblioteca del Congreso Nacional de Chile - LeyChile.
+- [Ley N.º 21.719 - Regula la protección y el tratamiento de los datos personales y crea la Agencia de Protección de Datos Personales.](https://www.bcn.cl/leychile/navegar?idNorma=1209272)
+- [Biblioteca del Congreso Nacional de Chile - LeyChile.](https://www.bcn.cl/leychile/)
