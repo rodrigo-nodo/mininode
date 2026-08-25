@@ -94,12 +94,17 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('name="email"', HTML)
         self.assertIn("Se utilizará para gestionar la solicitud y entregar el plan.", HTML)
         self.assertIn("fetch('/api/privacy/correction-plan-orders'", APP)
-        self.assertIn("JSON.stringify({ site_url: currentAnalyzedUrl, email: orderEmail.value })", APP)
+        self.assertIn("JSON.stringify({ diagnostic_id: currentDiagnosticId, email: orderEmail.value })", APP)
+        self.assertNotIn("site_url:", APP)
         self.assertNotIn("amount:", APP)
         self.assertNotIn("currency:", APP)
         self.assertNotIn("product_code:", APP)
         self.assertIn("Solicitud preparada", HTML)
         self.assertIn("El pago en línea estará disponible próximamente.", HTML)
+        self.assertIn("Disponible durante 24 horas después de este diagnóstico.", HTML)
+        self.assertIn("Este diagnóstico tiene más de 24 horas.", HTML)
+        self.assertIn("Revisar nuevamente", HTML)
+        self.assertNotIn("countdown", APP.lower())
         self.assertIn("La implementación técnica no está incluida.", HTML)
         self.assertNotIn("acompañamiento para resolver dudas", HTML.lower())
         self.assertIn("¿Necesita que alguien realice los cambios?", HTML)
@@ -126,7 +131,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=107" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=108" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

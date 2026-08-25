@@ -16,6 +16,7 @@ from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, dia
 from mininode_api.services import privacy_correction_plan
 from mininode_api.services import privacy_correction_plan_flow
 from mininode_api.services import privacy_correction_plan_order
+from mininode_api.services import privacy_diagnostic_snapshot
 
 router = APIRouter(prefix="/privacy", tags=["Privacy"])
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ class StoredCorrectionPlanResponse(BaseModel):
 class CreateCorrectionPlanOrderRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    site_url: str = Field(min_length=1, max_length=2048)
+    diagnostic_id: UUID
     email: str = Field(min_length=3, max_length=254)
 
     @field_validator("email")
@@ -83,14 +84,6 @@ class CreateCorrectionPlanOrderRequest(BaseModel):
             raise ValueError("email inválido")
         return normalized
 
-    @field_validator("site_url")
-    @classmethod
-    def validate_site_url(cls, value: str) -> str:
-        try:
-            return privacy_correction_plan_order.normalize_site_url(value)
-        except (PrivacyInspectionError, ValueError):
-            raise ValueError("site_url inválida") from None
-
 
 class CreateCorrectionPlanOrderResponse(BaseModel):
     order_id: UUID
@@ -102,6 +95,7 @@ class CreateCorrectionPlanOrderResponse(BaseModel):
 
 class CorrectionPlanOrderResponse(BaseModel):
     id: UUID
+    diagnostic_id: UUID
     site_url: str
     email: str
     product_code: str
@@ -121,7 +115,10 @@ def _require_correction_plan_database(request: Request) -> None:
 
 
 def _require_correction_plan_order_database(request: Request) -> None:
-    if not request.app.state.privacy_correction_plan_order_ready:
+    if (
+        not request.app.state.privacy_correction_plan_order_ready
+        or not request.app.state.privacy_diagnostic_snapshot_ready
+    ):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Servicio de órdenes no disponible.",
@@ -137,8 +134,18 @@ def _require_correction_plan_order_database(request: Request) -> None:
 def create_correction_plan_order(request: CreateCorrectionPlanOrderRequest):
     try:
         order = privacy_correction_plan_order.create_order(
-            site_url=request.site_url, email=request.email
+            diagnostic_id=request.diagnostic_id, email=request.email
         )
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticSnapshotNotFoundError:
+        raise HTTPException(status_code=404, detail="Diagnóstico no encontrado.") from None
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticPurchaseExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=(
+                "El diagnóstico ya no está disponible para crear un Plan. "
+                "Realice una nueva revisión."
+            ),
+        ) from None
     except Exception:
         # Do not attach exception details: database errors must never leak the email.
         logger.error("Privacy correction plan order creation failed")
@@ -250,11 +257,12 @@ _ERRORS = {
 
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
 def diagnose_privacy(
-    request: PrivacyDiagnosticRequest,
+    body: PrivacyDiagnosticRequest,
+    request: Request,
     x_mininode_diagnostics: str | None = Header(default=None, alias="X-Mininode-Diagnostics"),
 ):
     try:
-        return diagnose_privacy_url(request.url)
+        diagnostic = diagnose_privacy_url(body.url)
     except PrivacyInspectionError as exc:
         status_code, message = _ERRORS[exc.code]
         content = {"error": exc.code, "message": message}
@@ -267,3 +275,17 @@ def diagnose_privacy(
             status_code=500,
             content={"error": "internal_error", "message": "No fue posible completar el diagnóstico."},
         )
+
+    if request.app.state.privacy_diagnostic_snapshot_ready:
+        try:
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(diagnostic)
+        except Exception:
+            # The free result remains available when the commercial persistence fails.
+            logger.error("Privacy diagnostic snapshot persistence failed")
+        else:
+            diagnostic = {
+                **diagnostic,
+                "diagnostic_id": stored.id,
+                "purchase_expires_at": stored.purchase_expires_at,
+            }
+    return diagnostic

@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
         learn_feedback,
         privacy_correction_plan,
         privacy_correction_plan_order,
+        privacy_diagnostic_snapshot,
     )
 
     try:
@@ -36,6 +37,15 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.privacy_correction_plan_ready = True
+
+    try:
+        privacy_diagnostic_snapshot.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Privacy diagnostic snapshot database initialization failed; snapshots remain unavailable"
+        )
+    else:
+        app.state.privacy_diagnostic_snapshot_ready = True
 
     try:
         privacy_correction_plan_order.initialize_database()
@@ -76,6 +86,7 @@ def create_app() -> FastAPI:
     app.state.learn_feedback_ready = False
     app.state.privacy_correction_plan_ready = False
     app.state.privacy_correction_plan_order_ready = False
+    app.state.privacy_diagnostic_snapshot_ready = False
 
     # CORS desde env (coma-separado)
     origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
