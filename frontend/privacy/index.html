@@ -6,10 +6,10 @@
   <title>Mininode Privacy — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="styles.css?v=108">
+  <link rel="stylesheet" href="styles.css?v=109">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
-  <script src="app.js?v=106" defer></script>
+  <script src="app.js?v=107" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
@@ -94,11 +94,10 @@
         <div class="privacy-next">
           <div class="privacy-next__summary">
             <p class="privacy-next__eyebrow">Recomendado según su diagnóstico</p>
-            <h3>Plan de corrección automático</h3>
-            <p class="privacy-price" aria-label="Precio: 49.900 pesos chilenos">$49.900 CLP</p>
-            <p class="privacy-price-note">Precio final · pago único.</p>
-            <p>Obtenga un plan personalizado para corregir los puntos detectados en este diagnóstico.</p>
-            <p class="privacy-automatic-note">Mininode genera el plan automáticamente. No es necesario contactar a Mininode para recibirlo.</p>
+            <h3>Plan de corrección</h3>
+            <p class="privacy-price" aria-label="Precio: 49.900 pesos chilenos">$49.900</p>
+            <p class="privacy-price-note">pago único</p>
+            <p>Todas las mejoras detectadas, con instrucciones para corregirlas y comprobar cada cambio.</p>
           </div>
           <div class="privacy-includes">
             <h4>El plan incluye</h4>
@@ -110,7 +109,18 @@
             </ul>
           </div>
           <div class="privacy-next__action">
-            <a class="btn privacy-secondary" href="/contact/?source=privacy&amp;intent=correction">Solicitar plan de corrección</a>
+            <button class="btn privacy-secondary" type="button" id="correction-order-open">Obtener plan de corrección</button>
+            <form class="privacy-order-form" id="correction-order-form" hidden>
+              <label for="correction-order-email">Email</label>
+              <input id="correction-order-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+              <small>Se utilizará para gestionar la solicitud y entregar el plan.</small>
+              <button class="btn privacy-secondary" type="submit" id="correction-order-submit">Continuar</button>
+              <p class="privacy-error" id="correction-order-error" role="alert" hidden></p>
+            </form>
+            <div class="privacy-order-success" id="correction-order-success" role="status" hidden>
+              <strong>Solicitud preparada</strong>
+              <p>El pago en línea estará disponible próximamente.</p>
+            </div>
             <p>La implementación técnica no está incluida.</p>
           </div>
         </div>

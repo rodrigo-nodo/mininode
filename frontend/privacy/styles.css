@@ -640,6 +640,39 @@
   margin-top: 9px;
 }
 
+.privacy-order-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 420px;
+}
+
+.privacy-order-form[hidden] {
+  display: none;
+}
+
+.privacy-order-form label {
+  font-weight: 800;
+}
+
+.privacy-order-form input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  padding: 11px 12px;
+  width: 100%;
+}
+
+.privacy-order-form small {
+  color: var(--muted);
+}
+
+.privacy-order-success {
+  border-left: 3px solid var(--privacy-primary);
+  margin-top: 12px;
+  padding-left: 12px;
+}
+
 .privacy-secondary {
   background: var(--privacy-primary);
   border-color: var(--privacy-primary);

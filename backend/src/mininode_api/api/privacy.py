@@ -9,12 +9,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mininode_api.core.auth import require_api_key
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
 from mininode_api.services import privacy_correction_plan
 from mininode_api.services import privacy_correction_plan_flow
+from mininode_api.services import privacy_correction_plan_order
 
 router = APIRouter(prefix="/privacy", tags=["Privacy"])
 logger = logging.getLogger(__name__)
@@ -60,12 +61,119 @@ class StoredCorrectionPlanResponse(BaseModel):
     plan: dict[str, Any]
 
 
+class CreateCorrectionPlanOrderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    site_url: str = Field(min_length=1, max_length=2048)
+    email: str = Field(min_length=3, max_length=254)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        local, separator, domain = normalized.rpartition("@")
+        if (
+            not separator
+            or normalized.count("@") != 1
+            or not local
+            or not domain
+            or "." not in domain
+            or any(character.isspace() for character in normalized)
+        ):
+            raise ValueError("email inválido")
+        return normalized
+
+    @field_validator("site_url")
+    @classmethod
+    def validate_site_url(cls, value: str) -> str:
+        try:
+            return privacy_correction_plan_order.normalize_site_url(value)
+        except (PrivacyInspectionError, ValueError):
+            raise ValueError("site_url inválida") from None
+
+
+class CreateCorrectionPlanOrderResponse(BaseModel):
+    order_id: UUID
+    product: str
+    amount: int
+    currency: str
+    status: str
+
+
+class CorrectionPlanOrderResponse(BaseModel):
+    id: UUID
+    site_url: str
+    email: str
+    product_code: str
+    amount: int
+    currency: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
 def _require_correction_plan_database(request: Request) -> None:
     if not request.app.state.privacy_correction_plan_ready:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Servicio de planes no disponible.",
         )
+
+
+def _require_correction_plan_order_database(request: Request) -> None:
+    if not request.app.state.privacy_correction_plan_order_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de órdenes no disponible.",
+        )
+
+
+@router.post(
+    "/correction-plan-orders",
+    status_code=status.HTTP_201_CREATED,
+    response_model=CreateCorrectionPlanOrderResponse,
+    dependencies=[Depends(_require_correction_plan_order_database)],
+)
+def create_correction_plan_order(request: CreateCorrectionPlanOrderRequest):
+    try:
+        order = privacy_correction_plan_order.create_order(
+            site_url=request.site_url, email=request.email
+        )
+    except Exception:
+        # Do not attach exception details: database errors must never leak the email.
+        logger.error("Privacy correction plan order creation failed")
+        raise HTTPException(status_code=503, detail="Servicio de órdenes no disponible.") from None
+    return {
+        "order_id": order.id,
+        "product": order.product_code,
+        "amount": order.amount,
+        "currency": order.currency,
+        "status": order.status,
+    }
+
+
+@router.get(
+    "/correction-plan-orders/{order_id}",
+    response_model=CorrectionPlanOrderResponse,
+    dependencies=[Depends(require_api_key), Depends(_require_correction_plan_order_database)],
+)
+def get_correction_plan_order(order_id: UUID):
+    try:
+        return privacy_correction_plan_order.get_order(order_id)
+    except privacy_correction_plan_order.CorrectionPlanOrderNotFoundError:
+        raise HTTPException(status_code=404, detail="Orden no encontrada.") from None
+
+
+@router.post(
+    "/correction-plan-orders/{order_id}/mark-paid",
+    response_model=CorrectionPlanOrderResponse,
+    dependencies=[Depends(require_api_key), Depends(_require_correction_plan_order_database)],
+)
+def mark_correction_plan_order_paid(order_id: UUID):
+    try:
+        return privacy_correction_plan_order.mark_order_paid(order_id)
+    except privacy_correction_plan_order.CorrectionPlanOrderNotFoundError:
+        raise HTTPException(status_code=404, detail="Orden no encontrada.") from None
 
 
 @router.post(

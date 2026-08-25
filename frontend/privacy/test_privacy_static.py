@@ -87,10 +87,19 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_priorities_and_commercial_paths_are_preserved(self):
         self.assertIn(".slice(0, 3)", APP)
         self.assertIn("Array.isArray(priorities) && priorities.length > 0", APP)
-        self.assertIn('/contact/?source=privacy&amp;intent=correction', HTML)
-        self.assertIn("Plan de corrección automático", HTML)
-        self.assertIn("$49.900 CLP", HTML)
-        self.assertIn("Solicitar plan de corrección", HTML)
+        self.assertIn("Plan de corrección", HTML)
+        self.assertIn("$49.900", HTML)
+        self.assertIn("pago único", HTML)
+        self.assertIn("Obtener plan de corrección", HTML)
+        self.assertIn('name="email"', HTML)
+        self.assertIn("Se utilizará para gestionar la solicitud y entregar el plan.", HTML)
+        self.assertIn("fetch('/api/privacy/correction-plan-orders'", APP)
+        self.assertIn("JSON.stringify({ site_url: currentAnalyzedUrl, email: orderEmail.value })", APP)
+        self.assertNotIn("amount:", APP)
+        self.assertNotIn("currency:", APP)
+        self.assertNotIn("product_code:", APP)
+        self.assertIn("Solicitud preparada", HTML)
+        self.assertIn("El pago en línea estará disponible próximamente.", HTML)
         self.assertIn("La implementación técnica no está incluida.", HTML)
         self.assertNotIn("acompañamiento para resolver dudas", HTML.lower())
         self.assertIn("¿Necesita que alguien realice los cambios?", HTML)
@@ -117,7 +126,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=106" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=107" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

@@ -15,6 +15,16 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 - El trabajo actual de Web Inspector pertenece a la implementación backend existente de Privacy y sus pruebas.
 - Mantener el contrato de la API pública salvo que la Issue solicite explícitamente modificarlo.
 
+## Plan de corrección: frontera comercial
+
+El Plan de corrección Privacy Web es un producto único de pago único por CLP
+$49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden
+`pending_payment` con la URL diagnosticada y un email normalizado. El precio, la
+moneda, el producto y el estado son definidos por el backend. Crear o marcar como
+pagada una orden no ejecuta el diagnóstico ni genera el Plan, su token o su entrega;
+esa orquestación permanece separada hasta contar con una confirmación de pago
+confiable.
+
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí
 solo que la política sea de un tercero: la atribución puede confirmarse mediante el

@@ -15,6 +15,12 @@ const diagnosticControls = document.querySelector('#diagnostic-controls');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
 const correctionOffer = document.querySelector('#privacy-correction-offer');
 const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
+const orderOpenButton = document.querySelector('#correction-order-open');
+const orderForm = document.querySelector('#correction-order-form');
+const orderEmail = document.querySelector('#correction-order-email');
+const orderSubmit = document.querySelector('#correction-order-submit');
+const orderError = document.querySelector('#correction-order-error');
+const orderSuccess = document.querySelector('#correction-order-success');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
@@ -23,6 +29,7 @@ const modalCloseButtons = modal?.querySelectorAll('[data-modal-close]') ?? [];
 const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 let lastFocusedElement = null;
 let isDiagnosing = false;
+let currentAnalyzedUrl = '';
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
 const renderDiagnosticError = 'Recibimos el diagnóstico, pero no pudimos mostrar el resultado. Intenta nuevamente.';
@@ -250,6 +257,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   const humanStatus = getHumanStatus(score);
 
   analyzedUrl.textContent = websiteUrl;
+  currentAnalyzedUrl = websiteUrl;
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
@@ -341,6 +349,37 @@ const trapFocus = (event) => {
 urlInput.addEventListener('input', () => {
   if (isValidUrl(urlInput.value)) {
     setUrlError(false);
+  }
+});
+
+orderOpenButton?.addEventListener('click', () => {
+  orderOpenButton.hidden = true;
+  orderForm.hidden = false;
+  orderEmail.focus();
+});
+
+orderForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  orderError.hidden = true;
+  orderSubmit.disabled = true;
+
+  try {
+    const response = await fetch('/api/privacy/correction-plan-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site_url: currentAnalyzedUrl, email: orderEmail.value }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    orderForm.hidden = true;
+    orderSuccess.hidden = false;
+  } catch (error) {
+    reportFlowError('order_request_failed', error);
+    orderError.textContent = 'No pudimos preparar la solicitud. Intente nuevamente.';
+    orderError.hidden = false;
+  } finally {
+    orderSubmit.disabled = false;
   }
 });
 
