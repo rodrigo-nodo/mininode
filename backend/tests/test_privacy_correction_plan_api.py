@@ -11,6 +11,7 @@ sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.main import create_app  # noqa: E402
 from mininode_api.services import learn_feedback, privacy_correction_plan as service  # noqa: E402
+from mininode_api.services import privacy_correction_plan_check as checks  # noqa: E402
 from mininode_api.services import privacy_correction_plan_flow as flow  # noqa: E402
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError  # noqa: E402
 
@@ -29,6 +30,7 @@ def client(monkeypatch):
     monkeypatch.setenv("API_KEY", "internal-key")
     app = create_app()
     app.state.privacy_correction_plan_ready = True
+    app.state.privacy_correction_plan_check_ready = True
     return TestClient(app)
 
 
@@ -130,10 +132,31 @@ def test_get_uses_token_without_api_key(client, monkeypatch):
         "plan": PLAN,
     }
     monkeypatch.setattr(service, "get_correction_plan", lambda token: stored)
+    monkeypatch.setattr(checks, "get_check_metadata", lambda plan_id: {"status": "available", "expires_at": datetime.now(timezone.utc)})
     response = client.get("/privacy/correction-plans/secret-token")
     assert response.status_code == 200
     assert response.json()["plan"] == PLAN
     assert "token_hash" not in response.json()
+
+
+def test_public_check_endpoint_accepts_no_body_or_api_key(client, monkeypatch):
+    result = {"status": "used", "created_at": datetime.now(timezone.utc), "result": {"version": "1"}}
+    monkeypatch.setattr(checks, "perform_check", lambda token: result)
+    response = client.post("/privacy/correction-plans/secret-token/check")
+    assert response.status_code == 200
+    assert response.json()["result"] == {"version": "1"}
+    assert "token_hash" not in response.json()
+
+
+@pytest.mark.parametrize(
+    "error,expected",
+    [(checks.ImprovementCheckNotFoundError, 404), (checks.ImprovementCheckUsedError, 409),
+     (checks.ImprovementCheckExpiredError, 410), (checks.ImprovementInspectionError, 503)],
+)
+def test_check_errors_are_controlled(client, monkeypatch, error, expected):
+    monkeypatch.setattr(checks, "perform_check", lambda token: (_ for _ in ()).throw(error()))
+    response = client.post("/privacy/correction-plans/secret-token/check")
+    assert response.status_code == expected
 
 
 def test_invalid_or_revoked_token_returns_same_404(client, monkeypatch):

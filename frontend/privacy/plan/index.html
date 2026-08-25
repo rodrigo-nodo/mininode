@@ -8,8 +8,8 @@
   <title>Plan de corrección — Mininode Privacy</title>
   <meta name="description" content="Plan de corrección de Mininode Privacy Web.">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=1">
-  <link rel="stylesheet" href="/privacy/plan/styles.css?v=1">
-  <script src="/privacy/plan/app.js?v=2" defer></script>
+  <link rel="stylesheet" href="/privacy/plan/styles.css?v=2">
+  <script src="/privacy/plan/app.js?v=3" defer></script>
 </head>
 <body>
   <header class="plan-header"><div class="plan-shell plan-header__inner"><strong>Mininode Privacy</strong><span>Plan de corrección</span></div></header>
@@ -36,6 +36,23 @@
         <p class="section-label">Su plan</p><h2 id="closing-title"><span id="closing-count">—</span> mejoras recomendadas</h2>
         <p>Este plan fue generado automáticamente a partir de los hallazgos de Privacy Web.</p><p>La implementación técnica de los cambios no está incluida.</p>
         <p class="plan-closing__future">Una vez realizados los cambios, Privacy Web podrá volver a revisar el sitio para comprobar su evolución.</p>
+      </section>
+      <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
+        <p class="section-label">Incluida en el Plan</p><h2 id="check-title">Comprobación de mejoras</h2>
+        <p>Una vez realizados los cambios, Mininode puede volver a revisar el sitio y compararlo con este diagnóstico.</p>
+        <p><strong>1 comprobación incluida.</strong></p>
+        <p id="check-deadline"></p>
+        <button id="check-start" type="button" hidden>Comprobar mejoras</button>
+        <div id="check-confirm" class="check-confirm" hidden><p>Esta acción utilizará la comprobación incluida y volverá a analizar el sitio para comparar los resultados con el diagnóstico original.</p><button id="check-cancel" type="button">Cancelar</button><button id="check-submit" type="button">Iniciar comprobación</button></div>
+        <p id="check-progress" role="status" hidden>Comprobando mejoras...</p>
+        <p id="check-message" role="alert" hidden></p>
+        <div id="check-result" hidden>
+          <div class="check-scores"><p>Antes<strong id="check-before"></strong></p><p>Ahora<strong id="check-now"></strong></p></div>
+          <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
+          <p><strong id="check-corrected"></strong> mejoras corregidas</p><p><strong id="check-pending"></strong> todavía pendientes</p>
+          <ul id="check-items"></ul><p>Comprobación realizada <time id="check-created"></time></p>
+        </div>
+        <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
       </section>
       <aside class="plan-disclaimer" aria-label="Alcance del Plan de corrección"><p>Privacy Score es un indicador desarrollado por Mininode. No es una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.</p><p>El Plan de corrección se basa en señales observables del sitio web y no reemplaza una revisión jurídica o especializada cuando corresponda.</p></aside>
     </div>

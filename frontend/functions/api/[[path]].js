@@ -19,7 +19,9 @@ export const onRequest = async (ctx) => {
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
   const isCorrectionPlan = /^privacy\/correction-plans\/[A-Za-z0-9_-]+$/.test(destPathPublic);
-  const isAllowedCorrectionPlan = isCorrectionPlan && request.method.toUpperCase() === 'GET';
+  const isCorrectionPlanCheck = /^privacy\/correction-plans\/[A-Za-z0-9_-]+\/check$/.test(destPathPublic);
+  const isAllowedCorrectionPlan = (isCorrectionPlan && request.method.toUpperCase() === 'GET')
+    || (isCorrectionPlanCheck && request.method.toUpperCase() === 'POST');
   const isPublicOrderCreation = destPathPublic === 'privacy/correction-plan-orders'
     && request.method.toUpperCase() === 'POST';
   const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);

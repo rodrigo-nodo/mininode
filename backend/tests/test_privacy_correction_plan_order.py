@@ -54,6 +54,7 @@ def test_initialization_links_order_to_diagnostic_without_uniqueness(monkeypatch
     assert "product_code = 'PRIVACY_CORRECTION_PLAN'" in sql
     assert "status IN ('pending_payment', 'paid', 'cancelled')" in sql
     assert "access_token" not in sql
+    assert "ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ NULL" in sql
 
 
 def test_create_uses_diagnostic_site_and_backend_commercial_values(monkeypatch):
@@ -104,3 +105,4 @@ def test_attach_plan_sets_paid_only_for_an_unactivated_pending_order(monkeypatch
     assert "status = 'pending_payment' AND correction_plan_id IS NULL" in sql
     assert params == (plan_id, row[0])
     assert attached.correction_plan_id == plan_id
+    assert "paid_at = CURRENT_TIMESTAMP" in sql

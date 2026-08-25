@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
 );
 
 ALTER TABLE privacy.correction_plan_order
+    ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ NULL;
+
+ALTER TABLE privacy.correction_plan_order
     ADD COLUMN IF NOT EXISTS correction_plan_id UUID NULL;
 
 DO $$
@@ -74,6 +77,7 @@ class CorrectionPlanOrder:
     status: str
     created_at: datetime
     updated_at: datetime
+    paid_at: datetime | None = None
 
 
 def _database_url() -> str:
@@ -122,7 +126,7 @@ def create_order(*, diagnostic_id: UUID, email: str) -> CorrectionPlanOrder:
                 id, diagnostic_id, site_url, email, product_code, amount, currency, status
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
-                      status, created_at, updated_at
+                      status, created_at, updated_at, paid_at
             """,
             (
                 order_id,
@@ -143,7 +147,7 @@ def get_order(order_id: UUID) -> CorrectionPlanOrder:
         cursor.execute(
             """
             SELECT id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
-                   status, created_at, updated_at
+                   status, created_at, updated_at, paid_at
             FROM privacy.correction_plan_order WHERE id = %s
             """,
             (order_id,),
@@ -160,10 +164,11 @@ def mark_order_paid(order_id: UUID) -> CorrectionPlanOrder:
         cursor.execute(
             """
             UPDATE privacy.correction_plan_order
-            SET status = 'paid', updated_at = CURRENT_TIMESTAMP
+            SET status = 'paid', paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status IN ('pending_payment', 'paid')
             RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
-                      status, created_at, updated_at
+                      status, created_at, updated_at, paid_at
             """,
             (order_id,),
         )
@@ -179,10 +184,11 @@ def attach_correction_plan(order_id: UUID, correction_plan_id: UUID) -> Correcti
         cursor.execute(
             """
             UPDATE privacy.correction_plan_order
-            SET correction_plan_id = %s, status = 'paid', updated_at = CURRENT_TIMESTAMP
+            SET correction_plan_id = %s, status = 'paid', paid_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status = 'pending_payment' AND correction_plan_id IS NULL
             RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code,
-                      amount, currency, status, created_at, updated_at
+                      amount, currency, status, created_at, updated_at, paid_at
             """,
             (correction_plan_id, order_id),
         )

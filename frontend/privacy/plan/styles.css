@@ -4,3 +4,11 @@
 .plan-error p { line-height: 1.6; }
 .plan-error a, .plan-error button { color: var(--primary-dark); display: inline-block; font: inherit; font-weight: 750; margin: 10px 18px 0 0; }
 .plan-error button { background: white; border: 1px solid var(--primary); border-radius: 9px; cursor: pointer; padding: 10px 14px; }
+.improvement-check { background: #f4fbfa; border: 1px solid #b9ded9; border-radius: 16px; margin: 36px 0; padding: clamp(22px, 5vw, 36px); }
+.improvement-check button { background: #086f68; border: 0; border-radius: 9px; color: white; cursor: pointer; font: inherit; font-weight: 750; margin: 8px 12px 8px 0; padding: 11px 16px; }
+.improvement-check button:disabled { cursor: wait; opacity: .65; }
+.check-confirm { border-left: 3px solid #086f68; margin-top: 16px; padding-left: 16px; }
+.check-scores { display: flex; gap: clamp(40px, 12vw, 120px); margin-top: 24px; }
+.check-scores p { color: var(--muted); display: grid; gap: 6px; }
+.check-scores strong, .check-change { color: var(--ink); font-size: 1.6rem; }
+#check-items { display: grid; gap: 10px; list-style: none; padding: 0; }
