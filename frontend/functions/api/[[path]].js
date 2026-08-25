@@ -18,9 +18,11 @@ export const onRequest = async (ctx) => {
 
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
+  const isCorrectionPlan = /^privacy\/correction-plans\/[A-Za-z0-9_-]+$/.test(destPathPublic);
+  const isAllowedCorrectionPlan = isCorrectionPlan && request.method.toUpperCase() === 'GET';
   const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
   const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(request.method.toUpperCase());
-  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById) {
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -72,9 +74,9 @@ export const onRequest = async (ctx) => {
   const headers = new Headers();
   if (contentType) headers.set('Content-Type', contentType);
   headers.set('Accept', 'application/json');
-  headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+  if (!isAllowedCorrectionPlan) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
 
-  if (!env.MININODE_API_KEY) {
+  if (!isAllowedCorrectionPlan && !env.MININODE_API_KEY) {
     return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY (Pages Secret)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },

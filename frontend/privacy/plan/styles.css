@@ -1,0 +1,6 @@
+.plan-loading { color: var(--muted); padding: 72px 0; text-align: center; }
+.plan-error { margin: 72px auto; max-width: 680px; padding: 28px; }
+.plan-error h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0 0 14px; }
+.plan-error p { line-height: 1.6; }
+.plan-error a, .plan-error button { color: var(--primary-dark); display: inline-block; font: inherit; font-weight: 750; margin: 10px 18px 0 0; }
+.plan-error button { background: white; border: 1px solid var(--primary); border-radius: 9px; cursor: pointer; padding: 10px 14px; }
