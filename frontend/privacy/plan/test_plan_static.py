@@ -6,17 +6,30 @@ PLAN_DIR = Path(__file__).parent
 FRONTEND_DIR = PLAN_DIR.parents[1]
 HTML = (PLAN_DIR / "index.html").read_text(encoding="utf-8")
 APP = (PLAN_DIR / "app.js").read_text(encoding="utf-8")
-ROUTE = (FRONTEND_DIR / "functions/privacy/plan/[[token]].js").read_text(encoding="utf-8")
+ROUTE_PATH = FRONTEND_DIR / "functions/privacy/plan/[token].js"
+ROUTE = ROUTE_PATH.read_text(encoding="utf-8")
 PROXY = (FRONTEND_DIR / "functions/api/[[path]].js").read_text(encoding="utf-8")
 
 
 class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_clean_dynamic_route_serves_real_page(self):
-        self.assertIn("[[token]].js", str(FRONTEND_DIR / "functions/privacy/plan/[[token]].js"))
+        self.assertTrue(ROUTE_PATH.is_file())
+        self.assertFalse((ROUTE_PATH.parent / "[[token]].js").exists())
         self.assertIn("/privacy/plan/index.html", ROUTE)
+        self.assertIn(r"^\/privacy\/plan\/[A-Za-z0-9_-]+\/?$", ROUTE)
         self.assertIn("window.location.pathname", APP)
         self.assertIn(r"^\/privacy\/plan\/([^/]+)\/?$", APP)
         self.assertNotIn("searchParams", APP)
+
+    def test_dynamic_route_delegates_asset_requests(self):
+        self.assertIn("if (!isPlanPath) return env.ASSETS.fetch(request)", ROUTE)
+        self.assertNotRegex(ROUTE, r"pageUrl\.pathname\s*=.*app\.js")
+        self.assertTrue((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("const elements"))
+        self.assertIn("new AbortController()", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
+        self.assertIn("requestTimeoutMs", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
+        self.assertTrue((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith(".plan-loading"))
+        self.assertFalse((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("<!doctype html>"))
+        self.assertFalse((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith("<!doctype html>"))
 
     def test_get_uses_same_origin_proxy_without_api_credentials(self):
         self.assertIn("`/api/privacy/correction-plans/${encodeURIComponent(token)}`", APP)
