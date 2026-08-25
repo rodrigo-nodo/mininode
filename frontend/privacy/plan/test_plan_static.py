@@ -7,27 +7,36 @@ FRONTEND_DIR = PLAN_DIR.parents[1]
 HTML = (PLAN_DIR / "index.html").read_text(encoding="utf-8")
 APP = (PLAN_DIR / "app.js").read_text(encoding="utf-8")
 ROUTE_PATH = FRONTEND_DIR / "functions/privacy/plan/[token].js"
-ROUTE = ROUTE_PATH.read_text(encoding="utf-8")
+OPTIONAL_ROUTE_PATH = FRONTEND_DIR / "functions/privacy/plan/[[token]].js"
+REDIRECTS_PATH = FRONTEND_DIR / "_redirects"
+REDIRECTS = REDIRECTS_PATH.read_text(encoding="utf-8")
 PROXY = (FRONTEND_DIR / "functions/api/[[path]].js").read_text(encoding="utf-8")
 
 
 class RealCorrectionPlanStaticTests(unittest.TestCase):
-    def test_clean_dynamic_route_serves_real_page(self):
-        self.assertTrue(ROUTE_PATH.is_file())
-        self.assertFalse((ROUTE_PATH.parent / "[[token]].js").exists())
-        self.assertIn("pageUrl.pathname = '/privacy/plan/'", ROUTE)
-        self.assertIn("Pages resolves its index document internally", ROUTE)
-        self.assertIn(r"^\/privacy\/plan\/[A-Za-z0-9_-]+\/?$", ROUTE)
-        self.assertNotIn("Response.redirect", ROUTE)
-        self.assertNotRegex(ROUTE, r"status\s*:\s*30[1278]")
-        self.assertIn("pageUrl.search = ''", ROUTE)
+    def test_clean_dynamic_route_uses_static_rewrite(self):
+        self.assertTrue(REDIRECTS_PATH.is_file())
+        self.assertFalse(ROUTE_PATH.exists())
+        self.assertFalse(OPTIONAL_ROUTE_PATH.exists())
+
+        rules = [line.split() for line in REDIRECTS.splitlines()
+                 if line.strip() and not line.lstrip().startswith("#")]
+        plan_rules = [rule for rule in rules if rule[0] == "/privacy/plan/*"]
+        self.assertEqual(plan_rules, [["/privacy/plan/*", "/privacy/plan/", "200"]])
+        self.assertNotIn(plan_rules[0][2], {"301", "302", "307", "308"})
+
+        plan_rule_index = rules.index(plan_rules[0])
+        catch_all_indexes = [index for index, rule in enumerate(rules)
+                             if rule[0] in {"/*", "*"}]
+        self.assertTrue(all(plan_rule_index < index for index in catch_all_indexes))
+
         self.assertIn("window.location.pathname", APP)
         self.assertIn(r"^\/privacy\/plan\/([^/]+)\/?$", APP)
         self.assertNotIn("searchParams", APP)
 
-    def test_dynamic_route_delegates_asset_requests(self):
-        self.assertIn("if (!isPlanPath) return env.ASSETS.fetch(request)", ROUTE)
-        self.assertNotRegex(ROUTE, r"pageUrl\.pathname\s*=.*app\.js")
+    def test_static_plan_page_and_api_function_remain_available(self):
+        self.assertTrue((PLAN_DIR / "index.html").is_file())
+        self.assertTrue((FRONTEND_DIR / "functions/api/[[path]].js").is_file())
         self.assertTrue((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("const elements"))
         self.assertIn("new AbortController()", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
         self.assertIn("requestTimeoutMs", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
@@ -52,7 +61,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("if (!isAllowedCorrectionPlan && !isPublicOrderCreation) headers.set('X-Api-Key'", PROXY)
 
     def test_token_and_snapshot_are_not_persisted_or_logged(self):
-        combined = HTML + APP + ROUTE
+        combined = HTML + APP + REDIRECTS
         for forbidden in ("localStorage", "sessionStorage", "document.cookie", "console.", "analytics"):
             self.assertNotIn(forbidden, combined)
 
