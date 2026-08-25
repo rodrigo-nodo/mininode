@@ -1,5 +1,5 @@
 /* Scope por contenedor para no afectar al resto del sitio */
-#agents-landing { --brand: #005ad6; --border: #222428; --muted: #9aa1ab; --text: #eaeef5; }
+#agents-landing { --brand: var(--color-primary); --border: #222428; --muted: #9aa1ab; --text: #eaeef5; }
 #agents-landing .ag-container { max-width: 1120px; margin: 0 auto; padding: 32px 16px; }
 
 #agents-landing .ag-muted { color: var(--muted); }
@@ -44,10 +44,10 @@
 @media (min-width: 640px){ #agents-landing .ag-plans{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (min-width: 900px){ #agents-landing .ag-plans{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
-#agents-landing .ag-card--accent { border-color: rgba(0,90,214,0.15); }
-#agents-landing .ag-card--strong { border-color: rgba(0,90,214,0.30); }
+#agents-landing .ag-card--accent { border-color: rgba(23,107,120,0.15); }
+#agents-landing .ag-card--strong { border-color: rgba(23,107,120,0.30); }
 #agents-landing .ag-list { margin:0; padding-left: 18px; display:grid; gap: 6px; }
-#agents-landing .ag-pill { font-size: 11px; color: var(--brand); background: rgba(0,90,214,0.12); padding: 2px 8px; border-radius: 999px; }
+#agents-landing .ag-pill { font-size: 11px; color: var(--brand); background: rgba(23,107,120,0.12); padding: 2px 8px; border-radius: 999px; }
 
 #agents-landing .ag-note { margin-top: 8px; }
 

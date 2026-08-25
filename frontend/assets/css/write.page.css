@@ -1,4 +1,4 @@
-#write-app { --brand:#005ad6; --border:#222428; --muted:#9aa1ab; --text:#eaeef5; }
+#write-app { --brand:var(--color-primary); --border:#222428; --muted:#9aa1ab; --text:#eaeef5; }
 #write-app.wr-container { max-width: 920px; margin: 0 auto; padding: 32px 16px; color: var(--text); }
 
 .wr-hidden { display: none !important; }
@@ -41,7 +41,7 @@
 
 /* Modo claro por defecto */
 #write-app {
-  --brand: #005ad6;
+  --brand: var(--color-primary);
   --border: #e5e7eb;
   --muted: #475569;
   --text: #0f172a; /* slate-900 */
@@ -56,12 +56,12 @@
   display:inline-block; font-size:12px; font-weight:600;
   border:1px solid var(--border); color:var(--muted);
   padding:4px 8px; border-radius:999px; margin-bottom:8px;
-  background:#005ad6;
+  background:var(--color-primary);
   color:#eaeef5
 }
 
 /* token de marca */
-:root { --brand:#005AD6; }
+:root { --brand:var(--color-primary); }
 
 /* Badge “Mininode Write” con fondo azul y letra blanca */
 .wr-badge {

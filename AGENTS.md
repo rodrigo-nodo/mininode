@@ -33,6 +33,7 @@ No leer todos los documentos ni recorrer todo el repositorio por defecto.
 
 - `docs/architecture.md` - contexto general y arquitectura estable de Mininode: plataforma, dominios, frontend/backend, despliegue y estructura general.
 - `docs/privacy.md` - contexto específico de Mininode Privacy y Privacy Web Inspector.
+- `docs/UI.md` - reglas UX/UI y referencia de tokens y componentes para interfaces frontend.
 
 La Issue determina qué contexto es necesario.
 
@@ -47,6 +48,7 @@ La Issue determina qué contexto es necesario.
 
 - Tarea general de arquitectura, infraestructura o integración Mininode -> leer `docs/architecture.md`.
 - Mininode Privacy / Privacy Web Inspector -> leer `docs/privacy.md`; leer `docs/architecture.md` solo si la tarea necesita contexto general adicional.
+- Tarea que cree o modifique interfaz frontend, página, componente visual o estilos -> leer `docs/UI.md` antes de implementar.
 - Otras áreas -> usar la Issue y revisar únicamente el código relacionado, salvo que se indique otro documento de contexto.
 
 ## Reglas

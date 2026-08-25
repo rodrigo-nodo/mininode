@@ -1,10 +1,10 @@
 .learn-theme-page {
-  --learn-bg: #ffffff;
-  --learn-fg: #17171c;
-  --learn-muted: #626570;
-  --learn-link: #176b78;
-  --learn-link-soft: #e8f4f5;
-  --learn-border: #dfe3eb;
+  --learn-bg: var(--color-bg);
+  --learn-fg: var(--color-text);
+  --learn-muted: var(--color-muted);
+  --learn-link: var(--color-primary);
+  --learn-link-soft: var(--color-primary-soft);
+  --learn-border: var(--color-border);
   --bg: var(--learn-bg);
   --fg: var(--learn-fg);
   --muted: var(--learn-muted);
