@@ -75,3 +75,23 @@ def test_proxy_whitelists_feedback_get_and_patch():
     assert "learn/feedback" in proxy
     assert "^learn\\/feedback\\/[0-9a-f-]+$" in proxy
     assert "['GET', 'PATCH'].includes" in proxy
+
+
+def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
+    catalog = (ROOT / "index.html").read_text()
+    brief = (ROOT / "briefs" / "001-nueva-autoridad-de-datos" / "index.html").read_text()
+    script = (ROOT / "reader.js").read_text()
+    markdown = (ROOT / "content" / "briefs" / "001-nueva-autoridad-de-datos.md").read_text()
+    relationships = (ROOT / "content" / "relationships.json").read_text()
+
+    assert "Lecturas breves de 3 a 5 minutos." in catalog
+    assert "Guías prácticas para profundizar." in catalog
+    assert 'href="/learn/privacy"' in catalog
+    assert 'data-content-type="brief"' in brief
+    assert "¿Te resultó útil?" in brief
+    assert "learn-comment" not in brief
+    assert "content_key: CONTENT_KEY" in script
+    assert "MININODE BRIEF ${metadata.id}" in script
+    assert "metadata + content" not in markdown
+    assert "¿Te resultó útil?" not in markdown
+    assert '"related": []' in relationships

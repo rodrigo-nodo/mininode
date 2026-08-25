@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 import psycopg
 
 CONTENT_KEY = "001-privacidad-para-pequenos-negocios"
+BRIEF_001_CONTENT_KEY = "brief-001-nueva-autoridad-de-datos"
 UNSET = object()
 
 INITIALIZE_SQL = """
@@ -55,6 +56,22 @@ INSERT INTO learn.content (
 WHERE NOT EXISTS (
     SELECT 1 FROM learn.content
     WHERE content_key = '001-privacidad-para-pequenos-negocios'
+)
+ON CONFLICT (content_key) DO NOTHING;
+
+INSERT INTO learn.content (
+    content_key, slug, content_type, title, status, current_version, published_at
+) SELECT
+    'brief-001-nueva-autoridad-de-datos',
+    '/learn/briefs/001-nueva-autoridad-de-datos',
+    'brief',
+    'Nueva autoridad de datos',
+    'published',
+    1,
+    CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+    SELECT 1 FROM learn.content
+    WHERE content_key = 'brief-001-nueva-autoridad-de-datos'
 )
 ON CONFLICT (content_key) DO NOTHING;
 """
