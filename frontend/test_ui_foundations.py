@@ -24,19 +24,22 @@ def test_global_styles_load_the_ui_foundations():
 def test_tokens_are_the_only_source_of_brand_color_values():
     tokens_path = FRONTEND / "assets" / "css" / "tokens.css"
     tokens = tokens_path.read_text(encoding="utf-8").lower()
-    expected = {
-        "--color-primary": "#176b78",
-        "--color-primary-hover": "#125966",
-        "--color-primary-soft": "#e8f4f5",
-    }
-    for token, value in expected.items():
-        assert re.search(rf"{token}:\s*{value}\s*;", tokens)
+    brand_tokens = (
+        "--color-primary",
+        "--color-primary-hover",
+        "--color-primary-soft",
+    )
+    brand_values = []
+    for token in brand_tokens:
+        definition = re.search(rf"{re.escape(token)}\s*:\s*([^;]+);", tokens)
+        assert definition, f"{token} must be defined in {tokens_path}"
+        brand_values.append(definition.group(1).strip())
 
     for path in FRONTEND.rglob("*"):
         if path == tokens_path or path.suffix not in {".css", ".html"}:
             continue
         contents = path.read_text(encoding="utf-8").lower()
-        for value in expected.values():
+        for value in brand_values:
             assert value not in contents, f"{value} must only be defined in {tokens_path} (found in {path})"
 
 

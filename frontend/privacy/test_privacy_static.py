@@ -148,7 +148,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(commercial.lower(), r"\b(tu|te|quieres|obtén)\b")
         styles = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower()
         self.assertIn("var(--color-primary)", styles)
-        self.assertNotIn("#176b78", styles)
         self.assertNotRegex(commercial.lower(), r"violet|purple|#6c4df4")
 
     def test_api_and_backend_score_remain_inputs(self):
