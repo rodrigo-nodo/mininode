@@ -90,13 +90,17 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert 'href="/learn/privacy"' in catalog
     assert "MININODE LEARN" not in catalog
     assert "<p>RECURSOS</p>" in catalog
-    assert "Recursos — Briefs y ebooks | Mininode" in catalog
+    assert "<title>Recursos - Briefs y ebooks | Mininode</title>" in catalog
     assert '<span class="learn-card__duration">4 min</span>' in catalog
     assert '<span class="learn-card__duration">30 min</span>' in catalog
     assert "<li>4 min</li>" not in catalog
     assert "<li>30 min</li>" not in catalog
     assert 'href="/learn/briefs/001-nueva-autoridad-de-datos"' in catalog
     assert 'data-content-type="brief"' in brief
+    assert "<title>Nueva autoridad de datos - Brief 001 | Mininode</title>" in brief
+    assert '<a class="learn-back" href="/learn">← Recursos</a>' in brief
+    assert "← Learn" not in brief
+    assert "Volver a Learn" not in brief
     assert "¿Te resultó útil?" in brief
     assert "learn-comment" not in brief
     assert "content_key: CONTENT_KEY" in script
@@ -104,6 +108,15 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "metadata + content" not in markdown
     assert "¿Te resultó útil?" not in markdown
     assert '"related": []' in relationships
+
+
+def test_ebook_uses_resources_navigation_and_normalized_title():
+    ebook = (ROOT / "privacy" / "index.html").read_text()
+
+    assert "<title>Privacidad para pequeños negocios - Micro-ebook 001 | Mininode</title>" in ebook
+    assert '<a class="learn-back" href="/learn">← Recursos</a>' in ebook
+    assert "← Learn" not in ebook
+    assert "Volver a Learn" not in ebook
 
 
 def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
