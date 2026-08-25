@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from mininode_api.core.auth import require_api_key
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
 from mininode_api.services import privacy_correction_plan
+from mininode_api.services import privacy_correction_plan_flow
 
 router = APIRouter(prefix="/privacy", tags=["Privacy"])
 logger = logging.getLogger(__name__)
@@ -47,6 +48,11 @@ class CreateCorrectionPlanResponse(BaseModel):
     plan_path: str
 
 
+class CreateCorrectionPlanFromUrlResponse(CreateCorrectionPlanResponse):
+    initial_score: int
+    item_count: int
+
+
 class StoredCorrectionPlanResponse(BaseModel):
     id: UUID
     site_url: str
@@ -76,6 +82,36 @@ def create_correction_plan(request: CreateCorrectionPlanRequest):
     return {
         "access_token": created.access_token,
         "plan_path": f"/privacy/plan/{created.access_token}",
+    }
+
+
+@router.post(
+    "/correction-plans/from-url",
+    status_code=status.HTTP_201_CREATED,
+    response_model=CreateCorrectionPlanFromUrlResponse,
+    dependencies=[Depends(require_api_key), Depends(_require_correction_plan_database)],
+)
+def create_correction_plan_from_url(request: PrivacyDiagnosticRequest):
+    try:
+        created, plan = privacy_correction_plan_flow.create_correction_plan_from_url(
+            request.url
+        )
+    except PrivacyInspectionError as exc:
+        status_code, message = _ERRORS[exc.code]
+        return JSONResponse(
+            status_code=status_code,
+            content={"error": exc.code, "message": message},
+        )
+    except privacy_correction_plan_flow.NoActionableItemsError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"error": "no_actionable_items", "message": str(exc)},
+        )
+    return {
+        "access_token": created.access_token,
+        "plan_path": f"/privacy/plan/{created.access_token}",
+        "initial_score": plan["initial_score"],
+        "item_count": plan["item_count"],
     }
 
 
