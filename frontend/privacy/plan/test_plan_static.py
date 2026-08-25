@@ -15,8 +15,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_clean_dynamic_route_serves_real_page(self):
         self.assertTrue(ROUTE_PATH.is_file())
         self.assertFalse((ROUTE_PATH.parent / "[[token]].js").exists())
-        self.assertIn("/privacy/plan/index.html", ROUTE)
+        self.assertIn("pageUrl.pathname = '/privacy/plan/'", ROUTE)
+        self.assertIn("Pages resolves its index document internally", ROUTE)
         self.assertIn(r"^\/privacy\/plan\/[A-Za-z0-9_-]+\/?$", ROUTE)
+        self.assertNotIn("Response.redirect", ROUTE)
+        self.assertNotRegex(ROUTE, r"status\s*:\s*30[1278]")
+        self.assertIn("pageUrl.search = ''", ROUTE)
         self.assertIn("window.location.pathname", APP)
         self.assertIn(r"^\/privacy\/plan\/([^/]+)\/?$", APP)
         self.assertNotIn("searchParams", APP)
@@ -30,6 +34,14 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertTrue((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith(".plan-loading"))
         self.assertFalse((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("<!doctype html>"))
         self.assertFalse((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith("<!doctype html>"))
+
+    def test_dynamic_page_assets_are_absolute(self):
+        for asset in (
+            '/privacy/plan-demo/styles.css?v=1',
+            '/privacy/plan/styles.css?v=2',
+            '/privacy/plan/app.js?v=3',
+        ):
+            self.assertIn(asset, HTML)
 
     def test_get_uses_same_origin_proxy_without_api_credentials(self):
         self.assertIn("`/api/privacy/correction-plans/${encodeURIComponent(token)}`", APP)
