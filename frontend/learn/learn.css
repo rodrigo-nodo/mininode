@@ -242,8 +242,8 @@
     --learn-bg: #111218;
     --learn-fg: #f4f2fa;
     --learn-muted: #b5b1be;
-    --learn-link: #b8a6ff;
-    --learn-link-soft: #29223e;
+    --learn-link: #66c6d0;
+    --learn-link-soft: #17353a;
     --learn-border: #3a3944;
   }
 }
@@ -252,8 +252,8 @@
   --learn-bg: #111218;
   --learn-fg: #f4f2fa;
   --learn-muted: #b5b1be;
-  --learn-link: #b8a6ff;
-  --learn-link-soft: #29223e;
+  --learn-link: #66c6d0;
+  --learn-link-soft: #17353a;
   --learn-border: #3a3944;
 }
 
