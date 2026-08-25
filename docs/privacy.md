@@ -19,11 +19,14 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 
 El Plan de corrección Privacy Web es un producto único de pago único por CLP
 $49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden
-`pending_payment` con la URL diagnosticada y un email normalizado. El precio, la
+`pending_payment` con el identificador del snapshot y un email normalizado. El precio, la
 moneda, el producto y el estado son definidos por el backend. Crear o marcar como
 pagada una orden no ejecuta el diagnóstico ni genera el Plan, su token o su entrega;
 esa orquestación permanece separada hasta contar con una confirmación de pago
-confiable.
+confiable. El snapshot permite solicitar el Plan durante las 24 horas posteriores
+al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
+deduplicación en este MVP. El Plan incluirá una nueva revisión utilizable hasta 90
+días después del pago; esa revisión y su plazo se implementarán en una etapa posterior.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí

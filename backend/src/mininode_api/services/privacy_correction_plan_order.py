@@ -11,8 +11,7 @@ from uuid import UUID, uuid4
 
 import psycopg
 
-from mininode_api.services.privacy_diagnostic import validate_public_url_format
-from mininode_api.web_inspector.fetcher import normalize_url
+from mininode_api.services import privacy_diagnostic_snapshot
 
 PRODUCT_CODE = "PRIVACY_CORRECTION_PLAN"
 PRODUCT_AMOUNT = 49900
@@ -24,6 +23,7 @@ CREATE SCHEMA IF NOT EXISTS privacy;
 
 CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
     id UUID PRIMARY KEY,
+    diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
     site_url TEXT NOT NULL,
     email TEXT NOT NULL,
     product_code TEXT NOT NULL CHECK (product_code = 'PRIVACY_CORRECTION_PLAN'),
@@ -43,6 +43,7 @@ class CorrectionPlanOrderNotFoundError(Exception):
 @dataclass(frozen=True)
 class CorrectionPlanOrder:
     id: UUID
+    diagnostic_id: UUID
     site_url: str
     email: str
     product_code: str
@@ -71,31 +72,29 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def normalize_site_url(site_url: str) -> str:
-    """Validate and canonicalize without resolving or requesting the site."""
-    return normalize_url(validate_public_url_format(site_url))
-
-
 def _from_row(row: tuple) -> CorrectionPlanOrder:
     return CorrectionPlanOrder(*row)
 
 
-def create_order(*, site_url: str, email: str) -> CorrectionPlanOrder:
+def create_order(*, diagnostic_id: UUID, email: str) -> CorrectionPlanOrder:
     order_id = uuid4()
-    normalized_site_url = normalize_site_url(site_url)
+    diagnostic = privacy_diagnostic_snapshot.require_purchasable(
+        privacy_diagnostic_snapshot.get_diagnostic_snapshot(diagnostic_id)
+    )
     normalized_email = email.strip().lower()
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO privacy.correction_plan_order (
-                id, site_url, email, product_code, amount, currency, status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, site_url, email, product_code, amount, currency,
+                id, diagnostic_id, site_url, email, product_code, amount, currency, status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, diagnostic_id, site_url, email, product_code, amount, currency,
                       status, created_at, updated_at
             """,
             (
                 order_id,
-                normalized_site_url,
+                diagnostic.id,
+                diagnostic.site_url,
                 normalized_email,
                 PRODUCT_CODE,
                 PRODUCT_AMOUNT,
@@ -110,7 +109,7 @@ def get_order(order_id: UUID) -> CorrectionPlanOrder:
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, site_url, email, product_code, amount, currency,
+            SELECT id, diagnostic_id, site_url, email, product_code, amount, currency,
                    status, created_at, updated_at
             FROM privacy.correction_plan_order WHERE id = %s
             """,
@@ -130,7 +129,7 @@ def mark_order_paid(order_id: UUID) -> CorrectionPlanOrder:
             UPDATE privacy.correction_plan_order
             SET status = 'paid', updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status IN ('pending_payment', 'paid')
-            RETURNING id, site_url, email, product_code, amount, currency,
+            RETURNING id, diagnostic_id, site_url, email, product_code, amount, currency,
                       status, created_at, updated_at
             """,
             (order_id,),

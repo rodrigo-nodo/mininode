@@ -21,6 +21,9 @@ const orderEmail = document.querySelector('#correction-order-email');
 const orderSubmit = document.querySelector('#correction-order-submit');
 const orderError = document.querySelector('#correction-order-error');
 const orderSuccess = document.querySelector('#correction-order-success');
+const orderAvailability = document.querySelector('#correction-order-availability');
+const orderExpired = document.querySelector('#correction-order-expired');
+const orderRetry = document.querySelector('#correction-order-retry');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
@@ -29,7 +32,7 @@ const modalCloseButtons = modal?.querySelectorAll('[data-modal-close]') ?? [];
 const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 let lastFocusedElement = null;
 let isDiagnosing = false;
-let currentAnalyzedUrl = '';
+let currentDiagnosticId = '';
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
 const renderDiagnosticError = 'Recibimos el diagnóstico, pero no pudimos mostrar el resultado. Intenta nuevamente.';
@@ -257,7 +260,15 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   const humanStatus = getHumanStatus(score);
 
   analyzedUrl.textContent = websiteUrl;
-  currentAnalyzedUrl = websiteUrl;
+  currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id : '';
+  orderOpenButton.disabled = !currentDiagnosticId;
+  orderOpenButton.hidden = false;
+  orderForm.hidden = true;
+  orderSuccess.hidden = true;
+  orderExpired.hidden = true;
+  orderAvailability.textContent = currentDiagnosticId
+    ? 'Disponible durante 24 horas después de este diagnóstico.'
+    : 'El Plan no está disponible temporalmente. El diagnóstico gratuito sigue siendo válido.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
@@ -367,8 +378,13 @@ orderForm?.addEventListener('submit', async (event) => {
     const response = await fetch('/api/privacy/correction-plan-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site_url: currentAnalyzedUrl, email: orderEmail.value }),
+      body: JSON.stringify({ diagnostic_id: currentDiagnosticId, email: orderEmail.value }),
     });
+    if (response.status === 410) {
+      orderForm.hidden = true;
+      orderExpired.hidden = false;
+      return;
+    }
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -381,6 +397,13 @@ orderForm?.addEventListener('submit', async (event) => {
   } finally {
     orderSubmit.disabled = false;
   }
+});
+
+orderRetry?.addEventListener('click', () => {
+  orderExpired.hidden = true;
+  resultCard.hidden = true;
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  urlInput.focus();
 });
 
 form.addEventListener('submit', async (event) => {
