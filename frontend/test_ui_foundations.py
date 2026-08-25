@@ -21,6 +21,32 @@ def test_global_styles_load_the_ui_foundations():
         assert re.search(r'<link rel="stylesheet" href="(?:\.\./)*styles\.css">', html)
 
 
+def test_tokens_are_the_only_source_of_brand_color_values():
+    tokens_path = FRONTEND / "assets" / "css" / "tokens.css"
+    tokens = tokens_path.read_text(encoding="utf-8").lower()
+    expected = {
+        "--color-primary": "#176b78",
+        "--color-primary-hover": "#125966",
+        "--color-primary-soft": "#e8f4f5",
+    }
+    for token, value in expected.items():
+        assert re.search(rf"{token}:\s*{value}\s*;", tokens)
+
+    for path in FRONTEND.rglob("*"):
+        if path == tokens_path or path.suffix not in {".css", ".html"}:
+            continue
+        contents = path.read_text(encoding="utf-8").lower()
+        for value in expected.values():
+            assert value not in contents, f"{value} must only be defined in {tokens_path} (found in {path})"
+
+
+def test_theme_color_is_resolved_from_the_primary_token():
+    partial = (FRONTEND / "partials" / "head-common.html").read_text(encoding="utf-8")
+    loader = (FRONTEND / "assets" / "js" / "core-head.js").read_text(encoding="utf-8")
+    assert 'data-theme-color-token="--color-primary"' in partial
+    assert "getPropertyValue(token)" in loader
+
+
 def test_main_pages_reuse_the_shared_header_and_footer():
     for page in MAIN_PAGES:
         html = page.read_text(encoding="utf-8")
@@ -28,12 +54,3 @@ def test_main_pages_reuse_the_shared_header_and_footer():
         assert "partials/footer.html" in html
         assert 'id="site-header-nav"' not in html
         assert 'id="site-footer"' not in html
-
-
-def test_page_styles_do_not_redeclare_the_primary_hex():
-    for stylesheet in (
-        FRONTEND / "privacy" / "styles.css",
-        FRONTEND / "learn" / "learn.css",
-        FRONTEND / "assets" / "css" / "agents.page.css",
-    ):
-        assert "#176b78" not in stylesheet.read_text(encoding="utf-8").lower()

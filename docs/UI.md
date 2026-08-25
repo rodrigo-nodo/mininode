@@ -1,6 +1,6 @@
 # Fundamentos UX/UI de Mininode
 
-Esta guía es normativa para toda interfaz nueva o modificada. Los valores implementables viven en `frontend/assets/css/tokens.css`; este documento define cómo usarlos.
+Esta guía es normativa para toda interfaz nueva o modificada. `frontend/assets/css/tokens.css` es la única fuente de verdad de los valores visuales reales; este documento define sus roles y cómo usarlos. No copiar valores de color desde el archivo de tokens a documentación, páginas o componentes.
 
 ## Principios
 
@@ -12,17 +12,17 @@ Evitar titulares excesivamente grandes, gradientes llamativos, exceso de cards o
 
 ## Paleta
 
-| Rol | Valor |
+| Rol | Token |
 | --- | --- |
-| Primary | `#176B78` |
-| Primary hover/dark | `#125966` |
-| Primary soft | `#E8F4F5` |
-| Background | `#FFFFFF` |
-| Text | `#0D0F14` |
-| Muted | `#626570` |
-| Border | `#E5E9F2` |
+| Acento principal de marca | `--color-primary` |
+| Hover y variante oscura de marca | `--color-primary-hover` |
+| Fondos sutiles de marca | `--color-primary-soft` |
+| Fondo base | `--color-bg` |
+| Texto principal | `--color-text` |
+| Texto secundario | `--color-muted` |
+| Bordes | `--color-border` |
 
-El petróleo es el acento y la señal de marca; no debe dominar grandes superficies. Verde, amarillo y rojo se reservan principalmente para estados semánticos reales. No redefinir estos colores en una página: usar los tokens globales. Los temas oscuros pueden definir superficies y contrastes propios, pero deben conservar la identidad del acento.
+El petróleo es el acento y la señal de marca; no debe dominar grandes superficies. Verde, amarillo y rojo se reservan principalmente para estados semánticos reales. No redefinir ni copiar estos colores en una página: usar los tokens globales. Para transparencias derivadas de marca, usar `color-mix()` a partir del token correspondiente, no un RGB duplicado. Los temas oscuros pueden definir superficies y contrastes propios, pero deben conservar la identidad del acento.
 
 ## Tipografía
 

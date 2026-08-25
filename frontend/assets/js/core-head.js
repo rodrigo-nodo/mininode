@@ -41,6 +41,13 @@
         if (p) el.setAttribute('content', prefix + p);
         el.removeAttribute('data-content-root');
       });
+      // Keep browser chrome aligned with the centralized CSS brand token.
+      tmp.querySelectorAll('[data-theme-color-token]').forEach(el => {
+        const token = el.getAttribute('data-theme-color-token');
+        const value = token && getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+        if (value) el.setAttribute('content', value);
+        el.removeAttribute('data-theme-color-token');
+      });
       // Append to head
       while(tmp.firstChild){ document.head.appendChild(tmp.firstChild); }
     }catch(e){ /* silent */ }

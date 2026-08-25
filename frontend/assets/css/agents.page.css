@@ -44,10 +44,10 @@
 @media (min-width: 640px){ #agents-landing .ag-plans{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (min-width: 900px){ #agents-landing .ag-plans{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
-#agents-landing .ag-card--accent { border-color: rgba(23,107,120,0.15); }
-#agents-landing .ag-card--strong { border-color: rgba(23,107,120,0.30); }
+#agents-landing .ag-card--accent { border-color: color-mix(in srgb, var(--color-primary) 15%, transparent); }
+#agents-landing .ag-card--strong { border-color: color-mix(in srgb, var(--color-primary) 30%, transparent); }
 #agents-landing .ag-list { margin:0; padding-left: 18px; display:grid; gap: 6px; }
-#agents-landing .ag-pill { font-size: 11px; color: var(--brand); background: rgba(23,107,120,0.12); padding: 2px 8px; border-radius: 999px; }
+#agents-landing .ag-pill { font-size: 11px; color: var(--brand); background: color-mix(in srgb, var(--color-primary) 12%, transparent); padding: 2px 8px; border-radius: 999px; }
 
 #agents-landing .ag-note { margin-top: 8px; }
 
