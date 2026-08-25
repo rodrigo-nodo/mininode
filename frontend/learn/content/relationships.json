@@ -4,7 +4,13 @@
       "slug": "001-nueva-autoridad-de-datos",
       "title": "Nueva autoridad de datos",
       "subtitle": "El nuevo escenario de privacidad en Chile",
-      "related": []
+      "related": ["002"]
+    },
+    "002": {
+      "slug": "002-evidencia-de-cumplimiento",
+      "title": "Evidencia de cumplimiento",
+      "subtitle": "Cumplir también significa demostrar",
+      "related": ["001"]
     }
   }
 }

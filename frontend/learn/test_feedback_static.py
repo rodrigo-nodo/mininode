@@ -81,6 +81,7 @@ def test_proxy_whitelists_feedback_get_and_patch():
 def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     catalog = (ROOT / "index.html").read_text()
     brief = (ROOT / "briefs" / "001-nueva-autoridad-de-datos" / "index.html").read_text()
+    brief_002 = (ROOT / "briefs" / "002-evidencia-de-cumplimiento" / "index.html").read_text()
     script = (ROOT / "reader.js").read_text()
     markdown = (ROOT / "content" / "briefs" / "001-nueva-autoridad-de-datos.md").read_text()
     relationships = (ROOT / "content" / "relationships.json").read_text()
@@ -96,6 +97,7 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "<li>4 min</li>" not in catalog
     assert "<li>30 min</li>" not in catalog
     assert 'href="/learn/briefs/001-nueva-autoridad-de-datos"' in catalog
+    assert 'href="/learn/briefs/002-evidencia-de-cumplimiento"' in catalog
     assert 'data-content-type="brief"' in brief
     assert "<title>Nueva autoridad de datos - Brief 001 | Mininode</title>" in brief
     assert '<a class="learn-back" href="/learn">← Recursos</a>' in brief
@@ -103,11 +105,16 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "Volver a Learn" not in brief
     assert "¿Te resultó útil?" in brief
     assert "learn-comment" not in brief
+    assert 'data-content-key="brief-002-evidencia-de-cumplimiento"' in brief_002
+    assert 'data-content-type="brief"' in brief_002
+    assert "<title>Evidencia de cumplimiento - Brief 002 | Mininode</title>" in brief_002
+    assert "¿Te resultó útil?" in brief_002
+    assert "learn-comment" not in brief_002
     assert "content_key: CONTENT_KEY" in script
     assert "MININODE BRIEF ${metadata.id}" in script
     assert "metadata + content" not in markdown
     assert "¿Te resultó útil?" not in markdown
-    assert '"related": []' in relationships
+    assert '"related": ["001"]' in relationships
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():
@@ -123,10 +130,18 @@ def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
     script = (ROOT / "reader.js").read_text()
     relationships = json.loads((ROOT / "content" / "relationships.json").read_text())
     brief = relationships["briefs"]["001"]
+    brief_002 = relationships["briefs"]["002"]
 
     assert brief["slug"] == "001-nueva-autoridad-de-datos"
     assert brief["title"] == "Nueva autoridad de datos"
     assert brief["subtitle"] == "El nuevo escenario de privacidad en Chile"
+    assert brief["related"] == ["002"]
+    assert brief_002 == {
+        "slug": "002-evidencia-de-cumplimiento",
+        "title": "Evidencia de cumplimiento",
+        "subtitle": "Cumplir también significa demostrar",
+        "related": ["001"],
+    }
     assert '/learn/briefs/${id}' not in script
     assert '/learn/briefs/${item.slug}' in script
     assert "catalog[id]" in script
