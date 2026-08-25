@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Plan de corrección — Mininode Privacy</title>
+  <meta name="description" content="Plan de corrección de Mininode Privacy Web.">
+  <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=1">
+  <link rel="stylesheet" href="/privacy/plan/styles.css?v=1">
+  <script src="/privacy/plan/app.js?v=1" defer></script>
+</head>
+<body>
+  <header class="plan-header"><div class="plan-shell plan-header__inner"><strong>Mininode Privacy</strong><span>Plan de corrección</span></div></header>
+  <main class="plan-shell">
+    <p class="plan-loading" id="plan-loading" role="status">Cargando plan de corrección...</p>
+    <div id="plan-content" hidden>
+      <section class="plan-hero" aria-labelledby="plan-title">
+        <div class="plan-hero__label"><p>Plan de corrección</p></div>
+        <h1 id="plan-title">Plan de corrección de privacidad</h1>
+        <p class="plan-hero__description">Este plan organiza las mejoras detectadas en Privacy Web y explica cómo abordar y comprobar cada una.</p>
+        <dl class="plan-facts">
+          <div><dt>Sitio</dt><dd id="site-url">—</dd></div>
+          <div><dt>Score inicial</dt><dd id="initial-score">—</dd></div>
+          <div><dt>Mejoras recomendadas</dt><dd id="item-count">—</dd></div>
+        </dl>
+      </section>
+      <section class="plan-summary" aria-labelledby="summary-title">
+        <div><p class="section-label">Resumen</p><h2 id="summary-title"><span id="summary-count">—</span> mejoras recomendadas</h2></div>
+        <ul id="priority-summary" aria-label="Distribución de prioridades"></ul>
+        <p class="plan-summary__value">El diagnóstico gratuito muestra las principales prioridades. Este plan detalla todas las mejoras detectadas, cómo abordarlas y cómo comprobar cada corrección.</p>
+      </section>
+      <section class="improvements" aria-labelledby="improvements-title"><p class="section-label">Mejoras del plan</p><h2 id="improvements-title">Acciones recomendadas</h2><div id="plan-items"></div></section>
+      <section class="plan-closing" aria-labelledby="closing-title">
+        <p class="section-label">Su plan</p><h2 id="closing-title"><span id="closing-count">—</span> mejoras recomendadas</h2>
+        <p>Este plan fue generado automáticamente a partir de los hallazgos de Privacy Web.</p><p>La implementación técnica de los cambios no está incluida.</p>
+        <p class="plan-closing__future">Una vez realizados los cambios, Privacy Web podrá volver a revisar el sitio para comprobar su evolución.</p>
+      </section>
+      <aside class="plan-disclaimer" aria-label="Alcance del Plan de corrección"><p>Privacy Score es un indicador desarrollado por Mininode. No es una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.</p><p>El Plan de corrección se basa en señales observables del sitio web y no reemplaza una revisión jurídica o especializada cuando corresponda.</p></aside>
+    </div>
+    <section class="plan-error" id="plan-error" role="alert" hidden><h1 id="error-title"></h1><p id="error-message"></p><button id="retry" type="button" hidden>Reintentar</button><a id="privacy-link" href="/privacy/" hidden>Volver a Privacy Web</a></section>
+    <template id="plan-item-template"><article class="plan-item"><header class="plan-item__header"><div class="plan-item__identity"><span class="plan-item__number"></span><div><p class="plan-item__code"></p><h3 class="plan-item__name"></h3></div></div><span class="plan-item__priority"></span></header><div class="plan-item__content"><section><h4>Qué se encontró</h4><p class="plan-item__finding"></p></section><section><h4>Qué debería corregirse</h4><p class="plan-item__recommendation"></p></section><details class="plan-item__instructions"><summary><span class="instructions-label instructions-label--closed">Ver instrucciones</span><span class="instructions-label instructions-label--open">Ocultar instrucciones</span><span class="instructions-indicator" aria-hidden="true"></span></summary><div class="plan-item__instructions-content"><section><h4>Pasos recomendados</h4><ol class="plan-item__steps"></ol></section><section class="plan-item__validation"><h4><span aria-hidden="true">✓</span> Cómo comprobarlo</h4><p></p></section></div></details></div></article></template>
+  </main>
+</body>
+</html>
