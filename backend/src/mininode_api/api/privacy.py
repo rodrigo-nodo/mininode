@@ -17,6 +17,7 @@ from mininode_api.services import privacy_correction_plan
 from mininode_api.services import privacy_correction_plan_flow
 from mininode_api.services import privacy_correction_plan_activation
 from mininode_api.services import privacy_correction_plan_order
+from mininode_api.services import privacy_correction_plan_check
 from mininode_api.services import privacy_diagnostic_snapshot
 
 router = APIRouter(prefix="/privacy", tags=["Privacy"])
@@ -61,6 +62,7 @@ class StoredCorrectionPlanResponse(BaseModel):
     site_url: str
     created_at: datetime
     plan: dict[str, Any]
+    check: dict[str, Any] | None = None
 
 
 class CreateCorrectionPlanOrderRequest(BaseModel):
@@ -106,6 +108,7 @@ class CorrectionPlanOrderResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    paid_at: datetime | None
 
 
 class ActivateCorrectionPlanOrderResponse(BaseModel):
@@ -132,6 +135,11 @@ def _require_correction_plan_order_database(request: Request) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Servicio de órdenes no disponible.",
         )
+
+
+def _require_correction_plan_check_database(request: Request) -> None:
+    if not request.app.state.privacy_correction_plan_check_ready:
+        raise HTTPException(status_code=503, detail="Servicio de comprobación no disponible.")
 
 
 @router.post(
@@ -266,11 +274,38 @@ def create_correction_plan_from_url(request: PrivacyDiagnosticRequest):
     response_model=StoredCorrectionPlanResponse,
     dependencies=[Depends(_require_correction_plan_database)],
 )
-def get_correction_plan(access_token: str):
+def get_correction_plan(access_token: str, request: Request):
     try:
-        return privacy_correction_plan.get_correction_plan(access_token)
+        plan = privacy_correction_plan.get_correction_plan(access_token)
+        check = (
+            privacy_correction_plan_check.get_check_metadata(plan["id"])
+            if request.app.state.privacy_correction_plan_check_ready
+            else None
+        )
+        return {**plan, "check": check}
     except privacy_correction_plan.CorrectionPlanNotFoundError:
         raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+    except privacy_correction_plan_check.ImprovementCheckNotFoundError:
+        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+
+
+@router.post(
+    "/correction-plans/{access_token}/check",
+    dependencies=[Depends(_require_correction_plan_database), Depends(_require_correction_plan_check_database)],
+)
+def check_correction_plan(access_token: str):
+    try:
+        return privacy_correction_plan_check.perform_check(access_token)
+    except privacy_correction_plan_check.ImprovementCheckNotFoundError:
+        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+    except privacy_correction_plan_check.ImprovementCheckUsedError:
+        raise HTTPException(status_code=409, detail="La comprobación de mejoras incluida ya fue utilizada.") from None
+    except privacy_correction_plan_check.ImprovementCheckExpiredError:
+        raise HTTPException(status_code=410, detail="El plazo para realizar la comprobación de mejoras ha finalizado.") from None
+    except privacy_correction_plan_check.ImprovementCheckUnavailableError:
+        raise HTTPException(status_code=409, detail="La comprobación de mejoras no está disponible.") from None
+    except privacy_correction_plan_check.ImprovementInspectionError:
+        raise HTTPException(status_code=503, detail="No pudimos completar la comprobación. Intente nuevamente en unos minutos.") from None
 
 
 _ERRORS = {

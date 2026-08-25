@@ -30,9 +30,12 @@ cuando se integre posteriormente un proveedor de pagos. El enlace se entrega
 manualmente y no se almacena el token en texto plano en la orden. El snapshot permite
 solicitar el Plan durante las 24 horas posteriores
 al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
-deduplicación en este MVP. El Plan incluirá una comprobación de mejoras utilizable
-hasta 90 días después de la compra; esa comparación contra el diagnóstico original
-y su plazo se implementarán en una etapa posterior. El diagnóstico gratuito no queda
+deduplicación en este MVP. El Plan incluye una única comprobación de mejoras
+utilizable hasta 90 días después de `paid_at`, que durante el Design Partner es el
+momento de activación manual. Esta capacidad vuelve a inspeccionar la URL persistida
+en el diagnóstico original, crea un nuevo snapshot y compara solamente las mejoras
+del Plan por código de control estable. Un advisory lock por Plan y una restricción
+única evitan la doble ejecución. El diagnóstico gratuito no queda
 limitado por la compra y puede volver a ejecutarse independientemente del Plan.
 La ventana de 24 horas se valida al crear la orden, no al activarla posteriormente.
 Las activaciones de una misma orden se serializan y la vinculación exige que siga
@@ -41,6 +44,9 @@ la actualización de la orden usan actualmente conexiones separadas; por ello, u
 fallo de base de datos exactamente entre ambas operaciones podría dejar un Plan
 huérfano sin exponer su token. Esta limitación se resolverá junto con una unidad de
 trabajo transaccional, sin almacenar el secreto para facilitar reintentos.
+La nueva inspección y su snapshot usan conexiones separadas de la inserción final de
+`correction_plan_check`: un fallo posterior puede dejar ese snapshot huérfano, pero
+la comprobación no se considera utilizada hasta guardar el resultado final.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí

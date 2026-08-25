@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
         learn_feedback,
         privacy_correction_plan,
         privacy_correction_plan_order,
+        privacy_correction_plan_check,
         privacy_diagnostic_snapshot,
     )
 
@@ -55,6 +56,15 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.privacy_correction_plan_order_ready = True
+
+    try:
+        privacy_correction_plan_check.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Privacy correction plan check initialization failed; checks remain unavailable"
+        )
+    else:
+        app.state.privacy_correction_plan_check_ready = True
     yield
 
 
@@ -87,6 +97,7 @@ def create_app() -> FastAPI:
     app.state.privacy_correction_plan_ready = False
     app.state.privacy_correction_plan_order_ready = False
     app.state.privacy_diagnostic_snapshot_ready = False
+    app.state.privacy_correction_plan_check_ready = False
 
     # CORS desde env (coma-separado)
     origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
