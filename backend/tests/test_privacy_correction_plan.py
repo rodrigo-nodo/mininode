@@ -62,7 +62,12 @@ def test_initialization_defines_minimal_privacy_schema(monkeypatch):
 
 def test_create_stores_hash_and_untouched_snapshot(monkeypatch):
     executions = fake_connection(monkeypatch)
-    monkeypatch.setattr(service.secrets, "token_urlsafe", lambda size: "secret-token")
+    requested_sizes = []
+    monkeypatch.setattr(
+        service.secrets,
+        "token_urlsafe",
+        lambda size: requested_sizes.append(size) or "secret-token",
+    )
 
     created = service.create_correction_plan(site_url="https://example.com", plan=PLAN)
 
@@ -74,6 +79,23 @@ def test_create_stores_hash_and_untouched_snapshot(monkeypatch):
     assert "secret-token" not in params
     assert params[3].obj == PLAN
     assert params[4:7] == ("1", "2026-08-01", 26)
+    assert requested_sizes == [32]
+
+
+def test_same_site_can_be_persisted_as_independent_plans(monkeypatch):
+    executions = fake_connection(monkeypatch)
+    tokens = iter(("first-token", "second-token"))
+    monkeypatch.setattr(service.secrets, "token_urlsafe", lambda _size: next(tokens))
+
+    first = service.create_correction_plan(site_url="https://example.com", plan=PLAN)
+    second = service.create_correction_plan(site_url="https://example.com", plan=PLAN)
+
+    assert first.id != second.id
+    assert first.access_token != second.access_token
+    assert [params[1] for _sql, params in executions] == [
+        "https://example.com",
+        "https://example.com",
+    ]
 
 
 @pytest.mark.parametrize("score", [-1, 101, True])

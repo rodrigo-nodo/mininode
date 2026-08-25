@@ -15,6 +15,27 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 - El trabajo actual de Web Inspector pertenece a la implementación backend existente de Privacy y sus pruebas.
 - Mantener el contrato de la API pública salvo que la Issue solicite explícitamente modificarlo.
 
+## Persistencia de Planes de corrección
+
+Los Planes de corrección se guardan como snapshots inmutables en
+`privacy.correction_plan` (PostgreSQL). El snapshot JSONB conserva sin recalcular
+el contrato generado, mientras `site_url`, las versiones y el puntaje inicial se
+guardan también como metadatos del registro. Un mismo sitio puede tener varios
+planes independientes.
+
+El acceso es una capability: al crear un plan se entrega una sola vez un token
+URL-safe generado con 32 bytes aleatorios (256 bits). PostgreSQL guarda únicamente
+su hash SHA-256, nunca el token original. La recuperación pública requiere el token
+pero no una sesión ni identidad, solo considera registros `active` y responde con
+el mismo 404 neutro para tokens inexistentes o planes `revoked`. No existe endpoint
+de listado ni de actualización del snapshot.
+
+La tabla impone unicidad sobre el hash. Debido a la entropía de 256 bits no se
+agrega un retry de colisión en esta etapa; una colisión excepcional falla el
+`INSERT` sin debilitar ni revelar el token. La inicialización es idempotente e
+independiente de Learn: si PostgreSQL no está disponible, los endpoints de Planes
+responden 503 sin afectar Health ni el diagnóstico gratuito.
+
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí
 solo que la política sea de un tercero: la atribución puede confirmarse mediante el

@@ -14,6 +14,10 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.types.json import Jsonb
 
+# ``token_urlsafe`` encodes 32 random bytes (256 bits) as an approximately
+# 43-character URL-safe token.  Together with the database UNIQUE constraint,
+# this makes accidental collisions negligible enough that PLAN-003 does not add
+# retry/error-classification logic that could expose capability details.
 TOKEN_BYTES = 32
 
 INITIALIZE_SQL = """
