@@ -89,8 +89,8 @@ assert.equal(
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
 assert.equal(elements.get('privacy-no-priorities').hidden, true);
-assert.match(html, /Plan de corrección automático/);
-assert.match(html, /Solicitar plan de corrección/);
+assert.match(html, /Plan de corrección/);
+assert.match(html, /Obtener plan de corrección/);
 assert.match(html, /Conocer Privacy Data/);
 assert.equal(elements.get('request-error').textContent, '');
 

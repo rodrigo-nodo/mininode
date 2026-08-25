@@ -37,7 +37,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("X-Api-Key", APP)
         self.assertNotIn("api.mininode.io", APP)
         self.assertIn("isAllowedCorrectionPlan", PROXY)
-        self.assertIn("if (!isAllowedCorrectionPlan) headers.set('X-Api-Key'", PROXY)
+        self.assertIn("if (!isAllowedCorrectionPlan && !isPublicOrderCreation) headers.set('X-Api-Key'", PROXY)
 
     def test_token_and_snapshot_are_not_persisted_or_logged(self):
         combined = HTML + APP + ROUTE
@@ -98,7 +98,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_proxy_keeps_correction_plan_get_narrow_and_public(self):
         self.assertIn(r"^privacy\/correction-plans\/[A-Za-z0-9_-]+$", PROXY)
         self.assertIn("isCorrectionPlan && request.method.toUpperCase() === 'GET'", PROXY)
-        self.assertIn("!isAllowedCorrectionPlan && !env.MININODE_API_KEY", PROXY)
+        self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !env.MININODE_API_KEY", PROXY)
         self.assertIn("status: upstream.status", PROXY)
         self.assertIn("upstream.headers.get('Content-Type')", PROXY)
 
