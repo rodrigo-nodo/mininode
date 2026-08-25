@@ -24,6 +24,7 @@ CREATE SCHEMA IF NOT EXISTS privacy;
 CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
     id UUID PRIMARY KEY,
     diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
+    correction_plan_id UUID NULL REFERENCES privacy.correction_plan(id),
     site_url TEXT NOT NULL,
     email TEXT NOT NULL,
     product_code TEXT NOT NULL CHECK (product_code = 'PRIVACY_CORRECTION_PLAN'),
@@ -33,6 +34,22 @@ CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE privacy.correction_plan_order
+    ADD COLUMN IF NOT EXISTS correction_plan_id UUID NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'correction_plan_order_correction_plan_id_fkey'
+          AND conrelid = 'privacy.correction_plan_order'::regclass
+    ) THEN
+        ALTER TABLE privacy.correction_plan_order
+            ADD CONSTRAINT correction_plan_order_correction_plan_id_fkey
+            FOREIGN KEY (correction_plan_id) REFERENCES privacy.correction_plan(id);
+    END IF;
+END $$;
 """
 
 
@@ -40,10 +57,15 @@ class CorrectionPlanOrderNotFoundError(Exception):
     """No order matches the supplied identifier."""
 
 
+class CorrectionPlanOrderStateError(Exception):
+    """The order cannot be activated from its current state."""
+
+
 @dataclass(frozen=True)
 class CorrectionPlanOrder:
     id: UUID
     diagnostic_id: UUID
+    correction_plan_id: UUID | None
     site_url: str
     email: str
     product_code: str
@@ -67,6 +89,17 @@ def _connection() -> Iterator[psycopg.Connection]:
         yield connection
 
 
+@contextmanager
+def activation_lock(order_id: UUID) -> Iterator[None]:
+    """Serialize activation attempts for one order across API workers."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+            (str(order_id),),
+        )
+        yield
+
+
 def initialize_database() -> None:
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(INITIALIZE_SQL)
@@ -88,7 +121,7 @@ def create_order(*, diagnostic_id: UUID, email: str) -> CorrectionPlanOrder:
             INSERT INTO privacy.correction_plan_order (
                 id, diagnostic_id, site_url, email, product_code, amount, currency, status
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, diagnostic_id, site_url, email, product_code, amount, currency,
+            RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
                       status, created_at, updated_at
             """,
             (
@@ -109,7 +142,7 @@ def get_order(order_id: UUID) -> CorrectionPlanOrder:
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, diagnostic_id, site_url, email, product_code, amount, currency,
+            SELECT id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
                    status, created_at, updated_at
             FROM privacy.correction_plan_order WHERE id = %s
             """,
@@ -129,7 +162,7 @@ def mark_order_paid(order_id: UUID) -> CorrectionPlanOrder:
             UPDATE privacy.correction_plan_order
             SET status = 'paid', updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND status IN ('pending_payment', 'paid')
-            RETURNING id, diagnostic_id, site_url, email, product_code, amount, currency,
+            RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code, amount, currency,
                       status, created_at, updated_at
             """,
             (order_id,),
@@ -137,4 +170,23 @@ def mark_order_paid(order_id: UUID) -> CorrectionPlanOrder:
         row = cursor.fetchone()
     if row is None:
         raise CorrectionPlanOrderNotFoundError("Order not found")
+    return _from_row(row)
+
+
+def attach_correction_plan(order_id: UUID, correction_plan_id: UUID) -> CorrectionPlanOrder:
+    """Attach one plan and transition only a pending order to ``paid``."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE privacy.correction_plan_order
+            SET correction_plan_id = %s, status = 'paid', updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND status = 'pending_payment' AND correction_plan_id IS NULL
+            RETURNING id, diagnostic_id, correction_plan_id, site_url, email, product_code,
+                      amount, currency, status, created_at, updated_at
+            """,
+            (correction_plan_id, order_id),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise CorrectionPlanOrderStateError("Order is not pending activation")
     return _from_row(row)
