@@ -20,15 +20,27 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 El Plan de corrección Privacy Web es un producto único de pago único por CLP
 $49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden
 `pending_payment` con el identificador del snapshot y un email normalizado. El precio, la
-moneda, el producto y el estado son definidos por el backend. Crear o marcar como
-pagada una orden no ejecuta el diagnóstico ni genera el Plan, su token o su entrega;
-esa orquestación permanece separada hasta contar con una confirmación de pago
-confiable. El snapshot permite solicitar el Plan durante las 24 horas posteriores
+moneda, el producto y el estado son definidos por el backend. Crear una orden no
+genera el Plan, su token o su entrega. Durante el Design Partner, la generación puede
+autorizarse manualmente mediante un endpoint interno protegido: la activación usa el
+`diagnostic_snapshot` asociado, no vuelve a inspeccionar el sitio, genera un único
+`CorrectionPlan`, lo vincula a la orden y marca técnicamente la orden como `paid`.
+En esta etapa `paid` significa autorización manual; representará un pago confirmado
+cuando se integre posteriormente un proveedor de pagos. El enlace se entrega
+manualmente y no se almacena el token en texto plano en la orden. El snapshot permite
+solicitar el Plan durante las 24 horas posteriores
 al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
 deduplicación en este MVP. El Plan incluirá una comprobación de mejoras utilizable
 hasta 90 días después de la compra; esa comparación contra el diagnóstico original
 y su plazo se implementarán en una etapa posterior. El diagnóstico gratuito no queda
 limitado por la compra y puede volver a ejecutarse independientemente del Plan.
+La ventana de 24 horas se valida al crear la orden, no al activarla posteriormente.
+Las activaciones de una misma orden se serializan y la vinculación exige que siga
+`pending_payment`, evitando generar dos planes por reintentos. La creación del Plan y
+la actualización de la orden usan actualmente conexiones separadas; por ello, un
+fallo de base de datos exactamente entre ambas operaciones podría dejar un Plan
+huérfano sin exponer su token. Esta limitación se resolverá junto con una unidad de
+trabajo transaccional, sin almacenar el secreto para facilitar reintentos.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí

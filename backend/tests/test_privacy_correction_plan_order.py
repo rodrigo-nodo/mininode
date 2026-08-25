@@ -37,7 +37,7 @@ def diagnostic_record(*, expired=False):
 
 def order_row(diagnostic_id=None, *, status="pending_payment"):
     now = datetime.now(timezone.utc)
-    return (uuid4(), diagnostic_id or uuid4(), "https://example.com/", "buyer@example.com",
+    return (uuid4(), diagnostic_id or uuid4(), None, "https://example.com/", "buyer@example.com",
             service.PRODUCT_CODE, service.PRODUCT_AMOUNT, service.PRODUCT_CURRENCY, status, now, now)
 
 
@@ -46,6 +46,7 @@ def test_initialization_links_order_to_diagnostic_without_uniqueness(monkeypatch
     service.initialize_database()
     sql = executions[0][0]
     assert "diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id)" in sql
+    assert "correction_plan_id UUID NULL REFERENCES privacy.correction_plan(id)" in sql
     assert "site_url TEXT NOT NULL" in sql and "site_url TEXT UNIQUE" not in sql
     assert "email TEXT NOT NULL" in sql and "email TEXT UNIQUE" not in sql
     assert "amount INTEGER NOT NULL CHECK (amount = 49900)" in sql
@@ -90,3 +91,16 @@ def test_mark_paid_is_idempotent_and_only_updates_state(monkeypatch, status):
 def test_missing_order_is_not_found(monkeypatch):
     fake_connection(monkeypatch)
     with pytest.raises(service.CorrectionPlanOrderNotFoundError): service.get_order(uuid4())
+
+
+def test_attach_plan_sets_paid_only_for_an_unactivated_pending_order(monkeypatch):
+    plan_id = uuid4()
+    row = list(order_row(status="paid"))
+    row[2] = plan_id
+    executions = fake_connection(monkeypatch, rows=[tuple(row)])
+    attached = service.attach_correction_plan(row[0], plan_id)
+    sql, params = executions[0]
+    assert "correction_plan_id = %s, status = 'paid'" in sql
+    assert "status = 'pending_payment' AND correction_plan_id IS NULL" in sql
+    assert params == (plan_id, row[0])
+    assert attached.correction_plan_id == plan_id

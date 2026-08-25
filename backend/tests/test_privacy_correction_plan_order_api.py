@@ -12,13 +12,14 @@ sys.path.insert(0, str(BACKEND_SRC))
 from mininode_api.main import create_app  # noqa: E402
 from mininode_api.api import privacy as privacy_api  # noqa: E402
 from mininode_api.services import privacy_correction_plan_order as service  # noqa: E402
+from mininode_api.services import privacy_correction_plan_activation as activation  # noqa: E402
 from mininode_api.services import privacy_diagnostic_snapshot as snapshots  # noqa: E402
 
 
 def an_order(status="pending_payment"):
     now = datetime.now(timezone.utc)
     return service.CorrectionPlanOrder(
-        uuid4(), uuid4(), "https://example.com/", "buyer@example.com", service.PRODUCT_CODE,
+        uuid4(), uuid4(), None, "https://example.com/", "buyer@example.com", service.PRODUCT_CODE,
         service.PRODUCT_AMOUNT, service.PRODUCT_CURRENCY, status, now, now,
     )
 
@@ -28,6 +29,7 @@ def client(monkeypatch):
     monkeypatch.setenv("API_KEY", "internal-key")
     app = create_app()
     app.state.privacy_correction_plan_order_ready = True
+    app.state.privacy_correction_plan_ready = True
     app.state.privacy_diagnostic_snapshot_ready = True
     return TestClient(app)
 
@@ -81,6 +83,38 @@ def test_mark_paid_is_protected_and_idempotent(client, monkeypatch):
         assert response.status_code == 200
         assert response.json()["status"] == "paid"
     assert calls == [order.id, order.id]
+
+
+def test_activate_is_protected_and_returns_only_technical_plan_fields(client, monkeypatch):
+    order = an_order()
+    result = activation.ActivatedOrder(order.id, "paid", uuid4(), "/privacy/plan/secret")
+    calls = []
+    monkeypatch.setattr(activation, "activate_order", lambda order_id: calls.append(order_id) or result)
+    path = f"/privacy/correction-plan-orders/{order.id}/activate"
+    assert client.post(path).status_code == 401
+    response = client.post(path, headers={"X-Api-Key": "internal-key"})
+    assert response.status_code == 200
+    assert response.json() == {
+        "order_id": str(order.id), "status": "paid",
+        "correction_plan_id": str(result.correction_plan_id),
+        "plan_path": "/privacy/plan/secret",
+    }
+    assert "email" not in response.json() and "access_token" not in response.json()
+    assert calls == [order.id]
+
+
+@pytest.mark.parametrize("error,expected", [
+    (service.CorrectionPlanOrderNotFoundError(), 404),
+    (activation.OrderAlreadyActivatedError(), 409),
+    (activation.OrderActivationStateError(), 409),
+])
+def test_activate_errors_are_controlled(client, monkeypatch, error, expected):
+    monkeypatch.setattr(activation, "activate_order", lambda _: (_ for _ in ()).throw(error))
+    response = client.post(
+        f"/privacy/correction-plan-orders/{uuid4()}/activate",
+        headers={"X-Api-Key": "internal-key"},
+    )
+    assert response.status_code == expected
 
 
 def test_read_is_protected_missing_is_404_and_no_list_exists(client, monkeypatch):

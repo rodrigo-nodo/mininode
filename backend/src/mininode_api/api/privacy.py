@@ -15,6 +15,7 @@ from mininode_api.core.auth import require_api_key
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
 from mininode_api.services import privacy_correction_plan
 from mininode_api.services import privacy_correction_plan_flow
+from mininode_api.services import privacy_correction_plan_activation
 from mininode_api.services import privacy_correction_plan_order
 from mininode_api.services import privacy_diagnostic_snapshot
 
@@ -96,6 +97,7 @@ class CreateCorrectionPlanOrderResponse(BaseModel):
 class CorrectionPlanOrderResponse(BaseModel):
     id: UUID
     diagnostic_id: UUID
+    correction_plan_id: UUID | None
     site_url: str
     email: str
     product_code: str
@@ -104,6 +106,13 @@ class CorrectionPlanOrderResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class ActivateCorrectionPlanOrderResponse(BaseModel):
+    order_id: UUID
+    status: str
+    correction_plan_id: UUID
+    plan_path: str
 
 
 def _require_correction_plan_database(request: Request) -> None:
@@ -181,6 +190,28 @@ def mark_correction_plan_order_paid(order_id: UUID):
         return privacy_correction_plan_order.mark_order_paid(order_id)
     except privacy_correction_plan_order.CorrectionPlanOrderNotFoundError:
         raise HTTPException(status_code=404, detail="Orden no encontrada.") from None
+
+
+@router.post(
+    "/correction-plan-orders/{order_id}/activate",
+    response_model=ActivateCorrectionPlanOrderResponse,
+    dependencies=[
+        Depends(require_api_key),
+        Depends(_require_correction_plan_database),
+        Depends(_require_correction_plan_order_database),
+    ],
+)
+def activate_correction_plan_order(order_id: UUID):
+    try:
+        return privacy_correction_plan_activation.activate_order(order_id)
+    except privacy_correction_plan_order.CorrectionPlanOrderNotFoundError:
+        raise HTTPException(status_code=404, detail="Orden no encontrada.") from None
+    except privacy_correction_plan_activation.OrderAlreadyActivatedError:
+        raise HTTPException(status_code=409, detail="La orden ya fue activada.") from None
+    except privacy_correction_plan_activation.OrderActivationStateError:
+        raise HTTPException(
+            status_code=409, detail="La orden no se encuentra en un estado activable."
+        ) from None
 
 
 @router.post(
