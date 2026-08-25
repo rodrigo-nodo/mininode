@@ -3,8 +3,9 @@
 
   const reader = document.querySelector('[data-markdown-source]');
   const errorMessage = document.querySelector('#learn-error');
-  const EBOOK_ID = '001-privacidad-para-pequenos-negocios';
-  const STORAGE_KEY = `mininode-learn-feedback:${EBOOK_ID}`;
+  const CONTENT_KEY = reader?.dataset.contentKey || '001-privacidad-para-pequenos-negocios';
+  const CONTENT_TYPE = reader?.dataset.contentType || 'ebook';
+  const STORAGE_KEY = `mininode-learn-feedback:${CONTENT_KEY}`;
   const REQUEST_TIMEOUT_MS = 70000;
   const TOPIC_LABELS = {
     business_data: 'Datos que maneja el negocio',
@@ -27,12 +28,15 @@
 
   function initializeFeedback() {
     const template = document.querySelector('#learn-feedback-template');
-    const cta = [...reader.querySelectorAll('h2')]
-      .find((heading) => heading.textContent.includes('¿Quieres verlo aplicado'));
-    if (!template || !cta) return;
+    const cta = CONTENT_TYPE === 'brief'
+      ? reader.querySelector('.learn-related')
+      : [...reader.querySelectorAll('h2')]
+        .find((heading) => heading.textContent.includes('¿Quieres verlo aplicado'));
+    if (!template || (CONTENT_TYPE !== 'brief' && !cta)) return;
 
     const feedback = template.content.firstElementChild.cloneNode(true);
-    cta.before(feedback);
+    if (cta) cta.before(feedback);
+    else reader.append(feedback);
     const stars = [...feedback.querySelectorAll('[data-rating]')];
     const status = feedback.querySelector('.learn-feedback__status');
     const followup = feedback.querySelector('.learn-feedback__followup');
@@ -83,8 +87,9 @@
         return;
       }
       showRating(state.rating);
-      followup.hidden = false;
       status.textContent = '✓ Gracias por tu feedback.';
+      if (CONTENT_TYPE === 'brief') return;
+      followup.hidden = false;
       feedback.querySelectorAll('[name="learn-topic"]').forEach((option) => {
         option.checked = option.value === state.topic;
       });
@@ -123,7 +128,7 @@
         const response = await request(isUpdate ? `/api/learn/feedback/${feedbackId}` : '/api/learn/feedback', {
           method: isUpdate ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(isUpdate ? { rating } : { content_key: EBOOK_ID, rating })
+          body: JSON.stringify(isUpdate ? { rating } : { content_key: CONTENT_KEY, rating })
         });
         if (!response.ok) throw new Error('Feedback submission failed');
         if (!isUpdate) persistId((await response.json()).feedback_id);
@@ -154,10 +159,10 @@
       });
     });
 
-    topicSummary.querySelector('button').addEventListener('click', () => renderState({ expandTopics: true }));
-    commentToggle.addEventListener('click', () => renderState({ expandComment: true }));
+    topicSummary?.querySelector('button')?.addEventListener('click', () => renderState({ expandTopics: true }));
+    commentToggle?.addEventListener('click', () => renderState({ expandComment: true }));
 
-    comment.addEventListener('submit', async (event) => {
+    comment?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const textarea = comment.querySelector('textarea');
       const value = textarea.value.trim();
@@ -206,6 +211,57 @@
     if (errorMessage) errorMessage.hidden = false;
   }
 
+  function parseDocument(source) {
+    if (!source.startsWith('---\n')) return { metadata: null, markdown: source };
+    const end = source.indexOf('\n---\n', 4);
+    if (end < 0) return { metadata: null, markdown: source };
+    const metadata = {};
+    let listKey = null;
+    source.slice(4, end).split('\n').forEach((line) => {
+      const item = line.match(/^\s+-\s+(.+)$/);
+      if (item && listKey) {
+        metadata[listKey].push(item[1].trim());
+        return;
+      }
+      const field = line.match(/^([a-z_]+):\s*(.*)$/);
+      if (!field) return;
+      listKey = field[2] ? null : field[1];
+      metadata[field[1]] = field[2] || [];
+    });
+    return { metadata, markdown: source.slice(end + 5) };
+  }
+
+  function briefHeader(metadata) {
+    const header = document.createElement('header');
+    header.className = 'learn-reader__header';
+    const country = metadata.country === 'CL' ? 'Chile' : metadata.country;
+    const topics = (metadata.topics || []).map((topic) =>
+      `<span>${topic.charAt(0).toUpperCase() + topic.slice(1)}</span>`).join('');
+    header.innerHTML = window.DOMPurify.sanitize(`
+      <p class="learn-reader__eyebrow">MININODE BRIEF ${metadata.id}</p>
+      <h1>${metadata.title}</h1>
+      <p class="learn-reader__subtitle">${metadata.subtitle}</p>
+      <p class="learn-reader__details">${metadata.reading_time} min · Actualizado ${metadata.updated} · ${country}</p>
+      <div class="learn-reader__topics">${topics}</div>
+    `, { USE_PROFILES: { html: true } });
+    return header;
+  }
+
+  async function renderRelated(metadata) {
+    if (!metadata || metadata.type !== 'brief') return;
+    try {
+      const response = await fetch(reader.dataset.relationshipsSource);
+      if (!response.ok) return;
+      const related = (await response.json()).briefs?.[metadata.id]?.related || [];
+      if (!related.length) return;
+      const section = document.createElement('section');
+      section.className = 'learn-related';
+      section.innerHTML = window.DOMPurify.sanitize(`<h2>Relacionado</h2><ul>${related.map((id) =>
+        `<li><a href="/learn/briefs/${id}">Mininode Brief ${id}</a></li>`).join('')}</ul>`);
+      reader.append(section);
+    } catch (_error) { /* Relationships are optional supporting content. */ }
+  }
+
   async function renderBook() {
     if (!reader || !window.marked || !window.DOMPurify) {
       showError();
@@ -214,9 +270,14 @@
     try {
       const response = await fetch(reader.dataset.markdownSource, { headers: { Accept: 'text/markdown' } });
       if (!response.ok) throw new Error('Content unavailable');
-      const rendered = window.marked.parse(await response.text(), { gfm: true });
+      const documentSource = parseDocument(await response.text());
+      const rendered = window.marked.parse(documentSource.markdown, { gfm: true });
       reader.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
+      if (documentSource.metadata?.type === 'brief') {
+        reader.prepend(briefHeader(documentSource.metadata));
+      }
       reader.setAttribute('aria-busy', 'false');
+      await renderRelated(documentSource.metadata);
       initializeFeedback();
     } catch (_error) { showError(); }
   }
