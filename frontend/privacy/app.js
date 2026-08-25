@@ -267,7 +267,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
   orderAvailability.textContent = currentDiagnosticId
-    ? 'Disponible durante 24 horas después de este diagnóstico.'
+    ? 'Disponible para comprar durante 24 horas después de este diagnóstico.'
     : 'El Plan no está disponible temporalmente. El diagnóstico gratuito sigue siendo válido.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;

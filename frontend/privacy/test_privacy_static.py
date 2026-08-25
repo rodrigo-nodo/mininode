@@ -90,6 +90,12 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Plan de corrección", HTML)
         self.assertIn("$49.900", HTML)
         self.assertIn("pago único", HTML)
+        self.assertIn("Todas las mejoras detectadas", HTML)
+        self.assertIn("1 comprobación de mejoras incluida", HTML)
+        self.assertNotIn("1 nueva revisión", HTML.lower())
+        self.assertNotIn("Nueva revisión automática", HTML)
+        self.assertIn("comparar el sitio con el diagnóstico original", HTML)
+        self.assertIn("Disponible durante 90 días desde la compra.", HTML)
         self.assertIn("Obtener plan de corrección", HTML)
         self.assertIn('name="email"', HTML)
         self.assertIn("Se utilizará para gestionar la solicitud y entregar el plan.", HTML)
@@ -101,10 +107,15 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("product_code:", APP)
         self.assertIn("Solicitud preparada", HTML)
         self.assertIn("El pago en línea estará disponible próximamente.", HTML)
-        self.assertIn("Disponible durante 24 horas después de este diagnóstico.", HTML)
+        self.assertIn("Disponible para comprar durante 24 horas después de este diagnóstico.", HTML)
         self.assertIn("Este diagnóstico tiene más de 24 horas.", HTML)
         self.assertIn("Revisar nuevamente", HTML)
         self.assertNotIn("countdown", APP.lower())
+        self.assertNotIn("recheck", APP.lower())
+        self.assertNotIn("recheck_expires_at", HTML)
+        self.assertNotIn("Le queda 1 revisión", HTML)
+        self.assertNotIn("Última revisión", HTML)
+        self.assertNotIn("Solo puede volver a analizar una vez", HTML)
         self.assertIn("La implementación técnica no está incluida.", HTML)
         self.assertNotIn("acompañamiento para resolver dudas", HTML.lower())
         self.assertIn("¿Necesita que alguien realice los cambios?", HTML)
@@ -119,6 +130,19 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("score", privacy_data.split("</section>", 1)[0])
         self.assertNotIn("priorities", privacy_data.split("</section>", 1)[0])
 
+    def test_order_form_minimizes_data_and_keeps_commercial_fields_server_side(self):
+        order_form = HTML.split('id="correction-order-form"', 1)[1].split("</form>", 1)[0]
+        self.assertEqual(order_form.count("<input"), 1)
+        self.assertIn('name="email"', order_form)
+        for field in ('name="name"', 'name="empresa"', 'name="rut"', 'name="telefono"', 'name="site_url"'):
+            self.assertNotIn(field, order_form)
+
+        request = APP.split("fetch('/api/privacy/correction-plan-orders'", 1)[1].split("});", 1)[0]
+        self.assertIn("diagnostic_id: currentDiagnosticId", request)
+        self.assertIn("email: orderEmail.value", request)
+        for field in ("site_url", "amount", "currency", "status", "product_code", "score", "snapshot"):
+            self.assertNotIn(f"{field}:", request)
+
     def test_commercial_section_uses_privacy_identity_and_formal_language(self):
         commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
         self.assertNotRegex(commercial.lower(), r"\b(tu|te|quieres|obtén)\b")
@@ -131,7 +155,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=108" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=109" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

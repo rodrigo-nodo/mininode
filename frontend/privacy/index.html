@@ -6,10 +6,10 @@
   <title>Mininode Privacy — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="styles.css?v=109">
+  <link rel="stylesheet" href="styles.css?v=110">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
-  <script src="app.js?v=108" defer></script>
+  <script src="app.js?v=109" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
@@ -95,22 +95,24 @@
           <div class="privacy-next__summary">
             <p class="privacy-next__eyebrow">Recomendado según su diagnóstico</p>
             <h3>Plan de corrección</h3>
-            <p class="privacy-price" aria-label="Precio: 49.900 pesos chilenos">$49.900</p>
+            <p class="privacy-price" aria-label="Precio: 49.900 pesos chilenos">$49.900 CLP</p>
             <p class="privacy-price-note">pago único</p>
             <p>Todas las mejoras detectadas, con instrucciones para corregirlas y comprobar cada cambio.</p>
           </div>
           <div class="privacy-includes">
             <h4>El plan incluye</h4>
             <ul>
-              <li>Prioridades ordenadas</li>
+              <li>Todas las mejoras detectadas</li>
               <li>Instrucciones concretas para cada mejora</li>
               <li>Cómo comprobar cada corrección</li>
-              <li>Nueva revisión automática del sitio</li>
+              <li>1 comprobación de mejoras incluida</li>
             </ul>
+            <p class="privacy-check-note">Una vez realizados los cambios, permite comparar el sitio con el diagnóstico original y comprobar qué mejoras fueron resueltas.</p>
+            <p class="privacy-check-validity">Disponible durante 90 días desde la compra.</p>
           </div>
           <div class="privacy-next__action">
             <button class="btn privacy-secondary" type="button" id="correction-order-open">Obtener plan de corrección</button>
-            <p class="privacy-order-availability" id="correction-order-availability">Disponible durante 24 horas después de este diagnóstico.</p>
+            <p class="privacy-order-availability" id="correction-order-availability">Disponible para comprar durante 24 horas después de este diagnóstico.</p>
             <form class="privacy-order-form" id="correction-order-form" hidden>
               <label for="correction-order-email">Email</label>
               <input id="correction-order-email" name="email" type="email" maxlength="254" autocomplete="email" required>
@@ -123,7 +125,7 @@
               <p>El pago en línea estará disponible próximamente.</p>
             </div>
             <div class="privacy-order-expired" id="correction-order-expired" role="alert" hidden>
-              <p>Este diagnóstico tiene más de 24 horas. Revise nuevamente el sitio para obtener un Plan actualizado.</p>
+              <p>Este diagnóstico tiene más de 24 horas. Revise nuevamente el sitio para obtener un diagnóstico actualizado y generar un nuevo Plan.</p>
               <button class="btn privacy-secondary" type="button" id="correction-order-retry">Revisar nuevamente</button>
             </div>
             <p>La implementación técnica no está incluida.</p>
