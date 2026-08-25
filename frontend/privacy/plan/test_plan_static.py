@@ -118,7 +118,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
     def test_proxy_keeps_correction_plan_get_narrow_and_public(self):
         self.assertIn(r"^privacy\/correction-plans\/[A-Za-z0-9_-]+$", PROXY)
-        self.assertIn("isCorrectionPlan && request.method.toUpperCase() === 'GET'", PROXY)
+        self.assertIn("isCorrectionPlan && method === 'GET'", PROXY)
         self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !env.MININODE_API_KEY", PROXY)
         self.assertIn("status: upstream.status", PROXY)
         self.assertIn("upstream.headers.get('Content-Type')", PROXY)
