@@ -57,3 +57,8 @@ def test_main_pages_reuse_the_shared_header_and_footer():
         assert "partials/footer.html" in html
         assert 'id="site-header-nav"' not in html
         assert 'id="site-footer"' not in html
+
+
+def test_shared_header_links_to_resources_at_the_existing_learn_route():
+    header = (FRONTEND / "partials" / "header-nav.html").read_text(encoding="utf-8")
+    assert '<a href="/learn/">Recursos</a>' in header

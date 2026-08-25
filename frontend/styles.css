@@ -169,7 +169,8 @@ input[type="text"], input[type="email"], textarea{
 }
 
 @media (max-width:390px){
+  .header{gap:var(--space-2);padding-left:var(--space-3);padding-right:var(--space-3)}
   .brand-name{font-size:1rem}
-  .nav{gap:11px}
-  .nav a{font-size:.82rem}
+  .nav{gap:10px}
+  .nav a{font-size:.78rem}
 }
