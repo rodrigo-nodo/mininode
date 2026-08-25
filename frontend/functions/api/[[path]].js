@@ -1,9 +1,10 @@
 export const onRequest = async (ctx) => {
   const { request, env } = ctx;
   const url = new URL(request.url);
+  const method = request.method.toUpperCase();
 
   // OPTIONS (CORS preflight)
-  if (request.method.toUpperCase() === 'OPTIONS') {
+  if (method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
       headers: {
@@ -14,18 +15,22 @@ export const onRequest = async (ctx) => {
     });
   }
 
-  const destPathPublic = url.pathname.replace(/^\/api\/?/, '');
+  // Match only the pathname: the query is forwarded below, but never participates
+  // in the allowlist. Pages routes this function below /api, so normalize that
+  // boundary (and an optional trailing slash) once before applying strict matches.
+  const pathWithoutApi = url.pathname.replace(/^\/+api(?:\/+|$)/, '');
+  const destPathPublic = pathWithoutApi.replace(/^\/+|\/+$/g, '');
 
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
   const isCorrectionPlan = /^privacy\/correction-plans\/[A-Za-z0-9_-]+$/.test(destPathPublic);
   const isCorrectionPlanCheck = /^privacy\/correction-plans\/[A-Za-z0-9_-]+\/check$/.test(destPathPublic);
-  const isAllowedCorrectionPlan = (isCorrectionPlan && request.method.toUpperCase() === 'GET')
-    || (isCorrectionPlanCheck && request.method.toUpperCase() === 'POST');
+  const isAllowedCorrectionPlan = (isCorrectionPlan && method === 'GET')
+    || (isCorrectionPlanCheck && method === 'POST');
   const isPublicOrderCreation = destPathPublic === 'privacy/correction-plan-orders'
-    && request.method.toUpperCase() === 'POST';
+    && method === 'POST';
   const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
-  const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(request.method.toUpperCase());
+  const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(method);
   if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
@@ -46,8 +51,6 @@ export const onRequest = async (ctx) => {
   const apiBase = env.MININODE_API_BASE || 'https://api.mininode.io';
   const target = new URL(`${apiBase}/${destPathBackend}`);
   target.search = url.search;
-
-  const method = request.method.toUpperCase();
 
   // --- LECTURA Y NORMALIZACIÓN DEL BODY ---
   const origContentType = request.headers.get('Content-Type') || '';
