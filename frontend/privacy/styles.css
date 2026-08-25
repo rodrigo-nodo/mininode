@@ -95,7 +95,7 @@
 }
 
 .privacy-form input:focus {
-  outline: 3px solid rgba(23, 107, 120, 0.2);
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   outline-offset: 2px;
 }
 
@@ -408,7 +408,7 @@
 .privacy-controls-detail summary:focus-visible,
 .privacy-action-plan summary:focus-visible,
 .privacy-result a:focus-visible {
-  outline: 3px solid rgba(23, 107, 120, .25);
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
   outline-offset: 3px;
 }
 
@@ -863,7 +863,7 @@
 }
 
 .privacy-modal__panel:focus {
-  outline: 3px solid rgba(23, 107, 120, 0.2);
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .privacy-modal__close {

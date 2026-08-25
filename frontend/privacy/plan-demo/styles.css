@@ -160,7 +160,7 @@ h1 {
   padding: 16px 0 0;
 }
 .plan-item__instructions summary::-webkit-details-marker { display: none; }
-.plan-item__instructions summary:focus-visible { outline: 3px solid rgba(23,107,120,.22); outline-offset: 5px; }
+.plan-item__instructions summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary) 22%, transparent); outline-offset: 5px; }
 .instructions-label--open { display: none; }
 .plan-item__instructions[open] .instructions-label--closed { display: none; }
 .plan-item__instructions[open] .instructions-label--open { display: inline; }
