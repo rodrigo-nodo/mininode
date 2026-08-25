@@ -25,8 +25,10 @@ pagada una orden no ejecuta el diagnóstico ni genera el Plan, su token o su ent
 esa orquestación permanece separada hasta contar con una confirmación de pago
 confiable. El snapshot permite solicitar el Plan durante las 24 horas posteriores
 al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
-deduplicación en este MVP. El Plan incluirá una nueva revisión utilizable hasta 90
-días después del pago; esa revisión y su plazo se implementarán en una etapa posterior.
+deduplicación en este MVP. El Plan incluirá una comprobación de mejoras utilizable
+hasta 90 días después de la compra; esa comparación contra el diagnóstico original
+y su plazo se implementarán en una etapa posterior. El diagnóstico gratuito no queda
+limitado por la compra y puede volver a ejecutarse independientemente del Plan.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí

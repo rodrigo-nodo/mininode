@@ -617,6 +617,15 @@
   padding-left: 20px;
 }
 
+.privacy-check-note,
+.privacy-check-validity {
+  font-size: .86rem;
+}
+
+.privacy-check-validity {
+  font-weight: 700;
+}
+
 .privacy-price {
   color: var(--privacy-primary) !important;
   font-size: clamp(28px, 5vw, 38px);
