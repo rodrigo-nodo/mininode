@@ -274,6 +274,9 @@ def diagnose_privacy_url(
         "pages_analyzed": combined.pages_fetched,
         "limited": combined.limited,
     }
+    # The effective HOME URL is the canonical site identity for downstream
+    # products built from this exact inspection (including followed redirects).
+    diagnostic["site_url"] = home_page.final_url
     elapsed_ms = max(0, round((monotonic() - started) * 1000))
     remaining_gaps = _remaining_adaptive_gaps(diagnostic)
     remaining_categories = {

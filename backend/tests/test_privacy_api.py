@@ -711,6 +711,7 @@ def test_redirected_home_is_effective_base_and_original_target_is_preserved(monk
     assert fake.target_calls == [original, HOME, HOME]
     assert captured["contract"].target.requested_url == original
     assert captured["contract"].target.final_url == HOME
+    assert response.json()["site_url"] == HOME
     assert captured["contract"].transport.http_redirects_to_https is True
 
 

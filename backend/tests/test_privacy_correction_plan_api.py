@@ -11,6 +11,8 @@ sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.main import create_app  # noqa: E402
 from mininode_api.services import learn_feedback, privacy_correction_plan as service  # noqa: E402
+from mininode_api.services import privacy_correction_plan_flow as flow  # noqa: E402
+from mininode_api.services.privacy_diagnostic import PrivacyInspectionError  # noqa: E402
 
 
 PLAN = {
@@ -59,6 +61,65 @@ def test_post_creates_plan_without_exposing_hash(client, monkeypatch):
     }
     assert "token_hash" not in response.json()
     assert calls == [{"site_url": "https://example.com", "plan": PLAN}]
+
+
+def test_from_url_requires_api_key(client):
+    response = client.post(
+        "/privacy/correction-plans/from-url", json={"url": "https://example.com"}
+    )
+    assert response.status_code == 401
+
+
+def test_from_url_returns_plan_access_without_internal_data(client, monkeypatch):
+    created = service.CreatedCorrectionPlan(uuid4(), "generated-token")
+    monkeypatch.setattr(
+        flow,
+        "create_correction_plan_from_url",
+        lambda url: (created, {**PLAN, "item_count": 7}),
+    )
+
+    response = client.post(
+        "/privacy/correction-plans/from-url",
+        headers={"X-Api-Key": "internal-key"},
+        json={"url": "https://example.com"},
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "access_token": "generated-token",
+        "plan_path": "/privacy/plan/generated-token",
+        "initial_score": 26,
+        "item_count": 7,
+    }
+    assert "token_hash" not in response.json()
+
+
+def test_from_url_preserves_diagnostic_error_and_empty_plan_semantics(client, monkeypatch):
+    monkeypatch.setattr(
+        flow,
+        "create_correction_plan_from_url",
+        lambda url: (_ for _ in ()).throw(PrivacyInspectionError("unsafe_target")),
+    )
+    unsafe = client.post(
+        "/privacy/correction-plans/from-url",
+        headers={"X-Api-Key": "internal-key"},
+        json={"url": "http://127.0.0.1"},
+    )
+    assert unsafe.status_code == 400
+    assert unsafe.json()["error"] == "unsafe_target"
+
+    monkeypatch.setattr(
+        flow,
+        "create_correction_plan_from_url",
+        lambda url: (_ for _ in ()).throw(flow.NoActionableItemsError("none")),
+    )
+    empty = client.post(
+        "/privacy/correction-plans/from-url",
+        headers={"X-Api-Key": "internal-key"},
+        json={"url": "https://example.com"},
+    )
+    assert empty.status_code == 422
+    assert empty.json() == {"error": "no_actionable_items", "message": "none"}
 
 
 def test_get_uses_token_without_api_key(client, monkeypatch):
