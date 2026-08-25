@@ -1,7 +1,9 @@
+@import url("../../assets/css/tokens.css");
+
 :root {
-  --primary: #176b78;
-  --primary-dark: #125966;
-  --primary-light: #e8f4f5;
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-hover);
+  --primary-light: var(--color-primary-soft);
   --ink: #18252b;
   --muted: #5d6b70;
   --border: #dce6e8;

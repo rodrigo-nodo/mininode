@@ -146,7 +146,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_commercial_section_uses_privacy_identity_and_formal_language(self):
         commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
         self.assertNotRegex(commercial.lower(), r"\b(tu|te|quieres|obtén)\b")
-        self.assertIn("#176b78", (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower())
+        styles = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower()
+        self.assertIn("var(--color-primary)", styles)
+        self.assertNotIn("#176b78", styles)
         self.assertNotRegex(commercial.lower(), r"violet|purple|#6c4df4")
 
     def test_api_and_backend_score_remain_inputs(self):

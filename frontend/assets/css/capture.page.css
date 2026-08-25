@@ -1,4 +1,4 @@
-#capture-app { --brand:#005ad6; --border:#e5e7eb; --muted:#475569; --text:#0f172a; }
+#capture-app { --brand:var(--color-primary); --border:var(--color-border); --muted:var(--color-muted); --text:var(--color-text); }
 #capture-app.wr-container { max-width: 920px; margin: 0 auto; padding: 32px 16px; color: var(--text); }
 
 .wr-drop { border:2px dashed var(--border); border-radius: 16px; padding: 28px; text-align:center; background:#fff; transition: border-color .2s ease, background .2s ease; }

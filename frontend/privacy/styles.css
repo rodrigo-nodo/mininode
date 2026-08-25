@@ -1,7 +1,7 @@
 .privacy-page {
-  --privacy-primary: #176b78;
-  --privacy-primary-dark: #125966;
-  --privacy-primary-light: #e8f4f5;
+  --privacy-primary: var(--color-primary);
+  --privacy-primary-dark: var(--color-primary-hover);
+  --privacy-primary-light: var(--color-primary-soft);
   background: #fbfcff;
   color: var(--fg);
   min-height: 72vh;
@@ -33,7 +33,7 @@
 
 .privacy-tag {
   background: var(--primary-light);
-  border: 1px solid #ddd3ff;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--primary);
   display: inline-flex;
@@ -95,7 +95,7 @@
 }
 
 .privacy-form input:focus {
-  outline: 3px solid rgba(108, 77, 244, 0.16);
+  outline: 3px solid rgba(23, 107, 120, 0.2);
   outline-offset: 2px;
 }
 
@@ -863,7 +863,7 @@
 }
 
 .privacy-modal__panel:focus {
-  outline: 3px solid rgba(108, 77, 244, 0.2);
+  outline: 3px solid rgba(23, 107, 120, 0.2);
 }
 
 .privacy-modal__close {
@@ -913,8 +913,8 @@
 }
 
 .privacy-modal__highlight {
-  background: #faf9ff;
-  border: 1px solid #e4ddff;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 14px 16px;
 }

@@ -1,0 +1,47 @@
+/* Shared primitives. Page CSS may compose these without redefining brand values. */
+.btn {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  display: inline-flex;
+  font: inherit;
+  font-weight: 600;
+  gap: var(--space-2);
+  justify-content: center;
+  padding: 10px var(--space-4);
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn--primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.btn--ghost:hover { border-color: var(--color-primary); }
+
+input[type="text"],
+input[type="email"],
+input[type="url"],
+textarea,
+select {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font: inherit;
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}

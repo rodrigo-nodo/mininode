@@ -1,22 +1,17 @@
+@import url("assets/css/tokens.css");
+@import url("assets/css/components.css");
 
 :root {
-  --bg: #ffffff;
   --bg-elev: #fafaff;
-  --fg: #0d0f14;
-  --muted:#626570;
-  --primary:#176b78;
-  --primary-hover:#125966;
-  --accent:#176b78;
-  --primary-light:#e8f4f5;
-  --card:#ffffff;
-  --border:#e5e9f2;
-  --radius: 14px;
+  --accent: var(--color-primary);
+  --card: var(--color-bg);
+  --radius: var(--radius-md);
 }
 
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--fg);
   line-height: 1.6;
@@ -32,8 +27,6 @@ body{
 .nav{display:flex;align-items:center;gap:30px}
 .nav a{color:var(--fg);font-size:.95rem;font-weight:600;text-decoration:none;opacity:.78}
 .nav a:hover{color:var(--primary);opacity:1}
-a:focus-visible, button:focus-visible{outline:2px solid var(--primary);outline-offset:4px}
-
 /* Details-based Info menu */
 .infodrop{position:relative}
 .infodrop > summary{
@@ -61,7 +54,7 @@ a:focus-visible, button:focus-visible{outline:2px solid var(--primary);outline-o
 .cta{display:flex;gap:12px;margin-top:16px}
 .cta--center{justify-content:center}
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.card{padding:18px}
 .page-hero{padding-top:16px}
 .page-hero h1{font-size: clamp(24px, 4.5vw, 40px);margin:0 0 8px}
 .center{text-align:center}
@@ -75,14 +68,8 @@ a:focus-visible, button:focus-visible{outline:2px solid var(--primary);outline-o
 .form{display:grid;gap:12px;max-width:520px}
 label{display:grid;gap:6px;font-weight:600}
 input[type="text"], input[type="email"], textarea{
-  width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--fg);
+  width:100%;padding:10px 12px;
 }
-input:focus, textarea:focus{outline:2px solid var(--primary);outline-offset:2px}
-
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--fg);text-decoration:none;font-weight:600}
-.btn--primary{background:var(--primary);border-color:transparent;color:#ffffff}
-.btn--primary:hover{background:var(--primary-hover)}
-.btn--ghost:hover{border-color:var(--primary)}
 
 .footer{display:flex;align-items:flex-start;justify-content:space-between;color:var(--muted);border-top:1px solid var(--border);margin-top:80px;padding-top:28px;padding-bottom:42px}
 .footer__brand{color:var(--fg);font-weight:700;text-decoration:none}
