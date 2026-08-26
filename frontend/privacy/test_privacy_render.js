@@ -15,12 +15,19 @@ class Element {
     this.textContent = '';
     this.className = '';
     this.classList = new ClassList();
+    this.disabled = false;
+    this.value = '';
+    this.listeners = new Map();
   }
 
   append(child) { this.children.push(child); }
   replaceChildren() { this.children = []; }
   setAttribute(name, value) { this[name] = String(value); }
-  addEventListener() {}
+  addEventListener(type, listener) { this.listeners.set(type, listener); }
+  trigger(type, event = {}) {
+    const listener = this.listeners.get(type);
+    return listener?.({ preventDefault() {}, currentTarget: this, ...event });
+  }
   querySelector() { return null; }
   querySelectorAll() { return []; }
   scrollIntoView() {}
@@ -45,7 +52,11 @@ const context = {
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
-vm.runInNewContext(`${source}\nglobalThis.renderDiagnosticForTest = renderDiagnostic; globalThis.isValidDiagnosticResponseForTest = isValidDiagnosticResponse;`, context);
+vm.runInNewContext(`${source}
+globalThis.renderDiagnosticForTest = renderDiagnostic;
+globalThis.resetCommercialStateForTest = resetCommercialState;
+globalThis.currentDiagnosticIdForTest = () => currentDiagnosticId;
+globalThis.isValidDiagnosticResponseForTest = isValidDiagnosticResponse;`, context);
 
 const codes = [
   'PRV-001', 'PRV-002', 'PRV-003', 'PRV-004', 'PRV-005', 'PRV-006',
@@ -60,6 +71,7 @@ const controls = codes.map((control_code, index) => ({
   reason: 'Resultado determinístico del control.',
 }));
 const baseDiagnostic = {
+  diagnostic_id: 'DIAG-A',
   score: 82,
   coverage: 94,
   status: 'Preparación avanzada',
@@ -88,6 +100,8 @@ assert.equal(
 );
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
+assert.equal(elements.get('correction-order-open').disabled, false);
+assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-A');
 assert.equal(elements.get('privacy-no-priorities').hidden, true);
 assert.match(html, /Plan de corrección/);
 assert.match(html, /Obtener plan de corrección/);
@@ -116,6 +130,51 @@ assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No se identificaron acciones prioritarias/);
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-no-priorities').hidden, false);
+
+// A new diagnosis removes every commercial state before its request starts.
+elements.get('correction-order-open').trigger('click');
+elements.get('correction-order-email').value = 'previous@example.com';
+elements.get('correction-order-error').textContent = 'Previous error';
+elements.get('correction-order-error').hidden = false;
+elements.get('correction-order-success').hidden = false;
+context.resetCommercialStateForTest();
+assert.equal(context.currentDiagnosticIdForTest(), '');
+assert.equal(elements.get('privacy-correction-offer').hidden, true);
+assert.equal(elements.get('correction-order-form').hidden, true);
+assert.equal(elements.get('correction-order-email').value, '');
+assert.equal(elements.get('correction-order-error').hidden, true);
+assert.equal(elements.get('correction-order-success').hidden, true);
+
+// The following result can only rebuild an offer for its own diagnostic id.
+context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: 'DIAG-B' }, 'https://site-b.example');
+assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-B');
+assert.equal(elements.get('privacy-correction-offer').hidden, false);
+assert.equal(elements.get('correction-order-open').disabled, false);
+
+// A visual result without an id never reuses A and replaces the priced card
+// with a clear, non-technical recovery state.
+context.resetCommercialStateForTest();
+context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: undefined }, 'https://site-c.example');
+assert.equal(context.currentDiagnosticIdForTest(), '');
+assert.equal(elements.get('privacy-correction-offer').hidden, true);
+assert.equal(elements.get('privacy-correction-unavailable').hidden, false);
+assert.match(html, /Plan de corrección no disponible/);
+assert.match(html, /Realizar nuevo diagnóstico/);
+
+let orderRequests = [];
+context.fetch = async (url, options) => {
+  orderRequests.push({ url, body: JSON.parse(options.body) });
+  return { ok: true, status: 201 };
+};
+elements.get('correction-order-form').trigger('submit');
+assert.equal(orderRequests.length, 0);
+
+context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: 'DIAG-B' }, 'https://site-b.example');
+elements.get('correction-order-email').value = 'buyer@example.com';
+elements.get('correction-order-form').hidden = false;
+elements.get('correction-order-form').trigger('submit');
+assert.equal(orderRequests.length, 1);
+assert.equal(orderRequests[0].body.diagnostic_id, 'DIAG-B');
 
 for (const score of [26, 100]) {
   assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, score, priorities: [] }, 'https://example.com'));

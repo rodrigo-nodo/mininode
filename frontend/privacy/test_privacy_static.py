@@ -102,7 +102,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('name="email"', HTML)
         self.assertIn("Se utilizará para gestionar la solicitud y entregar el plan.", HTML)
         self.assertIn("fetch('/api/privacy/correction-plan-orders'", APP)
-        self.assertIn("JSON.stringify({ diagnostic_id: currentDiagnosticId, email: orderEmail.value })", APP)
+        self.assertIn("JSON.stringify({ diagnostic_id: diagnosticId, email: orderEmail.value })", APP)
         self.assertNotIn("site_url:", APP)
         self.assertNotIn("amount:", APP)
         self.assertNotIn("currency:", APP)
@@ -169,10 +169,27 @@ class PrivacyResultStaticTests(unittest.TestCase):
             self.assertNotIn(field, order_form)
 
         request = APP.split("fetch('/api/privacy/correction-plan-orders'", 1)[1].split("});", 1)[0]
-        self.assertIn("diagnostic_id: currentDiagnosticId", request)
+        self.assertIn("diagnostic_id: diagnosticId", request)
         self.assertIn("email: orderEmail.value", request)
         for field in ("site_url", "amount", "currency", "status", "product_code", "score", "snapshot"):
             self.assertNotIn(f"{field}:", request)
+
+    def test_each_diagnosis_owns_and_resets_its_commercial_state(self):
+        submit_flow = APP.split("form.addEventListener('submit'", 1)[1]
+        self.assertIn("resetCommercialState();", submit_flow.split("fetch('/api/privacy/diagnose'", 1)[0])
+        self.assertIn("currentDiagnosticId = '';", APP)
+        self.assertIn("orderEmail.value = '';", APP)
+        self.assertIn("correctionOffer.hidden = true;", APP)
+        self.assertIn("const diagnosticId = currentDiagnosticId;", APP)
+        self.assertIn("if (!diagnosticId || correctionOffer.hidden)", APP)
+
+    def test_unavailable_plan_has_explanatory_state_instead_of_priced_card(self):
+        unavailable = HTML.split('id="privacy-correction-unavailable"', 1)[1].split('</div>', 1)[0]
+        self.assertIn("Plan de corrección no disponible", unavailable)
+        self.assertIn("No fue posible habilitar el Plan de corrección para este diagnóstico.", unavailable)
+        self.assertIn("Realizar nuevo diagnóstico", unavailable)
+        self.assertNotIn("$49.900", unavailable)
+        self.assertIn("correctionUnavailable.hidden = !hasPriorities || planAvailable;", APP)
 
     def test_commercial_section_uses_privacy_identity_and_formal_language(self):
         commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
@@ -187,7 +204,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=109" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=110" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

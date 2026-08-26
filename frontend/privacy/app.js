@@ -15,6 +15,8 @@ const diagnosticControls = document.querySelector('#diagnostic-controls');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
 const correctionOffer = document.querySelector('#privacy-correction-offer');
 const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
+const correctionUnavailable = document.querySelector('#privacy-correction-unavailable');
+const correctionUnavailableRetry = document.querySelector('#correction-unavailable-retry');
 const orderOpenButton = document.querySelector('#correction-order-open');
 const orderForm = document.querySelector('#correction-order-form');
 const orderEmail = document.querySelector('#correction-order-email');
@@ -248,10 +250,29 @@ const renderPriorities = (priorities) => {
   });
 };
 
+const resetCommercialState = () => {
+  currentDiagnosticId = '';
+  correctionOffer.hidden = true;
+  noPrioritiesOffer.hidden = true;
+  correctionUnavailable.hidden = true;
+  orderOpenButton.hidden = false;
+  orderOpenButton.disabled = true;
+  orderForm.hidden = true;
+  orderEmail.value = '';
+  orderError.textContent = '';
+  orderError.hidden = true;
+  orderSuccess.hidden = true;
+  orderExpired.hidden = true;
+  orderSubmit.disabled = false;
+  orderAvailability.textContent = 'Disponible para comprar durante 24 horas después de este diagnóstico.';
+};
+
 const renderCommercialOffer = (priorities) => {
   const hasPriorities = Array.isArray(priorities) && priorities.length > 0;
-  correctionOffer.hidden = !hasPriorities;
+  const planAvailable = hasPriorities && Boolean(currentDiagnosticId);
+  correctionOffer.hidden = !planAvailable;
   noPrioritiesOffer.hidden = hasPriorities;
+  correctionUnavailable.hidden = !hasPriorities || planAvailable;
 };
 
 const renderDiagnostic = (diagnostic, websiteUrl) => {
@@ -260,15 +281,13 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   const humanStatus = getHumanStatus(score);
 
   analyzedUrl.textContent = websiteUrl;
-  currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id : '';
+  currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id.trim() : '';
   orderOpenButton.disabled = !currentDiagnosticId;
   orderOpenButton.hidden = false;
   orderForm.hidden = true;
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
-  orderAvailability.textContent = currentDiagnosticId
-    ? 'Disponible para comprar durante 24 horas después de este diagnóstico.'
-    : 'El Plan no está disponible temporalmente. El diagnóstico gratuito sigue siendo válido.';
+  orderAvailability.textContent = 'Disponible para comprar durante 24 horas después de este diagnóstico.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
@@ -371,6 +390,10 @@ orderOpenButton?.addEventListener('click', () => {
 
 orderForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  const diagnosticId = currentDiagnosticId;
+  if (!diagnosticId || correctionOffer.hidden) {
+    return;
+  }
   orderError.hidden = true;
   orderSubmit.disabled = true;
 
@@ -378,7 +401,7 @@ orderForm?.addEventListener('submit', async (event) => {
     const response = await fetch('/api/privacy/correction-plan-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ diagnostic_id: currentDiagnosticId, email: orderEmail.value }),
+      body: JSON.stringify({ diagnostic_id: diagnosticId, email: orderEmail.value }),
     });
     if (response.status === 410) {
       orderForm.hidden = true;
@@ -406,6 +429,11 @@ orderRetry?.addEventListener('click', () => {
   urlInput.focus();
 });
 
+correctionUnavailableRetry?.addEventListener('click', () => {
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  urlInput.focus();
+});
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -424,6 +452,7 @@ form.addEventListener('submit', async (event) => {
 
   setUrlError(false);
   setRequestError();
+  resetCommercialState();
   resultCard.hidden = true;
   loadingCard.hidden = false;
   isDiagnosing = true;
