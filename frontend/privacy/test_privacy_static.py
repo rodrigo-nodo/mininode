@@ -8,6 +8,8 @@ from pathlib import Path
 PRIVACY_DIR = Path(__file__).parent
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
+DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
+HOME_HTML = (PRIVACY_DIR.parent / "index.html").read_text(encoding="utf-8")
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
@@ -125,10 +127,31 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_privacy_data_is_an_unconditional_next_step(self):
         self.assertIn('href="/privacy/data/">Conocer Privacy Data</a>', HTML)
         self.assertEqual(HTML.count('href="/privacy/data/"'), 1)
-        self.assertIn("En desarrollo", HTML)
+        self.assertIn("Próximamente", HTML)
         privacy_data = HTML.split('<section class="privacy-data-next-step"', 1)[1]
         self.assertNotIn("score", privacy_data.split("</section>", 1)[0])
         self.assertNotIn("priorities", privacy_data.split("</section>", 1)[0])
+
+    def test_product_names_and_privacy_data_public_copy(self):
+        self.assertIn('<p class="privacy-tag">Privacy Web</p>', HTML)
+        self.assertIn('<form class="privacy-form" id="privacy-form">', HTML)
+        self.assertIn("fetch('/api/privacy/diagnose'", APP)
+        self.assertIn("Plan de corrección", HTML)
+        self.assertIn('<span class="product-status">Próximamente</span>', HOME_HTML)
+        self.assertIn("Ordena cómo manejas los datos personales por dentro.", DATA_HTML)
+        self.assertIn('<p class="data-state">Próximamente</p>', DATA_HTML)
+        self.assertNotIn("En desarrollo", HOME_HTML)
+        self.assertNotIn("En desarrollo", DATA_HTML)
+
+        for technical_name in (
+            "Metadata Scanner",
+            "Data Classifier",
+            "Data Mapper",
+            "Risk Engine",
+            "Connectors",
+            "Local Scanner",
+        ):
+            self.assertNotIn(technical_name, DATA_HTML)
 
     def test_order_form_minimizes_data_and_keeps_commercial_fields_server_side(self):
         order_form = HTML.split('id="correction-order-form"', 1)[1].split("</form>", 1)[0]
