@@ -11,6 +11,12 @@
       "title": "Evidencia de cumplimiento",
       "subtitle": "Cumplir también significa demostrar",
       "related": ["001"]
+    },
+    "003": {
+      "slug": "003-datos-personales",
+      "title": "Datos personales",
+      "subtitle": "La información que una organización no siempre ve",
+      "related": []
     }
   }
 }

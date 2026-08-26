@@ -58,7 +58,9 @@ def test_initialization_uses_idempotent_learn_schema_and_seed(monkeypatch):
     assert "REFERENCES learn.content(id)" in sql
     assert "ON CONFLICT (content_key) DO NOTHING" in sql
     assert learn_feedback.BRIEF_001_CONTENT_KEY in sql
+    assert learn_feedback.BRIEF_003_CONTENT_KEY in sql
     assert "'/learn/briefs/001-nueva-autoridad-de-datos'" in sql
+    assert "'/learn/briefs/003-datos-personales'" in sql
     assert "'brief'" in sql
     assert "CREATE INDEX IF NOT EXISTS learn_feedback_content_id_idx" in sql
     assert "public.learn_" not in sql

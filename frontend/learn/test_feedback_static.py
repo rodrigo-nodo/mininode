@@ -82,6 +82,7 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     catalog = (ROOT / "index.html").read_text()
     brief = (ROOT / "briefs" / "001-nueva-autoridad-de-datos" / "index.html").read_text()
     brief_002 = (ROOT / "briefs" / "002-evidencia-de-cumplimiento" / "index.html").read_text()
+    brief_003 = (ROOT / "briefs" / "003-datos-personales" / "index.html").read_text()
     script = (ROOT / "reader.js").read_text()
     markdown = (ROOT / "content" / "briefs" / "001-nueva-autoridad-de-datos.md").read_text()
     relationships = (ROOT / "content" / "relationships.json").read_text()
@@ -98,6 +99,10 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "<li>30 min</li>" not in catalog
     assert 'href="/learn/briefs/001-nueva-autoridad-de-datos"' in catalog
     assert 'href="/learn/briefs/002-evidencia-de-cumplimiento"' in catalog
+    assert 'href="/learn/briefs/003-datos-personales"' in catalog
+    assert "Datos personales" in catalog
+    assert "La información que una organización no siempre ve" in catalog
+    assert "<li>Datos</li>" in catalog
     assert 'data-content-type="brief"' in brief
     assert "<title>Nueva autoridad de datos - Brief 001 | Mininode</title>" in brief
     assert '<a class="learn-back" href="/learn">← Recursos</a>' in brief
@@ -110,6 +115,13 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "<title>Evidencia de cumplimiento - Brief 002 | Mininode</title>" in brief_002
     assert "¿Te resultó útil?" in brief_002
     assert "learn-comment" not in brief_002
+    assert 'data-content-key="brief-003-datos-personales"' in brief_003
+    assert 'data-content-type="brief"' in brief_003
+    assert 'data-markdown-source="../../content/briefs/003-datos-personales.md"' in brief_003
+    assert "<title>Datos personales - Brief 003 | Mininode</title>" in brief_003
+    assert "¿Te resultó útil?" in brief_003
+    assert brief_003.count('data-rating="') == 5
+    assert "learn-comment" not in brief_003
     assert "content_key: CONTENT_KEY" in script
     assert "MININODE BRIEF ${metadata.id}" in script
     assert "metadata + content" not in markdown
@@ -131,6 +143,7 @@ def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
     relationships = json.loads((ROOT / "content" / "relationships.json").read_text())
     brief = relationships["briefs"]["001"]
     brief_002 = relationships["briefs"]["002"]
+    brief_003 = relationships["briefs"]["003"]
 
     assert brief["slug"] == "001-nueva-autoridad-de-datos"
     assert brief["title"] == "Nueva autoridad de datos"
@@ -141,6 +154,12 @@ def test_related_briefs_resolve_catalog_slugs_and_ignore_incomplete_entries():
         "title": "Evidencia de cumplimiento",
         "subtitle": "Cumplir también significa demostrar",
         "related": ["001"],
+    }
+    assert brief_003 == {
+        "slug": "003-datos-personales",
+        "title": "Datos personales",
+        "subtitle": "La información que una organización no siempre ve",
+        "related": [],
     }
     assert '/learn/briefs/${id}' not in script
     assert '/learn/briefs/${item.slug}' in script
@@ -162,3 +181,15 @@ def test_brief_related_presentation_and_official_sources():
     assert ".learn-feedback--brief { margin: 56px 0 0;" in css
     assert "https://www.bcn.cl/leychile/navegar?idNorma=1209272" in markdown
     assert "https://www.bcn.cl/leychile/" in markdown
+
+
+def test_brief_003_has_expected_metadata_and_content():
+    markdown = (ROOT / "content" / "briefs" / "003-datos-personales.md").read_text()
+
+    assert markdown.startswith("---\nid: 003\ntype: brief\n")
+    assert "title: Datos personales\n" in markdown
+    assert "subtitle: La información que una organización no siempre ve\n" in markdown
+    assert "  - privacidad\n  - datos\n" in markdown
+    assert "country: CL\nupdated: 2026-08\nreading_time: 4\n---\n" in markdown
+    assert "Los datos personales forman parte de la operación cotidiana" in markdown
+    assert "https://www.bcn.cl/leychile/Navegar?idNorma=1209272" in markdown
