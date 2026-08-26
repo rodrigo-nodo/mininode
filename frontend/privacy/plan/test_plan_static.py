@@ -136,7 +136,8 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("elements.retry.addEventListener('click', loadPlan)", APP)
 
     def test_proxy_keeps_correction_plan_get_narrow_and_public(self):
-        self.assertIn(r"^privacy\/correction-plans\/[A-Za-z0-9_-]+$", PROXY)
+        self.assertIn(r"^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/?$", PROXY)
+        self.assertIn(".test(url.pathname)", PROXY)
         self.assertIn("isCorrectionPlan && method === 'GET'", PROXY)
         self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !env.MININODE_API_KEY", PROXY)
         self.assertIn("status: upstream.status", PROXY)

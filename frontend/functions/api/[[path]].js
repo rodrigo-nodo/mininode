@@ -23,8 +23,10 @@ export const onRequest = async (ctx) => {
 
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
-  const isCorrectionPlan = /^privacy\/correction-plans\/[A-Za-z0-9_-]+$/.test(destPathPublic);
-  const isCorrectionPlanCheck = /^privacy\/correction-plans\/[A-Za-z0-9_-]+\/check$/.test(destPathPublic);
+  // Security for browser-facing plan routes is based on the HTTP pathname itself,
+  // never on a catch-all parameter or a reconstructed path.
+  const isCorrectionPlan = /^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/?$/.test(url.pathname);
+  const isCorrectionPlanCheck = /^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/check\/?$/.test(url.pathname);
   const isAllowedCorrectionPlan = (isCorrectionPlan && method === 'GET')
     || (isCorrectionPlanCheck && method === 'POST');
   const isPublicOrderCreation = destPathPublic === 'privacy/correction-plan-orders'
@@ -46,7 +48,12 @@ export const onRequest = async (ctx) => {
     'privacy/diagnose': 'privacy/diagnose',
     'learn/feedback': 'learn/feedback',
   };
-  const destPathBackend = ROUTE_MAP[destPathPublic] || destPathPublic;
+  const correctionPlanBackendPath = url.pathname
+    .replace(/^\/api\//, '')
+    .replace(/\/$/, '');
+  const destPathBackend = isAllowedCorrectionPlan
+    ? correctionPlanBackendPath
+    : (ROUTE_MAP[destPathPublic] || destPathPublic);
 
   const apiBase = env.MININODE_API_BASE || 'https://api.mininode.io';
   const target = new URL(`${apiBase}/${destPathBackend}`);
