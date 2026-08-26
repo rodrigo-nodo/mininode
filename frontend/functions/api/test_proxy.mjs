@@ -21,13 +21,15 @@ async function request(path, method = 'GET', options = {}) {
   try {
     const headers = options.headers || {};
     const body = ['GET', 'HEAD'].includes(method) ? undefined : '{}';
-    const response = await onRequest({
+    const context = {
       request: new Request(`https://mininode.io${path}`, { method, headers, body }),
       env: {
         MININODE_API_BASE: 'https://backend.example',
         ...(!options.withoutApiKey && { MININODE_API_KEY: API_KEY }),
       },
-    });
+    };
+    if (Object.hasOwn(options, 'params')) context.params = options.params;
+    const response = await onRequest(context);
     return { response, json: await response.json(), calls };
   } finally {
     globalThis.fetch = originalFetch;
@@ -44,6 +46,7 @@ async function assertRejected(path, method = 'GET') {
 test('allows strict public correction-plan reads and forwards query strings', async () => {
   const tokens = [
     'ABC123',
+    'PLAN-003',
     'Upper_lower-0123456789',
     'GlHIycPAQYtNNOSz9hYKz_8u4-jbH6PpN3wRZsT0aVq7CdEfLmX2',
   ];
@@ -59,6 +62,35 @@ test('allows strict public correction-plan reads and forwards query strings', as
     assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
     assert.equal(JSON.stringify(result.json).includes(API_KEY), false);
   }
+});
+
+test('uses request pathname regardless of catch-all params representation', async () => {
+  const paramsVariants = [
+    undefined,
+    {},
+    { path: 'privacy/correction-plans/ABC123' },
+    { path: ['privacy', 'correction-plans', 'ABC123'] },
+    { path: { unexpected: true } },
+  ];
+
+  for (const params of paramsVariants) {
+    const result = await request('/api/privacy/correction-plans/ABC123', 'GET', {
+      withoutApiKey: true,
+      params,
+    });
+    assert.equal(result.response.status, 200);
+    assert.equal(result.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123');
+  }
+});
+
+test('normalizes an optional trailing slash before forwarding public plan routes', async () => {
+  const read = await request('/api/privacy/correction-plans/ABC123/', 'GET', { withoutApiKey: true });
+  assert.equal(read.response.status, 200);
+  assert.equal(read.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123');
+
+  const check = await request('/api/privacy/correction-plans/ABC123/check/', 'POST', { withoutApiKey: true });
+  assert.equal(check.response.status, 200);
+  assert.equal(check.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123/check');
 });
 
 test('allows only POST for the public correction-plan check', async () => {
@@ -100,4 +132,9 @@ test('keeps protected and existing allowlist behavior unchanged', async () => {
   const order = await request('/api/privacy/correction-plan-orders', 'POST');
   assert.equal(order.response.status, 200);
   assert.equal(order.calls[0].init.headers.has('X-Api-Key'), false);
+
+  const missingKey = await request('/api/privacy/diagnose', 'POST', { withoutApiKey: true });
+  assert.equal(missingKey.response.status, 500);
+  assert.equal(missingKey.json.error, 'Falta MININODE_API_KEY (Pages Secret)');
+  assert.equal(missingKey.calls.length, 0);
 });
