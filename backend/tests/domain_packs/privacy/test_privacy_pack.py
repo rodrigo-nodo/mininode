@@ -92,6 +92,29 @@ def test_catalog_matches_the_approved_controls_exactly():
     } == EXPECTED
 
 
+def test_documental_framework_matches_productive_catalog():
+    framework_path = (
+        BACKEND_SRC.parents[1]
+        / "frontend"
+        / "privacy"
+        / "data"
+        / "privacy-framework-v0.1.json"
+    )
+    framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
+        "framework"
+    ]["controls"]
+    productive_controls = load_controls()
+
+    assert {control["code"] for control in framework_controls} == {
+        control["code"] for control in productive_controls
+    }
+    productive_by_code = {control["code"]: control for control in productive_controls}
+    for documented in framework_controls:
+        productive = productive_by_code[documented["code"]]
+        for shared_field in ("name", "domain", "type", "score_weight", "dependency"):
+            assert documented.get(shared_field) == productive.get(shared_field)
+
+
 def test_catalog_contains_required_metadata_and_dependencies():
     controls = {control["code"]: control for control in load_controls()}
     assert controls["PRV-101"]["type"] == "context"
