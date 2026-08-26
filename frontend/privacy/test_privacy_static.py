@@ -134,12 +134,20 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_product_names_and_privacy_data_public_copy(self):
         self.assertIn('<p class="privacy-tag">Privacy Web</p>', HTML)
+        self.assertNotIn("Mininode Privacy", HTML)
         self.assertIn('<form class="privacy-form" id="privacy-form">', HTML)
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
         self.assertIn("Plan de corrección", HTML)
+        self.assertIn('<span class="product-row__name">Privacy Web</span>', HOME_HTML)
+        self.assertIn('<span class="product-row__name">Privacy Data</span>', HOME_HTML)
+        self.assertNotIn("Mininode Privacy", HOME_HTML)
         self.assertIn('<span class="product-status">Próximamente</span>', HOME_HTML)
         self.assertIn("Ordena cómo manejas los datos personales por dentro.", DATA_HTML)
         self.assertIn('<p class="data-state">Próximamente</p>', DATA_HTML)
+        self.assertIn(
+            "Privacy Data ayuda a pequeñas empresas a entender y ordenar el manejo interno de datos personales.",
+            DATA_HTML,
+        )
         self.assertNotIn("En desarrollo", HOME_HTML)
         self.assertNotIn("En desarrollo", DATA_HTML)
 

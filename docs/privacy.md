@@ -1,22 +1,13 @@
-# Mininode Privacy - Contexto de producto
+# Privacy Web y Privacy Data - Contexto de producto
 
-Usar este documento para Issues cuyo alcance sea Mininode Privacy o Privacy Web Inspector.
+Usar este documento para Issues cuyo alcance sea Privacy Web, Privacy Data o Privacy Web Inspector.
 
 ## Alcance del producto
 
-Mininode Privacy reúne dos productos:
+Mininode ofrece actualmente dos productos relacionados con privacidad:
 
-```text
-Mininode Privacy
-
-├── Privacy Web
-│   Producto operativo actual.
-│   Revisa señales públicas visibles del sitio web.
-│
-└── Privacy Data
-    Próximamente.
-    Ayuda a ordenar el manejo interno de datos personales.
-```
+- **Privacy Web** - producto operativo actual. Revisa señales públicas visibles del sitio web.
+- **Privacy Data** - próximamente. Ayuda a ordenar el manejo interno de datos personales.
 
 Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 
