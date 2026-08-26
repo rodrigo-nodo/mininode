@@ -4,7 +4,21 @@ Usar este documento para Issues cuyo alcance sea Mininode Privacy o Privacy Web 
 
 ## Alcance del producto
 
-Mininode Privacy realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
+Mininode Privacy reúne dos productos:
+
+```text
+Mininode Privacy
+
+├── Privacy Web
+│   Producto operativo actual.
+│   Revisa señales públicas visibles del sitio web.
+│
+└── Privacy Data
+    Próximamente.
+    Ayuda a ordenar el manejo interno de datos personales.
+```
+
+Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 
 El resultado es orientativo: no constituye una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.
 
