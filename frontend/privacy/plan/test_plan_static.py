@@ -4,8 +4,9 @@ from pathlib import Path
 
 PLAN_DIR = Path(__file__).parent
 FRONTEND_DIR = PLAN_DIR.parents[1]
+ASSETS_DIR = FRONTEND_DIR / "privacy/plan-assets"
 HTML = (PLAN_DIR / "index.html").read_text(encoding="utf-8")
-APP = (PLAN_DIR / "app.js").read_text(encoding="utf-8")
+APP = (ASSETS_DIR / "app.js").read_text(encoding="utf-8")
 ROUTE_PATH = FRONTEND_DIR / "functions/privacy/plan/[token].js"
 OPTIONAL_ROUTE_PATH = FRONTEND_DIR / "functions/privacy/plan/[[token]].js"
 REDIRECTS_PATH = FRONTEND_DIR / "_redirects"
@@ -21,8 +22,9 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
         rules = [line.split() for line in REDIRECTS.splitlines()
                  if line.strip() and not line.lstrip().startswith("#")]
-        plan_rules = [rule for rule in rules if rule[0] == "/privacy/plan/*"]
-        self.assertEqual(plan_rules, [["/privacy/plan/*", "/privacy/plan/", "200"]])
+        plan_rules = [rule for rule in rules if rule[0] == "/privacy/plan/:token"]
+        self.assertEqual(plan_rules, [["/privacy/plan/:token", "/privacy/plan/", "200"]])
+        self.assertNotIn(["/privacy/plan/*", "/privacy/plan/", "200"], rules)
         self.assertNotIn(plan_rules[0][2], {"301", "302", "307", "308"})
 
         plan_rule_index = rules.index(plan_rules[0])
@@ -37,20 +39,37 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_static_plan_page_and_api_function_remain_available(self):
         self.assertTrue((PLAN_DIR / "index.html").is_file())
         self.assertTrue((FRONTEND_DIR / "functions/api/[[path]].js").is_file())
-        self.assertTrue((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("const elements"))
-        self.assertIn("new AbortController()", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
-        self.assertIn("requestTimeoutMs", (PLAN_DIR / "app.js").read_text(encoding="utf-8"))
-        self.assertTrue((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith(".plan-loading"))
-        self.assertFalse((PLAN_DIR / "app.js").read_text(encoding="utf-8").startswith("<!doctype html>"))
-        self.assertFalse((PLAN_DIR / "styles.css").read_text(encoding="utf-8").startswith("<!doctype html>"))
+        self.assertTrue((ASSETS_DIR / "app.js").read_text(encoding="utf-8").startswith("const elements"))
+        self.assertIn("new AbortController()", APP)
+        self.assertIn("requestTimeoutMs", APP)
+        self.assertTrue((ASSETS_DIR / "styles.css").read_text(encoding="utf-8").startswith(".plan-loading"))
+        self.assertFalse((ASSETS_DIR / "app.js").read_text(encoding="utf-8").startswith("<!doctype html>"))
+        self.assertFalse((ASSETS_DIR / "styles.css").read_text(encoding="utf-8").startswith("<!doctype html>"))
+        self.assertFalse((PLAN_DIR / "app.js").exists())
+        self.assertFalse((PLAN_DIR / "styles.css").exists())
 
     def test_dynamic_page_assets_are_absolute(self):
         for asset in (
             '/privacy/plan-demo/styles.css?v=1',
-            '/privacy/plan/styles.css?v=2',
-            '/privacy/plan/app.js?v=3',
+            '/privacy/plan-assets/styles.css?v=2',
+            '/privacy/plan-assets/app.js?v=3',
         ):
             self.assertIn(asset, HTML)
+
+    def test_only_token_request_matches_plan_rewrite(self):
+        source = "/privacy/plan/:token"
+
+        def matches(path):
+            source_parts = source.strip("/").split("/")
+            path_parts = path.strip("/").split("/")
+            return len(source_parts) == len(path_parts) and all(
+                expected.startswith(":") or expected == actual
+                for expected, actual in zip(source_parts, path_parts)
+            )
+
+        self.assertTrue(matches("/privacy/plan/ABC123"))
+        self.assertFalse(matches("/privacy/plan-assets/app.js"))
+        self.assertFalse(matches("/privacy/plan-assets/styles.css"))
 
     def test_get_uses_same_origin_proxy_without_api_credentials(self):
         self.assertIn("`/api/privacy/correction-plans/${encodeURIComponent(token)}`", APP)
@@ -126,8 +145,8 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan/app.js?v=3"', HTML)
-        self.assertNotIn('src="/privacy/plan/app.js?v=1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=3"', HTML)
+        self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
 
