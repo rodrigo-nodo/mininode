@@ -3,7 +3,7 @@ const elements = {
   errorTitle: document.querySelector('#error-title'), errorMessage: document.querySelector('#error-message'), retry: document.querySelector('#retry'), privacyLink: document.querySelector('#privacy-link'),
   site: document.querySelector('#site-url'), score: document.querySelector('#initial-score'), itemCount: document.querySelector('#item-count'), summaryCount: document.querySelector('#summary-count'), closingCount: document.querySelector('#closing-count'),
   prioritySummary: document.querySelector('#priority-summary'), items: document.querySelector('#plan-items'), template: document.querySelector('#plan-item-template'),
-  checkDeadline: document.querySelector('#check-deadline'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkPending: document.querySelector('#check-pending'), checkItems: document.querySelector('#check-items'), checkCreated: document.querySelector('#check-created'), checkFree: document.querySelector('#check-free'),
+  checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkCreated: document.querySelector('#check-created'), checkFree: document.querySelector('#check-free'),
 };
 const displayNames = { 'PRV-003': 'Política de privacidad claramente asociada a la empresa' };
 const requiredItemFields = ['control_code', 'name', 'priority', 'finding', 'recommendation', 'action_steps', 'validation_step'];
@@ -47,18 +47,19 @@ const renderItem = (item, index) => {
 };
 const renderCheckResult = (check) => {
   const result = check.result;
-  elements.checkStart.hidden = true; elements.checkConfirm.hidden = true; elements.checkResult.hidden = false; elements.checkMessage.hidden = true;
+  elements.checkAvailable.hidden = true; elements.checkStart.hidden = true; elements.checkConfirm.hidden = true; elements.checkResult.hidden = false; elements.checkMessage.hidden = true;
   elements.checkBefore.textContent = `${result.original_score} / 100`; elements.checkNow.textContent = `${result.current_score} / 100`;
-  elements.checkChange.textContent = `${result.score_change > 0 ? '+' : ''}${result.score_change} puntos`; elements.checkLower.hidden = result.score_change >= 0;
-  elements.checkCorrected.textContent = result.corrected_count; elements.checkPending.textContent = result.pending_count; elements.checkItems.replaceChildren();
-  result.items.forEach((item) => { const li = document.createElement('li'); const corrected = item.status === 'corrected'; li.textContent = `${corrected ? '✓' : '⚠'} ${item.name} — ${corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo'}`; elements.checkItems.append(li); });
+  elements.checkChange.textContent = result.score_change === 0 ? 'Sin cambios en el score' : `${result.score_change > 0 ? '+' : ''}${result.score_change} puntos`; elements.checkLower.hidden = result.score_change >= 0;
+  elements.checkCorrected.textContent = result.corrected_count; elements.checkCorrectedLabel.textContent = result.corrected_count === 1 ? 'mejora corregida' : 'mejoras corregidas';
+  elements.checkPending.textContent = result.pending_count; elements.checkPendingLabel.textContent = result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes'; elements.checkItems.replaceChildren();
+  result.items.forEach((item) => { const li = document.createElement('li'); const corrected = item.status === 'corrected'; const icon = document.createElement('span'); const content = document.createElement('span'); const status = document.createElement('small'); icon.className = `check-item__icon check-item__icon--${corrected ? 'corrected' : 'pending'}`; icon.textContent = corrected ? '✓' : '⚠'; icon.setAttribute('aria-hidden', 'true'); content.textContent = item.name; status.textContent = corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo'; content.append(status); li.append(icon, content); elements.checkItems.append(li); });
   elements.checkCreated.textContent = friendlyDate(check.created_at);
 };
 const renderCheck = (check) => {
   if (!check) { document.querySelector('#improvement-check').hidden = true; return; }
   if (check.expires_at) elements.checkDeadline.textContent = `Disponible hasta: ${friendlyDate(check.expires_at)}`;
   if (check.status === 'used') { renderCheckResult(check); return; }
-  if (check.status === 'expired') { elements.checkDeadline.textContent = 'El plazo de 90 días para realizar la comprobación incluida ha finalizado.'; elements.checkFree.hidden = false; return; }
+  if (check.status === 'expired') { elements.checkDeadline.textContent = 'El plazo de 90 días para realizar la comprobación incluida ha finalizado.'; elements.checkRecommendation.hidden = true; elements.checkFree.hidden = false; return; }
   elements.checkStart.hidden = false;
 };
 const render = ({ site_url: siteUrl, plan, check }) => {

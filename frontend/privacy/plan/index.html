@@ -7,12 +7,14 @@
   <meta name="referrer" content="no-referrer">
   <title>Plan de corrección — Mininode Privacy</title>
   <meta name="description" content="Plan de corrección de Mininode Privacy Web.">
+  <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=1">
-  <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=2">
-  <script src="/privacy/plan-assets/app.js?v=3" defer></script>
+  <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=3">
+  <script src="/include.js" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=4" defer></script>
 </head>
 <body>
-  <header class="plan-header"><div class="plan-shell plan-header__inner"><strong>Mininode Privacy</strong><span>Plan de corrección</span></div></header>
+  <div data-include="/partials/header-nav.html"></div>
   <main class="plan-shell">
     <p class="plan-loading" id="plan-loading" role="status">Cargando plan de corrección...</p>
     <div id="plan-content" hidden>
@@ -39,17 +41,21 @@
       </section>
       <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
         <p class="section-label">Incluida en el Plan</p><h2 id="check-title">Comprobación de mejoras</h2>
-        <p>Una vez realizados los cambios, Mininode puede volver a revisar el sitio y compararlo con este diagnóstico.</p>
-        <p><strong>1 comprobación incluida.</strong></p>
-        <p id="check-deadline"></p>
-        <button id="check-start" type="button" hidden>Comprobar mejoras</button>
-        <div id="check-confirm" class="check-confirm" hidden><p>Esta acción utilizará la comprobación incluida y volverá a analizar el sitio para comparar los resultados con el diagnóstico original.</p><button id="check-cancel" type="button">Cancelar</button><button id="check-submit" type="button">Iniciar comprobación</button></div>
-        <p id="check-progress" role="status" hidden>Comprobando mejoras...</p>
-        <p id="check-message" role="alert" hidden></p>
+        <div id="check-available">
+          <p>Una vez realizados los cambios, Mininode puede volver a revisar el sitio y compararlo con este diagnóstico.</p>
+          <p><strong>1 comprobación incluida.</strong></p>
+          <p id="check-deadline"></p>
+          <p class="check-recommendation" id="check-recommendation">Se recomienda utilizar esta comprobación después de realizar los cambios indicados en el Plan.</p>
+          <button id="check-start" type="button" hidden>Comprobar mejoras</button>
+          <div id="check-confirm" class="check-confirm" hidden><p>Se realizará una nueva revisión del sitio y se utilizará la comprobación incluida para comparar los resultados con el diagnóstico original.</p><button id="check-cancel" type="button">Cancelar</button><button id="check-submit" type="button">Iniciar comprobación</button></div>
+          <p id="check-progress" role="status" hidden>Comprobando mejoras...</p>
+          <p id="check-message" role="alert" hidden></p>
+        </div>
         <div id="check-result" hidden>
           <div class="check-scores"><p>Antes<strong id="check-before"></strong></p><p>Ahora<strong id="check-now"></strong></p></div>
           <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
-          <p><strong id="check-corrected"></strong> mejoras corregidas</p><p><strong id="check-pending"></strong> todavía pendientes</p>
+          <h3 class="check-result__title">Resultado de las mejoras</h3>
+          <div class="check-counts"><p><strong id="check-corrected"></strong><span id="check-corrected-label"></span></p><p><strong id="check-pending"></strong><span id="check-pending-label"></span></p></div>
           <ul id="check-items"></ul><p>Comprobación realizada <time id="check-created"></time></p>
         </div>
         <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
@@ -59,5 +65,6 @@
     <section class="plan-error" id="plan-error" role="alert" hidden><h1 id="error-title"></h1><p id="error-message"></p><button id="retry" type="button" hidden>Reintentar</button><a id="privacy-link" href="/privacy/" hidden>Volver a Privacy Web</a></section>
     <template id="plan-item-template"><article class="plan-item"><header class="plan-item__header"><div class="plan-item__identity"><span class="plan-item__number"></span><div><p class="plan-item__code"></p><h3 class="plan-item__name"></h3></div></div><span class="plan-item__priority"></span></header><div class="plan-item__content"><section><h4>Qué se encontró</h4><p class="plan-item__finding"></p></section><section><h4>Qué debería corregirse</h4><p class="plan-item__recommendation"></p></section><details class="plan-item__instructions"><summary><span class="instructions-label instructions-label--closed">Ver instrucciones</span><span class="instructions-label instructions-label--open">Ocultar instrucciones</span><span class="instructions-indicator" aria-hidden="true"></span></summary><div class="plan-item__instructions-content"><section><h4>Pasos recomendados</h4><ol class="plan-item__steps"></ol></section><section class="plan-item__validation"><h4><span aria-hidden="true">✓</span> Cómo comprobarlo</h4><p></p></section></div></details></div></article></template>
   </main>
+  <div data-include="/partials/footer.html"></div>
 </body>
 </html>

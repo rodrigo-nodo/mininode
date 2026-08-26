@@ -50,9 +50,11 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
     def test_dynamic_page_assets_are_absolute(self):
         for asset in (
+            '/styles.css',
             '/privacy/plan-demo/styles.css?v=1',
-            '/privacy/plan-assets/styles.css?v=2',
-            '/privacy/plan-assets/app.js?v=3',
+            '/privacy/plan-assets/styles.css?v=3',
+            '/include.js',
+            '/privacy/plan-assets/app.js?v=4',
         ):
             self.assertIn(asset, HTML)
 
@@ -146,7 +148,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=3"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=4"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -156,6 +158,35 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         for forbidden in ("solicitar plan de corrección", "checkout", "stripe", "webpay", "mercado pago", "login", "magic link", "recheck", "checkbox"):
             self.assertNotIn(forbidden, combined)
         self.assertNotIn("<form", HTML.lower())
+
+    def test_shared_header_footer_and_plan_disclaimers_are_present(self):
+        self.assertIn('data-include="/partials/header-nav.html"', HTML)
+        self.assertIn('data-include="/partials/footer.html"', HTML)
+        self.assertIn('src="/include.js"', HTML)
+        self.assertIn("Privacy Score es un indicador desarrollado por Mininode.", HTML)
+        self.assertIn("no reemplaza una revisión jurídica o especializada", HTML)
+
+    def test_available_check_has_preventive_copy_cta_and_confirmation(self):
+        self.assertIn("1 comprobación incluida.", HTML)
+        self.assertIn('id="check-deadline"', HTML)
+        self.assertIn("Se recomienda utilizar esta comprobación después de realizar los cambios indicados en el Plan.", HTML)
+        self.assertIn(">Comprobar mejoras</button>", HTML)
+        self.assertIn("Se realizará una nueva revisión del sitio y se utilizará la comprobación incluida", HTML)
+        self.assertIn("elements.checkStart.hidden = false", APP)
+
+    def test_used_result_formats_score_counts_and_details_without_cta(self):
+        self.assertIn("result.score_change === 0 ? 'Sin cambios en el score'", APP)
+        self.assertIn("result.score_change > 0 ? '+' : ''", APP)
+        self.assertIn("result.corrected_count === 1 ? 'mejora corregida' : 'mejoras corregidas'", APP)
+        self.assertIn("result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes'", APP)
+        self.assertIn("result.items.forEach", APP)
+        self.assertIn("elements.checkAvailable.hidden = true", APP)
+        self.assertIn("elements.checkCreated.textContent = friendlyDate(check.created_at)", APP)
+
+    def test_expired_check_keeps_cta_disabled(self):
+        expired_branch = APP[APP.index("if (check.status === 'expired')"):APP.index("elements.checkStart.hidden = false")]
+        self.assertIn("El plazo de 90 días", expired_branch)
+        self.assertNotIn("checkStart.hidden = false", expired_branch)
 
 
 if __name__ == "__main__":
