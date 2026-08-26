@@ -7,8 +7,26 @@
 .improvement-check { background: #f4fbfa; border: 1px solid #b9ded9; border-radius: 16px; margin: 36px 0; padding: clamp(22px, 5vw, 36px); }
 .improvement-check button { background: #086f68; border: 0; border-radius: 9px; color: white; cursor: pointer; font: inherit; font-weight: 750; margin: 8px 12px 8px 0; padding: 11px 16px; }
 .improvement-check button:disabled { cursor: wait; opacity: .65; }
+.improvement-check button:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary) 28%, transparent); outline-offset: 3px; }
+.check-recommendation { border-left: 2px solid var(--primary); color: var(--muted); margin: 20px 0 14px; max-width: 680px; padding-left: 14px; }
 .check-confirm { border-left: 3px solid #086f68; margin-top: 16px; padding-left: 16px; }
-.check-scores { display: flex; gap: clamp(40px, 12vw, 120px); margin-top: 24px; }
+.check-scores { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 180px)); margin-top: 24px; }
 .check-scores p { color: var(--muted); display: grid; gap: 6px; }
 .check-scores strong, .check-change { color: var(--ink); font-size: 1.6rem; }
-#check-items { display: grid; gap: 10px; list-style: none; padding: 0; }
+.check-change { border-bottom: 1px solid var(--border); margin: 8px 0 24px; padding-bottom: 24px; }
+.check-result__title { font-size: 1rem; margin: 0 0 14px; }
+.check-counts { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 520px; }
+.check-counts p { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: grid; gap: 2px; margin: 0; padding: 16px; }
+.check-counts strong { color: var(--ink); font-size: 1.65rem; line-height: 1.2; }
+.check-counts span { color: var(--muted); font-size: .9rem; }
+#check-items { border-top: 1px solid var(--border); display: grid; gap: 0; list-style: none; margin-top: 24px; padding: 0; }
+#check-items li { align-items: start; border-bottom: 1px solid var(--border); display: grid; gap: 10px; grid-template-columns: 22px minmax(0, 1fr); padding: 14px 0; }
+#check-items small { color: var(--muted); display: block; margin-top: 2px; }
+.check-item__icon--corrected { color: var(--primary-dark); }
+.check-item__icon--pending { color: #8a6a19; }
+
+@media (max-width: 520px) {
+  .check-scores, .check-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .check-scores strong, .check-change { font-size: 1.35rem; }
+  .check-counts p { padding: 14px; }
+}
