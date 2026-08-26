@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="styles.css?v=110">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
-  <script src="app.js?v=109" defer></script>
+  <script src="app.js?v=110" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
@@ -142,6 +142,14 @@
       <div class="privacy-no-priorities privacy-help-offer" id="privacy-no-priorities" hidden>
         <h3>Su sitio está bien preparado en los puntos revisados</h3>
         <p>No identificamos mejoras prioritarias en este diagnóstico.</p>
+      </div>
+
+      <div class="privacy-no-priorities privacy-help-offer" id="privacy-correction-unavailable" hidden>
+        <p class="privacy-help-offer__label">Ayuda opcional</p>
+        <h3>Plan de corrección no disponible</h3>
+        <p>No fue posible habilitar el Plan de corrección para este diagnóstico.</p>
+        <p>Puede realizar un nuevo diagnóstico e intentarlo nuevamente.</p>
+        <button class="btn privacy-secondary" type="button" id="correction-unavailable-retry">Realizar nuevo diagnóstico</button>
       </div>
 
       <section class="privacy-data-next-step" aria-labelledby="privacy-data-title">
