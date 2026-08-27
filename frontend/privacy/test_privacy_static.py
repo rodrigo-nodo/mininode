@@ -254,7 +254,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=112" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=113" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(
