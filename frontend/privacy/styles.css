@@ -923,6 +923,11 @@
   margin: 0 0 7px;
 }
 
+.privacy-modal__block--secondary h3 {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
 .privacy-modal p {
   color: var(--muted);
   margin: 0;

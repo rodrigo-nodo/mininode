@@ -357,8 +357,9 @@ const getFocusableElements = () => {
   return Array.from(modalPanel.querySelectorAll(focusableSelector)).filter((element) => !element.disabled && !element.hidden);
 };
 
-const appendModalBlock = (title, text) => {
-  const block = appendTextElement(modalContent, 'div', '', 'privacy-modal__block');
+const appendModalBlock = (title, text, modifier = '') => {
+  const className = `privacy-modal__block${modifier ? ` privacy-modal__block--${modifier}` : ''}`;
+  const block = appendTextElement(modalContent, 'div', '', className);
   appendTextElement(block, 'h3', title);
   appendTextElement(block, 'p', text);
 };
@@ -395,7 +396,7 @@ const openAreaInfo = (areaName, trigger) => {
   modalContent.replaceChildren();
   appendModalBlock('Qué revisamos', info.what);
   appendModalBlock('Por qué importa', info.why);
-  appendModalBlock('Fundamento normativo', info.basis);
+  appendModalBlock('Fundamento normativo', info.basis, 'secondary');
   openModal(trigger);
 };
 
