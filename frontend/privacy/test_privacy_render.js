@@ -37,12 +37,17 @@ class Element {
 const html = fs.readFileSync(`${__dirname}/index.html`, 'utf8');
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
 const elements = new Map(ids.map((id) => [id, new Element()]));
+const modalPanel = new Element('section');
+const modalCloseButton = new Element('button');
+elements.get('privacy-modal').querySelector = (selector) => selector === '.privacy-modal__panel' ? modalPanel : null;
+elements.get('privacy-modal').querySelectorAll = (selector) => selector === '[data-modal-close]' ? [modalCloseButton] : [];
+const documentListeners = new Map();
 const document = {
   body: new Element('body'),
   activeElement: null,
   createElement: (tagName) => new Element(tagName),
   querySelector: (selector) => selector.startsWith('#') ? elements.get(selector.slice(1)) ?? null : null,
-  addEventListener() {},
+  addEventListener(type, listener) { documentListeners.set(type, listener); },
 };
 
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
@@ -92,6 +97,25 @@ assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, 82);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
+const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
+assert.equal(areaButtons.every((button) => button.tagName === 'BUTTON' && button.type === 'button'), true);
+assert.deepEqual(areaButtons.map((button) => button.children[1].textContent), ['ⓘ', 'ⓘ', 'ⓘ', 'ⓘ', 'ⓘ']);
+assert.equal(areaButtons[0]['aria-label'], 'Información sobre el área Transparencia');
+areaButtons[0].trigger('click');
+assert.equal(elements.get('privacy-modal').hidden, false);
+assert.equal(elements.get('privacy-modal-title').textContent, 'Transparencia');
+assert.deepEqual(
+  elements.get('privacy-modal-content').children.map((block) => block.children[0].textContent),
+  ['Qué revisamos', 'Por qué importa', 'Fundamento normativo'],
+);
+areaButtons[1].trigger('click');
+assert.equal(elements.get('privacy-modal-title').textContent, 'Formularios');
+assert.match(elements.get('privacy-modal-content').children[0].children[1].textContent, /formularios/);
+modalCloseButton.trigger('click');
+assert.equal(elements.get('privacy-modal').hidden, true);
+areaButtons[2].trigger('click');
+documentListeners.get('keydown')({ key: 'Escape' });
+assert.equal(elements.get('privacy-modal').hidden, true);
 assert.match(html, /Ver qué revisamos/);
 assert.equal(elements.get('diagnostic-controls').children.length, 5);
 assert.equal(

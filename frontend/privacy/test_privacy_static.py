@@ -64,6 +64,25 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertEqual(config.count("PRV-301"), 1)
         self.assertEqual(config.count("PRV-501"), 1)
 
+    def test_area_information_uses_one_accessible_reusable_modal(self):
+        area_info = APP.split("const AREA_INFO = {", 1)[1].split("const resultLabels", 1)[0]
+
+        self.assertEqual(HTML.count('role="dialog"'), 1)
+        self.assertEqual(HTML.count('id="privacy-modal-content"'), 1)
+        self.assertEqual(HTML.count("Qué revisamos"), 0)
+        for area in ("Transparencia", "Formularios", "Cookies", "Contacto", "Seguridad"):
+            self.assertIn(f"{area}: {{", area_info)
+        self.assertEqual(area_info.count("what:"), 5)
+        self.assertEqual(area_info.count("why:"), 5)
+        self.assertEqual(area_info.count("basis:"), 5)
+        self.assertIn("appendModalBlock('Qué revisamos', info.what)", APP)
+        self.assertIn("appendModalBlock('Por qué importa', info.why)", APP)
+        self.assertIn("appendModalBlock('Fundamento normativo', info.basis)", APP)
+        self.assertIn("appendTextElement(areaSummary, 'button'", APP)
+        self.assertIn("Información sobre el área ${area.name}", APP)
+        self.assertIn("areaInfoButton.type = 'button'", APP)
+        self.assertNotIn("W2.1", APP)
+
     def test_context_controls_are_informational(self):
         self.assertRegex(APP, r"code: 'PRV-004'.*informational: true")
         self.assertRegex(APP, r"code: 'PRV-009'.*informational: true")
@@ -204,7 +223,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=110" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=111" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

@@ -30,6 +30,8 @@ const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
 const modalPanel = modal?.querySelector('.privacy-modal__panel');
+const modalTitle = document.querySelector('#privacy-modal-title');
+const modalContent = document.querySelector('#privacy-modal-content');
 const modalCloseButtons = modal?.querySelectorAll('[data-modal-close]') ?? [];
 const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 let lastFocusedElement = null;
@@ -67,6 +69,34 @@ const privacyAreas = [
   { name: 'Contacto', controls: [{ code: 'PRV-301', name: 'Canal de contacto visible' }] },
   { name: 'Seguridad', controls: [{ code: 'PRV-501', name: 'HTTPS activo' }] },
 ];
+
+const AREA_INFO = {
+  Transparencia: {
+    what: 'Si el sitio entrega información clara sobre cómo se tratan los datos personales y quién es responsable de ese tratamiento.',
+    why: 'Permite que las personas entiendan qué ocurre con sus datos y conozcan cómo ejercer sus derechos.',
+    basis: 'Esta área se relaciona con los deberes de información y transparencia de la normativa sobre protección de datos personales.',
+  },
+  Formularios: {
+    what: 'Cómo el sitio solicita datos personales mediante formularios y qué información entrega al momento de recopilarlos.',
+    why: 'Cuando una persona entrega sus datos, necesita información suficiente para comprender su recopilación y uso.',
+    basis: 'Esta área se relaciona con los deberes de información y con las condiciones aplicables a la recopilación y tratamiento de datos personales.',
+  },
+  Cookies: {
+    what: 'Señales visibles relacionadas con el uso de cookies y tecnologías similares en el sitio.',
+    why: 'Algunas de estas tecnologías pueden recopilar información sobre las personas y su navegación.',
+    basis: 'Esta área se relaciona con la transparencia sobre la recopilación y el uso de información asociada a las personas.',
+  },
+  Contacto: {
+    what: 'Si el sitio ofrece medios públicos que permitan comunicarse con el negocio.',
+    why: 'Un canal de contacto facilita que las personas puedan realizar consultas y solicitudes relacionadas con sus datos personales.',
+    basis: 'Esta área se relaciona con la posibilidad de ejercer derechos y comunicarse con quien trata los datos personales.',
+  },
+  Seguridad: {
+    what: 'Señales técnicas de seguridad que pueden observarse públicamente desde el sitio.',
+    why: 'Estas señales ayudan a identificar si la información se transmite bajo condiciones técnicas básicas de protección.',
+    basis: 'Esta área se relaciona con el deber de adoptar medidas apropiadas para proteger los datos personales.',
+  },
+};
 
 const resultLabels = {
   detected: { label: 'Bien', className: 'good' },
@@ -173,7 +203,12 @@ const renderAreasAndControls = (controls) => {
   privacyAreas.forEach((area) => {
     const areaResult = resultLabels[getAreaResult(area, controlsByCode)];
     const areaSummary = appendTextElement(diagnosticAreas, 'article', '', 'privacy-area');
-    appendTextElement(areaSummary, 'h4', area.name);
+    const areaInfoButton = appendTextElement(areaSummary, 'button', '', 'privacy-area__info');
+    areaInfoButton.type = 'button';
+    areaInfoButton.setAttribute('aria-label', `Información sobre el área ${area.name}`);
+    appendTextElement(areaInfoButton, 'span', area.name);
+    appendTextElement(areaInfoButton, 'span', 'ⓘ', 'privacy-area__info-icon').setAttribute('aria-hidden', 'true');
+    areaInfoButton.addEventListener('click', () => openAreaInfo(area.name, areaInfoButton));
     appendTextElement(areaSummary, 'p', areaResult.label, `privacy-state privacy-state--${areaResult.className}`);
 
     const areaDetail = appendTextElement(diagnosticControls, 'section', '', 'privacy-control-area');
@@ -322,6 +357,23 @@ const getFocusableElements = () => {
   return Array.from(modalPanel.querySelectorAll(focusableSelector)).filter((element) => !element.disabled && !element.hidden);
 };
 
+const appendModalBlock = (title, text) => {
+  const block = appendTextElement(modalContent, 'div', '', 'privacy-modal__block');
+  appendTextElement(block, 'h3', title);
+  appendTextElement(block, 'p', text);
+};
+
+const renderHowItWorks = () => {
+  modalTitle.textContent = '¿Cómo funciona el diagnóstico?';
+  modalContent.replaceChildren();
+  appendModalBlock('Analizamos', 'Información pública y visible del sitio web, como formularios, cookies, políticas de privacidad y textos relacionados con el tratamiento de datos personales.');
+  appendModalBlock('No analizamos', 'Bases de datos, sistemas internos, archivos privados ni información protegida por autenticación.');
+  appendModalBlock('Resultado', 'Privacy Score, señales detectadas y acciones iniciales recomendadas.');
+  appendTextElement(modalContent, 'p', 'Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales.', 'privacy-modal__highlight');
+  const disclaimer = appendTextElement(modalContent, 'p', '');
+  appendTextElement(disclaimer, 'strong', 'No constituye una certificación legal ni una auditoría completa.');
+};
+
 const openModal = (trigger) => {
   if (!modal || !modalPanel) {
     return;
@@ -331,6 +383,20 @@ const openModal = (trigger) => {
   modal.hidden = false;
   document.body.classList.add('privacy-modal-open');
   modalPanel.focus();
+};
+
+const openAreaInfo = (areaName, trigger) => {
+  const info = AREA_INFO[areaName];
+  if (!info) {
+    return;
+  }
+
+  modalTitle.textContent = areaName;
+  modalContent.replaceChildren();
+  appendModalBlock('Qué revisamos', info.what);
+  appendModalBlock('Por qué importa', info.why);
+  appendModalBlock('Fundamento normativo', info.basis);
+  openModal(trigger);
 };
 
 const closeModal = () => {
@@ -346,8 +412,9 @@ const closeModal = () => {
   }
 };
 
-const handleModalTrigger = (event) => {
+const handleHelpModalTrigger = (event) => {
   event.preventDefault();
+  renderHowItWorks();
   openModal(event.currentTarget);
 };
 
@@ -526,7 +593,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 [helpLink, headerHelpLink].forEach((trigger) => {
-  trigger?.addEventListener('click', handleModalTrigger);
+  trigger?.addEventListener('click', handleHelpModalTrigger);
 });
 
 modalCloseButtons.forEach((button) => {

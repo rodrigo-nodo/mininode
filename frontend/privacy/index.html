@@ -6,10 +6,10 @@
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="styles.css?v=110">
+  <link rel="stylesheet" href="styles.css?v=111">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
-  <script src="app.js?v=110" defer></script>
+  <script src="app.js?v=111" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
@@ -194,24 +194,7 @@
   <section class="privacy-modal__panel" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" tabindex="-1">
     <button class="privacy-modal__close" type="button" aria-label="Cerrar" data-modal-close>×</button>
     <h2 id="privacy-modal-title">¿Cómo funciona el diagnóstico?</h2>
-
-    <div class="privacy-modal__block">
-      <h3>Analizamos</h3>
-      <p>Información pública y visible del sitio web, como formularios, cookies, políticas de privacidad y textos relacionados con el tratamiento de datos personales.</p>
-    </div>
-
-    <div class="privacy-modal__block">
-      <h3>No analizamos</h3>
-      <p>Bases de datos, sistemas internos, archivos privados ni información protegida por autenticación.</p>
-    </div>
-
-    <div class="privacy-modal__block">
-      <h3>Resultado</h3>
-      <p>Privacy Score, señales detectadas y acciones iniciales recomendadas.</p>
-    </div>
-
-    <p class="privacy-modal__highlight">Privacy Score es un indicador desarrollado por Mininode que estima el nivel de preparación de un sitio web a partir de señales públicas, documentación visible y buenas prácticas relacionadas con la protección de datos personales.</p>
-    <p><strong>No constituye una certificación legal ni una auditoría completa.</strong></p>
+    <div id="privacy-modal-content"></div>
   </section>
 </div>
 
