@@ -52,9 +52,9 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         for asset in (
             '/styles.css',
             '/privacy/plan-demo/styles.css?v=1',
-            '/privacy/plan-assets/styles.css?v=3',
+            '/privacy/plan-assets/styles.css?v=4',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=4',
+            '/privacy/plan-assets/app.js?v=5',
         ):
             self.assertIn(asset, HTML)
 
@@ -148,7 +148,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=4"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=5"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -187,6 +187,35 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         expired_branch = APP[APP.index("if (check.status === 'expired')"):APP.index("elements.checkStart.hidden = false")]
         self.assertIn("El plazo de 90 días", expired_branch)
         self.assertNotIn("checkStart.hidden = false", expired_branch)
+
+    def test_continuous_monitoring_is_only_revealed_for_used_check(self):
+        self.assertIn('id="continuous-monitoring"', HTML)
+        self.assertIn('aria-labelledby="continuous-monitoring-title" hidden', HTML)
+        self.assertIn("elements.continuousMonitoring.hidden = check.status !== 'used'", APP)
+        self.assertIn("if (check.status === 'used') { renderCheckResult(check); return; }", APP)
+
+        available_and_expired_branch = APP[APP.index("const renderCheck = (check)"):APP.index("elements.checkStart.hidden = false")]
+        self.assertNotIn("continuousMonitoring.hidden = false", available_and_expired_branch)
+
+    def test_continuous_monitoring_uses_roadmap_copy_without_cta_or_price(self):
+        monitoring = HTML[HTML.index('<section class="continuous-monitoring"'):HTML.index('</section>', HTML.index('<section class="continuous-monitoring"'))]
+        self.assertIn("Próximamente", monitoring)
+        self.assertIn("Seguimiento continuo", monitoring)
+        self.assertIn("Mininode podrá revisar periódicamente el sitio y avisar si aparecen nuevas señales o si alguna mejora vuelve a quedar pendiente.", monitoring)
+        self.assertNotIn("<button", monitoring)
+        self.assertNotIn("<a ", monitoring)
+        self.assertNotIn("$", monitoring)
+
+    def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
+        self.assertEqual(APP.count("fetch("), 2)
+        for assignment in (
+            "elements.checkBefore.textContent = `${result.original_score} / 100`",
+            "elements.checkNow.textContent = `${result.current_score} / 100`",
+            "elements.checkCorrected.textContent = result.corrected_count",
+            "elements.checkPending.textContent = result.pending_count",
+            "elements.checkCreated.textContent = friendlyDate(check.created_at)",
+        ):
+            self.assertIn(assignment, APP)
 
 
 if __name__ == "__main__":

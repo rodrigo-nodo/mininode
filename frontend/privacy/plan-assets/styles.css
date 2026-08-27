@@ -24,6 +24,10 @@
 #check-items small { color: var(--muted); display: block; margin-top: 2px; }
 .check-item__icon--corrected { color: var(--primary-dark); }
 .check-item__icon--pending { color: #8a6a19; }
+.continuous-monitoring { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: -12px 0 36px; padding: clamp(20px, 4vw, 28px); }
+.continuous-monitoring__badge { color: var(--primary-dark); font-size: .72rem; font-weight: 800; letter-spacing: .09em; margin: 0 0 10px; text-transform: uppercase; }
+.continuous-monitoring h2 { font-size: clamp(1.2rem, 3vw, 1.45rem); margin: 0 0 8px; }
+.continuous-monitoring > p:last-child { color: var(--muted); line-height: 1.6; margin: 0; max-width: 680px; }
 
 @media (max-width: 520px) {
   .check-scores, .check-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
