@@ -996,6 +996,12 @@ def test_prv013_classifies_contextual_complaints(text, signal, result):
     ("Tratamos sus datos con su consentimiento para responder consultas.", True, "none", "not_detected"),
     ("Esta política menciona el consentimiento.", False, "none", "not_applicable"),
     ("Consentimiento de cookies. Acepto los términos.", False, "none", "not_applicable"),
+    ("Gestionar preferencias de cookies. Checkbox de consentimiento.", False, "none", "not_applicable"),
+    ("Consentimiento para recibir promociones.", False, "none", "not_applicable"),
+    ("El usuario presta su consentimiento para el tratamiento de sus datos personales.", True, "none", "not_detected"),
+    ("Solicitamos su consentimiento para tratar sus datos personales.", True, "none", "not_detected"),
+    ("We obtain your consent for the processing of your personal data.", True, "none", "not_detected"),
+    ("You consent to the processing of your personal data.", True, "none", "not_detected"),
 ])
 def test_prv014_requires_declared_consent_basis(text, basis, signal, result):
     adapted = _adapt_selected_policy(text)
@@ -1005,6 +1011,52 @@ def test_prv014_requires_declared_consent_basis(text, basis, signal, result):
     assert evidence["consent_withdrawal"] == signal
     assert evidence["source_urls"] == ["https://example.com/privacy"]
     assert evaluated["result"] == result
+
+
+def test_prv014_detects_emol_style_consent_basis_and_revocation():
+    adapted = _adapt_selected_policy(
+        "El usuario otorga su consentimiento para el tratamiento de sus datos "
+        "personales. La autorización otorgada podrá ser revocada."
+    )
+    evidence = adapted["PRV-014"]
+
+    assert evidence["consent_basis_declared"] is True
+    assert evidence["consent_withdrawal"] == "explicit"
+    assert evaluate_control(
+        "PRV-014", evidence, {"PRV-003": "detected"}
+    )["result"] == "detected"
+
+
+def test_prv014_treats_preference_management_as_ambiguous_with_declared_basis():
+    adapted = _adapt_selected_policy(
+        "El usuario otorga su consentimiento para el tratamiento de sus datos "
+        "personales y puede gestionar sus preferencias."
+    )
+    evidence = adapted["PRV-014"]
+
+    assert evidence["consent_basis_declared"] is True
+    assert evidence["consent_withdrawal"] == "generic"
+    assert evaluate_control(
+        "PRV-014", evidence, {"PRV-003": "detected"}
+    )["result"] == "partial"
+
+
+@pytest.mark.parametrize("withdrawal", [
+    "Puede revocar la autorización.",
+    "Puede retirar la autorización.",
+    "La autorización puede ser revocada.",
+])
+def test_prv014_recognizes_authorization_withdrawal_phrasing(withdrawal):
+    adapted = _adapt_selected_policy(
+        f"Otorga su consentimiento para el tratamiento de datos personales. {withdrawal}"
+    )
+    evidence = adapted["PRV-014"]
+
+    assert evidence["consent_basis_declared"] is True
+    assert evidence["consent_withdrawal"] == "explicit"
+    assert evaluate_control(
+        "PRV-014", evidence, {"PRV-003": "detected"}
+    )["result"] == "detected"
 
 
 def test_new_controls_use_only_prv003_selected_policy_and_ignore_forms_and_other_pages():

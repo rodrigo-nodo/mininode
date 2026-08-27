@@ -266,11 +266,15 @@ _PRIVACY_COMPLAINT_CONTEXT_TERMS = (
 _CONSENT_BASIS_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\b(?:tratamiento|tratamientos|tratar|trataremos|tratamos|procesamiento|procesar|procesamos)\b.{0,80}\b(?:se bas(?:e|a) en|basad[oa]s? en|fundad[oa]s? en|conforme a|con) (?:su |el )?consentimiento\b",
     r"\bconsentimiento\b.{0,60}\b(?:base|fundamento)\b(?:.{0,50}\b(?:tratamiento|procesamiento|datos)\b)?",
+    r"\bconsentimiento\b.{0,40}\b(?:para el|respecto del|en relacion con el) (?:tratamiento|procesamiento)\b(?:.{0,40}\bdatos(?: personales)?\b)?",
+    r"\bconsentimiento\b.{0,40}\bpara (?:tratar|procesar)\b.{0,30}\b(?:sus )?datos(?: personales)?\b",
+    r"\bautorizacion\b.{0,40}\bpara el (?:tratamiento|procesamiento)\b.{0,40}\bdatos(?: personales)?\b",
     r"\b(?:processing|process|personal data|data)\b.{0,80}\bbased on (?:your )?consent\b",
     r"\bconsent\b.{0,60}\b(?:basis|legal basis|basis for processing)\b",
+    r"\bconsent\b.{0,30}\b(?:for|to) (?:the )?(?:processing|process)\b.{0,40}\b(?:your )?(?:personal )?data\b",
 ))
 _CONSENT_WITHDRAWAL_PATTERNS = tuple(re.compile(pattern) for pattern in (
-    r"\b(?:retirar|retire|retira|revocar|revoque|revoca)\b.{0,35}\b(?:su |el )?(?:consentimiento|autorizacion)\b",
+    r"\b(?:retirar|retire|retira|revocar|revoque|revoca)\b.{0,35}\b(?:su |el |la )?(?:consentimiento|autorizacion)\b",
     r"\b(?:consentimiento|autorizacion)\b.{0,35}\b(?:puede ser |podra ser )?(?:retirad[oa]|revocad[oa])\b",
     r"\b(?:withdraw|revoke)\b.{0,25}\b(?:your )?consent\b",
     r"\bwithdrawal of (?:your )?consent\b",
