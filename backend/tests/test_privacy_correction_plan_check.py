@@ -76,3 +76,21 @@ def test_context_uses_joined_diagnostic_site_not_caller_input():
     assert context.site_url == "https://stored.example"
     assert "JOIN privacy.diagnostic" in cursor.statement
     assert "d.site_url" in cursor.statement
+
+
+def test_new_transparency_controls_use_generic_corrected_comparison():
+    plan = {"items": [
+        {"control_code": "PRV-013", "name": "Reclamo ante la Agencia"},
+        {"control_code": "PRV-014", "name": "Retiro del consentimiento"},
+    ]}
+    original = {"score": 40, "controls": [
+        {"control_code": "PRV-013", "result": "not_detected"},
+        {"control_code": "PRV-014", "result": "partial"},
+    ]}
+    current = {"score": 70, "controls": [
+        {"control_code": "PRV-013", "result": "detected"},
+        {"control_code": "PRV-014", "result": "detected"},
+    ]}
+    result = service.compare_diagnostics(plan, original, current)
+    assert result["corrected_count"] == 2
+    assert [item["status"] for item in result["items"]] == ["corrected", "corrected"]

@@ -282,6 +282,54 @@
       }
     },
     {
+      "code": "PRV-013",
+      "domain": "Transparencia",
+      "name": "Reclamo ante la Agencia",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; distingue la posibilidad observable de reclamar ante una autoridad de los derechos sustantivos del titular.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial.",
+      "expected_evidence": [
+        "referencia contextual a una reclamación o recurso ante la autoridad de protección de datos en el documento seleccionado por PRV-003",
+        "relación observable con privacidad, datos personales o derechos del titular",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Incorporar en la política información clara sobre la posibilidad de reclamar ante la Agencia de Protección de Datos Personales o la autoridad competente cuando corresponda.",
+      "criteria": {
+        "detected": "La política seleccionada informa de forma clara y reconocible la posibilidad de reclamar, recurrir o presentar una reclamación ante la Agencia o una autoridad de protección de datos.",
+        "partial": "La política seleccionada contiene una referencia observable a una reclamación o recurso y a una autoridad, pero la autoridad o su relación con protección de datos resulta genérica o ambigua.",
+        "not_detected": "La política seleccionada es evaluable, pero no contiene una referencia observable a la posibilidad de reclamar o recurrir ante una autoridad de protección de datos.",
+        "not_applicable": "PRV-003 = not_detected.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
+      "code": "PRV-014",
+      "domain": "Transparencia",
+      "name": "Retiro del consentimiento",
+      "impact": "alto",
+      "automatable": "parcial",
+      "type": "conditional_evaluation",
+      "type_justification": "Solo puntúa cuando la política seleccionada por PRV-003 declara claramente al menos un tratamiento basado en consentimiento.",
+      "dependency": "PRV-003",
+      "applicability": "Aplica cuando PRV-003 = detected o partial y la política declara claramente un tratamiento basado en consentimiento.",
+      "expected_evidence": [
+        "declaración contextual de un tratamiento basado en consentimiento en el documento seleccionado por PRV-003",
+        "referencia al retiro o revocación de ese consentimiento",
+        "URL del documento seleccionado por PRV-003"
+      ],
+      "base_recommendation": "Cuando la política declare tratamientos basados en consentimiento, informar de forma clara la posibilidad de retirarlo o revocarlo.",
+      "criteria": {
+        "detected": "La política declara un tratamiento basado en consentimiento e informa claramente que este puede retirarse o revocarse.",
+        "partial": "La política declara un tratamiento basado en consentimiento y contiene una referencia a su retiro, revocación o modificación, pero su alcance o relación con el tratamiento resulta genérica o ambigua.",
+        "not_detected": "La política declara claramente un tratamiento basado en consentimiento, pero no informa de forma observable sobre su retiro o revocación.",
+        "not_applicable": "PRV-003 = not_detected o la política evaluable no declara claramente un tratamiento basado en consentimiento.",
+        "not_evaluable": "PRV-003 = not_evaluable o el documento seleccionado no está disponible entre las páginas inspeccionadas."
+      }
+    },
+    {
       "code": "PRV-101",
       "domain": "Formularios",
       "name": "Formularios que recopilan datos personales",

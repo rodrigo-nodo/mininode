@@ -56,6 +56,8 @@ const privacyAreas = [
       { code: 'PRV-010', name: 'Destinatarios o terceros' },
       { code: 'PRV-011', name: 'Derechos de las personas' },
       { code: 'PRV-012', name: 'Conservación de datos' },
+      { code: 'PRV-013', name: 'Reclamo ante la Agencia' },
+      { code: 'PRV-014', name: 'Retiro del consentimiento' },
     ],
   },
   {

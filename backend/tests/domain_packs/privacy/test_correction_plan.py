@@ -91,3 +91,13 @@ def test_plan_engine_has_no_external_or_ai_integration():
         sys.modules["mininode_api.domain_packs.privacy.correction_plan"]
     ).lower()
     assert all(term not in source for term in ("httpx", "requests", "openai", "llm"))
+
+
+def test_new_actionable_controls_flow_through_generic_plan_engine():
+    plan = build_correction_plan([
+        finding("PRV-013", "not_detected"),
+        finding("PRV-014", "partial"),
+        finding("PRV-014", "not_applicable"),
+    ], initial_score=50)
+    assert [item["control_code"] for item in plan["items"]] == ["PRV-013", "PRV-014"]
+    assert all(item["action_steps"] and item["validation_step"] for item in plan["items"])

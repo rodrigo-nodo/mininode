@@ -963,3 +963,71 @@ def test_prv004_uses_only_policy_selected_after_hcaptcha(provider_text, own_text
     result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": prv003})
     assert result["result"] == expected
     assert adapted["PRV-004"]["source_urls"] == [own_url]
+
+
+def _adapt_selected_policy(text, *, other_text=None, forms=None):
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    pages = [PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=text)]
+    if other_text is not None:
+        pages.append(PageEvidence("https://example.com/otra", 200, "Otra", "text/html", visible_text=other_text))
+    return adapt_evidence(contract(links=[link], pages=pages, forms=forms or []))
+
+
+@pytest.mark.parametrize(("text", "signal", "result"), [
+    ("Puede presentar una reclamación ante la Agencia de Protección de Datos Personales.", "explicit", "detected"),
+    ("You may lodge a complaint with the data protection authority.", "explicit", "detected"),
+    ("En relación con sus datos personales, puede reclamar ante la autoridad competente.", "generic", "partial"),
+    ("Esta política explica el tratamiento de datos personales.", "none", "not_detected"),
+    ("Agencia de marketing. Autoridades tributarias. Autoridad competente para contratos.", "none", "not_detected"),
+])
+def test_prv013_classifies_contextual_complaints(text, signal, result):
+    adapted = _adapt_selected_policy(text)
+    evaluated = evaluate_control("PRV-013", adapted["PRV-013"], {"PRV-003": "detected"})
+    assert adapted["PRV-013"]["agency_complaint"] == signal
+    assert adapted["PRV-013"]["source_urls"] == ["https://example.com/privacy"]
+    assert evaluated["result"] == result
+
+
+@pytest.mark.parametrize(("text", "basis", "signal", "result"), [
+    ("Cuando el tratamiento se base en su consentimiento, podrá retirar su consentimiento.", True, "explicit", "detected"),
+    ("Processing of personal data is based on your consent. You may withdraw your consent.", True, "explicit", "detected"),
+    ("Tratamos sus datos con su consentimiento. Puede modificar sus preferencias de consentimiento.", True, "generic", "partial"),
+    ("Tratamos sus datos con su consentimiento para responder consultas.", True, "none", "not_detected"),
+    ("Esta política menciona el consentimiento.", False, "none", "not_applicable"),
+    ("Consentimiento de cookies. Acepto los términos.", False, "none", "not_applicable"),
+])
+def test_prv014_requires_declared_consent_basis(text, basis, signal, result):
+    adapted = _adapt_selected_policy(text)
+    evidence = adapted["PRV-014"]
+    evaluated = evaluate_control("PRV-014", evidence, {"PRV-003": "detected"})
+    assert evidence["consent_basis_declared"] is basis
+    assert evidence["consent_withdrawal"] == signal
+    assert evidence["source_urls"] == ["https://example.com/privacy"]
+    assert evaluated["result"] == result
+
+
+def test_new_controls_use_only_prv003_selected_policy_and_ignore_forms_and_other_pages():
+    noisy_form = form(
+        nearby_text="Acepto los términos y retiro mi consentimiento",
+        checkboxes=[CheckboxEvidence("consent", "Acepto")],
+    )
+    adapted = _adapt_selected_policy(
+        "Esta política explica cómo usamos datos personales.",
+        other_text=("Puede reclamar ante la Agencia de Protección de Datos Personales. "
+                    "El tratamiento se basa en consentimiento y puede retirarlo."),
+        forms=[noisy_form],
+    )
+    assert adapted["PRV-013"]["agency_complaint"] == "none"
+    assert adapted["PRV-014"]["consent_basis_declared"] is False
+    assert adapted["PRV-013"]["source_urls"] == ["https://example.com/privacy"]
+    assert adapted["PRV-014"]["source_urls"] == ["https://example.com/privacy"]
+
+
+def test_new_control_dependency_and_technical_states_are_explicit():
+    complaint = {"agency_complaint": "none"}
+    withdrawal = {"consent_basis_declared": True, "consent_withdrawal": "none"}
+    for code, evidence in (("PRV-013", complaint), ("PRV-014", withdrawal)):
+        assert evaluate_control(code, evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
+        assert evaluate_control(code, evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
+        assert evaluate_control(code, {**evidence, "technical_error": True}, {"PRV-003": "detected"})["result"] == "not_evaluable"
