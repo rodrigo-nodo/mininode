@@ -6,13 +6,44 @@ from pathlib import Path
 
 
 PRIVACY_DIR = Path(__file__).parent
+FRONTEND_DIR = PRIVACY_DIR.parent
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
 DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
 HOME_HTML = (PRIVACY_DIR.parent / "index.html").read_text(encoding="utf-8")
+REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_obsolete_complete_diagnosis_offer_is_removed(self):
+        obsolete_dir = PRIVACY_DIR / "diagnostico-completo"
+        self.assertFalse((obsolete_dir / "index.html").exists())
+        self.assertFalse((obsolete_dir / "styles.css").exists())
+
+        productive_files = [
+            path for path in FRONTEND_DIR.rglob("*")
+            if path.is_file() and path.suffix in {".html", ".js", ".css"}
+        ]
+        productive_content = "\n".join(
+            path.read_text(encoding="utf-8", errors="ignore")
+            for path in productive_files
+        )
+        self.assertNotIn("/privacy/diagnostico-completo/", productive_content)
+        self.assertNotIn("$39.900", productive_content)
+        self.assertIn("$49.900", HTML)
+        self.assertTrue((PRIVACY_DIR / "index.html").is_file())
+        self.assertTrue((PRIVACY_DIR / "plan" / "index.html").is_file())
+
+        rules = [line.split() for line in REDIRECTS.splitlines() if line.strip()]
+        obsolete_redirect = [
+            "/privacy/diagnostico-completo/", "/privacy/", "301"
+        ]
+        plan_rewrite = ["/privacy/plan/:token", "/privacy/plan/", "200"]
+        self.assertIn(obsolete_redirect, rules)
+        self.assertIn(plan_rewrite, rules)
+        self.assertLess(rules.index(obsolete_redirect), rules.index(plan_rewrite))
+        self.assertTrue((FRONTEND_DIR / "functions" / "api" / "[[path]].js").is_file())
+
     def test_human_status_uses_backend_score_boundaries(self):
         function = re.search(
             r"const getHumanStatus = \(score\) => \{.*?\n\};",
