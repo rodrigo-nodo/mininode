@@ -347,14 +347,44 @@
   padding: 13px;
 }
 
-.privacy-area h4,
+.privacy-area__info,
 .privacy-area p {
   margin: 0;
 }
 
-.privacy-area h4 {
+.privacy-area__info {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
   font-size: .92rem;
+  gap: 5px;
+  margin: -8px;
+  min-height: 40px;
   overflow-wrap: anywhere;
+  padding: 8px;
+  text-align: left;
+}
+
+.privacy-area__info:hover span:first-child {
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+.privacy-area__info:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.privacy-area__info-icon {
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 500;
 }
 
 .privacy-area .privacy-state {
