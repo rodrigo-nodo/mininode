@@ -77,7 +77,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertEqual(area_info.count("basis:"), 5)
         self.assertIn("appendModalBlock('Qué revisamos', info.what)", APP)
         self.assertIn("appendModalBlock('Por qué importa', info.why)", APP)
-        self.assertIn("appendModalBlock('Fundamento normativo', info.basis)", APP)
+        self.assertIn("appendModalBlock('Fundamento normativo', info.basis, 'secondary')", APP)
         self.assertIn("appendTextElement(areaSummary, 'button'", APP)
         self.assertIn("Información sobre el área ${area.name}", APP)
         self.assertIn("areaInfoButton.type = 'button'", APP)
@@ -223,7 +223,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=111" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=112" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

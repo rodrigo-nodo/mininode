@@ -108,9 +108,12 @@ assert.deepEqual(
   elements.get('privacy-modal-content').children.map((block) => block.children[0].textContent),
   ['Qué revisamos', 'Por qué importa', 'Fundamento normativo'],
 );
+assert.equal(elements.get('privacy-modal-content').children[2].className, 'privacy-modal__block privacy-modal__block--secondary');
 areaButtons[1].trigger('click');
 assert.equal(elements.get('privacy-modal-title').textContent, 'Formularios');
 assert.match(elements.get('privacy-modal-content').children[0].children[1].textContent, /formularios/);
+elements.get('how-it-works').trigger('click');
+assert.equal(elements.get('privacy-modal-content').children.every((block) => !block.className.includes('--secondary')), true);
 modalCloseButton.trigger('click');
 assert.equal(elements.get('privacy-modal').hidden, true);
 areaButtons[2].trigger('click');
