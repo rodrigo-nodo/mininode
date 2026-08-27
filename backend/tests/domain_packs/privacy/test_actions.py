@@ -29,6 +29,8 @@ EXPECTED_ACTIONS = {
     "PRV-010": {"partial", "not_detected"},
     "PRV-011": {"partial", "not_detected"},
     "PRV-012": {"partial", "not_detected"},
+    "PRV-013": {"partial", "not_detected"},
+    "PRV-014": {"partial", "not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
@@ -107,6 +109,14 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
         "PRV-012": [
             ({"data_retention": "generic"}, {"PRV-003": "detected"}),
             ({"data_retention": "none"}, {"PRV-003": "detected"}),
+        ],
+        "PRV-013": [
+            ({"agency_complaint": "generic"}, {"PRV-003": "detected"}),
+            ({"agency_complaint": "none"}, {"PRV-003": "detected"}),
+        ],
+        "PRV-014": [
+            ({"consent_basis_declared": True, "consent_withdrawal": "generic"}, {"PRV-003": "detected"}),
+            ({"consent_basis_declared": True, "consent_withdrawal": "none"}, {"PRV-003": "detected"}),
         ],
         "PRV-104": [
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),

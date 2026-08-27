@@ -66,6 +66,7 @@ globalThis.isValidDiagnosticResponseForTest = isValidDiagnosticResponse;`, conte
 const codes = [
   'PRV-001', 'PRV-002', 'PRV-003', 'PRV-004', 'PRV-005', 'PRV-006',
   'PRV-007', 'PRV-008', 'PRV-009', 'PRV-010', 'PRV-011', 'PRV-012',
+  'PRV-013', 'PRV-014',
   'PRV-101', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
 ];
 const controls = codes.map((control_code, index) => ({
@@ -123,7 +124,7 @@ assert.match(html, /Ver qué revisamos/);
 assert.equal(elements.get('diagnostic-controls').children.length, 5);
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  17,
+  19,
 );
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
@@ -146,7 +147,7 @@ assert.doesNotThrow(() => context.renderDiagnosticForTest({
 }, 'https://example.com'));
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  17,
+  19,
 );
 const transparencyItems = elements.get('diagnostic-controls').children[0].children[1].children;
 assert.equal(transparencyItems[1].children[1].children[0].textContent, 'No pudimos revisarlo');

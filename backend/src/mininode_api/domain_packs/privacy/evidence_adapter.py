@@ -23,6 +23,8 @@ CONTROL_CODES = (
     "PRV-010",
     "PRV-011",
     "PRV-012",
+    "PRV-013",
+    "PRV-014",
     "PRV-101",
     "PRV-104",
     "PRV-201",
@@ -246,6 +248,37 @@ _RETENTION_CRITERIA_PATTERNS = tuple(
         r"\b(?:cuando|when)\b.{0,60}\b(?:dejen? de ser|no longer)\b.{0,30}\b(?:necesari[oa]s?|necessary|needed)\b",
     )
 )
+_COMPLAINT_TERMS = (
+    "reclamar", "reclamo", "reclamacion", "recurrir", "complaint",
+    "lodge a complaint", "file a complaint",
+)
+_DATA_PROTECTION_AUTHORITY_TERMS = (
+    "agencia de proteccion de datos personales", "agencia de proteccion de datos",
+    "autoridad de proteccion de datos", "data protection authority",
+    "supervisory authority",
+)
+_GENERIC_AUTHORITY_TERMS = ("agencia", "autoridad competente", "authority")
+_PRIVACY_COMPLAINT_CONTEXT_TERMS = (
+    "privacidad", "privacy", "datos personales", "personal data",
+    "proteccion de datos", "data protection", "derechos del titular",
+    "data subject rights",
+)
+_CONSENT_BASIS_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    r"\b(?:tratamiento|tratamientos|tratar|trataremos|tratamos|procesamiento|procesar|procesamos)\b.{0,80}\b(?:se bas(?:e|a) en|basad[oa]s? en|fundad[oa]s? en|conforme a|con) (?:su |el )?consentimiento\b",
+    r"\bconsentimiento\b.{0,60}\b(?:base|fundamento)\b(?:.{0,50}\b(?:tratamiento|procesamiento|datos)\b)?",
+    r"\b(?:processing|process|personal data|data)\b.{0,80}\bbased on (?:your )?consent\b",
+    r"\bconsent\b.{0,60}\b(?:basis|legal basis|basis for processing)\b",
+))
+_CONSENT_WITHDRAWAL_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    r"\b(?:retirar|retire|retira|revocar|revoque|revoca)\b.{0,35}\b(?:su |el )?(?:consentimiento|autorizacion)\b",
+    r"\b(?:consentimiento|autorizacion)\b.{0,35}\b(?:puede ser |podra ser )?(?:retirad[oa]|revocad[oa])\b",
+    r"\b(?:withdraw|revoke)\b.{0,25}\b(?:your )?consent\b",
+    r"\bwithdrawal of (?:your )?consent\b",
+))
+_AMBIGUOUS_CONSENT_CHANGE_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    r"\b(?:modificar|cambiar|gestionar)\b.{0,35}\b(?:consentimiento|preferencias)\b",
+    r"\b(?:modify|change|manage)\b.{0,35}\b(?:consent|preferences)\b",
+))
 
 
 def _normalize(value: str) -> str:
@@ -950,6 +983,111 @@ def _data_retention(contract: EvidenceContract, attribution: dict) -> dict:
     return {**evidence, "data_retention": retention, "confidence": confidence}
 
 
+def _selected_policy_segments(
+    contract: EvidenceContract, attribution: dict, evidence_key: str
+) -> tuple[dict, list[str] | None]:
+    """Return normalized segments from PRV-003's selected inspected policy."""
+
+    source_urls = (
+        attribution.get("source_urls") or []
+        if attribution.get("policy_attribution") in {"own", "ambiguous"}
+        else []
+    )
+    if not source_urls:
+        return {evidence_key: "none", "confidence": "high"}, []
+    selected_url = source_urls[0]
+    selected_page = next(
+        (
+            page for page in contract.pages
+            if any(
+                observed and _public_source_url(observed) == selected_url
+                for observed in (page.url, page.requested_url)
+            )
+        ),
+        None,
+    )
+    evidence = {"source_urls": [selected_url]}
+    if selected_page is None:
+        return {
+            **evidence, evidence_key: "unknown", "technical_error": True,
+            "confidence": "low",
+        }, None
+    segments = [
+        _normalize(segment)
+        for segment in re.split(
+            r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or ""
+        )
+        if segment.strip()
+    ]
+    return evidence, segments
+
+
+def _agency_complaint(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify complaint-to-authority language only in the selected policy."""
+
+    evidence, segments = _selected_policy_segments(
+        contract, attribution, "agency_complaint"
+    )
+    if segments is None or not segments:
+        return evidence
+    complaint_segments = [
+        segment for segment in segments
+        if _contains_phrase(segment, _COMPLAINT_TERMS)
+    ]
+    if any(
+        _contains_phrase(segment, _DATA_PROTECTION_AUTHORITY_TERMS)
+        for segment in complaint_segments
+    ):
+        value, confidence = "explicit", "high"
+    elif any(
+        _contains_phrase(segment, _GENERIC_AUTHORITY_TERMS)
+        and _contains_phrase(segment, _PRIVACY_COMPLAINT_CONTEXT_TERMS)
+        for segment in complaint_segments
+    ):
+        value, confidence = "generic", "medium"
+    else:
+        value, confidence = "none", "high"
+    return {**evidence, "agency_complaint": value, "confidence": confidence}
+
+
+def _consent_withdrawal(contract: EvidenceContract, attribution: dict) -> dict:
+    """Classify consent basis/applicability and withdrawal in the selected policy."""
+
+    evidence, segments = _selected_policy_segments(
+        contract, attribution, "consent_withdrawal"
+    )
+    if segments is None or not segments:
+        return evidence
+    consent_basis_declared = any(
+        pattern.search(segment)
+        for segment in segments
+        for pattern in _CONSENT_BASIS_PATTERNS
+    )
+    if not consent_basis_declared:
+        return {
+            **evidence, "consent_basis_declared": False,
+            "consent_withdrawal": "none", "confidence": "high",
+        }
+    if any(
+        pattern.search(segment)
+        for segment in segments
+        for pattern in _CONSENT_WITHDRAWAL_PATTERNS
+    ):
+        value, confidence = "explicit", "high"
+    elif any(
+        pattern.search(segment)
+        for segment in segments
+        for pattern in _AMBIGUOUS_CONSENT_CHANGE_PATTERNS
+    ):
+        value, confidence = "generic", "medium"
+    else:
+        value, confidence = "none", "high"
+    return {
+        **evidence, "consent_basis_declared": True,
+        "consent_withdrawal": value, "confidence": confidence,
+    }
+
+
 def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     for field in form.fields:
         field_type = _normalize(field.type)
@@ -1052,6 +1190,8 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv010 = _data_recipients(contract, prv003)
     prv011 = _data_subject_rights(contract, prv003)
     prv012 = _data_retention(contract, prv003)
+    prv013 = _agency_complaint(contract, prv003)
+    prv014 = _consent_withdrawal(contract, prv003)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(
@@ -1160,6 +1300,8 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-010": prv010,
         "PRV-011": prv011,
         "PRV-012": prv012,
+        "PRV-013": prv013,
+        "PRV-014": prv014,
         "PRV-101": prv101,
         "PRV-104": prv104,
         "PRV-201": prv201,

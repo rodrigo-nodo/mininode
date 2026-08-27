@@ -81,15 +81,15 @@ class PrivacyResultStaticTests(unittest.TestCase):
         config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
         codes = re.findall(r"code: '(PRV-\d+)'", config)
 
-        self.assertEqual(len(codes), 17)
-        self.assertEqual(len(set(codes)), 17)
+        self.assertEqual(len(codes), 19)
+        self.assertEqual(len(set(codes)), 19)
         self.assertEqual(config.count("name: 'Transparencia'"), 1)
         self.assertEqual(config.count("name: 'Formularios'"), 1)
         self.assertEqual(config.count("name: 'Cookies'"), 1)
         self.assertEqual(config.count("name: 'Contacto'"), 1)
         self.assertEqual(config.count("name: 'Seguridad'"), 1)
-        self.assertEqual(config.count("name: '") - 17, 5)
-        self.assertEqual(len(re.findall(r"PRV-0\d\d", config)), 12)
+        self.assertEqual(config.count("name: '") - 19, 5)
+        self.assertEqual(len(re.findall(r"PRV-0\d\d", config)), 14)
         self.assertEqual(len(re.findall(r"PRV-10[14]", config)), 2)
         self.assertEqual(config.count("PRV-201"), 1)
         self.assertEqual(config.count("PRV-301"), 1)
@@ -134,7 +134,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("PRV-", HTML)
         self.assertNotIn("diagnostic-coverage", HTML)
         self.assertIn("Ver qué revisamos", HTML)
-        self.assertIn("17 puntos en 5 áreas", HTML)
+        self.assertIn("19 puntos en 5 áreas", HTML)
 
     def test_priorities_and_commercial_paths_are_preserved(self):
         self.assertIn(".slice(0, 3)", APP)

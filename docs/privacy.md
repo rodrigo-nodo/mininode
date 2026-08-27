@@ -145,3 +145,14 @@ Al modificar el fetcher, preservar el comportamiento exitoso de estos casos medi
 4. Pruebas existentes relevantes aprobadas.
 5. Sin archivos no relacionados modificados.
 6. El resumen final indica archivos cambiados, pruebas ejecutadas y cualquier caso pendiente.
+
+PRV-013 evalúa únicamente en la política seleccionada por PRV-003 si se informa
+la posibilidad de reclamar o recurrir ante una autoridad de protección de datos.
+Se mantiene separado de PRV-011: este último describe los derechos del titular,
+mientras PRV-013 observa la vía de reclamación ante la autoridad.
+
+PRV-014 evalúa el retiro o revocación del consentimiento únicamente cuando la
+política seleccionada por PRV-003 declara claramente un tratamiento basado en
+consentimiento. Las menciones aisladas, formularios y señales de cookies no activan
+su aplicabilidad; cuando esa base no se declara, el control es `not_applicable` y no
+participa en el puntaje.

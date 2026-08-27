@@ -184,6 +184,39 @@
         "validation_step": "Abrir la política seleccionada y comprobar que la referencia permite identificar un plazo, evento o criterio temporal de conservación."
       }
     },
+    "PRV-013": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar la política seleccionada.",
+          "Incorporar, cuando corresponda, información clara sobre la posibilidad de reclamar ante la Agencia o una autoridad de protección de datos.",
+          "Relacionar esa información con privacidad, datos personales o derechos del titular."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que puede identificarse claramente la posibilidad de reclamar o recurrir ante la autoridad correspondiente."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica a una reclamación o recurso y a una autoridad.",
+          "Precisar la autoridad y su relación con privacidad, datos personales o derechos del titular."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que puede identificarse claramente la posibilidad de reclamar o recurrir ante la autoridad correspondiente."
+      }
+    },
+    "PRV-014": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar los tratamientos que la política declara basados en consentimiento.",
+          "Informar de forma clara la posibilidad de retirar o revocar ese consentimiento cuando corresponda."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que, en el contexto del tratamiento basado en consentimiento, puede identificarse de forma clara el retiro o la revocación."
+      },
+      "partial": {
+        "action_steps": [
+          "Revisar la referencia genérica al retiro, revocación o modificación del consentimiento.",
+          "Precisar la posibilidad de retiro o revocación en el contexto del tratamiento basado en consentimiento."
+        ],
+        "validation_step": "Abrir la política seleccionada y comprobar que, en el contexto del tratamiento basado en consentimiento, puede identificarse de forma clara el retiro o la revocación."
+      }
+    },
     "PRV-104": {
       "not_detected": {
         "action_steps": [
