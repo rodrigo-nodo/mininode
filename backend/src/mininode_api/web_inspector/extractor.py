@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit
@@ -28,6 +29,9 @@ COOKIE_BANNER_SIGNALS = (
 TECHNICAL_INPUT_TYPES = {"hidden", "submit", "button", "reset", "image"}
 EMAIL_RE = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
 PHONE_RE = re.compile(r"(?<!\w)\+?\d[\d\s().-]{5,}\d(?!\w)")
+CONTENT_TEXT_LIMIT = 12000
+_SUBSTANTIVE_TEXT_LENGTH = 40
+_CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
 
 
 @dataclass
@@ -40,10 +44,38 @@ class PageExtraction:
     banner_detected: bool = False
     preferences_detected: bool = False
     mixed_content: bool = False
+    content_text: str | None = None
 
 
 def _text(tag: Tag) -> str:
     return " ".join(tag.get_text(" ", strip=True).split())
+
+
+def _clean_content_text(soup: BeautifulSoup) -> str:
+    """Return a bounded main-content sample without mutating extraction DOM."""
+
+    mains = soup.find_all("main")
+    candidate = mains[0] if len(mains) == 1 else None
+    if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
+        candidate = next(
+            (
+                article for article in soup.find_all("article")
+                if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
+            ),
+            None,
+        )
+
+    def cleaned_text(root: Tag) -> str:
+        clean_root = deepcopy(root)
+        for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
+            removable.decompose()
+        return _text(clean_root)
+
+    content = cleaned_text(candidate) if isinstance(candidate, Tag) else ""
+    if len(content) < _SUBSTANTIVE_TEXT_LENGTH:
+        fallback = soup.body if isinstance(soup.body, Tag) else soup
+        content = cleaned_text(fallback)
+    return content[:CONTENT_TEXT_LIMIT]
 
 
 def _label(control: Tag, soup: BeautifulSoup) -> str:
@@ -147,12 +179,14 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
     for removable in soup.find_all(["script", "style", "template"]):
         removable.decompose()
     visible_text = _text(soup)
+    content_text = _clean_content_text(soup)
     visible = visible_text.lower()
     return PageExtraction(
         title=title,
         # Bounded document text lets domain packs retain deterministic signals
         # without retaining the complete untrusted document.
         visible_text=visible_text[:4000],
+        content_text=content_text,
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -186,6 +220,7 @@ def build_evidence(
             content_type=page.content_type,
             requested_url=page.requested_url,
             visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)

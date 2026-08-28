@@ -1,4 +1,4 @@
-from mininode_api.web_inspector.extractor import extract_page
+from mininode_api.web_inspector.extractor import CONTENT_TEXT_LIMIT, extract_page
 
 
 def test_extracts_static_page_observations_without_executing_scripts():
@@ -67,3 +67,57 @@ def test_form_uses_only_its_nearest_container_as_context():
     assert "Al enviar este formulario" in form.nearby_text
     assert len(form.nearby_text) <= 500
     assert [link.url for link in form.privacy_links] == ["https://example.com/privacidad"]
+
+
+def test_content_text_prefers_clean_main_without_changing_visible_or_forms():
+    html = """
+    <header>Nombre Apellido Correo</header><nav>Productos Contacto Cookies</nav>
+    <form><label for="email">Correo electrónico</label><input id="email" name="email"></form>
+    <main><h1>Política de Privacidad</h1><p>Tratamos datos personales para prestar nuestros servicios.</p></main>
+    <footer>contacto@example.com Cookies Terceros Seguridad</footer>
+    """
+
+    result = extract_page(html, "https://example.com/privacidad")
+
+    assert "Nombre Apellido Correo" in result.visible_text
+    assert "contacto@example.com" in result.visible_text
+    assert result.forms[0].fields[0].label == "Correo electrónico"
+    assert result.content_text == (
+        "Política de Privacidad Tratamos datos personales para prestar nuestros servicios."
+    )
+
+
+def test_content_text_uses_substantive_article_then_clean_div_fallback():
+    article = extract_page(
+        "<nav>Ruido de navegación</nav><article><h1>Aviso de privacidad</h1>"
+        "<p>Este documento explica cómo tratamos información personal.</p></article>",
+        "https://example.com/legal",
+    )
+    legacy = extract_page(
+        "<body><nav>Menú extenso</nav><div>Política de privacidad que explica el tratamiento "
+        "de datos personales y sus finalidades.</div><footer>Contacto</footer></body>",
+        "https://example.com/legal",
+    )
+
+    assert article.content_text == (
+        "Aviso de privacidad Este documento explica cómo tratamos información personal."
+    )
+    assert "Menú extenso" not in legacy.content_text
+    assert "tratamiento de datos personales" in legacy.content_text
+
+
+def test_content_text_extends_beyond_legacy_visible_text_limit_but_is_bounded():
+    prefix = "Información general sobre nuestra política. " * 120
+    late_signals = (
+        "El tratamiento se basa en su consentimiento. Puede revocar el consentimiento "
+        "en cualquier momento. Derechos, conservación y reclamo ante la autoridad."
+    )
+    result = extract_page(
+        f"<main><h1>Política de privacidad</h1><p>{prefix}</p><p>{late_signals}</p></main>",
+        "https://example.com/privacidad",
+    )
+
+    assert len(result.visible_text) == 4000
+    assert "revocar el consentimiento" not in result.visible_text
+    assert "revocar el consentimiento" in result.content_text
+    assert len(result.content_text) <= CONTENT_TEXT_LIMIT

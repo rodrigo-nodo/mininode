@@ -7,7 +7,9 @@ import unicodedata
 from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
-from mininode_api.web_inspector.models import EvidenceContract, FormEvidence, LinkEvidence
+from mininode_api.web_inspector.models import (
+    EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
+)
 
 
 CONTROL_CODES = (
@@ -517,6 +519,12 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
     }
 
 
+def _policy_document_text(page: PageEvidence) -> str:
+    """Prefer cleaned, bounded policy content while preserving legacy evidence."""
+
+    return page.content_text or page.visible_text or ""
+
+
 def _responsible_identification(contract: EvidenceContract, attribution: dict) -> dict:
     """Inspect only the policy selected by PRV-003 and retain no document text."""
 
@@ -550,7 +558,7 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
         }
 
     document = _normalize(
-        f"{selected_page.title or ''} {selected_page.visible_text or ''}"
+        f"{selected_page.title or ''} {_policy_document_text(selected_page)}"
     )
     organization_named = any(
         re.search(rf"(?:^|\s){re.escape(term)}(?:$|\s)", document)
@@ -605,7 +613,7 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
             "technical_error": True, "confidence": "low",
         }
 
-    raw_document = f"{selected_page.title or ''}\n{selected_page.visible_text or ''}"
+    raw_document = f"{selected_page.title or ''}\n{_policy_document_text(selected_page)}"
     document = _normalize(raw_document)
     if _POLICY_VERSION_PATTERN.search(document):
         return {
@@ -663,7 +671,7 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    raw_document = selected_page.visible_text or ""
+    raw_document = _policy_document_text(selected_page)
     segments = [
         segment
         for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", raw_document)
@@ -724,7 +732,7 @@ def _data_categories(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    document = selected_page.visible_text or ""
+    document = _policy_document_text(selected_page)
     if _contains_phrase(document, _CONCRETE_DATA_CATEGORIES):
         category, confidence = "concrete", "high"
     elif _contains_phrase(document, _GENERIC_PERSONAL_DATA_TERMS):
@@ -763,7 +771,7 @@ def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    document = selected_page.visible_text or ""
+    document = _policy_document_text(selected_page)
     if _contains_phrase(document, _CONCRETE_PROCESSING_PURPOSES):
         purposes, confidence = "concrete", "high"
     elif _contains_phrase(document, _GENERIC_PROCESSING_PURPOSE_TERMS):
@@ -804,7 +812,7 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
 
     segments = [
         _normalize(segment) for segment in
-        re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+        re.split(r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page))
         if segment.strip()
     ]
     positive_segments = [
@@ -858,7 +866,7 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page))
     communication_segments = [
         segment for segment in segments
         if _contains_phrase(segment, _RECIPIENT_COMMUNICATION_TERMS)
@@ -917,7 +925,7 @@ def _data_subject_rights(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    document = selected_page.visible_text or ""
+    document = _policy_document_text(selected_page)
     concrete_count = sum(
         _contains_phrase(document, set(equivalents))
         for equivalents in _CONCRETE_DATA_SUBJECT_RIGHTS
@@ -966,7 +974,7 @@ def _data_retention(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or "")
+    segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page))
     contextual = [
         _normalize(segment) for segment in segments
         if _contains_phrase(segment, _RETENTION_DATA_TERMS)
@@ -1018,7 +1026,7 @@ def _selected_policy_segments(
     segments = [
         _normalize(segment)
         for segment in re.split(
-            r"(?<=[.!?;])\s+|[\n\r]+", selected_page.visible_text or ""
+            r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page)
         )
         if segment.strip()
     ]
