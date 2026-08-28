@@ -268,7 +268,6 @@ _CONSENT_BASIS_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bconsentimiento\b.{0,60}\b(?:base|fundamento)\b(?:.{0,50}\b(?:tratamiento|procesamiento|datos)\b)?",
     r"\bconsentimiento\b.{0,40}\b(?:para el|respecto del|en relacion con el) (?:tratamiento|procesamiento)\b(?:.{0,40}\bdatos(?: personales)?\b)?",
     r"\bconsentimiento\b.{0,40}\bpara (?:tratar|procesar)\b.{0,30}\b(?:sus )?datos(?: personales)?\b",
-    r"\bautorizacion\b.{0,40}\bpara el (?:tratamiento|procesamiento)\b.{0,40}\bdatos(?: personales)?\b",
     r"\b(?:processing|process|personal data|data)\b.{0,80}\bbased on (?:your )?consent\b",
     r"\bconsent\b.{0,60}\b(?:basis|legal basis|basis for processing)\b",
     r"\bconsent\b.{0,30}\b(?:for|to) (?:the )?(?:processing|process)\b.{0,40}\b(?:your )?(?:personal )?data\b",
