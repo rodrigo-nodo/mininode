@@ -4,7 +4,7 @@ import httpx
 
 from mininode_api.web_inspector.extractor import build_evidence
 from mininode_api.web_inspector.fetcher import WebFetcher
-from mininode_api.web_inspector.models import FetchPageResult, InspectionFetchResult
+from mininode_api.web_inspector.models import FetchPageResult, InspectionFetchResult, PageEvidence
 
 
 def test_fetcher_preserves_cookie_names_without_values():
@@ -52,6 +52,23 @@ def test_integral_evidence_contract_is_json_compatible_and_observational():
     assert "<html" not in encoded.lower()
     for forbidden in ("PRV-", "Privacy Score", "cumplimiento legal"):
         assert forbidden not in encoded
+    assert "content_text" not in encoded
+
+
+def test_page_evidence_content_text_is_optional_and_never_serialized():
+    legacy = PageEvidence("https://example.com", 200, "Inicio", "text/html")
+    fetched = InspectionFetchResult(
+        target_url="https://example.com/", pages_requested=1,
+        pages=[FetchPageResult(
+            "https://example.com/", "https://example.com/", 200, "text/html",
+            "<main>Política de privacidad con contenido documental sustantivo.</main>",
+        )],
+    )
+
+    payload = build_evidence(fetched).to_dict()
+
+    assert legacy.content_text is None
+    assert "content_text" not in payload["pages"][0]
 
 
 def test_page_evidence_preserves_requested_to_final_url_trace():

@@ -156,3 +156,12 @@ política seleccionada por PRV-003 declara claramente un tratamiento basado en
 consentimiento. Las menciones aisladas, formularios y señales de cookies no activan
 su aplicabilidad; cuando esa base no se declara, el control es `not_applicable` y no
 participa en el puntaje.
+
+Los controles documentales PRV-004 a PRV-014 prefieren una muestra interna y
+efímera de contenido principal de hasta 12.000 caracteres. El extractor selecciona
+un `main` único sustantivo, después un `article` sustantivo y, por último, una copia
+limpia del cuerpo; en esa copia excluye `script`, `style`, `template`, `header`,
+`nav`, `footer`, `aside` y `form`. La muestra histórica `visible_text` conserva su
+límite y semántica, continúa siendo la evidencia usada por PRV-003 y actúa como
+fallback para construcciones anteriores. La muestra principal no se serializa en el
+Evidence Contract ni forma parte de respuestas o snapshots.

@@ -74,6 +74,7 @@ class PageEvidence:
     content_type: str | None
     requested_url: str | None = None
     visible_text: str | None = None
+    content_text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -147,4 +148,7 @@ class EvidenceContract:
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-compatible representation of the contract."""
 
-        return asdict(self)
+        payload = asdict(self)
+        for page in payload["pages"]:
+            page.pop("content_text", None)
+        return payload

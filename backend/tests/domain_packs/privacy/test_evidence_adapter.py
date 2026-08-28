@@ -119,6 +119,89 @@ def test_prv003_same_site_policy_is_own():
     assert evaluate_control("PRV-003", evidence)["result"] == "detected"
 
 
+def test_document_controls_ignore_emol_style_chrome_and_form_noise():
+    """Clean policy evidence wins over login/header/footer text."""
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html",
+        visible_text=(
+            "Example SpA es responsable. Nombre Apellido Correo electrónico. "
+            "Para ejercer derechos escriba a privacidad@example.com. "
+            "Compartimos datos con terceros. Derechos de acceso y rectificación. "
+            "Acepto el tratamiento basado en consentimiento y puedo revocarlo."
+        ),
+        content_text=(
+            "Política de privacidad. Tratamos datos personales para prestar el servicio."
+        ),
+    )
+
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+
+    assert adapted["PRV-005"]["responsible_identification"] == "none"
+    assert adapted["PRV-006"]["rights_channel"] == "none"
+    assert adapted["PRV-007"]["data_categories"] == "generic"
+    assert adapted["PRV-010"]["data_recipients"] == "none"
+    assert adapted["PRV-011"]["data_subject_rights"] == "none"
+    assert adapted["PRV-014"]["consent_basis_declared"] is False
+
+
+def test_document_controls_keep_edusmart_style_policy_signals_not_footer():
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html",
+        visible_text="Productos Cursos Contacto oficina@example.com teléfonos y direcciones",
+        content_text=(
+            "Política de privacidad. Recogemos nombre y correo electrónico para enviar "
+            "comunicaciones de newsletter. Aplicamos medidas de seguridad y usamos "
+            "cookies. Podemos comunicar los datos a proveedores de servicios."
+        ),
+    )
+
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+
+    assert adapted["PRV-007"]["data_categories"] == "concrete"
+    assert adapted["PRV-008"]["processing_purposes"] == "concrete"
+    assert adapted["PRV-010"]["data_recipients"] == "explicit"
+    assert adapted["PRV-006"]["rights_channel"] == "none"
+
+
+def test_prv014_detects_late_consent_withdrawal_from_content_text():
+    url = "https://example.com/privacy"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    late = (
+        "El tratamiento de sus datos se basa en el consentimiento. "
+        "Puede revocar el consentimiento en cualquier momento."
+    )
+    page = PageEvidence(
+        url, 200, "Política de privacidad", "text/html",
+        visible_text="Contenido introductorio. " + ("x" * 3970),
+        content_text="Contenido introductorio. " + ("x" * 4100) + ". " + late,
+    )
+
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    result = evaluate_control(
+        "PRV-014", adapted["PRV-014"], {"PRV-003": "detected"}
+    )
+
+    assert adapted["PRV-014"]["consent_withdrawal"] == "explicit"
+    assert result["result"] == "detected"
+
+
+def test_content_text_does_not_create_policy_when_prv003_did_not_find_one():
+    page = PageEvidence(
+        "https://example.com/", 200, "Inicio", "text/html",
+        content_text="Política de privacidad con consentimiento y revocación.",
+    )
+    adapted = adapt_evidence(contract(pages=[page]))
+    prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
+
+    assert prv003["result"] == "not_detected"
+    for code in [f"PRV-{number:03d}" for number in range(4, 15)]:
+        assert evaluate_control(code, adapted[code], {"PRV-003": prv003})["result"] == "not_applicable"
+
+
 @pytest.mark.parametrize("url", [
     "https://hcaptcha.com/privacy",
     "https://www.google.com/policies/privacy/",
