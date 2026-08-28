@@ -51,19 +51,17 @@ def _text(tag: Tag) -> str:
     return " ".join(tag.get_text(" ", strip=True).split())
 
 
-def _clean_content_text(soup: BeautifulSoup) -> str:
+def _clean_content_text(soup: BeautifulSoup) -> str | None:
     """Return a bounded main-content sample without mutating extraction DOM."""
 
     mains = soup.find_all("main")
     candidate = mains[0] if len(mains) == 1 else None
     if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
-        candidate = next(
-            (
-                article for article in soup.find_all("article")
-                if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
-            ),
-            None,
-        )
+        substantive_articles = [
+            article for article in soup.find_all("article")
+            if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
+        ]
+        candidate = max(substantive_articles, key=lambda article: len(_text(article)), default=None)
 
     def cleaned_text(root: Tag) -> str:
         clean_root = deepcopy(root)
@@ -75,7 +73,7 @@ def _clean_content_text(soup: BeautifulSoup) -> str:
     if len(content) < _SUBSTANTIVE_TEXT_LENGTH:
         fallback = soup.body if isinstance(soup.body, Tag) else soup
         content = cleaned_text(fallback)
-    return content[:CONTENT_TEXT_LIMIT]
+    return content[:CONTENT_TEXT_LIMIT] if len(content) >= _SUBSTANTIVE_TEXT_LENGTH else None
 
 
 def _label(control: Tag, soup: BeautifulSoup) -> str:

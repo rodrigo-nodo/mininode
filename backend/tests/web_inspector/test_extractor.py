@@ -106,6 +106,30 @@ def test_content_text_uses_substantive_article_then_clean_div_fallback():
     assert "tratamiento de datos personales" in legacy.content_text
 
 
+def test_content_text_returns_none_when_clean_fallback_is_not_substantive():
+    result = extract_page(
+        "<body><header>Cabecera extensa que se elimina</header><div>Aviso breve</div></body>",
+        "https://example.com/legal",
+    )
+
+    assert result.content_text is None
+    assert "Aviso breve" in result.visible_text
+
+
+def test_content_text_uses_longest_substantive_article():
+    result = extract_page(
+        "<article>Bloque comercial sustantivo con información general del sitio.</article>"
+        "<article><h1>Política de privacidad</h1><p>Este documento más extenso explica "
+        "el tratamiento de datos personales, sus finalidades, conservación y los derechos "
+        "que pueden ejercer las personas.</p></article>",
+        "https://example.com/legal",
+    )
+
+    assert result.content_text.startswith("Política de privacidad")
+    assert "tratamiento de datos personales" in result.content_text
+    assert "Bloque comercial" not in result.content_text
+
+
 def test_content_text_extends_beyond_legacy_visible_text_limit_but_is_bounded():
     prefix = "Información general sobre nuestra política. " * 120
     late_signals = (
