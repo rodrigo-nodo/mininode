@@ -135,6 +135,7 @@ def test_guide_reuses_reader_and_preserves_source_content():
     guide = (ROOT / "guides" / "001-proteccion-de-datos-personales" / "index.html").read_text()
     markdown = (ROOT / "content" / "guides" / "001-proteccion-de-datos-personales.md").read_text()
     script = (ROOT / "reader.js").read_text()
+    styles = (ROOT / "learn.css").read_text()
 
     assert 'data-content-type="guide"' in guide
     assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
@@ -143,6 +144,9 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert "CONTENT_TYPE === 'guide'" in script
     assert markdown.count("## Parte 1") == 1
     assert markdown.count("## Parte 2") == 1
+    assert '.learn-reader[data-content-type="guide"] hr { display: none; }' in styles
+    assert '.learn-reader[data-content-type="guide"] hr + :is(h2, h3)' in styles
+    assert '.learn-reader[data-content-type="guide"] > h2:last-of-type' in styles
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():
