@@ -88,11 +88,12 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     relationships = (ROOT / "content" / "relationships.json").read_text()
 
     assert "Lecturas breves de 3 a 5 minutos." in catalog
-    assert "Guías prácticas para profundizar." in catalog
+    assert "Lecturas prácticas de 15 a 25 minutos." in catalog
+    assert "Lecturas compactas para profundizar en un tema." in catalog
     assert 'href="/learn/privacy"' in catalog
     assert "MININODE LEARN" not in catalog
     assert "<p>RECURSOS</p>" in catalog
-    assert "<title>Recursos - Briefs y ebooks | Mininode</title>" in catalog
+    assert "<title>Recursos - Briefs, Guides y Micro-ebooks | Mininode</title>" in catalog
     assert '<span class="learn-card__duration">4 min</span>' in catalog
     assert '<span class="learn-card__duration">30 min</span>' in catalog
     assert "<li>4 min</li>" not in catalog
@@ -100,6 +101,7 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert 'href="/learn/briefs/001-nueva-autoridad-de-datos"' in catalog
     assert 'href="/learn/briefs/002-evidencia-de-cumplimiento"' in catalog
     assert 'href="/learn/briefs/003-datos-personales"' in catalog
+    assert 'href="/learn/guides/001-proteccion-de-datos-personales"' in catalog
     assert "Datos personales" in catalog
     assert "La información que una organización no siempre ve" in catalog
     assert "<li>Datos</li>" in catalog
@@ -127,6 +129,20 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "metadata + content" not in markdown
     assert "¿Te resultó útil?" not in markdown
     assert '"related": ["001"]' in relationships
+
+
+def test_guide_reuses_reader_and_preserves_source_content():
+    guide = (ROOT / "guides" / "001-proteccion-de-datos-personales" / "index.html").read_text()
+    markdown = (ROOT / "content" / "guides" / "001-proteccion-de-datos-personales.md").read_text()
+    script = (ROOT / "reader.js").read_text()
+
+    assert 'data-content-type="guide"' in guide
+    assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
+    assert guide.count('data-rating="') == 5
+    assert "MININODE GUIDE 001" in script
+    assert "CONTENT_TYPE === 'guide'" in script
+    assert markdown.count("## Parte 1") == 1
+    assert markdown.count("## Parte 2") == 1
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():
