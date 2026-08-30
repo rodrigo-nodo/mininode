@@ -313,6 +313,22 @@
 .learn-reader--brief > h3 { font-size: var(--text-h3); margin-top: var(--space-12); }
 .learn-reader--brief > h3:last-of-type { border-top: 1px solid var(--learn-border); padding-top: 54px; }
 .learn-feedback--brief { margin: 56px 0 0; padding-top: var(--space-12); }
+.learn-guide-001 .learn-feedback { margin-bottom: 0; }
+.learn-guide-next-step {
+  border-top: 1px solid var(--learn-border);
+  margin-top: var(--space-12);
+  padding-top: var(--space-12);
+}
+.learn-guide-next-step > h2 { font-size: clamp(1.45rem, 4vw, 1.85rem); margin: 0 0 var(--space-3); }
+.learn-guide-next-step > p { color: var(--learn-muted); margin: 0; }
+.learn-guide-next-step__options { display: grid; gap: var(--space-8); margin-top: var(--space-8); }
+.learn-guide-next-step__options section { border-top: 1px solid var(--learn-border); padding-top: var(--space-6); }
+.learn-guide-next-step__options h3 { font-size: 1.1rem; margin: 0 0 var(--space-2); }
+.learn-guide-next-step__options p { color: var(--learn-muted); margin: 0 0 var(--space-3); max-width: 46rem; }
+.learn-guide-next-step__options a { color: var(--learn-link); font-weight: 700; text-decoration: none; }
+.learn-guide-next-step__options a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.learn-guide-next-step__options a:focus-visible { outline: 3px solid var(--learn-link); outline-offset: 3px; }
+.learn-guide-next-step__options span { color: var(--learn-muted); font-size: .85rem; font-weight: 700; }
 .learn-related { margin-top: var(--space-8); }
 .learn-related h2 { font-size: clamp(1.45rem, 4vw, 1.85rem); margin: 0 0 var(--space-4); }
 .learn-related ul { list-style: none; margin: 0; padding: 0; }
