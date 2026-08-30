@@ -168,6 +168,14 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert '.learn-reader[data-content-type="guide"] hr { display: none; }' in styles
     assert '.learn-reader[data-content-type="guide"] hr + :is(h2, h3)' in styles
     assert '.learn-reader[data-content-type="guide"] > h2:last-of-type' in styles
+    assert guide.index('id="learn-feedback-template"') < guide.index('class="learn-guide-next-step"')
+    assert '<a href="/privacy/">Analizar mi sitio →</a>' in guide
+    assert '<h3>Privacy Data</h3>' in guide
+    assert '<span>Próximamente</span>' in guide
+    assert 'href="/privacy/data/' not in guide
+    assert "learn-guide-001 .learn-feedback" in styles
+    assert "learn-guide-next-step__options" in styles
+    assert "Llevarlo a la práctica" not in markdown
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():
