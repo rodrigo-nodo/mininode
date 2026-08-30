@@ -316,14 +316,29 @@ def test_prv005_uses_own_policy_selected_after_provider_candidate():
 
 
 @pytest.mark.parametrize(
-    ("visible_text", "expected"),
+    ("visible_text", "expected_channel", "expected_result"),
     [
-        ("Para ejercer sus derechos sobre datos personales escriba a privacidad@example.com.", "detected"),
-        ("Consultas: contacto@example.com.", "partial"),
-        ("Esta política describe el tratamiento de datos personales.", "not_detected"),
+        (
+            "Para ejercer sus derechos sobre datos personales escriba a privacidad@example.com.",
+            "explicit", "detected",
+        ),
+        ("Consultas: contacto@example.com.", "generic", "partial"),
+        ("Para consultas puede contactarnos al +56 2 1234 5678.", "generic", "partial"),
+        ("Recogemos nombre y correo electrónico.", "none", "not_detected"),
+        ("Tratamos email y teléfono.", "none", "not_detected"),
+        (
+            "Datos de contacto: nombre, correo electrónico y teléfono.",
+            "none", "not_detected",
+        ),
+        (
+            "Esta política describe el tratamiento de datos personales.",
+            "none", "not_detected",
+        ),
     ],
 )
-def test_prv006_classifies_channel_only_in_selected_policy(visible_text, expected):
+def test_prv006_classifies_channel_only_in_selected_policy(
+    visible_text, expected_channel, expected_result
+):
     url = "https://example.com/privacy"
     link = LinkEvidence(url, "Privacidad", "https://example.com/")
     page = PageEvidence(url, 200, "Política de privacidad", "text/html", visible_text=visible_text)
@@ -332,7 +347,8 @@ def test_prv006_classifies_channel_only_in_selected_policy(visible_text, expecte
 
     result = evaluate_control("PRV-006", adapted["PRV-006"], {"PRV-003": prv003})
 
-    assert result["result"] == expected
+    assert adapted["PRV-006"]["rights_channel"] == expected_channel
+    assert result["result"] == expected_result
     assert adapted["PRV-006"]["source_urls"] == [url]
 
 

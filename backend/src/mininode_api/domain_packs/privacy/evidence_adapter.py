@@ -118,9 +118,9 @@ _RIGHTS_CONTEXT_TERMS = (
     "privacy", "privacy request",
     "data protection", "data subject rights",
 )
-_CHANNEL_WORDS = (
-    "correo", "email", "e mail", "telefono", "phone", "formulario de contacto",
-    "direccion postal", "domicilio", "escriba", "contacte", "contactenos",
+_CONCRETE_CHANNEL_WORDS = (
+    "formulario de contacto", "direccion postal", "domicilio", "escriba",
+    "contacte", "contactenos",
 )
 _EMAIL_PATTERN = re.compile(r"\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.I)
 _PHONE_PATTERN = re.compile(r"(?:\+?\d[\d ()-]{6,}\d)")
@@ -682,7 +682,7 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         return bool(
             _EMAIL_PATTERN.search(value)
             or _PHONE_PATTERN.search(value)
-            or _contains_phrase(value, _CHANNEL_WORDS)
+            or _contains_phrase(value, _CONCRETE_CHANNEL_WORDS)
         )
 
     channel_segments = [
