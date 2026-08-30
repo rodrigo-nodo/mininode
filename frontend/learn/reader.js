@@ -28,11 +28,12 @@
 
   function initializeFeedback() {
     const template = document.querySelector('#learn-feedback-template');
-    const cta = CONTENT_TYPE === 'brief'
+    const ratingOnly = CONTENT_TYPE === 'brief' || CONTENT_TYPE === 'guide';
+    const cta = ratingOnly
       ? reader.querySelector('.learn-related')
       : [...reader.querySelectorAll('h2')]
         .find((heading) => heading.textContent.includes('¿Quieres verlo aplicado'));
-    if (!template || (CONTENT_TYPE !== 'brief' && !cta)) return;
+    if (!template || (!ratingOnly && !cta)) return;
 
     const feedback = template.content.firstElementChild.cloneNode(true);
     if (cta) cta.before(feedback);
@@ -88,7 +89,7 @@
       }
       showRating(state.rating);
       status.textContent = '✓ Gracias por tu feedback.';
-      if (CONTENT_TYPE === 'brief') return;
+      if (ratingOnly) return;
       followup.hidden = false;
       feedback.querySelectorAll('[name="learn-topic"]').forEach((option) => {
         option.checked = option.value === state.topic;
@@ -247,6 +248,31 @@
     return header;
   }
 
+  function guideHeader() {
+    const title = reader.querySelector(':scope > h1');
+    const subtitle = title?.nextElementSibling;
+    if (!title || !subtitle) return null;
+    const details = [];
+    let detail = subtitle.nextElementSibling;
+    while (detail?.matches('p') && detail.querySelector('strong')) {
+      details.push(detail.textContent.replace(':', '').trim());
+      const next = detail.nextElementSibling;
+      detail.remove();
+      detail = next;
+    }
+    const header = document.createElement('header');
+    header.className = 'learn-reader__header';
+    header.innerHTML = window.DOMPurify.sanitize(`
+      <p class="learn-reader__eyebrow">MININODE GUIDE 001</p>
+      <h1>${title.textContent}</h1>
+      <p class="learn-reader__subtitle">${subtitle.textContent}</p>
+      <p class="learn-reader__details">${details.join(' · ')}</p>
+    `, { USE_PROFILES: { html: true } });
+    title.remove();
+    subtitle.remove();
+    return header;
+  }
+
   async function renderRelated(metadata) {
     if (!metadata || metadata.type !== 'brief') return;
     try {
@@ -282,6 +308,9 @@
       reader.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
       if (documentSource.metadata?.type === 'brief') {
         reader.prepend(briefHeader(documentSource.metadata));
+      } else if (CONTENT_TYPE === 'guide') {
+        const header = guideHeader();
+        if (header) reader.prepend(header);
       }
       reader.setAttribute('aria-busy', 'false');
       await renderRelated(documentSource.metadata);
