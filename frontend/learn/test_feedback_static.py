@@ -139,10 +139,23 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert 'data-content-type="guide"' in guide
     assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
     assert guide.count('data-rating="') == 5
-    assert "MININODE GUIDE 001" in script
+    assert '<p class="learn-reader__eyebrow">GUIDE 001</p>' in script
     assert "CONTENT_TYPE === 'guide'" in script
+    assert "reader.classList.add('learn-reader--guide')" in script
+    assert "details['Lectura estimada']" in script
+    assert "details.País" in script
+    assert "Actualizado ${updated}" in script
     assert markdown.count("## Parte 1") == 1
     assert markdown.count("## Parte 2") == 1
+
+
+def test_guide_mobile_styles_are_scoped_from_briefs():
+    css = (ROOT / "learn.css").read_text()
+
+    assert ".learn-reader__header--guide h1 { font-size: clamp(2rem, 9vw, 2.25rem)" in css
+    assert ".learn-reader--guide > h2 { font-size: 1.65rem" in css
+    assert ".learn-reader__header--guide .learn-reader__details { display: flex; flex-wrap: wrap" in css
+    assert '.learn-reader__header--guide .learn-reader__details span + span::before { content: "·"' in css
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():

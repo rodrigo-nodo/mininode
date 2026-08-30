@@ -252,21 +252,25 @@
     const title = reader.querySelector(':scope > h1');
     const subtitle = title?.nextElementSibling;
     if (!title || !subtitle) return null;
-    const details = [];
+    const details = {};
     let detail = subtitle.nextElementSibling;
     while (detail?.matches('p') && detail.querySelector('strong')) {
-      details.push(detail.textContent.replace(':', '').trim());
+      const label = detail.querySelector('strong').textContent.replace(':', '').trim();
+      const value = detail.textContent.slice(detail.querySelector('strong').textContent.length).trim();
+      details[label] = value;
       const next = detail.nextElementSibling;
       detail.remove();
       detail = next;
     }
+    const readingTime = details['Lectura estimada']?.replace(/minutos?/, 'min');
+    const updated = details.Actualizado?.replace(/ de (\d{4})$/, ' $1');
     const header = document.createElement('header');
-    header.className = 'learn-reader__header';
+    header.className = 'learn-reader__header learn-reader__header--guide';
     header.innerHTML = window.DOMPurify.sanitize(`
-      <p class="learn-reader__eyebrow">MININODE GUIDE 001</p>
+      <p class="learn-reader__eyebrow">GUIDE 001</p>
       <h1>${title.textContent}</h1>
       <p class="learn-reader__subtitle">${subtitle.textContent}</p>
-      <p class="learn-reader__details">${details.join(' · ')}</p>
+      <p class="learn-reader__details"><span>${readingTime}</span><span>${details.País}</span><span>Actualizado ${updated}</span></p>
     `, { USE_PROFILES: { html: true } });
     title.remove();
     subtitle.remove();
@@ -309,6 +313,7 @@
       if (documentSource.metadata?.type === 'brief') {
         reader.prepend(briefHeader(documentSource.metadata));
       } else if (CONTENT_TYPE === 'guide') {
+        reader.classList.add('learn-reader--guide');
         const header = guideHeader();
         if (header) reader.prepend(header);
       }
