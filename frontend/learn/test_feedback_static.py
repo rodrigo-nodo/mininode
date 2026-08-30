@@ -139,7 +139,14 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert 'data-content-type="guide"' in guide
     assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
     assert guide.count('data-rating="') == 5
-    assert "MININODE GUIDE 001" in script
+    styles = (ROOT / "learn.css").read_text()
+
+    assert '<p class="learn-reader__eyebrow">GUIDE 001</p>' in script
+    assert "learn-reader__header--guide" in script
+    assert "value.replace(/ minutos?$/, ' min')" in script
+    assert "value.replace(/ de (?=\\d{4}$)/, ' ')" in script
+    assert ".learn-reader__header--guide h1" in styles
+    assert ".learn-reader__header--guide ~ h2" in styles
     assert "CONTENT_TYPE === 'guide'" in script
     assert markdown.count("## Parte 1") == 1
     assert markdown.count("## Parte 2") == 1

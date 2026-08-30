@@ -255,15 +255,19 @@
     const details = [];
     let detail = subtitle.nextElementSibling;
     while (detail?.matches('p') && detail.querySelector('strong')) {
-      details.push(detail.textContent.replace(':', '').trim());
+      const label = detail.querySelector('strong').textContent.replace(':', '').trim();
+      let value = detail.textContent.slice(detail.querySelector('strong').textContent.length).trim();
+      if (label === 'Lectura estimada') value = value.replace(/ minutos?$/, ' min');
+      if (label === 'Actualizado') value = `Actualizado ${value.replace(/ de (?=\d{4}$)/, ' ')}`;
+      details.push(value);
       const next = detail.nextElementSibling;
       detail.remove();
       detail = next;
     }
     const header = document.createElement('header');
-    header.className = 'learn-reader__header';
+    header.className = 'learn-reader__header learn-reader__header--guide';
     header.innerHTML = window.DOMPurify.sanitize(`
-      <p class="learn-reader__eyebrow">MININODE GUIDE 001</p>
+      <p class="learn-reader__eyebrow">GUIDE 001</p>
       <h1>${title.textContent}</h1>
       <p class="learn-reader__subtitle">${subtitle.textContent}</p>
       <p class="learn-reader__details">${details.join(' · ')}</p>
