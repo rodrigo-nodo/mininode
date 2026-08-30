@@ -1,10 +1,12 @@
-# Protección de datos personales - Una guía para comenzar
-
-Una introducción práctica para entender dónde aparecen los datos personales en una empresa, qué puede observarse públicamente y qué ocurre dentro de su operación.
-
-**Lectura estimada:** 15-20 minutos  
-**País:** Chile  
-**Actualizado:** agosto de 2026
+---
+id: 001
+type: guide
+title: Protección de datos personales - Una guía para comenzar
+subtitle: Una introducción práctica para entender dónde aparecen los datos personales en una empresa, qué puede observarse públicamente y qué ocurre dentro de su operación.
+country: CL
+updated: 2026-08
+reading_time: 15-20
+---
 
 ## Parte 1 - Entender la protección de datos personales
 
