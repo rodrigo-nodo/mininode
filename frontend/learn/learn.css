@@ -328,7 +328,6 @@
 .learn-guide-next-step__options a { color: var(--learn-link); font-weight: 700; text-decoration: none; }
 .learn-guide-next-step__options a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .learn-guide-next-step__options a:focus-visible { outline: 3px solid var(--learn-link); outline-offset: 3px; }
-.learn-guide-next-step__options span { color: var(--learn-muted); font-size: .85rem; font-weight: 700; }
 .learn-related { margin-top: var(--space-8); }
 .learn-related h2 { font-size: clamp(1.45rem, 4vw, 1.85rem); margin: 0 0 var(--space-4); }
 .learn-related ul { list-style: none; margin: 0; padding: 0; }
