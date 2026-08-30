@@ -96,6 +96,12 @@ def test_catalog_and_brief_reuse_reader_with_content_specific_feedback():
     assert "<title>Recursos - Briefs, Guides y Micro-ebooks | Mininode</title>" in catalog
     assert '<span class="learn-card__duration">4 min</span>' in catalog
     assert '<span class="learn-card__duration">30 min</span>' in catalog
+    assert '<span class="learn-card__duration">15-20 min</span>' in catalog
+    assert '<span class="learn-card__number">003</span> - Datos personales' in catalog
+    assert '<span class="learn-card__number">001</span> - Protección de datos personales' in catalog
+    assert '<span class="learn-card__number">001</span> - Privacidad para pequeños negocios' in catalog
+    assert "GUIDE 001" not in catalog
+    assert "MICRO-EBOOK 001" not in catalog
     assert "<li>4 min</li>" not in catalog
     assert "<li>30 min</li>" not in catalog
     assert 'href="/learn/briefs/001-nueva-autoridad-de-datos"' in catalog
