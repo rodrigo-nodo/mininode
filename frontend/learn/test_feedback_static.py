@@ -171,8 +171,7 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert guide.index('id="learn-feedback-template"') < guide.index('class="learn-guide-next-step"')
     assert '<a href="/privacy/">Analizar mi sitio →</a>' in guide
     assert '<h3>Privacy Data</h3>' in guide
-    assert '<span>Próximamente</span>' in guide
-    assert 'href="/privacy/data/' not in guide
+    assert '<a href="/privacy/data/">Próximamente →</a>' in guide
     assert "learn-guide-001 .learn-feedback" in styles
     assert "learn-guide-next-step__options" in styles
     assert "Llevarlo a la práctica" not in markdown
