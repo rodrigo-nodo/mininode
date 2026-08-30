@@ -302,6 +302,11 @@
 .learn-reader__subtitle { color: var(--learn-muted) !important; font-family: inherit !important; font-size: clamp(1.2rem, 3vw, 1.48rem) !important; line-height: 1.5 !important; }
 .learn-reader__details { color: var(--learn-link) !important; font-family: inherit !important; font-size: .78rem !important; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .learn-reader__topics { display: flex; flex-wrap: wrap; gap: 8px; }
+.learn-reader[data-content-type="guide"] .learn-reader__header { margin-bottom: var(--space-8); }
+.learn-reader[data-content-type="guide"] .learn-reader__header h1 { font-size: clamp(2rem, 6vw, 2.8rem); }
+.learn-reader[data-content-type="guide"] .learn-reader__subtitle { font-size: clamp(1.05rem, 2.5vw, 1.25rem) !important; margin-bottom: var(--space-4); }
+.learn-reader[data-content-type="guide"] > h2 { font-size: clamp(1.65rem, 4vw, 2rem); }
+.learn-reader[data-content-type="guide"] > .learn-reader__header + h2 { margin-top: 0; }
 .learn-reader--brief > h3 { font-size: var(--text-h3); margin-top: var(--space-12); }
 .learn-reader--brief > h3:last-of-type { border-top: 1px solid var(--learn-border); padding-top: 54px; }
 .learn-feedback--brief { margin: 56px 0 0; padding-top: var(--space-12); }

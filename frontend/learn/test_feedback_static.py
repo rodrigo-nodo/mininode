@@ -135,14 +135,33 @@ def test_guide_reuses_reader_and_preserves_source_content():
     guide = (ROOT / "guides" / "001-proteccion-de-datos-personales" / "index.html").read_text()
     markdown = (ROOT / "content" / "guides" / "001-proteccion-de-datos-personales.md").read_text()
     script = (ROOT / "reader.js").read_text()
+    css = (ROOT / "learn.css").read_text()
 
     assert 'data-content-type="guide"' in guide
     assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
     assert guide.count('data-rating="') == 5
-    assert "MININODE GUIDE 001" in script
+    assert markdown.startswith("---\nid: 001\ntype: guide\n")
+    assert "title: Protección de datos personales - Una guía para comenzar\n" in markdown
+    assert "subtitle: Una introducción práctica" in markdown
+    assert "country: CL\n" in markdown
+    assert "updated: 2026-08\n" in markdown
+    assert "reading_time: 15-20\n" in markdown
+    assert "guideHeader(documentSource.metadata)" in script
+    guide_header = script[script.index("function guideHeader"):script.index("async function renderRelated")]
+    assert "GUIDE ${metadata.id}" in guide_header
+    assert "${metadata.reading_time} min · ${country} · Actualizado ${monthName} ${year}" in guide_header
+    assert "querySelector" not in guide_header
+    assert "textContent" not in guide_header
+    assert "<strong>" not in guide_header
     assert "CONTENT_TYPE === 'guide'" in script
+    assert "undefined" not in guide_header
+    assert "País:" not in markdown
+    assert "minutosPaís" not in markdown
     assert markdown.count("## Parte 1") == 1
     assert markdown.count("## Parte 2") == 1
+    assert '.learn-reader[data-content-type="guide"] .learn-reader__header h1' in css
+    assert '.learn-reader[data-content-type="guide"] > h2' in css
+    assert '.learn-reader[data-content-type="guide"] > .learn-reader__header + h2' in css
 
 
 def test_ebook_uses_resources_navigation_and_normalized_title():

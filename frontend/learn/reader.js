@@ -248,28 +248,18 @@
     return header;
   }
 
-  function guideHeader() {
-    const title = reader.querySelector(':scope > h1');
-    const subtitle = title?.nextElementSibling;
-    if (!title || !subtitle) return null;
-    const details = [];
-    let detail = subtitle.nextElementSibling;
-    while (detail?.matches('p') && detail.querySelector('strong')) {
-      details.push(detail.textContent.replace(':', '').trim());
-      const next = detail.nextElementSibling;
-      detail.remove();
-      detail = next;
-    }
+  function guideHeader(metadata) {
+    const country = metadata.country === 'CL' ? 'Chile' : metadata.country;
+    const [year, month] = metadata.updated.split('-');
+    const monthName = { '08': 'agosto' }[month] || month;
     const header = document.createElement('header');
     header.className = 'learn-reader__header';
     header.innerHTML = window.DOMPurify.sanitize(`
-      <p class="learn-reader__eyebrow">MININODE GUIDE 001</p>
-      <h1>${title.textContent}</h1>
-      <p class="learn-reader__subtitle">${subtitle.textContent}</p>
-      <p class="learn-reader__details">${details.join(' · ')}</p>
+      <p class="learn-reader__eyebrow">GUIDE ${metadata.id}</p>
+      <h1>${metadata.title}</h1>
+      <p class="learn-reader__subtitle">${metadata.subtitle}</p>
+      <p class="learn-reader__details">${metadata.reading_time} min · ${country} · Actualizado ${monthName} ${year}</p>
     `, { USE_PROFILES: { html: true } });
-    title.remove();
-    subtitle.remove();
     return header;
   }
 
@@ -309,7 +299,7 @@
       if (documentSource.metadata?.type === 'brief') {
         reader.prepend(briefHeader(documentSource.metadata));
       } else if (CONTENT_TYPE === 'guide') {
-        const header = guideHeader();
+        const header = guideHeader(documentSource.metadata);
         if (header) reader.prepend(header);
       }
       reader.setAttribute('aria-busy', 'false');
