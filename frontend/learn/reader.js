@@ -248,28 +248,32 @@
     return header;
   }
 
-  function guideHeader() {
-    const title = reader.querySelector(':scope > h1');
-    const subtitle = title?.nextElementSibling;
-    if (!title || !subtitle) return null;
-    const details = [];
-    let detail = subtitle.nextElementSibling;
-    while (detail?.matches('p') && detail.querySelector('strong')) {
-      details.push(detail.textContent.replace(':', '').trim());
-      const next = detail.nextElementSibling;
-      detail.remove();
-      detail = next;
-    }
+  function guideHeader(metadata) {
+    const country = metadata.country === 'CL' ? 'Chile' : metadata.country;
+    const [year, month] = metadata.updated.split('-');
+    const monthNames = {
+      '01': 'enero',
+      '02': 'febrero',
+      '03': 'marzo',
+      '04': 'abril',
+      '05': 'mayo',
+      '06': 'junio',
+      '07': 'julio',
+      '08': 'agosto',
+      '09': 'septiembre',
+      '10': 'octubre',
+      '11': 'noviembre',
+      '12': 'diciembre'
+    };
+    const updated = `${monthNames[month]} ${year}`;
     const header = document.createElement('header');
     header.className = 'learn-reader__header';
     header.innerHTML = window.DOMPurify.sanitize(`
-      <p class="learn-reader__eyebrow">MININODE GUIDE 001</p>
-      <h1>${title.textContent}</h1>
-      <p class="learn-reader__subtitle">${subtitle.textContent}</p>
-      <p class="learn-reader__details">${details.join(' · ')}</p>
+      <p class="learn-reader__eyebrow">GUIDE ${metadata.id}</p>
+      <h1>${metadata.title}</h1>
+      <p class="learn-reader__subtitle">${metadata.subtitle}</p>
+      <p class="learn-reader__details">${metadata.reading_time} min · ${country} · Actualizado ${updated}</p>
     `, { USE_PROFILES: { html: true } });
-    title.remove();
-    subtitle.remove();
     return header;
   }
 
@@ -308,9 +312,8 @@
       reader.innerHTML = window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } });
       if (documentSource.metadata?.type === 'brief') {
         reader.prepend(briefHeader(documentSource.metadata));
-      } else if (CONTENT_TYPE === 'guide') {
-        const header = guideHeader();
-        if (header) reader.prepend(header);
+      } else if (documentSource.metadata?.type === 'guide') {
+        reader.prepend(guideHeader(documentSource.metadata));
       }
       reader.setAttribute('aria-busy', 'false');
       await renderRelated(documentSource.metadata);

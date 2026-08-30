@@ -140,8 +140,23 @@ def test_guide_reuses_reader_and_preserves_source_content():
     assert 'data-content-type="guide"' in guide
     assert 'data-markdown-source="../../content/guides/001-proteccion-de-datos-personales.md"' in guide
     assert guide.count('data-rating="') == 5
-    assert "MININODE GUIDE 001" in script
-    assert "CONTENT_TYPE === 'guide'" in script
+    assert markdown.startswith(
+        "---\nid: 001\ntype: guide\n"
+        "title: Protección de datos personales - Una guía para comenzar\n"
+        "subtitle: Una introducción práctica para entender dónde aparecen los datos "
+        "personales en una empresa, qué puede observarse públicamente y qué ocurre dentro "
+        "de su operación.\ncountry: CL\nupdated: 2026-08\nreading_time: 15-20\n---\n"
+    )
+    header = script[script.index("function guideHeader(metadata)"):script.index("async function renderRelated")]
+    assert "guideHeader(documentSource.metadata)" in script
+    assert "GUIDE ${metadata.id}" in header
+    assert "${metadata.reading_time} min · ${country} · Actualizado ${updated}" in header
+    assert "'08': 'agosto'" in header
+    assert "metadata.country === 'CL' ? 'Chile'" in header
+    for scraping in ("querySelector", "textContent", "<strong>", "<br>"):
+        assert scraping not in header
+    for invalid_output in ("undefined", "País:", "minutosPaís"):
+        assert invalid_output not in header
     assert markdown.count("## Parte 1") == 1
     assert markdown.count("## Parte 2") == 1
     assert '.learn-reader[data-content-type="guide"] hr { display: none; }' in styles
