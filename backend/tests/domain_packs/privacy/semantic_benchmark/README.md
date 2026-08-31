@@ -11,6 +11,38 @@ change. It performs no NLI, embeddings, LLM inference, network access, persisten
 or model download. The 12 profiles and 36 cases cover only PRV-008, PRV-010 and
 PRV-012.
 
+## W2.S.2b direct NLI experiment
+
+`semantic_nli_runner.py` is a separate, experiment-only direct classifier. It sends
+every synthetic document fixture (one fixture is one fragment) to
+`MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` with explicit Spanish hypotheses; it does
+not use embeddings, retrieval, or top-k filtering. The model is an approximately
+278M-parameter multilingual DeBERTa-v3-base NLI checkpoint, distributed under MIT,
+and was selected as one CPU-capable base-size model trained with multilingual XNLI
+data including Spanish. The model ID identifies the selected repository; record the
+resolved Hub commit in any frozen result because the runner intentionally does not
+add or pin a product dependency.
+
+The only calibration constants are `ENTAILMENT_THRESHOLD = 0.65` and
+`CLASS_MARGIN = 0.10`. The strongest fragment/hypothesis pair for each semantic
+class is retained; the leading class must clear both constants or the runner returns
+`none`. PRV-003 remains a deterministic gate and returns `not_applicable` without
+model inference. Evidence is emitted only from the input document, together with raw
+NLI scores and the model ID.
+
+Install CPU-only `torch` and `transformers` in a temporary environment, not in the
+product requirements, then run:
+
+```bash
+python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_nli_runner
+python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_nli_runner --format json
+```
+
+The JSON output contains all 36 predictions, reusable baseline metrics, direct-NLI
+metrics, latency, and inference count. Run it twice with the same cached checkpoint
+to check basic stability. Unit tests inject a scorer and never import Transformers or
+download model weights.
+
 ## Data and minimization
 
 `manifest.yaml` holds labels, rationales, dependency state, and gold fixture
