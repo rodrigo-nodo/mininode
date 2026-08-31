@@ -39,9 +39,10 @@ python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_nli_run
 ```
 
 The JSON output contains all 36 predictions, reusable baseline metrics, direct-NLI
-metrics, latency, and inference count. Run it twice with the same cached checkpoint
-to check basic stability. Unit tests inject a scorer and never import Transformers or
-download model weights.
+metrics, latency, and inference count. W2.S.2b completed two stable executions with
+the frozen configuration; the measured comparison and decision are recorded in
+[`semantic_nli_result.md`](semantic_nli_result.md). Unit tests inject a scorer and
+never import Transformers or download model weights.
 
 ## Data and minimization
 
