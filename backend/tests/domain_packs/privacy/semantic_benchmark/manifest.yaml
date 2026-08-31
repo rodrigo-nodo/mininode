@@ -1,0 +1,552 @@
+# YAML golden-set manifest. Text lives separately in fixtures.yaml.
+{
+  "schema_version": 1,
+  "corpus_version": "w2s2a-2026-01",
+  "cases": [
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "sip",
+      "control": "PRV-008",
+      "expected_class": "not_applicable",
+      "rationale": "No existe una política propia seleccionada por PRV-003.",
+      "evidence": [],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "not_detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "sip",
+      "control": "PRV-010",
+      "expected_class": "not_applicable",
+      "rationale": "La dependencia PRV-003 no fue detectada; referencias de otra página no cuentan.",
+      "evidence": [],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "not_detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "sip",
+      "control": "PRV-012",
+      "expected_class": "not_applicable",
+      "rationale": "Sin política propia, el evaluator debe abstenerse mediante not_applicable.",
+      "evidence": [],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "not_detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "emol",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Paráfrasis sintética de varias finalidades concretas.",
+      "evidence": [
+        "emol-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "emol",
+      "control": "PRV-010",
+      "expected_class": "explicit",
+      "rationale": "La modalidad podemos mantiene una relación explícita entre datos y proveedores.",
+      "evidence": [
+        "emol-prv-010-e01"
+      ],
+      "hard_negatives": [
+        "emol-prv-010-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "emol",
+      "control": "PRV-012",
+      "expected_class": "generic",
+      "rationale": "Existe una referencia general al almacenamiento, pero no plazo o criterio.",
+      "evidence": [
+        "emol-prv-012-e01"
+      ],
+      "hard_negatives": [
+        "emol-prv-012-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "edusmart",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Finalidades concretas expresadas entre dos frases y con referencia anafórica.",
+      "evidence": [
+        "edusmart-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "edusmart",
+      "control": "PRV-010",
+      "expected_class": "none",
+      "rationale": "Enlaces y cookies de terceros no prueban comunicación de datos; none es compatible con el adapter.",
+      "evidence": [],
+      "hard_negatives": [
+        "edusmart-prv-010-h01",
+        "edusmart-prv-010-h02"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "edusmart",
+      "control": "PRV-012",
+      "expected_class": "none",
+      "rationale": "La eliminación tiene un objeto específico y no establece conservación general.",
+      "evidence": [],
+      "hard_negatives": [
+        "edusmart-prv-012-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "commerce_01",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Vincula datos con gestión de pedidos y mejora del servicio.",
+      "evidence": [
+        "commerce_01-prv-008-e01"
+      ],
+      "hard_negatives": [
+        "commerce_01-prv-008-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "commerce_01",
+      "control": "PRV-010",
+      "expected_class": "explicit",
+      "rationale": "Nombra categorías concretas de destinatarios.",
+      "evidence": [
+        "commerce_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "commerce_01",
+      "control": "PRV-012",
+      "expected_class": "explicit",
+      "rationale": "Define dos criterios observables de conservación.",
+      "evidence": [
+        "commerce_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "banking_01",
+      "control": "PRV-008",
+      "expected_class": "generic",
+      "rationale": "Declara finalidad sin especificar la acción u objetivo.",
+      "evidence": [
+        "banking_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "banking_01",
+      "control": "PRV-010",
+      "expected_class": "explicit_none",
+      "rationale": "Negación inequívoca cuyo objeto son datos personales.",
+      "evidence": [
+        "banking_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "banking_01",
+      "control": "PRV-012",
+      "expected_class": "explicit",
+      "rationale": "Plazo y evento de inicio explícitos.",
+      "evidence": [
+        "banking_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "education_01",
+      "control": "PRV-008",
+      "expected_class": "none",
+      "rationale": "Explica protección, no una finalidad de tratamiento.",
+      "evidence": [],
+      "hard_negatives": [
+        "education_01-prv-008-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "education_01",
+      "control": "PRV-010",
+      "expected_class": "generic",
+      "rationale": "La modalidad es válida pero no identifica categoría de receptor.",
+      "evidence": [
+        "education_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "education_01",
+      "control": "PRV-012",
+      "expected_class": "generic",
+      "rationale": "Declara conservación general sin criterio verificable.",
+      "evidence": [
+        "education_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "health_01",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Dos finalidades concretas de atención.",
+      "evidence": [
+        "health_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "health_01",
+      "control": "PRV-010",
+      "expected_class": "none",
+      "rationale": "El sujeto es el laboratorio y no se afirma comunicación desde la política.",
+      "evidence": [],
+      "hard_negatives": [
+        "health_01-prv-010-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "health_01",
+      "control": "PRV-012",
+      "expected_class": "explicit",
+      "rationale": "La obligación legal funciona como criterio explícito.",
+      "evidence": [
+        "health_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "telecom_01",
+      "control": "PRV-008",
+      "expected_class": "generic",
+      "rationale": "La referencia a finalidades operativas permanece genérica.",
+      "evidence": [
+        "telecom_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "telecom_01",
+      "control": "PRV-010",
+      "expected_class": "explicit",
+      "rationale": "Modalidad y destinatario concreto están ligados a los datos.",
+      "evidence": [
+        "telecom_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "telecom_01",
+      "control": "PRV-012",
+      "expected_class": "none",
+      "rationale": "Otro sujeto y objeto técnico no prueban conservación de datos por la empresa.",
+      "evidence": [],
+      "hard_negatives": [
+        "telecom_01-prv-012-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "media_01",
+      "control": "PRV-008",
+      "expected_class": "none",
+      "rationale": "La palabra finalidades no se vincula al tratamiento de datos.",
+      "evidence": [],
+      "hard_negatives": [
+        "media_01-prv-008-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "media_01",
+      "control": "PRV-010",
+      "expected_class": "none",
+      "rationale": "Un enlace externo no demuestra transferencia de datos.",
+      "evidence": [],
+      "hard_negatives": [
+        "media_01-prv-010-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "media_01",
+      "control": "PRV-012",
+      "expected_class": "generic",
+      "rationale": "Menciona eliminación sin plazo, evento ni criterio fuerte.",
+      "evidence": [
+        "media_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "saas_01",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Enumera acciones específicas relacionadas con los datos.",
+      "evidence": [
+        "saas_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "saas_01",
+      "control": "PRV-010",
+      "expected_class": "explicit_none",
+      "rationale": "La negación explícita prevalece; complementos no son destinatarios por sí mismos.",
+      "evidence": [
+        "saas_01-prv-010-e01"
+      ],
+      "hard_negatives": [
+        "saas_01-prv-010-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "saas_01",
+      "control": "PRV-012",
+      "expected_class": "explicit",
+      "rationale": "Plazo y evento explícitos.",
+      "evidence": [
+        "saas_01-prv-012-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "travel_01",
+      "control": "PRV-008",
+      "expected_class": "concrete",
+      "rationale": "Referencia anafórica y frase dividida conservan finalidades concretas.",
+      "evidence": [
+        "travel_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "travel_01",
+      "control": "PRV-010",
+      "expected_class": "generic",
+      "rationale": "Modalidad condicional con receptor genérico.",
+      "evidence": [
+        "travel_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "travel_01",
+      "control": "PRV-012",
+      "expected_class": "none",
+      "rationale": "El alcance específico de estadísticas no es retención general.",
+      "evidence": [],
+      "hard_negatives": [
+        "travel_01-prv-012-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "services_01",
+      "control": "PRV-008",
+      "expected_class": "generic",
+      "rationale": "Prestación sin detalle adicional se anota conservadoramente como genérica.",
+      "evidence": [
+        "services_01-prv-008-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "services_01",
+      "control": "PRV-010",
+      "expected_class": "explicit",
+      "rationale": "La relación de comunicación y categorías de destinatario es explícita.",
+      "evidence": [
+        "services_01-prv-010-e01"
+      ],
+      "hard_negatives": [],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    },
+    {
+      "schema_version": 1,
+      "corpus_version": "w2s2a-2026-01",
+      "policy_id": "services_01",
+      "control": "PRV-012",
+      "expected_class": "generic",
+      "rationale": "Hay conservación general, sin duración o criterio; cookies son hard negative.",
+      "evidence": [
+        "services_01-prv-012-e01"
+      ],
+      "hard_negatives": [
+        "services_01-prv-012-h01"
+      ],
+      "source_type": "synthetic_equivalent",
+      "language": "es",
+      "prv003": "detected"
+    }
+  ]
+}
