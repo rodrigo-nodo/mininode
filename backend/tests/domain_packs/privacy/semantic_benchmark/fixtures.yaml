@@ -1,0 +1,240 @@
+# Synthetic paraphrases only; no copied policies or HTML.
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "fixture_id": "emol-prv-008-e01",
+      "text": "Tratamos sus datos para gestionar y mejorar nuestros servicios, personalizar su experiencia y enviar comunicaciones.",
+      "expected_role": "positive",
+      "reason": "Paráfrasis sintética de varias finalidades concretas."
+    },
+    {
+      "fixture_id": "emol-prv-010-e01",
+      "text": "Podemos comunicar datos personales a proveedores que prestan servicios para la empresa.",
+      "expected_role": "positive",
+      "reason": "La modalidad podemos mantiene una relación explícita entre datos y proveedores."
+    },
+    {
+      "fixture_id": "emol-prv-010-h01",
+      "text": "El portal publica noticias sobre empresas proveedoras.",
+      "expected_role": "hard_negative",
+      "reason": "La modalidad podemos mantiene una relación explícita entre datos y proveedores."
+    },
+    {
+      "fixture_id": "emol-prv-012-e01",
+      "text": "Podemos almacenar información personal de forma segura.",
+      "expected_role": "generic",
+      "reason": "Existe una referencia general al almacenamiento, pero no plazo o criterio."
+    },
+    {
+      "fixture_id": "emol-prv-012-h01",
+      "text": "El navegador almacena cookies necesarias.",
+      "expected_role": "hard_negative",
+      "reason": "Existe una referencia general al almacenamiento, pero no plazo o criterio."
+    },
+    {
+      "fixture_id": "edusmart-prv-008-e01",
+      "text": "Usamos los datos para mantener registros de usuarios y pedidos. También nos permiten mejorar productos y enviar comunicaciones.",
+      "expected_role": "positive",
+      "reason": "Finalidades concretas expresadas entre dos frases y con referencia anafórica."
+    },
+    {
+      "fixture_id": "edusmart-prv-010-h01",
+      "text": "Este sitio puede incluir enlaces a páginas de terceros.",
+      "expected_role": "hard_negative",
+      "reason": "Enlaces y cookies de terceros no prueban comunicación de datos; none es compatible con el adapter."
+    },
+    {
+      "fixture_id": "edusmart-prv-010-h02",
+      "text": "Usamos cookies de terceros.",
+      "expected_role": "hard_negative",
+      "reason": "Enlaces y cookies de terceros no prueban comunicación de datos; none es compatible con el adapter."
+    },
+    {
+      "fixture_id": "edusmart-prv-012-h01",
+      "text": "La información estadística de cookies se elimina posteriormente.",
+      "expected_role": "hard_negative",
+      "reason": "La eliminación tiene un objeto específico y no establece conservación general."
+    },
+    {
+      "fixture_id": "commerce_01-prv-008-e01",
+      "text": "Usamos sus datos para gestionar pedidos y mejorar nuestros servicios.",
+      "expected_role": "positive",
+      "reason": "Vincula datos con gestión de pedidos y mejora del servicio."
+    },
+    {
+      "fixture_id": "commerce_01-prv-008-h01",
+      "text": "Nuestros servicios tienen distintas finalidades comerciales.",
+      "expected_role": "hard_negative",
+      "reason": "Vincula datos con gestión de pedidos y mejora del servicio."
+    },
+    {
+      "fixture_id": "commerce_01-prv-010-e01",
+      "text": "Compartimos datos personales con proveedores de pago y hosting.",
+      "expected_role": "positive",
+      "reason": "Nombra categorías concretas de destinatarios."
+    },
+    {
+      "fixture_id": "commerce_01-prv-012-e01",
+      "text": "Conservaremos sus datos mientras dure la relación contractual y por los plazos legales aplicables.",
+      "expected_role": "positive",
+      "reason": "Define dos criterios observables de conservación."
+    },
+    {
+      "fixture_id": "banking_01-prv-008-e01",
+      "text": "Tratamos sus datos para fines relacionados con nuestros servicios.",
+      "expected_role": "generic",
+      "reason": "Declara finalidad sin especificar la acción u objetivo."
+    },
+    {
+      "fixture_id": "banking_01-prv-010-e01",
+      "text": "No compartimos sus datos personales con terceros.",
+      "expected_role": "positive",
+      "reason": "Negación inequívoca cuyo objeto son datos personales."
+    },
+    {
+      "fixture_id": "banking_01-prv-012-e01",
+      "text": "Los datos se conservarán durante cinco años después del cierre de la cuenta.",
+      "expected_role": "positive",
+      "reason": "Plazo y evento de inicio explícitos."
+    },
+    {
+      "fixture_id": "education_01-prv-008-h01",
+      "text": "Esta política explica cómo protegemos su información.",
+      "expected_role": "hard_negative",
+      "reason": "Explica protección, no una finalidad de tratamiento."
+    },
+    {
+      "fixture_id": "education_01-prv-010-e01",
+      "text": "Podemos compartir información con terceros cuando sea necesario.",
+      "expected_role": "generic",
+      "reason": "La modalidad es válida pero no identifica categoría de receptor."
+    },
+    {
+      "fixture_id": "education_01-prv-012-e01",
+      "text": "Sus datos se conservarán durante un período razonable.",
+      "expected_role": "generic",
+      "reason": "Declara conservación general sin criterio verificable."
+    },
+    {
+      "fixture_id": "health_01-prv-008-e01",
+      "text": "Recogemos los datos para coordinar citas y responder consultas de pacientes.",
+      "expected_role": "positive",
+      "reason": "Dos finalidades concretas de atención."
+    },
+    {
+      "fixture_id": "health_01-prv-010-h01",
+      "text": "El laboratorio asociado procesa sus propias muestras.",
+      "expected_role": "hard_negative",
+      "reason": "El sujeto es el laboratorio y no se afirma comunicación desde la política."
+    },
+    {
+      "fixture_id": "health_01-prv-012-e01",
+      "text": "Conservamos los datos durante el plazo exigido por la normativa aplicable.",
+      "expected_role": "positive",
+      "reason": "La obligación legal funciona como criterio explícito."
+    },
+    {
+      "fixture_id": "telecom_01-prv-008-e01",
+      "text": "Utilizamos información personal para nuestras finalidades operativas.",
+      "expected_role": "generic",
+      "reason": "La referencia a finalidades operativas permanece genérica."
+    },
+    {
+      "fixture_id": "telecom_01-prv-010-e01",
+      "text": "Podemos revelar sus datos a autoridades cuando una ley lo exija.",
+      "expected_role": "positive",
+      "reason": "Modalidad y destinatario concreto están ligados a los datos."
+    },
+    {
+      "fixture_id": "telecom_01-prv-012-h01",
+      "text": "El teléfono almacena registros técnicos temporalmente.",
+      "expected_role": "hard_negative",
+      "reason": "Otro sujeto y objeto técnico no prueban conservación de datos por la empresa."
+    },
+    {
+      "fixture_id": "media_01-prv-008-h01",
+      "text": "Nuestros servicios tienen distintas finalidades comerciales.",
+      "expected_role": "hard_negative",
+      "reason": "La palabra finalidades no se vincula al tratamiento de datos."
+    },
+    {
+      "fixture_id": "media_01-prv-010-h01",
+      "text": "Este sitio contiene enlaces a terceros.",
+      "expected_role": "hard_negative",
+      "reason": "Un enlace externo no demuestra transferencia de datos."
+    },
+    {
+      "fixture_id": "media_01-prv-012-e01",
+      "text": "Podemos eliminar información personal posteriormente.",
+      "expected_role": "generic",
+      "reason": "Menciona eliminación sin plazo, evento ni criterio fuerte."
+    },
+    {
+      "fixture_id": "saas_01-prv-008-e01",
+      "text": "Tratamos datos para crear su cuenta, prevenir fraude y prestar soporte.",
+      "expected_role": "positive",
+      "reason": "Enumera acciones específicas relacionadas con los datos."
+    },
+    {
+      "fixture_id": "saas_01-prv-010-e01",
+      "text": "No divulgamos información personal a terceros.",
+      "expected_role": "positive",
+      "reason": "La negación explícita prevalece; complementos no son destinatarios por sí mismos."
+    },
+    {
+      "fixture_id": "saas_01-prv-010-h01",
+      "text": "Los complementos de terceros pueden ofrecer funciones adicionales.",
+      "expected_role": "hard_negative",
+      "reason": "La negación explícita prevalece; complementos no son destinatarios por sí mismos."
+    },
+    {
+      "fixture_id": "saas_01-prv-012-e01",
+      "text": "Eliminaremos sus datos treinta días después de que cierre la cuenta.",
+      "expected_role": "positive",
+      "reason": "Plazo y evento explícitos."
+    },
+    {
+      "fixture_id": "travel_01-prv-008-e01",
+      "text": "La usamos para confirmar reservas. Esta información también permite personalizar el viaje.",
+      "expected_role": "positive",
+      "reason": "Referencia anafórica y frase dividida conservan finalidades concretas."
+    },
+    {
+      "fixture_id": "travel_01-prv-010-e01",
+      "text": "Podríamos compartir sus datos con terceros si resulta necesario.",
+      "expected_role": "generic",
+      "reason": "Modalidad condicional con receptor genérico."
+    },
+    {
+      "fixture_id": "travel_01-prv-012-h01",
+      "text": "Las estadísticas de búsqueda se borran al terminar la sesión.",
+      "expected_role": "hard_negative",
+      "reason": "El alcance específico de estadísticas no es retención general."
+    },
+    {
+      "fixture_id": "services_01-prv-008-e01",
+      "text": "Tratamos información para prestar nuestros servicios.",
+      "expected_role": "generic",
+      "reason": "Prestación sin detalle adicional se anota conservadoramente como genérica."
+    },
+    {
+      "fixture_id": "services_01-prv-010-e01",
+      "text": "Comunicamos datos a empresas relacionadas y proveedores de alojamiento.",
+      "expected_role": "positive",
+      "reason": "La relación de comunicación y categorías de destinatario es explícita."
+    },
+    {
+      "fixture_id": "services_01-prv-012-e01",
+      "text": "Conservamos sus datos de forma segura.",
+      "expected_role": "generic",
+      "reason": "Hay conservación general, sin duración o criterio; cookies son hard negative."
+    },
+    {
+      "fixture_id": "services_01-prv-012-h01",
+      "text": "El sitio almacena cookies en el navegador.",
+      "expected_role": "hard_negative",
+      "reason": "Hay conservación general, sin duración o criterio; cookies son hard negative."
+    }
+  ]
+}
