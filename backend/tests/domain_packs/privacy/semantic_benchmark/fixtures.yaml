@@ -18,7 +18,7 @@
       "fixture_id": "emol-prv-010-h01",
       "text": "El portal publica noticias sobre empresas proveedoras.",
       "expected_role": "hard_negative",
-      "reason": "La modalidad podemos mantiene una relación explícita entre datos y proveedores."
+      "reason": "La mención editorial de empresas proveedoras no afirma comunicación de datos personales."
     },
     {
       "fixture_id": "emol-prv-012-e01",
@@ -196,9 +196,9 @@
     },
     {
       "fixture_id": "travel_01-prv-008-e01",
-      "text": "La usamos para confirmar reservas. Esta información también permite personalizar el viaje.",
+      "text": "Usamos esta información personal para confirmar reservas. También permite personalizar el viaje.",
       "expected_role": "positive",
-      "reason": "Referencia anafórica y frase dividida conservan finalidades concretas."
+      "reason": "El antecedente explícito permite conservar la referencia entre frases y dos finalidades concretas."
     },
     {
       "fixture_id": "travel_01-prv-010-e01",
@@ -215,8 +215,8 @@
     {
       "fixture_id": "services_01-prv-008-e01",
       "text": "Tratamos información para prestar nuestros servicios.",
-      "expected_role": "generic",
-      "reason": "Prestación sin detalle adicional se anota conservadoramente como genérica."
+      "expected_role": "positive",
+      "reason": "Prestar servicios es una finalidad específica y observable del tratamiento."
     },
     {
       "fixture_id": "services_01-prv-010-e01",
@@ -235,6 +235,106 @@
       "text": "El sitio almacena cookies en el navegador.",
       "expected_role": "hard_negative",
       "reason": "Hay conservación general, sin duración o criterio; cookies son hard negative."
+    }
+  ],
+  "documents": [
+    {
+      "policy_id": "sip",
+      "fixtures": []
+    },
+    {
+      "policy_id": "emol",
+      "fixtures": [
+        "emol-prv-008-e01",
+        "emol-prv-010-e01",
+        "emol-prv-010-h01",
+        "emol-prv-012-e01",
+        "emol-prv-012-h01"
+      ]
+    },
+    {
+      "policy_id": "edusmart",
+      "fixtures": [
+        "edusmart-prv-008-e01",
+        "edusmart-prv-010-h01",
+        "edusmart-prv-010-h02",
+        "edusmart-prv-012-h01"
+      ]
+    },
+    {
+      "policy_id": "commerce_01",
+      "fixtures": [
+        "commerce_01-prv-008-e01",
+        "commerce_01-prv-008-h01",
+        "commerce_01-prv-010-e01",
+        "commerce_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "banking_01",
+      "fixtures": [
+        "banking_01-prv-008-e01",
+        "banking_01-prv-010-e01",
+        "banking_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "education_01",
+      "fixtures": [
+        "education_01-prv-008-h01",
+        "education_01-prv-010-e01",
+        "education_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "health_01",
+      "fixtures": [
+        "health_01-prv-008-e01",
+        "health_01-prv-010-h01",
+        "health_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "telecom_01",
+      "fixtures": [
+        "telecom_01-prv-008-e01",
+        "telecom_01-prv-010-e01",
+        "telecom_01-prv-012-h01"
+      ]
+    },
+    {
+      "policy_id": "media_01",
+      "fixtures": [
+        "media_01-prv-008-h01",
+        "media_01-prv-010-h01",
+        "media_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "saas_01",
+      "fixtures": [
+        "saas_01-prv-008-e01",
+        "saas_01-prv-010-e01",
+        "saas_01-prv-010-h01",
+        "saas_01-prv-012-e01"
+      ]
+    },
+    {
+      "policy_id": "travel_01",
+      "fixtures": [
+        "travel_01-prv-008-e01",
+        "travel_01-prv-010-e01",
+        "travel_01-prv-012-h01"
+      ]
+    },
+    {
+      "policy_id": "services_01",
+      "fixtures": [
+        "services_01-prv-008-e01",
+        "services_01-prv-010-e01",
+        "services_01-prv-012-e01",
+        "services_01-prv-012-h01"
+      ]
     }
   ]
 }

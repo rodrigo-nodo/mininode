@@ -1,11 +1,11 @@
 # YAML golden-set manifest. Text lives separately in fixtures.yaml.
 {
   "schema_version": 1,
-  "corpus_version": "w2s2a-2026-01",
+  "corpus_version": "w2s2a-2026-02",
   "cases": [
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "sip",
       "control": "PRV-008",
       "expected_class": "not_applicable",
@@ -18,7 +18,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "sip",
       "control": "PRV-010",
       "expected_class": "not_applicable",
@@ -31,7 +31,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "sip",
       "control": "PRV-012",
       "expected_class": "not_applicable",
@@ -44,7 +44,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "emol",
       "control": "PRV-008",
       "expected_class": "concrete",
@@ -59,7 +59,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "emol",
       "control": "PRV-010",
       "expected_class": "explicit",
@@ -76,7 +76,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "emol",
       "control": "PRV-012",
       "expected_class": "generic",
@@ -93,7 +93,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "edusmart",
       "control": "PRV-008",
       "expected_class": "concrete",
@@ -108,7 +108,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "edusmart",
       "control": "PRV-010",
       "expected_class": "none",
@@ -124,7 +124,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "edusmart",
       "control": "PRV-012",
       "expected_class": "none",
@@ -139,7 +139,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "commerce_01",
       "control": "PRV-008",
       "expected_class": "concrete",
@@ -156,7 +156,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "commerce_01",
       "control": "PRV-010",
       "expected_class": "explicit",
@@ -171,7 +171,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "commerce_01",
       "control": "PRV-012",
       "expected_class": "explicit",
@@ -186,7 +186,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "banking_01",
       "control": "PRV-008",
       "expected_class": "generic",
@@ -201,7 +201,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "banking_01",
       "control": "PRV-010",
       "expected_class": "explicit_none",
@@ -216,7 +216,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "banking_01",
       "control": "PRV-012",
       "expected_class": "explicit",
@@ -231,7 +231,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "education_01",
       "control": "PRV-008",
       "expected_class": "none",
@@ -246,7 +246,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "education_01",
       "control": "PRV-010",
       "expected_class": "generic",
@@ -261,7 +261,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "education_01",
       "control": "PRV-012",
       "expected_class": "generic",
@@ -276,7 +276,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "health_01",
       "control": "PRV-008",
       "expected_class": "concrete",
@@ -291,7 +291,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "health_01",
       "control": "PRV-010",
       "expected_class": "none",
@@ -306,7 +306,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "health_01",
       "control": "PRV-012",
       "expected_class": "explicit",
@@ -321,7 +321,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "telecom_01",
       "control": "PRV-008",
       "expected_class": "generic",
@@ -336,7 +336,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "telecom_01",
       "control": "PRV-010",
       "expected_class": "explicit",
@@ -351,7 +351,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "telecom_01",
       "control": "PRV-012",
       "expected_class": "none",
@@ -366,7 +366,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "media_01",
       "control": "PRV-008",
       "expected_class": "none",
@@ -381,7 +381,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "media_01",
       "control": "PRV-010",
       "expected_class": "none",
@@ -396,7 +396,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "media_01",
       "control": "PRV-012",
       "expected_class": "generic",
@@ -411,7 +411,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "saas_01",
       "control": "PRV-008",
       "expected_class": "concrete",
@@ -426,7 +426,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "saas_01",
       "control": "PRV-010",
       "expected_class": "explicit_none",
@@ -443,7 +443,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "saas_01",
       "control": "PRV-012",
       "expected_class": "explicit",
@@ -458,11 +458,11 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "travel_01",
       "control": "PRV-008",
       "expected_class": "concrete",
-      "rationale": "Referencia anafórica y frase dividida conservan finalidades concretas.",
+      "rationale": "El antecedente explícito permite conservar la referencia entre frases y dos finalidades concretas.",
       "evidence": [
         "travel_01-prv-008-e01"
       ],
@@ -473,7 +473,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "travel_01",
       "control": "PRV-010",
       "expected_class": "generic",
@@ -488,7 +488,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "travel_01",
       "control": "PRV-012",
       "expected_class": "none",
@@ -503,11 +503,11 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "services_01",
       "control": "PRV-008",
-      "expected_class": "generic",
-      "rationale": "Prestación sin detalle adicional se anota conservadoramente como genérica.",
+      "expected_class": "concrete",
+      "rationale": "Prestar servicios es una finalidad específica y observable del tratamiento.",
       "evidence": [
         "services_01-prv-008-e01"
       ],
@@ -518,7 +518,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "services_01",
       "control": "PRV-010",
       "expected_class": "explicit",
@@ -533,7 +533,7 @@
     },
     {
       "schema_version": 1,
-      "corpus_version": "w2s2a-2026-01",
+      "corpus_version": "w2s2a-2026-02",
       "policy_id": "services_01",
       "control": "PRV-012",
       "expected_class": "generic",
