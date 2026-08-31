@@ -1,7 +1,9 @@
 name: Temporary privacy semantic NLI experiment
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - codex/implementar-experimento-semantico-nli
 
 permissions:
   contents: read
