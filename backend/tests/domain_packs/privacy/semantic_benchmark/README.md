@@ -3,7 +3,8 @@
 This directory is the offline golden set for the semantic-evidence work proposed in
 [`semantic-evidence-w2-s1.md`](../../../../../docs/decisions/privacy/semantic-evidence-w2-s1.md).
 It freezes human-expected classes for the evaluation unit `(policy_id, control)` and
-runs the **unchanged production rules** as baseline A.
+runs the **unchanged production rules** as baseline A. Each `policy_id` represents one
+frozen synthetic document, and all three controls evaluate that same complete input.
 
 It is not a model, training set, production feature, legal assessment, or scoring
 change. It performs no NLI, embeddings, LLM inference, network access, persistence,
@@ -12,8 +13,12 @@ PRV-012.
 
 ## Data and minimization
 
-`manifest.yaml` holds labels, rationales, dependency state, and fixture references.
-`fixtures.yaml` holds short Spanish synthetic paraphrases. The `sip`, `emol`, and
+`manifest.yaml` holds labels, rationales, dependency state, and gold fixture
+references. A case's `evidence` and `hard_negatives` identify the gold annotations for
+that control; they are not the complete input. `fixtures.yaml` holds short Spanish
+synthetic paraphrases and the single ordered document fixture list for every policy.
+The runner builds `PageEvidence` from that full list, so evidence for one control can
+act as a realistic distractor for another. The `sip`, `emol`, and
 `edusmart` profiles reproduce calibration phenomena without preserving real policies;
 all other profiles are fictional sector-diverse equivalents. There is no HTML or full
 policy text. A golden label is the reviewed expected semantic class, not the current
@@ -34,11 +39,15 @@ precision/recall, omissions, and false-positive promotions. Promotion uses these
 strict orders: `none < generic < concrete` for PRV-008 and
 `none < generic < explicit` for PRV-010/012. `explicit_none` and `not_applicable` are
 incomparable and are never counted as ordinal promotions or omissions.
+`semantic_polarity_errors` separately counts PRV-010 contradictions between an
+explicit no-disclosure statement (`explicit_none`) and a positive disclosure
+assertion (`generic` or `explicit`). `none` versus `explicit_none` is not automatically
+a polarity error because absence of evidence is not the opposite assertion.
 
 ## Add a case
 
 1. Add short, original synthetic fragments to `fixtures.yaml`, each with a globally
-   unique ID, role, and reason.
+   unique ID, role, and reason, and reference them from the policy's one document.
 2. Add one manifest entry with a unique `(policy_id, control)`, a valid class for that
    control, and references to the fixtures.
 3. Keep fixture text below 1,000 characters and never paste HTML or complete policies.

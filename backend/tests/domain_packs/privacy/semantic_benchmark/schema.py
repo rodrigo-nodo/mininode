@@ -106,6 +106,7 @@ class Corpus:
     corpus_version: str
     cases: tuple[BenchmarkCase, ...]
     fixtures: tuple[Fixture, ...]
+    documents: dict[str, tuple[Fixture, ...]]
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -121,7 +122,10 @@ def load_corpus(directory: Path | None = None) -> Corpus:
     manifest = _read_yaml(root / "manifest.yaml")
     fixture_data = _read_yaml(root / "fixtures.yaml")
     _required(manifest, {"schema_version", "corpus_version", "cases"}, "manifest")
-    _required(fixture_data, {"schema_version", "fixtures"}, "fixtures document")
+    _required(
+        fixture_data, {"schema_version", "fixtures", "documents"},
+        "fixtures document",
+    )
     if manifest["schema_version"] != fixture_data["schema_version"]:
         raise ValueError("manifest and fixture schema versions differ")
     fixtures_list = [Fixture.from_dict(item) for item in fixture_data["fixtures"]]
@@ -129,15 +133,41 @@ def load_corpus(directory: Path | None = None) -> Corpus:
     if len(fixture_ids) != len(set(fixture_ids)):
         raise ValueError("fixture IDs must be unique")
     fixtures = {item.fixture_id: item for item in fixtures_list}
+    documents: dict[str, tuple[Fixture, ...]] = {}
+    for document in fixture_data["documents"]:
+        _required(document, {"policy_id", "fixtures"}, "document")
+        policy_id = document["policy_id"]
+        if policy_id in documents:
+            raise ValueError(f"duplicate document for policy: {policy_id}")
+        missing = [
+            fixture_id for fixture_id in document["fixtures"]
+            if fixture_id not in fixtures
+        ]
+        if missing:
+            raise ValueError(f"unknown fixtures in document {policy_id}: {missing}")
+        documents[policy_id] = tuple(
+            fixtures[fixture_id] for fixture_id in document["fixtures"]
+        )
     cases = tuple(BenchmarkCase.from_dict(item, fixtures) for item in manifest["cases"])
     case_ids = [(item.policy_id, item.control) for item in cases]
     if len(case_ids) != len(set(case_ids)):
         raise ValueError("(policy_id, control) case IDs must be unique")
     if any(item.corpus_version != manifest["corpus_version"] for item in cases):
         raise ValueError("case corpus versions must match the manifest")
+    policy_ids = {item.policy_id for item in cases}
+    if documents.keys() != policy_ids:
+        raise ValueError("each policy_id must have exactly one synthetic document")
+    for case in cases:
+        document_fixture_ids = {item.fixture_id for item in documents[case.policy_id]}
+        gold_fixture_ids = {
+            item.fixture_id for item in case.evidence + case.hard_negatives
+        }
+        if not gold_fixture_ids <= document_fixture_ids:
+            raise ValueError(f"case fixtures missing from document: {case.policy_id}")
     return Corpus(
         schema_version=manifest["schema_version"],
         corpus_version=manifest["corpus_version"],
         cases=cases,
         fixtures=tuple(fixtures_list),
+        documents=documents,
     )

@@ -21,7 +21,7 @@ from mininode_api.web_inspector.models import (  # noqa: E402
     PageEvidence, TargetEvidence, TransportEvidence,
 )
 
-from .schema import BenchmarkCase, CONTROLS, load_corpus
+from .schema import BenchmarkCase, CONTROLS, Fixture, load_corpus
 
 
 EVIDENCE_KEYS = {
@@ -45,7 +45,14 @@ class CaseResult:
     match: bool
 
 
-def _contract(case: BenchmarkCase) -> EvidenceContract:
+def document_text(fixtures: Iterable[Fixture]) -> str:
+    """Return the single frozen synthetic document shared by a policy's cases."""
+    return "\n".join(item.text for item in fixtures)
+
+
+def _contract(
+    case: BenchmarkCase, document: Iterable[Fixture]
+) -> EvidenceContract:
     base_url = f"https://{case.policy_id}.benchmark.invalid/"
     if case.prv003 == "not_detected":
         links: list[LinkEvidence] = []
@@ -53,7 +60,7 @@ def _contract(case: BenchmarkCase) -> EvidenceContract:
     else:
         policy_url = base_url + "privacy"
         links = [LinkEvidence(policy_url, "Política de privacidad", base_url)]
-        text = "\n".join(item.text for item in case.evidence + case.hard_negatives)
+        text = document_text(document)
         pages = [
             PageEvidence(
                 policy_url, 200, "Política de privacidad", "text/html",
@@ -72,8 +79,8 @@ def _contract(case: BenchmarkCase) -> EvidenceContract:
     )
 
 
-def run_case(case: BenchmarkCase) -> CaseResult:
-    adapted = adapt_evidence(_contract(case))
+def run_case(case: BenchmarkCase, document: Iterable[Fixture]) -> CaseResult:
+    adapted = adapt_evidence(_contract(case, document))
     prv003 = evaluate_control("PRV-003", adapted["PRV-003"])
     evaluated = evaluate_control(case.control, adapted[case.control], {"PRV-003": prv003})
     actual = (
@@ -88,8 +95,9 @@ def run_case(case: BenchmarkCase) -> CaseResult:
 
 
 def run_benchmark(cases: Iterable[BenchmarkCase] | None = None) -> list[CaseResult]:
-    selected = load_corpus().cases if cases is None else cases
-    return [run_case(case) for case in selected]
+    corpus = load_corpus()
+    selected = corpus.cases if cases is None else cases
+    return [run_case(case, corpus.documents[case.policy_id]) for case in selected]
 
 
 def _direction(result: CaseResult) -> int:
@@ -103,6 +111,20 @@ def _direction(result: CaseResult) -> int:
         return 0
     return (order[result.actual_class] > order[result.expected_class]) - (
         order[result.actual_class] < order[result.expected_class]
+    )
+
+
+def _is_semantic_polarity_error(result: CaseResult) -> bool:
+    """Detect an asserted disclosure/no-disclosure contradiction for PRV-010."""
+    if result.control != "PRV-010":
+        return False
+    positive_assertions = {"generic", "explicit"}
+    return (
+        result.expected_class == "explicit_none"
+        and result.actual_class in positive_assertions
+    ) or (
+        result.actual_class == "explicit_none"
+        and result.expected_class in positive_assertions
     )
 
 
@@ -144,6 +166,9 @@ def calculate_metrics(results: Iterable[CaseResult]) -> dict:
         ],
         "false_positive_promotions": sum(_direction(item) > 0 for item in rows),
         "false_negative_omissions": sum(_direction(item) < 0 for item in rows),
+        "semantic_polarity_errors": sum(
+            _is_semantic_polarity_error(item) for item in rows
+        ),
         "macro_precision": sum(precision) / len(precision) if precision else 0.0,
         "macro_recall": sum(recall) / len(recall) if recall else 0.0,
     }
@@ -165,7 +190,8 @@ def _text_report(results: list[CaseResult], metrics: dict) -> str:
         f"mismatches: {metrics['mismatches']}",
         f"accuracy: {metrics['accuracy']:.3f}",
         f"false_positive_promotions: {metrics['false_positive_promotions']}",
-        f"false_negative_omissions: {metrics['false_negative_omissions']}", "",
+        f"false_negative_omissions: {metrics['false_negative_omissions']}",
+        f"semantic_polarity_errors: {metrics['semantic_polarity_errors']}", "",
         "per control:",
     ])
     lines.extend(
