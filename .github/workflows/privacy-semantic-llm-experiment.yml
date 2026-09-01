@@ -2,7 +2,8 @@ name: Privacy semantic LLM W2.S.3
 
 on:
   push:
-    branches: [work]
+    branches:
+      - codex/crear-pr-para-w2.s.3-llm-experiment
 
 permissions:
   contents: read

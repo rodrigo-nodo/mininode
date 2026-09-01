@@ -8,7 +8,7 @@
 - Corpus: `w2s2a-2026-02` (frozen)
 - Primary quality run: run 1; run 2 is used only for stability.
 - Routing: frozen before inference in `semantic_llm_runner.py`.
-- Cost reference: USD 1.25 / million input tokens and USD 10.00 / million
+- Cost reference: USD 4.00 / million input tokens and USD 20.00 / million
   output tokens, snapshot dated 2026-08-31. This experimental estimate is
   separate from quality metrics and pricing may change.
 
