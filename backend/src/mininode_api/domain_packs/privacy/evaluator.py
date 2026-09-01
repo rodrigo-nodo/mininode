@@ -54,6 +54,13 @@ def _join_visible_fields(fields: list[str]) -> str:
 
 
 def _evidence_summary(control_code: str, evidence: Mapping[str, Any]) -> str | None:
+    if control_code == "PRV-103":
+        return {
+            "concrete": "Se detectó una finalidad concreta asociada al formulario.",
+            "generic": "Se detectó contexto asociado al formulario, pero la finalidad es genérica.",
+            "none": "En el formulario revisado no se identificó una finalidad visible reconocible.",
+            "unknown": "No fue posible determinar con suficiente confianza la finalidad visible del formulario.",
+        }.get(evidence.get("form_purpose"))
     visible = evidence.get("visible_evidence")
     if not isinstance(visible, Mapping) or visible.get("type") != "personal_data_form":
         return None
@@ -257,6 +264,16 @@ def evaluate_control(
             result = "not_detected"
         else:
             result = "not_evaluable"
+    elif control_code == "PRV-103":
+        dependency_result = _previous_result(previous_results, "PRV-101")
+        if dependency_result == "not_evaluable":
+            result = "not_evaluable"
+            confidence = "low"
+        else:
+            result = {
+                "concrete": "detected", "generic": "partial",
+                "none": "not_detected", "unknown": "not_evaluable",
+            }.get(evidence.get("form_purpose"), "not_evaluable")
     elif control_code == "PRV-104":
         information = evidence.get("privacy_information", False)
         consent = evidence.get("consent_mechanism", False)

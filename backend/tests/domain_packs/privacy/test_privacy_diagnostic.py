@@ -13,7 +13,7 @@ from mininode_api.web_inspector.models import (  # noqa: E402
     InspectionEvidence, LinkEvidence, PageEvidence, TargetEvidence, TransportEvidence,
 )
 
-CODES = ["PRV-001", "PRV-002", "PRV-003", "PRV-004", "PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-009", "PRV-010", "PRV-011", "PRV-012", "PRV-013", "PRV-014", "PRV-101", "PRV-102", "PRV-104", "PRV-201", "PRV-301", "PRV-501"]
+CODES = ["PRV-001", "PRV-002", "PRV-003", "PRV-004", "PRV-005", "PRV-006", "PRV-007", "PRV-008", "PRV-009", "PRV-010", "PRV-011", "PRV-012", "PRV-013", "PRV-014", "PRV-101", "PRV-102", "PRV-103", "PRV-104", "PRV-201", "PRV-301", "PRV-501"]
 
 
 def complete_contract():
@@ -44,10 +44,10 @@ def failed_contract():
 
 def test_full_contract_runs_complete_privacy_pipeline():
     result = run_privacy_diagnostic(complete_contract())
-    assert result["framework_version"] == "0.2"
+    assert result["framework_version"] == "0.3"
     assert result["scoring_version"] == "0.1"
     assert [control["control_code"] for control in result["controls"]] == CODES
-    assert len(result["controls"]) == 20
+    assert len(result["controls"]) == 21
     assert result["controls"][1]["result"] == "detected"
     assert result["controls"][14]["result"] == "detected"
     assert 0 <= result["score"] <= 100

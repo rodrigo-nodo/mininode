@@ -29,6 +29,7 @@ CONTROL_CODES = (
     "PRV-014",
     "PRV-101",
     "PRV-102",
+    "PRV-103",
     "PRV-104",
     "PRV-201",
     "PRV-301",
@@ -1163,6 +1164,83 @@ def _form_transport(
     return evidence
 
 
+_FORM_PURPOSE_FIELDS = ("heading", "legend", "introductory_text", "submit_text")
+_FORM_PURPOSE_NOISE = {
+    "all fields required", "required fields", "campos obligatorios", "required",
+    "enviando", "sending", "cargando", "loading", "anterior", "previous", "back",
+}
+_FORM_PURPOSE_GENERIC = {
+    "contacto", "contact us", "get in touch", "formulario de contacto",
+    "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
+    "siguiente", "next", "mensaje", "message", "newsletter",
+}
+_FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
+    r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
+    r"\b(?:enviar|envia|envianos)\b.{0,30}\b(?:consulta|mensaje)\b",
+    r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias)\b",
+    r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
+    r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
+    r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account)\b",
+    r"\b(?:registrarse|register|postular|apply)\b",
+    r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
+    r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
+    r"\bsend\b.{0,20}\b(?:an inquiry|us a message)\b",
+    r"\b(?:we will contact you|we ll get back to you)\b",
+    r"\breceive\b.{0,20}\bupdates?\b",
+))
+
+
+def _form_purpose_signal(form: FormEvidence) -> str:
+    """Classify purpose solely from structured text belonging to one form."""
+    values = [
+        _normalize(getattr(form, field, "") or "")
+        for field in _FORM_PURPOSE_FIELDS
+        if (getattr(form, field, None) or "").strip()
+    ]
+    if not values:
+        return "unknown"
+    useful = [value for value in values if value not in _FORM_PURPOSE_NOISE]
+    combined = " ".join(useful)
+    if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
+        return "concrete"
+    # A generic topic plus a matching action is meaningful only within this form.
+    if "newsletter" in useful and any(
+        re.search(r"\b(?:subscribe|suscribirme|suscribete|suscribirse)\b", value)
+        for value in useful
+    ):
+        return "concrete"
+    if any(value in _FORM_PURPOSE_GENERIC for value in useful):
+        return "generic"
+    return "none"
+
+
+def _form_purpose_evidence(
+    contract: EvidenceContract,
+    personal_forms: list[tuple[FormEvidence, str]],
+) -> dict:
+    high_forms = [form for form, confidence in personal_forms if confidence == "high"]
+    if not high_forms:
+        return {"form_purpose": "unknown", "confidence": "low"}
+
+    classified = [(form, _form_purpose_signal(form)) for form in high_forms]
+    precedence = ("none", "unknown", "generic", "concrete")
+    purpose = next(value for value in precedence if any(
+        classification == value for _, classification in classified
+    ))
+    determining_forms = [form for form, value in classified if value == purpose]
+    evidence = {
+        "form_purpose": purpose,
+        "confidence": {"concrete": "high", "none": "high", "generic": "medium", "unknown": "low"}[purpose],
+    }
+    source_urls = _inspected_source_urls(
+        contract, [form.source_url for form in determining_forms]
+    )
+    if source_urls:
+        evidence["source_urls"] = source_urls
+    return evidence
+
+
 def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
     """Recognize an explicit contact page with communication-oriented fields."""
 
@@ -1280,6 +1358,11 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         prv102["technical_error"] = True
         prv102["confidence"] = "low"
 
+    prv103 = _form_purpose_evidence(contract, personal_forms)
+    if not sufficient:
+        prv103["technical_error"] = True
+        prv103["confidence"] = "low"
+
     privacy_link = any(form.privacy_links for form, _ in personal_forms)
     privacy_information = privacy_link or any(
         _contains_phrase(form.nearby_text, _PRIVACY_INFORMATION_TERMS)
@@ -1370,6 +1453,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-014": prv014,
         "PRV-101": prv101,
         "PRV-102": prv102,
+        "PRV-103": prv103,
         "PRV-104": prv104,
         "PRV-201": prv201,
         "PRV-301": prv301,

@@ -30,15 +30,16 @@ def contract(*, links=None, pages=None, forms=None, cookies=None, contacts=None,
     )
 
 
-def form(*, field_type="text", name="message", label="Mensaje", nearby_text="", privacy_links=None, checkboxes=None):
+def form(*, field_type="text", name="message", label="Mensaje", nearby_text="", privacy_links=None, checkboxes=None,
+         heading=None, legend=None, introductory_text=None, submit_text=None):
     return FormEvidence(
         "https://example.com/contacto", "https://example.com/send", "post",
         [FieldEvidence(name, field_type, label, False)], checkboxes or [], nearby_text,
-        privacy_links or [],
+        privacy_links or [], heading, legend, introductory_text, submit_text,
     )
 
 
-def test_internal_form_context_does_not_change_current_privacy_evidence_or_results():
+def test_internal_form_context_does_not_change_existing_privacy_controls():
     baseline = form(field_type="email", nearby_text="Política de privacidad")
     extended = FormEvidence(
         baseline.source_url, baseline.action, baseline.method, baseline.fields,
@@ -50,11 +51,87 @@ def test_internal_form_context_does_not_change_current_privacy_evidence_or_resul
     baseline_adapted = adapt_evidence(contract(forms=[baseline]))
     extended_adapted = adapt_evidence(contract(forms=[extended]))
 
-    assert extended_adapted == baseline_adapted
     for control_id in ("PRV-101", "PRV-102", "PRV-104"):
         assert evaluate_control(control_id, extended_adapted[control_id]) == evaluate_control(
             control_id, baseline_adapted[control_id]
         )
+
+
+@pytest.mark.parametrize(("kwargs", "purpose", "result"), [
+    ({"heading": "Solicita una cotización"}, "concrete", "detected"),
+    ({"introductory_text": "Déjanos tus datos y te contactaremos para preparar una cotización."}, "concrete", "detected"),
+    ({"heading": "Request a demo"}, "concrete", "detected"),
+    ({"heading": "Contacto"}, "generic", "partial"),
+    ({"submit_text": "Enviar"}, "generic", "partial"),
+    ({"submit_text": "Continuar"}, "generic", "partial"),
+    ({"introductory_text": "All fields required", "submit_text": "Sending"}, "none", "not_detected"),
+    ({}, "unknown", "not_evaluable"),
+    ({"heading": "Newsletter", "submit_text": "Subscribe"}, "concrete", "detected"),
+])
+def test_prv103_classifies_structured_same_form_purpose(kwargs, purpose, result):
+    adapted = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))
+    assert adapted["PRV-103"]["form_purpose"] == purpose
+    assert adapted["PRV-103"]["confidence"] == {
+        "concrete": "high", "generic": "medium", "none": "high", "unknown": "low",
+    }[purpose]
+    assert "source_urls" not in adapted["PRV-103"]
+    prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
+    assert evaluate_control("PRV-103", adapted["PRV-103"], {"PRV-101": prv101})["result"] == result
+
+
+def test_prv103_does_not_infer_from_nearby_fields_or_privacy_evidence():
+    privacy = LinkEvidence("https://example.com/privacy", "Privacidad", "https://example.com/contacto")
+    candidate = form(
+        field_type="email", name="email", label="Correo electrónico",
+        nearby_text="Solicita una cotización", privacy_links=[privacy],
+    )
+    evidence = adapt_evidence(contract(forms=[candidate]))["PRV-103"]
+    assert evidence["form_purpose"] == "unknown"
+
+
+def test_prv103_exposes_only_sanitized_determining_form_urls():
+    forms = [
+        form(field_type="email", heading="Request a demo"),
+        FormEvidence(
+            "https://example.com/support?private=value", "https://example.com/send", "post",
+            [FieldEvidence("email", "email", "Email", False)], [], "", [],
+            None, None, "All fields required", "Sending",
+        ),
+    ]
+    pages = [
+        PageEvidence("https://example.com/contacto", 200, "", "text/html"),
+        PageEvidence("https://example.com/support?private=value", 200, "", "text/html"),
+    ]
+    evidence = adapt_evidence(contract(forms=forms, pages=pages))["PRV-103"]
+    assert evidence == {
+        "form_purpose": "none", "confidence": "high",
+        "source_urls": ["https://example.com/support"],
+    }
+
+
+def test_prv103_medium_only_is_unknown_and_high_ignores_medium():
+    medium = form(name="country", label="", submit_text="Chile Argentina Perú")
+    medium_only = adapt_evidence(contract(forms=[medium]))
+    assert medium_only["PRV-101"]["confidence"] == "medium"
+    assert medium_only["PRV-103"] == {"form_purpose": "unknown", "confidence": "low"}
+
+    high = form(field_type="email", heading="Solicita una cotización")
+    combined = adapt_evidence(contract(forms=[high, medium]))["PRV-103"]
+    assert combined["form_purpose"] == "concrete"
+
+
+@pytest.mark.parametrize(("other", "expected"), [
+    ({"heading": "Request support"}, "concrete"),
+    ({"heading": "Contacto"}, "generic"),
+    ({"submit_text": "Sending"}, "none"),
+    ({}, "unknown"),
+])
+def test_prv103_conservative_multi_high_precedence(other, expected):
+    forms = [
+        form(field_type="email", heading="Solicita una cotización"),
+        form(field_type="email", **other),
+    ]
+    assert adapt_evidence(contract(forms=forms))["PRV-103"]["form_purpose"] == expected
 
 
 def test_prv001_explicit_text_is_high_confidence():
