@@ -30,6 +30,14 @@ no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones ig
 - El trabajo actual de Web Inspector pertenece a la implementación backend existente de Privacy y sus pruebas.
 - Mantener el contrato de la API pública salvo que la Issue solicite explícitamente modificarlo.
 
+## Diseño de controles de formularios
+
+La definición aprobada para la siguiente ampliación de la familia Formularios está en
+[`privacy-forms-control-design.md`](privacy-forms-control-design.md). El diseño mantiene
+PRV-101 y PRV-104 sin cambios, prioriza un control determinista de transporte del
+formulario y posterga conclusiones sobre minimización, consentimiento, menores o datos
+de riesgo elevado cuando la evidencia pública no permite evitar falsos positivos.
+
 ## Plan de corrección: frontera comercial
 
 El Plan de corrección Privacy Web es un producto único de pago único por CLP
