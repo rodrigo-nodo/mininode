@@ -1,199 +1,304 @@
 # W2.2b.2-QA - calibración de evidencia estructurada por formulario
 
-## Estado
+## Resultado
 
-**CALIBRATION BLOCKED**
+**PASS WITH OBSERVATIONS**
 
-La calibración no se ejecutó. El entorno de trabajo no tenía un remoto Git
-configurado ni una sesión autenticada de GitHub CLI, por lo que no fue posible
-publicar una rama temporal ni iniciar el workflow de GitHub Actions requerido por
-esta QA. La comprobación previa `gh auth status` devolvió `You are not logged into
-any GitHub hosts`.
+La calibración real de `heading`, `legend`, `introductory_text` y `submit_text` se ejecutó mediante GitHub Actions sobre ocho sitios públicos y 19 formularios observados.
 
-De acuerdo con la regla de no inventar resultados, este documento no presenta
-observaciones, revisiones manuales ni métricas como si se hubieran obtenido de
-sitios reales. No se sustituyó la calibración por fixtures sintéticos ni por una
-ejecución local.
+El objetivo fue validar asociación estructural, no clasificar finalidad.
+
+Resultado principal:
+
+- 0 asociaciones falsas críticas;
+- 0 `cross_form_bleed`;
+- 0 texto de privacidad usado como contexto;
+- 0 texto posterior asociado incorrectamente;
+- 100% de precisión sobre asociaciones no nulas revisadas en los cuatro campos;
+- 1 caso claro de `missed_valid_context`, aceptable bajo la política precisión > recall.
+
+La clasificación es **PASS WITH OBSERVATIONS** porque el extractor omitió al menos un contexto manualmente válido por diseño conservador y algunos sitios no aportaron todos los fenómenos objetivo de forma natural.
 
 ## Línea base
 
 | Campo | Valor |
 |---|---|
 | Fecha | 2026-09-01 |
-| Main SHA previsto | `194fc5662154b4d6342314bb332043f907a17ea8` |
+| Main SHA evaluado | `194fc5662154b4d6342314bb332043f907a17ea8` |
 | Evidence Contract interno | `v0.2` |
 | `framework_version` | `0.2` |
 | `scoring_version` | `0.1` |
 | `actions_version` | `2` |
-| Producción modificada | No |
+| Controles | 20 |
 | PRV-103 implementado | No |
+| Producción modificada | No |
 
-## Metodología prevista
+## Ejecución
 
-La ejecución debía usar exclusivamente un workflow temporal de GitHub Actions y
-el pipeline actual del Web Inspector. Para cada página pública, el runner debía
-obtener HTML sin interactuar con formularios y ejecutar `extract_page(...)` y/o
-`build_evidence(...)` sin modificar el extractor.
+La ejecución local del entorno Codex no tenía autenticación suficiente para publicar y ejecutar el workflow. Por ello la calibración se ejecutó directamente mediante un workflow temporal en la rama del PR.
 
-El artifact debía contener únicamente información sanitizada por formulario:
+Run:
 
-- identificador del caso, sector, hostname y URL sin query string;
-- índice del formulario;
-- `heading`, `legend`, `introductory_text` y `submit_text`;
-- método, cantidad y tipos de campos, nombres minimizados y cantidad de
-  checkboxes;
-- como máximo, una muestra limitada de texto cercano para resolver una revisión
-  ambigua.
+https://github.com/rodrigo-nodo/mininode/actions/runs/33529438209
 
-No debía contener HTML, actions completas, query strings, cookies, headers,
-credenciales, tokens, bodies ni valores de usuario. No se debía enviar ningún
-formulario ni acceder a zonas autenticadas.
+Artifact:
 
-Una revisión manual independiente debía responder, para cada valor, si el texto
-pertenecía realmente al formulario, sin evaluar todavía la claridad de su
-finalidad y sin clasificarlo como `concrete`, `generic` o `none`.
+- nombre: `privacy-form-evidence-calibration`
+- artifact id: `9809098315`
+- retención: 7 días
 
-## Ejecución de GitHub Actions
+El workflow temporal fue eliminado después de documentar los resultados.
 
-| Elemento | Resultado |
-|---|---|
-| Workflow ejecutado | No |
-| Run URL | No disponible |
-| Artifact | No generado |
-| Causa del bloqueo | Sin remoto Git configurado y GitHub CLI sin autenticar |
+## Metodología
 
-El bloqueo ocurrió antes de publicar el workflow temporal. Por ello no se creó un
-run y no hubo artifact que descargar o revisar. Tampoco se creó un runner temporal
-en la versión final.
+El runner temporal utilizó el Web Inspector actual para obtener HTML público y ejecutó `extract_page(...)` sin modificar el extractor ni sus límites.
+
+No se enviaron formularios ni se introdujeron datos personales.
+
+Por formulario se almacenó de forma sanitizada:
+
+- URL de origen sin query string;
+- hostname;
+- índice;
+- `heading`;
+- `legend`;
+- `introductory_text`;
+- `submit_text`;
+- método;
+- tipos/nombres/labels minimizados de campos;
+- cantidad de checkboxes;
+- scheme/hostname del action;
+- una muestra limitada de estructura DOM para revisión independiente.
+
+No se almacenaron cookies, headers, bodies enviados, valores de usuarios, credenciales, tokens ni actions completas.
+
+La revisión manual respondió únicamente:
+
+> ¿El texto extraído pertenece realmente a este formulario?
+
+No evaluó todavía si el texto constituye una finalidad concreta o genérica.
 
 ## Sitios
 
-Los candidatos previstos cubrían e-commerce, servicios profesionales, educación,
-salud, SaaS/tecnología y microempresa/sitio simple. Beardbrand, Benesch y Wicked
-Grounds se consideraban candidatos conocidos, con reemplazos a seleccionar en el
-run si algún sitio no aportaba evidencia suficiente.
+| Caso | Sector | Sitio | Páginas observadas | Formularios |
+|---|---|---|---:|---:|
+| C01 | E-commerce | `beardbrand.com` | 1 | 3 |
+| C02 | Servicios profesionales | `beneschlaw.com` | 2 | 5 |
+| C03 | Educación | `harvard.edu` | 2 | 0 |
+| C04 | Salud | `nhs.uk` | 1 | 1 |
+| C05 | SaaS/tecnología | `about.gitlab.com` | 3 | 3 |
+| C06 | Microempresa/sitio simple | `wickedgrounds.com` | 2 | 1 |
+| C07 | Servicios web | `djangoproject.com` / `djangoproject.com` | 2 | 3 |
+| C08 | Tecnología | `mozilla.org` | 2 | 3 |
+
+Resumen:
 
 | Métrica | Resultado |
 |---|---:|
-| Sitios previstos | Aproximadamente 6 |
-| Sitios intentados por el workflow | 0 |
-| Sitios diagnosticados | 0 |
-| Formularios revisados | 0 |
+| Sitios intentados | 8 |
+| Sitios con páginas observadas | 8 |
+| Formularios revisados | 19 |
+| Errores de fetch en casos finales | 0 |
 
-Ningún candidato se marca como intentado: sin ejecución del workflow no existe
-una respuesta pública observada por el pipeline que permita atribuir éxito, 403,
-robots, TLS, WAF o timeout a un sitio.
+## Asociaciones revisadas
 
-## Formularios y matriz de resultados
+| Campo | Asociaciones no nulas | Correctas | Incorrectas | Precisión |
+|---|---:|---:|---:|---:|
+| `heading` | 1 | 1 | 0 | 100% |
+| `legend` | 3 | 3 | 0 | 100% |
+| `introductory_text` | 2 | 2 | 0 | 100% |
+| `submit_text` | 12 | 12 | 0 | 100% |
 
-No existen filas de resultados porque no se obtuvo evidencia real mediante el
-entorno requerido.
+La precisión se calcula solo sobre asociaciones no nulas revisadas.
 
-| Case | Sector | Site | Form | heading | heading review | legend | legend review | intro | intro review | submit | submit review | Observation |
-|---|---|---|---:|---|---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | — | — | — | — | — | Calibración bloqueada antes del run |
+Los valores `None` no se consideran fallos salvo cuando existe contexto manualmente claro que el extractor omitió.
 
-## Resumen de revisiones
+## Casos representativos
 
-| Métrica | Resultado |
-|---|---:|
-| Formularios revisados | 0 |
-| Asociaciones `heading` revisadas | 0 |
-| Asociaciones `legend` revisadas | 0 |
-| Asociaciones `introductory_text` revisadas | 0 |
-| Asociaciones `submit_text` revisadas | 0 |
-| Headings correctos | 0 |
-| Legends correctas | 0 |
-| Intros correctas | 0 |
-| Submits correctos | 0 |
-| `missed_valid_context` | 0 observados |
-| Casos inciertos | 0 observados |
+### Mozilla - heading interno
 
-Los ceros indican ausencia de observaciones, no validación satisfactoria.
+Formulario newsletter:
 
-## Fenómenos estructurales
+- `heading = "Recibe noticias de Firefox"`;
+- el heading aparece como `h3` dentro del mismo formulario;
+- asociación manual: correcta.
 
-No fue posible confirmar naturalmente ninguno de los fenómenos objetivo, incluidos
-dos formularios cercanos, privacy link, wrapper complejo, texto posterior,
-variantes de submit o legend dentro de fieldset. La cobertura permanece pendiente
-de una ejecución real y no se infiere de tests sintéticos.
+No existe contaminación con el bloque posterior de confirmación.
 
-## Discrepancias
+### Benesch - legend interno
 
-No hay discrepancias clasificables porque no hubo formularios observados. En
-particular, los siguientes valores no pueden interpretarse como una comprobación
-de ausencia:
+Se observaron formularios con:
+
+- `legend = "Contact us Form"`;
+- `legend = "Footer - Get In Touch"`.
+
+Los legends pertenecen al mismo formulario y fueron asociados correctamente.
+
+### GitLab - introductory_text externo
+
+Dos formularios estructurales mostraron:
+
+- `introductory_text = "All fields required"`.
+
+La frase aparece como hermano inmediato anterior del formulario, sin link, heading ni controles anidados.
+
+La asociación estructural es correcta.
+
+Este QA no decide si "All fields required" expresa finalidad; esa clasificación pertenece a PRV-103.
+
+### Django - omisión conservadora válida
+
+El formulario de contacto tiene un párrafo manualmente claro:
+
+> "This contact form is for the Django Software Foundation..."
+
+Sin embargo, entre ese párrafo y el formulario existen varios párrafos con enlaces.
+
+El extractor devuelve:
+
+- `introductory_text = None`.
+
+Clasificación:
+
+- `missed_valid_context`.
+
+Esto es coherente con la regla de precisión > recall: el extractor corta la búsqueda frente a bloques con links y evita asociar texto más lejano.
+
+No se recomienda ampliar la heurística a partir de este caso.
+
+### Beardbrand - múltiples submits
+
+El selector de país/región contiene múltiples botones submit.
+
+`submit_text` conserva el orden DOM, elimina duplicados y trunca al límite configurado.
+
+La asociación al formulario es correcta.
+
+Observación: este caso demuestra que `submit_text` puede ser técnicamente correcto pero semánticamente ruidoso en formularios utilitarios. PRV-103 deberá depender de PRV-101 y no interpretar cualquier submit aislado como finalidad.
+
+### Mozilla - submit con estado visual
+
+El newsletter devuelve:
+
+`submit_text = "Suscríbete ya Enviando"`.
+
+Ambos textos están dentro del botón submit observado.
+
+La asociación es correcta, aunque el texto incluye un estado visual adicional. Se registra como observación de calidad semántica futura, no como error de asociación.
+
+## Contamination review
 
 | Tipo | Observados |
 |---|---:|
+| `critical_false_associations` | 0 |
 | `cross_form_bleed` | 0 |
 | `wrong_heading` | 0 |
 | `wrong_intro` | 0 |
 | `privacy_text_as_context` | 0 |
 | `distant_text_association` | 0 |
 | `following_text_association` | 0 |
-| `nested_wrapper_ambiguity` | 0 |
+| `nested_wrapper_ambiguity` con falsa asociación | 0 |
 | `submit_misclassification` | 0 |
 | `legend_misclassification` | 0 |
-| `missed_valid_context` | 0 |
-| `technical_limitation` | 1 (entorno de ejecución) |
+| `missed_valid_context` | 1 |
 | `manual_uncertain` | 0 |
 
-## Precisión por campo
+## Fenómenos observados
 
-`association_precision` se define como asociaciones correctas divididas por todas
-las asociaciones no nulas revisadas. Al no existir asociaciones revisadas, el
-denominador es cero y ninguna precisión es calculable.
+Se observaron naturalmente:
 
-| Campo | Correctas | No nulas revisadas | `association_precision` |
-|---|---:|---:|---|
-| `heading` | 0 | 0 | N/A |
-| `legend` | 0 | 0 | N/A |
-| `introductory_text` | 0 | 0 | N/A |
-| `submit_text` | 0 | 0 | N/A |
+- heading dentro del formulario;
+- legend dentro del formulario;
+- introductory text inmediatamente anterior;
+- button submit;
+- múltiples submit;
+- formularios sin contexto estructurado;
+- formularios cercanos en una misma página;
+- formularios con estructura compleja;
+- texto posterior que no fue asociado;
+- formulario con contexto válido omitido por presencia de links intermedios.
 
-## Contamination review
+No se observó evidencia de contaminación entre formularios.
 
-La contamination review no se ejecutó. En consecuencia,
-`critical_false_associations`, `cross_form_bleed`,
-`privacy_text_as_context` y `following_text_association` quedan **no evaluados**;
-no se reportan como cero validado.
+No todos los fenómenos previstos aparecieron con una muestra positiva independiente; en particular, la muestra real fue limitada para wrappers externos complejos con heading y para `input type=submit` claramente aislado.
+
+Los tests sintéticos continúan cubriendo esos casos.
 
 ## Missing evidence
 
-No se puede distinguir entre una omisión conservadora del extractor y contexto
-válido no capturado sin evidencia real y revisión manual. Por eso no se atribuyen
-casos `missed_valid_context` a ningún sitio o formulario.
+Se registró un caso claro de `missed_valid_context` en Django.
 
-## No tuning y alcance
+Esto no invalida la calibración porque:
 
-No se modificaron el extractor, modelos, adapter, evaluator, catálogos, frontend,
-API, base de datos ni producción. Tampoco se modificaron límites o heurísticas, se
-implementó PRV-103 o se inició W2.2b.3. Las versiones de Evidence Contract,
-framework, scoring y actions permanecen sin cambios.
+- no genera una asociación falsa;
+- no introduce texto de otro formulario;
+- no puede empeorar un resultado mediante evidencia incorrecta;
+- PRV-103 será contextual y de peso cero;
+- el diseño aprobado privilegia precisión sobre recall.
 
-## Limpieza
+No se recomienda ampliar la ventana estructural ni cruzar bloques con links únicamente para capturar este caso.
 
-| Elemento temporal | Estado final |
-|---|---|
-| `.github/workflows/privacy-form-evidence-calibration.yml` | Ausente |
-| Runner temporal | Ausente |
+## No tuning
+
+No se modificaron durante la calibración:
+
+- `extractor.py`;
+- `models.py`;
+- adapter;
+- evaluator;
+- catálogos;
+- límites;
+- scoring;
+- frontend;
+- API;
+- BD.
+
+No se implementó PRV-103.
+
+Los resultados se documentaron después de la ejecución sin ajustar heurísticas sobre la misma muestra.
+
+## Versionado
+
+Se mantiene:
+
+- Evidence Contract interno = `v0.2`;
+- `framework_version = 0.2`;
+- `scoring_version = 0.1`;
+- `actions_version = 2`;
+- controles = 20.
+
+La QA no cambia comportamiento productivo.
 
 ## Conclusión
 
-**CALIBRATION BLOCKED**
+**PASS WITH OBSERVATIONS**
 
-No corresponde clasificar esta QA como **PASS**, **PASS WITH OBSERVATIONS** ni
-**NEEDS FIX**: no se ejecutó el método requerido y, por tanto, no existe una muestra
-con la que aplicar esos criterios. En particular, no puede afirmarse que
-`critical_false_associations` sea cero.
+La evidencia estructurada por formulario es suficientemente confiable para servir como entrada a la siguiente etapa.
+
+En 19 formularios reales y 8 sitios:
+
+- 0 asociaciones falsas críticas;
+- 0 contaminación entre formularios;
+- 0 privacidad usada como contexto;
+- 100% de precisión sobre asociaciones no nulas revisadas;
+- 1 omisión conservadora claramente identificada.
+
+La observación principal es de recall, no de precisión.
+
+No existe evidencia que justifique modificar W2.2b.2 antes de avanzar.
 
 ## Recomendación
 
-Reanudar W2.2b.2-QA en un entorno con un remoto de `rodrigo-nodo/mininode` y
-credenciales que permitan publicar una rama y ejecutar GitHub Actions. Ejecutar
-entonces el workflow temporal, revisar independientemente entre 10 y 15 formularios
-de aproximadamente seis sitios, descargar el artifact sanitizado, completar esta
-matriz con resultados reales y eliminar el workflow y runner antes de cerrar el PR.
+Cerrar W2.2b.2-QA con **PASS WITH OBSERVATIONS**.
 
-No modificar heurísticas ni implementar PRV-103 durante esa reanudación.
+El siguiente paso puede avanzar a W2.2b.3 - PRV-103 "Finalidad visible del formulario".
+
+Mantener para PRV-103 los principios ya aprobados:
+
+- dependencia PRV-101;
+- control contextual;
+- `score_weight = 0`;
+- no inferir finalidad desde campos;
+- clasificar `concrete / generic / none` solo desde evidencia estructurada asociada;
+- tratar evidencia ausente o ambigua de forma conservadora;
+- no convertir submit utilitario o texto técnico en una finalidad positiva por sí solo.
