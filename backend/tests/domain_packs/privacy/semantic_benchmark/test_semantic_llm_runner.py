@@ -22,6 +22,10 @@ def test_output_schema_is_strict_and_control_specific():
     schema = output_schema("PRV-010")
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]["predicted_class"]["enum"]) == {"explicit", "generic", "explicit_none", "none"}
+    assert schema["properties"]["evidence_fixture_ids"] == {
+        "type": "array",
+        "items": {"type": "string"},
+    }
 
 
 def test_fixture_validation_and_original_evidence_text():
@@ -30,6 +34,22 @@ def test_fixture_validation_and_original_evidence_text():
     assert result.llm_evidence_texts == (fixture.text,)
     with pytest.raises(ValueError, match="invalid_output"):
         validate_output(case.control, {"predicted_class": "concrete", "evidence_fixture_ids": ["invented"], "reason_short": "Visible.", "uncertain": False}, document)
+
+
+def test_duplicate_fixture_ids_are_rejected_at_local_trust_boundary():
+    case, document = _case()
+    fixture_id = document[0].fixture_id
+    with pytest.raises(ValueError, match="invalid_output"):
+        validate_output(
+            case.control,
+            {
+                "predicted_class": "concrete",
+                "evidence_fixture_ids": [fixture_id, fixture_id],
+                "reason_short": "Evidencia observable.",
+                "uncertain": False,
+            },
+            document,
+        )
 
 
 @pytest.mark.parametrize("control,bad", [("PRV-008", "explicit"), ("PRV-010", "concrete"), ("PRV-012", "explicit_none")])
