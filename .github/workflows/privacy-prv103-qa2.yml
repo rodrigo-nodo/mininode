@@ -56,26 +56,26 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("Q01", "Fintech", "es", "https://www.tenpo.cl/"),
-              ("Q02", "Salud", "es", "https://www.clinicaindisa.cl/"),
-              ("Q03", "Educación", "es", "https://www.duoc.cl/"),
-              ("Q04", "Educación", "es", "https://www.udd.cl/"),
-              ("Q05", "SaaS", "en", "https://www.typeform.com/help/contact/"),
-              ("Q06", "SaaS", "en", "https://miro.com/contact/sales/"),
-              ("Q07", "SaaS", "en", "https://calendly.com/contact"),
-              ("Q08", "SaaS", "en", "https://basecamp.com/contact"),
-              ("Q09", "E-commerce", "en", "https://www.patagonia.com/contact/"),
-              ("Q10", "Salud", "en", "https://www.mayoclinic.org/about-mayo-clinic/contact"),
-              ("Q11", "Educación", "en", "https://www.stanford.edu/contact/"),
-              ("Q12", "SaaS", "en", "https://www.grammarly.com/contact"),
-              ("Q13", "E-commerce", "en", "https://bluebottlecoffee.com/contact"),
-              ("Q14", "SaaS", "en", "https://www.surveymonkey.com/curiosity/contact-sales/"),
-              ("Q15", "SaaS", "en", "https://www.smartsheet.com/contact"),
-              ("Q16", "SaaS", "en", "https://clickup.com/contact-sales"),
-              ("Q17", "SaaS", "en", "https://www.wrike.com/contact-sales/"),
-              ("Q18", "SaaS", "en", "https://www.box.com/contact"),
-              ("Q19", "SaaS", "en", "https://www.hootsuite.com/contact-sales"),
-              ("Q20", "SaaS", "en", "https://webflow.com/contact-sales"),
+              ("Q21", "SaaS", "en", "https://www.lucid.co/contact-sales"),
+              ("Q22", "SaaS", "en", "https://www.drift.com/contact/"),
+              ("Q23", "SaaS", "en", "https://www.helpscout.com/company/contact/"),
+              ("Q24", "SaaS", "en", "https://www.gong.io/contact/"),
+              ("Q25", "SaaS", "en", "https://www.braze.com/contact"),
+              ("Q26", "SaaS", "en", "https://www.optimizely.com/contact/"),
+              ("Q27", "SaaS", "en", "https://www.qualtrics.com/contact/"),
+              ("Q28", "SaaS", "en", "https://www.tableau.com/about/contact"),
+              ("Q29", "SaaS", "en", "https://www.domo.com/company/contact"),
+              ("Q30", "SaaS", "en", "https://www.qlik.com/us/company/contact-us"),
+              ("Q31", "Fintech", "en", "https://wise.com/help/contact"),
+              ("Q32", "Fintech", "en", "https://www.revolut.com/contact-us/"),
+              ("Q33", "E-commerce", "en", "https://www.allbirds.com/pages/contact"),
+              ("Q34", "E-commerce", "en", "https://www.warbyparker.com/contact"),
+              ("Q35", "E-commerce", "en", "https://www.bombas.com/pages/contact-us"),
+              ("Q36", "Servicios", "es", "https://www.chilexpress.cl/contacto"),
+              ("Q37", "Servicios", "es", "https://www.starken.cl/contacto"),
+              ("Q38", "Educación", "es", "https://www.inacap.cl/contacto/"),
+              ("Q39", "Salud", "es", "https://www.redsalud.cl/contacto"),
+              ("Q40", "Servicios", "es", "https://www.movistar.cl/contacto/"),
           ]
 
           def clean_url(value):
@@ -313,7 +313,7 @@ jobs:
       - name: Upload sanitized QA2 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-qa2
+          name: privacy-prv103-qa2-batch2
           path: artifacts/privacy-prv103-qa2.json
           if-no-files-found: error
           retention-days: 7
