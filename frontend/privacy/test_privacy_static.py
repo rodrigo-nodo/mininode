@@ -9,6 +9,7 @@ PRIVACY_DIR = Path(__file__).parent
 FRONTEND_DIR = PRIVACY_DIR.parent
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
+CSS = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8")
 DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
 HOME_HTML = (PRIVACY_DIR.parent / "index.html").read_text(encoding="utf-8")
 REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
@@ -118,6 +119,14 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertRegex(APP, r"code: 'PRV-004'.*informational: true")
         self.assertRegex(APP, r"code: 'PRV-009'.*informational: true")
         self.assertIn("Informativo · no afecta el resultado", APP)
+        self.assertIn("'privacy-control__note'", APP)
+        self.assertIn(".privacy-control__note", CSS)
+        self.assertIn("color: var(--color-muted);", CSS)
+
+    def test_control_detail_typographic_hierarchy(self):
+        self.assertRegex(CSS, r"\.privacy-control-area h4 \{[^}]*font-weight: 700;")
+        self.assertRegex(CSS, r"\.privacy-control__name \{[^}]*font-weight: 400;")
+        self.assertRegex(CSS, r"\.privacy-controls \{[^}]*gap: var\(--space-8\);")
 
     def test_all_backend_results_have_human_labels(self):
         expected = {

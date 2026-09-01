@@ -224,7 +224,7 @@ const renderAreasAndControls = (controls) => {
       const badges = appendTextElement(item, 'span', '', 'privacy-control__badges');
       appendTextElement(badges, 'span', result.label, `privacy-state privacy-state--${result.className}`);
       if (control.informational) {
-        appendTextElement(badges, 'span', 'Informativo · no afecta el resultado', 'privacy-state privacy-state--neutral');
+        appendTextElement(badges, 'span', 'Informativo · no afecta el resultado', 'privacy-control__note');
       }
     });
   });
