@@ -38,6 +38,7 @@ EXPECTED = {
     "PRV-014": ("Retiro del consentimiento", "alto", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-102": ("Envío seguro del formulario", "medio", "conditional_evaluation"),
+    "PRV-103": ("Finalidad visible del formulario", "bajo", "context"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
     "PRV-301": ("Canal de contacto visible", "bajo", "evaluation"),
@@ -88,7 +89,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 20
+    assert len(controls) == 21
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -101,7 +102,7 @@ def test_documental_framework_matches_productive_catalog():
         / "frontend"
         / "privacy"
         / "data"
-        / "privacy-framework-v0.2.json"
+        / "privacy-framework-v0.3.json"
     )
     framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
         "framework"
@@ -118,21 +119,27 @@ def test_documental_framework_matches_productive_catalog():
             assert documented.get(shared_field) == productive.get(shared_field)
 
 
-def test_documental_framework_keeps_v01_history_and_publishes_v02():
+def test_documental_framework_keeps_history_and_publishes_v03():
     framework_directory = (
         BACKEND_SRC.parents[1] / "frontend" / "privacy" / "data"
     )
     historical_path = framework_directory / "privacy-framework-v0.1.json"
-    current_path = framework_directory / "privacy-framework-v0.2.json"
+    v02_path = framework_directory / "privacy-framework-v0.2.json"
+    current_path = framework_directory / "privacy-framework-v0.3.json"
 
     assert historical_path.is_file()
     historical = json.loads(historical_path.read_text(encoding="utf-8"))["framework"]
+    v02 = json.loads(v02_path.read_text(encoding="utf-8"))["framework"]
     current = json.loads(current_path.read_text(encoding="utf-8"))["framework"]
 
     assert historical["version"] == "0.1"
-    assert current["version"] == "0.2"
+    assert v02["version"] == "0.2"
+    assert current["version"] == "0.3"
     assert "PRV-102" not in {control["code"] for control in historical["controls"]}
-    assert "PRV-102" in {control["code"] for control in current["controls"]}
+    assert "PRV-102" in {control["code"] for control in v02["controls"]}
+    assert "PRV-103" not in {control["code"] for control in historical["controls"]}
+    assert "PRV-103" not in {control["code"] for control in v02["controls"]}
+    assert {"PRV-102", "PRV-103"} <= {control["code"] for control in current["controls"]}
 
 
 def test_catalog_contains_required_metadata_and_dependencies():
@@ -141,6 +148,9 @@ def test_catalog_contains_required_metadata_and_dependencies():
     assert controls["PRV-101"]["score_weight"] == 0
     assert controls["PRV-102"]["impact"] == "medio"
     assert controls["PRV-102"]["score_weight"] == 1
+    assert controls["PRV-103"]["type"] == "context"
+    assert controls["PRV-103"]["score_weight"] == 0
+    assert controls["PRV-103"]["dependency"] == "PRV-101"
     assert controls["PRV-004"]["score_weight"] == 0
     assert controls["PRV-004"]["dependency"] == "PRV-003"
     assert controls["PRV-009"]["type"] == "context"
@@ -209,6 +219,7 @@ def test_catalog_criteria_match_active_evaluator_results():
         },
         "PRV-101": {"detected", "not_detected", "not_evaluable"},
         "PRV-102": {"detected", "not_detected", "not_applicable", "not_evaluable"},
+        "PRV-103": {"detected", "partial", "not_detected", "not_applicable", "not_evaluable"},
         "PRV-104": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
@@ -565,6 +576,32 @@ def test_prv004_context_does_not_modify_privacy_score():
         assert score_privacy([
             *baseline, {"control_code": "PRV-004", "result": result}
         ]) == expected
+
+
+@pytest.mark.parametrize("result", [
+    "detected", "partial", "not_detected", "not_evaluable", "not_applicable",
+])
+def test_prv103_never_modifies_score_or_coverage(result):
+    baseline = [{"control_code": "PRV-501", "result": "detected"}]
+    assert score_privacy(baseline) == score_privacy([
+        *baseline, {"control_code": "PRV-103", "result": result},
+    ])
+
+
+def test_prv103_dependency_and_consumer_summaries():
+    evidence = {"form_purpose": "concrete", "confidence": "high"}
+    assert evaluate_control("PRV-103", evidence, {"PRV-101": "not_detected"})["result"] == "not_applicable"
+    assert evaluate_control("PRV-103", evidence, {"PRV-101": "not_evaluable"})["result"] == "not_evaluable"
+    result = evaluate_control("PRV-103", evidence, {"PRV-101": "detected"})
+    assert result["evidence_summary"] == "Se detectó una finalidad concreta asociada al formulario."
+
+
+def test_prv103_is_never_an_actionable_priority():
+    results = [
+        {"control_code": "PRV-103", "result": result, "confidence": "high"}
+        for result in ("partial", "not_detected")
+    ]
+    assert prioritize_findings(results, limit=20) == []
 
 
 @pytest.mark.parametrize(("result", "score"), [

@@ -1,0 +1,422 @@
+{
+  "framework": {
+    "id": "mininode-privacy-framework",
+    "version": "0.3",
+    "name": "Marco de Evaluación Mininode Privacy",
+    "description": "Marco documental de Privacy Web para evaluar señales públicas y observables de preparación frente a la privacidad y la protección de datos personales. No constituye certificación, auditoría jurídica ni validación del cumplimiento operacional interno.",
+    "scope": {
+      "includes": [
+        "Páginas públicas del sitio web inspeccionadas",
+        "Visibilidad, accesibilidad, atribución y contenido observable de políticas de privacidad",
+        "Formularios públicos visibles y categorías observables de datos personales solicitados",
+        "Información de privacidad o señales de consentimiento asociadas a formularios visibles",
+        "Información visible sobre cookies cuando se observan cookies en las respuestas inspeccionadas",
+        "Canales públicos de contacto y canales declarados en la política para ejercer derechos",
+        "Uso de HTTPS, validez del certificado TLS y anomalías observables como contenido mixto",
+        "Declaraciones públicas de la política sobre responsable, finalidades, bases, destinatarios o terceros, derechos y conservación"
+      ],
+      "excludes": [
+        "Bases de datos, archivos internos, planillas Excel y CRM",
+        "Sistemas internos, correos privados y conversaciones de WhatsApp",
+        "Contratos y documentación interna",
+        "Permisos, controles de acceso y procesos operacionales internos",
+        "Conservación o eliminación real de registros: solo se observan las declaraciones públicas de la política",
+        "Medidas técnicas de seguridad no observables públicamente",
+        "Información y funcionalidades protegidas mediante autenticación",
+        "Validación del cumplimiento operacional completo de la organización",
+        "Certificación, auditoría jurídica o determinación de cumplimiento legal completo"
+      ]
+    },
+    "allowed_values": {
+      "impact": [
+        "bajo",
+        "medio",
+        "alto",
+        "muy_alto"
+      ],
+      "automatable": [
+        "si",
+        "parcial",
+        "ia",
+        "manual"
+      ],
+      "type": [
+        "evaluation",
+        "conditional_evaluation",
+        "context"
+      ]
+    },
+    "controls": [
+      {
+        "code": "PRV-001",
+        "domain": "Transparencia",
+        "name": "Política de privacidad visible",
+        "impact": "muy_alto",
+        "automatable": "si",
+        "type": "evaluation",
+        "expected_evidence": [
+          "enlace visible relacionado con privacidad",
+          "referencia visible a una política de privacidad o tratamiento de datos"
+        ],
+        "type_justification": "La presencia o ausencia de una política visible representa directamente una señal relevante de transparencia.",
+        "base_recommendation": "Publicar una política de privacidad accesible desde las páginas principales del sitio."
+      },
+      {
+        "code": "PRV-002",
+        "domain": "Transparencia",
+        "name": "Política de privacidad accesible",
+        "impact": "medio",
+        "automatable": "si",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-001",
+        "applicability": "Solo aplica cuando PRV-001 = detected.",
+        "expected_evidence": [
+          "URL de la política",
+          "respuesta HTTP satisfactoria",
+          "contenido claramente relacionado con privacidad o tratamiento de datos"
+        ],
+        "type_justification": "Solo puede evaluarse si PRV-001 detectó una política visible; una vez aplicable, su accesibilidad sí influye en la evaluación.",
+        "base_recommendation": "Revisar que el enlace de privacidad sea accesible y dirija a contenido claramente relacionado con privacidad."
+      },
+      {
+        "code": "PRV-003",
+        "domain": "Transparencia",
+        "name": "Política propia del responsable",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "type": "evaluation",
+        "expected_evidence": [
+          "hostname y URL del enlace de privacidad",
+          "relación observable entre el documento inspeccionado y la organización evaluada",
+          "señales de política general de un proveedor conocido"
+        ],
+        "type_justification": "La atribución observable de la política al sitio evaluado es una señal directa de transparencia y actúa como gate conceptual de la capa B1.",
+        "base_recommendation": "Publicar o enlazar una política de privacidad que pueda atribuirse claramente al responsable del sitio."
+      },
+      {
+        "code": "PRV-004",
+        "domain": "Transparencia",
+        "name": "Fecha o versión de la política",
+        "impact": "bajo",
+        "automatable": "si",
+        "type": "context",
+        "score_weight": 0,
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "fecha contextualizada de actualización, publicación o vigencia en el documento seleccionado por PRV-003",
+          "identificador de versión reconocible en el documento seleccionado por PRV-003",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Aporta contexto sobre el mantenimiento documental observable, sin representar por sí mismo una señal sustantiva puntuable de transparencia.",
+        "base_recommendation": "Incorporar una fecha de última actualización o un identificador de versión visible en la política y mantener esa referencia cuando cambie el documento."
+      },
+      {
+        "code": "PRV-005",
+        "domain": "Transparencia",
+        "name": "Identificación del responsable",
+        "impact": "alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "identificación observable de la organización o responsable en el documento seleccionado por PRV-003",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política propia seleccionada por PRV-003; una vez aplicable, la identificación observable del responsable aporta una señal de transparencia.",
+        "base_recommendation": "Identificar de forma clara al responsable del sitio en su política de privacidad."
+      },
+      {
+        "code": "PRV-006",
+        "domain": "Transparencia",
+        "name": "Canal para ejercer derechos",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "canal observable dentro del documento seleccionado por PRV-003",
+          "asociación observable del canal con privacidad, datos personales o ejercicio de derechos",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, la presencia observable de un canal asociado a privacidad, datos personales o ejercicio de derechos aporta una señal de transparencia.",
+        "base_recommendation": "Incorporar en la política un canal claramente asociado a privacidad, datos personales o ejercicio de derechos."
+      },
+      {
+        "code": "PRV-007",
+        "domain": "Transparencia",
+        "name": "Categorías de datos tratados",
+        "impact": "alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "categorías o tipos concretos de datos personales en el documento seleccionado por PRV-003",
+          "referencia genérica a datos personales o información personal",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, las categorías observables de datos tratados aportan una señal de transparencia.",
+        "base_recommendation": "Describir en la política las categorías o tipos concretos de datos personales tratados."
+      },
+      {
+        "code": "PRV-008",
+        "domain": "Transparencia",
+        "name": "Finalidades del tratamiento",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "finalidades concretas del tratamiento en el documento seleccionado por PRV-003",
+          "referencia genérica al uso o tratamiento de datos",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, las finalidades concretas y observables del tratamiento aportan una señal de transparencia.",
+        "base_recommendation": "Describir en la política una o más finalidades concretas del tratamiento de datos personales."
+      },
+      {
+        "code": "PRV-009",
+        "domain": "Transparencia",
+        "name": "Base declarada del tratamiento",
+        "impact": "bajo",
+        "automatable": "parcial",
+        "type": "context",
+        "score_weight": 0,
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "base o fundamento explícito asociado al tratamiento en el documento seleccionado por PRV-003",
+          "referencia genérica a una base, autorización o permiso para el tratamiento",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Aporta contexto sobre las bases o fundamentos que la política declara de forma observable, sin valorar su corrección jurídica ni constituir una señal puntuable.",
+        "base_recommendation": "Si corresponde al tratamiento descrito, considerar informar de forma explícita el fundamento o base que la política declara para tratar los datos."
+      },
+      {
+        "code": "PRV-010",
+        "domain": "Transparencia",
+        "name": "Destinatarios o terceros",
+        "impact": "alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "mención contextual de destinatarios, proveedores, encargados o terceros en el documento seleccionado por PRV-003",
+          "categorías reconocibles de destinatarios o terceros",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, las menciones observables de destinatarios o categorías de terceros aportan una señal de transparencia.",
+        "base_recommendation": "Describir en la política las categorías de destinatarios o terceros con los que se comparten o comunican datos, cuando corresponda."
+      },
+      {
+        "code": "PRV-011",
+        "domain": "Transparencia",
+        "name": "Derechos del titular",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "sección explícita sobre derechos en el documento seleccionado por PRV-003",
+          "derechos concretos reconocibles del titular",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, la información observable sobre derechos del titular aporta una señal de transparencia.",
+        "base_recommendation": "Describir en la política los derechos concretos que puede ejercer el titular."
+      },
+      {
+        "code": "PRV-012",
+        "domain": "Transparencia",
+        "name": "Conservación de datos",
+        "impact": "medio",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "referencia contextual a conservación, retención o eliminación de datos en el documento seleccionado por PRV-003",
+          "plazo, evento o criterio temporal reconocible",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; una vez aplicable, los plazos o criterios observables de conservación aportan una señal de transparencia.",
+        "base_recommendation": "Informar en la política cuánto tiempo se conservan los datos o qué criterio determina su conservación."
+      },
+      {
+        "code": "PRV-013",
+        "domain": "Transparencia",
+        "name": "Reclamo ante la Agencia",
+        "impact": "alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "type_justification": "Solo puede evaluarse sobre la política seleccionada por PRV-003; distingue la posibilidad observable de reclamar ante una autoridad de los derechos sustantivos del titular.",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial.",
+        "expected_evidence": [
+          "referencia contextual a una reclamación o recurso ante la autoridad de protección de datos en el documento seleccionado por PRV-003",
+          "relación observable con privacidad, datos personales o derechos del titular",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "base_recommendation": "Incorporar en la política información clara sobre la posibilidad de reclamar ante la Agencia de Protección de Datos Personales o la autoridad competente cuando corresponda."
+      },
+      {
+        "code": "PRV-014",
+        "domain": "Transparencia",
+        "name": "Retiro del consentimiento",
+        "impact": "alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "type_justification": "Solo puntúa cuando la política seleccionada por PRV-003 declara claramente al menos un tratamiento basado en consentimiento.",
+        "dependency": "PRV-003",
+        "applicability": "Aplica cuando PRV-003 = detected o partial y la política declara claramente un tratamiento basado en consentimiento.",
+        "expected_evidence": [
+          "declaración contextual de un tratamiento basado en consentimiento en el documento seleccionado por PRV-003",
+          "referencia al retiro o revocación de ese consentimiento",
+          "URL del documento seleccionado por PRV-003"
+        ],
+        "base_recommendation": "Cuando la política declare tratamientos basados en consentimiento, informar de forma clara la posibilidad de retirarlo o revocarlo."
+      },
+      {
+        "code": "PRV-101",
+        "domain": "Formularios",
+        "name": "Formularios que recopilan datos personales",
+        "impact": "alto",
+        "automatable": "si",
+        "type": "context",
+        "score_weight": 0,
+        "expected_evidence": [
+          "formulario público",
+          "campos potencialmente personales como nombre, email, teléfono, RUT, dirección o texto libre"
+        ],
+        "type_justification": "Tener formularios no constituye por sí mismo una brecha; el control identifica un punto de recopilación y activa controles posteriores.",
+        "base_recommendation": "Revisar qué datos se solicitan y limitar la recopilación a aquellos necesarios para la finalidad informada."
+      },
+      {
+        "code": "PRV-102",
+        "domain": "Formularios",
+        "name": "Envío seguro del formulario",
+        "impact": "medio",
+        "automatable": "si",
+        "type": "conditional_evaluation",
+        "score_weight": 1,
+        "dependency": "PRV-101",
+        "applicability": "Solo aplica cuando PRV-101 = detected.",
+        "expected_evidence": [
+          "Esquema HTTPS de la página que contiene el formulario.",
+          "Esquema HTTPS del destino declarado por el action.",
+          "URL pública de origen del formulario."
+        ],
+        "type_justification": "El control solo aplica cuando se observa un formulario que recopila datos potencialmente personales. Una vez aplicable, el esquema de transporte de la página y del destino del formulario es una señal técnica pública y determinista.",
+        "base_recommendation": "Mantener bajo HTTPS tanto la página que contiene el formulario como el destino declarado para su envío.",
+        "criteria": {
+          "detected": "Todos los formularios personales de alta confianza observados se cargan desde páginas HTTPS y declaran destinos HTTPS.",
+          "not_detected": "Se observó al menos un formulario personal de alta confianza cuya página o destino declarado utiliza HTTP.",
+          "not_applicable": "No se observaron formularios que recopilen datos potencialmente personales.",
+          "not_evaluable": "No fue posible determinar con suficiente confianza el transporte de todos los formularios personales relevantes."
+        }
+      },
+      {
+        "code": "PRV-103",
+        "domain": "Formularios",
+        "name": "Finalidad visible del formulario",
+        "impact": "bajo",
+        "automatable": "parcial",
+        "type": "context",
+        "score_weight": 0,
+        "dependency": "PRV-101",
+        "applicability": "Solo aplica cuando PRV-101 = detected.",
+        "type_justification": "La finalidad visible aporta contexto sobre para qué se solicitan los datos en un formulario, pero esta observación no permite valorar por sí sola la licitud, necesidad o suficiencia jurídica del tratamiento y no debe afectar el score.",
+        "expected_evidence": [
+          "heading asociado al formulario",
+          "legend asociado al formulario",
+          "introductory_text asociado al formulario",
+          "submit_text asociado al formulario"
+        ],
+        "base_recommendation": "Explicar de forma visible y asociada al formulario para qué se solicitan los datos, utilizando una acción o resultado comprensible para la persona.",
+        "criteria": {
+          "detected": "Los formularios personales evaluables contienen una finalidad concreta y reconocible asociada al formulario.",
+          "partial": "Se identifica contexto asociado al formulario, pero la finalidad observada es genérica o insuficientemente concreta.",
+          "not_detected": "Se dispone de evidencia estructurada asociada al formulario, pero no se identifica una finalidad visible reconocible.",
+          "not_applicable": "PRV-101 = not_detected.",
+          "not_evaluable": "PRV-101 = not_evaluable, la aplicabilidad del formulario es insuficientemente confiable o no existe evidencia estructurada suficiente para determinar la finalidad visible."
+        }
+      },
+      {
+        "code": "PRV-104",
+        "domain": "Formularios",
+        "name": "Información de privacidad asociada al formulario",
+        "impact": "muy_alto",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "dependency": "PRV-101",
+        "applicability": "Solo aplica cuando PRV-101 = detected.",
+        "expected_evidence": [
+          "texto informativo asociado al formulario",
+          "enlace a política de privacidad",
+          "checkbox",
+          "mecanismo de consentimiento cuando corresponda"
+        ],
+        "type_justification": "Solo se evalúa cuando existe un formulario que recopila datos personales; una vez aplicable, la información asociada sí es relevante.",
+        "base_recommendation": "Incorporar información visible sobre el tratamiento de datos junto al formulario y evaluar si corresponde algún mecanismo adicional de consentimiento o aceptación."
+      },
+      {
+        "code": "PRV-201",
+        "domain": "Cookies",
+        "name": "Información visible sobre cookies",
+        "impact": "medio",
+        "automatable": "parcial",
+        "type": "conditional_evaluation",
+        "expected_evidence": [
+          "banner o aviso de cookies",
+          "texto informativo sobre cookies",
+          "panel o mecanismo de preferencias cuando corresponda"
+        ],
+        "type_justification": "Solo tiene sentido evaluarlo cuando se detectan cookies o tecnologías relevantes dentro del alcance del diagnóstico.",
+        "base_recommendation": "Incorporar información visible sobre el uso de cookies cuando corresponda al funcionamiento real del sitio."
+      },
+      {
+        "code": "PRV-301",
+        "domain": "Contacto",
+        "name": "Canal de contacto visible",
+        "impact": "bajo",
+        "automatable": "si",
+        "type": "evaluation",
+        "expected_evidence": [
+          "correo",
+          "teléfono",
+          "formulario de contacto",
+          "dirección",
+          "otro canal público accesible"
+        ],
+        "type_justification": "La existencia de un canal público y accesible es una señal directa de transparencia y posibilidad de contacto con la organización.",
+        "base_recommendation": "Publicar un canal de contacto claro y fácilmente accesible."
+      },
+      {
+        "code": "PRV-501",
+        "domain": "Seguridad visible",
+        "name": "Uso de HTTPS",
+        "impact": "muy_alto",
+        "automatable": "si",
+        "type": "evaluation",
+        "expected_evidence": [
+          "URL HTTPS",
+          "certificado TLS válido"
+        ],
+        "type_justification": "HTTPS es una señal técnica observable que puede evaluarse directamente y aporta al nivel de preparación visible del sitio.",
+        "base_recommendation": "Mantener el sitio bajo HTTPS válido y revisar la presencia de recursos inseguros."
+      }
+    ],
+    "result_semantics": {
+      "detected": "Señal positiva detectada o condición satisfecha.",
+      "partial": "Existe evidencia, pero es incompleta o ambigua.",
+      "not_detected": "No se observó la condición esperada; puede existir una oportunidad de mejora.",
+      "not_evaluable": "Una limitación técnica impide determinar el resultado.",
+      "not_applicable": "El control no corresponde debido a su dependencia o al contexto observado."
+    }
+  }
+}

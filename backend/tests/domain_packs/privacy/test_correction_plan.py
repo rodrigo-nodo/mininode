@@ -115,3 +115,12 @@ def test_prv102_insecure_transport_generates_complete_actionable_item():
         "control_code", "finding", "recommendation", "action_steps",
         "validation_step",
     } <= set(plan["items"][0])
+
+
+def test_prv103_context_never_generates_correction_plan_items():
+    plan = build_correction_plan([
+        finding("PRV-103", "partial"),
+        finding("PRV-103", "not_detected"),
+    ], initial_score=75)
+    assert plan["item_count"] == 0
+    assert plan["items"] == []

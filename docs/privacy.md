@@ -40,6 +40,14 @@ de riesgo elevado cuando la evidencia pública no permite evitar falsos positivo
 
 ## Plan de corrección: frontera comercial
 
+PRV-103 observa de forma contextual y determinista si los formularios personales de
+alta confianza expresan una finalidad visible concreta, genérica, ausente o no
+evaluable. Usa exclusivamente `heading`, `legend`, `introductory_text` y
+`submit_text` asociados al mismo formulario; no infiere la finalidad desde campos,
+`nearby_text` ni señales de privacidad. Los formularios de confianza media no
+determinan el resultado y el control no participa en el Privacy Score, las
+prioridades ni el Plan de corrección.
+
 El Plan de corrección Privacy Web es un producto único de pago único por CLP
 $49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden
 `pending_payment` con el identificador del snapshot y un email normalizado. El precio, la
