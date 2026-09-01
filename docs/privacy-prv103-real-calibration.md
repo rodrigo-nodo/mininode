@@ -2,17 +2,28 @@
 
 ## Resultado
 
-**CALIBRATION BLOCKED**
+**NEEDS FIX**
 
-No fue posible ejecutar la calibración real. El entorno local resolvió DNS, pero
-rechazó todas las conexiones salientes del `WebFetcher` con
-`ConnectError: network_unreachable`. El entorno tampoco dispone de autenticación
-GitHub (`gh auth status` informa que no existe una sesión), por lo que no fue
-posible publicar ni ejecutar el workflow temporal alternativo.
+PRV-103 se calibró sobre un holdout real nuevo, separado de los sitios utilizados para diseñar W2.2b.2 y PRV-103.
 
-No se usaron fixtures, mocks ni resultados inventados. En consecuencia, esta
-ejecución no permite clasificar PRV-103 como PASS, PASS WITH OBSERVATIONS o NEEDS
-FIX.
+La ejecución no mostró promociones falsas a `concrete`, pero sí un patrón repetido de clasificaciones demasiado adversas o demasiado conservadoras: finalidades que la revisión manual considera `concrete` o `generic` terminan como `none` o, en varios casos, como `generic` cuando eran `concrete`.
+
+Resultado principal:
+
+- 56 sitios nuevos intentados en cuatro lotes;
+- 40 sitios con al menos una página analizada;
+- 18 formularios personales HIGH revisados;
+- 0 formularios MEDIUM observados;
+- 1 clasificación automática `concrete`, correctamente `concrete` en revisión manual;
+- `detected_precision = 100%` (1/1);
+- 0 `false_concrete_promotion`;
+- `exact_class_agreement = 38,9%` (7/18);
+- 6 `missed_concrete`;
+- 8 casos `false_adverse_none` (manual `concrete/generic`, producto `none`);
+- 0 `medium_influenced_result`;
+- 0 errores mecánicos de consolidación multi-form observados.
+
+Según los criterios fijados antes de ejecutar el holdout, el patrón repetido de `none` incorrecto obliga a clasificar esta QA como **NEEDS FIX**.
 
 ## Línea base
 
@@ -25,114 +36,251 @@ FIX.
 | `actions_version` | `2` |
 | Evidence Contract interno | `v0.2` |
 | Controles | 21 |
-| Producción modificada | No |
-| PRV-103 modificado | No |
+| Producción modificada durante QA | No |
+| PRV-103 modificado durante QA | No |
 
-## Metodología intentada
+## Ejecución
 
-Se preparó fuera del repositorio un runner efímero que invocaba
-`diagnose_privacy_url(...)` sin mocks. El runner conservaba en memoria el Evidence
-Contract final y proyectaba exclusivamente URL sin query string, hostname, índice,
-confianza personal, evidencia estructurada, clase interna y campos minimizados. No
-introducía datos, enviaba formularios, ejecutaba POST, autenticaba ni probaba
-endpoints.
+La calibración se ejecutó mediante un workflow temporal de GitHub Actions usando el Web Inspector y el pipeline productivo, sin mocks ni envío de formularios.
 
-Los doce intentos fallaron durante el fetch inicial. Al no existir autenticación
-GitHub, no se creó el workflow alternativo: hacerlo sin poder publicarlo o ejecutarlo
-no habría producido evidencia real y habría dejado un cambio temporal innecesario.
+Runs:
 
-## Holdout principal intentado
+1. https://github.com/rodrigo-nodo/mininode/actions/runs/33563245764
+2. https://github.com/rodrigo-nodo/mininode/actions/runs/33563428165
+3. https://github.com/rodrigo-nodo/mininode/actions/runs/33563615844
+4. https://github.com/rodrigo-nodo/mininode/actions/runs/33563860085
 
-Todos los sitios eran nuevos respecto de W2.2b.2-QA.
+Artifacts sanitizados:
 
-| Sitio | Idioma | Sector | Resultado |
-|---|---|---|---|
-| `bsale.cl` | Español | SaaS/e-commerce, Chile | `network_unreachable` |
-| `cleveritgroup.com` | Español | Tecnología, Chile | `network_unreachable` |
-| `uc.cl` | Español | Educación, Chile | `network_unreachable` |
-| `clinicaalemana.cl` | Español | Salud, Chile | `network_unreachable` |
-| `achs.cl` | Español | Salud, Chile | `network_unreachable` |
-| `laborum.cl` | Español | Servicios, Chile | `network_unreachable` |
-| `shopify.com` | Inglés | E-commerce/SaaS | `network_unreachable` |
-| `hubspot.com` | Inglés | SaaS/tecnología | `network_unreachable` |
-| `salesforce.com` | Inglés | SaaS/tecnología | `network_unreachable` |
-| `wordpress.com` | Inglés | Tecnología | `network_unreachable` |
-| `squarespace.com` | Inglés | SaaS/tecnología | `network_unreachable` |
-| `zendesk.com` | Inglés | Soporte/SaaS | `network_unreachable` |
+| Lote | Artifact | ID |
+|---|---|---:|
+| 1 | `privacy-prv103-calibration` | `9822099051` |
+| 2 | `privacy-prv103-calibration-batch2` | `9822172201` |
+| 3 | `privacy-prv103-calibration-batch3` | `9822238686` |
+| 4 | `privacy-prv103-calibration-batch4` | `9822325131` |
 
-Sitios diagnosticados: **0 de 12**. No se forzó ninguno ni se relajaron las
-protecciones del inspector.
+Todos tienen retención de siete días.
 
-## Formularios y matriz manual/producto
+El workflow temporal se eliminó después de documentar esta calibración.
 
-No hubo páginas recuperadas ni formularios observables. Por tanto, no existe una
-matriz manual/producto válida. Una tabla con clases o acuerdos en estas condiciones
-sería evidencia inventada.
+## Metodología
 
-| Case | Site | Lang | Form | Personal conf | Heading | Legend | Intro | Submit | Product purpose | PRV-103 | Manual purpose | Agreement | Error type |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | — | — | — | — | — | — | `calibration_blocked` |
+Por cada sitio se utilizó el fetcher real, extracción real, construcción del Evidence Contract y diagnóstico Privacy real.
+
+No se:
+
+- enviaron formularios;
+- introdujeron datos personales;
+- ejecutaron actions de formularios;
+- autenticaron sesiones;
+- modificaron reglas de PRV-103;
+- agregaron regex o keywords;
+- modificaron extractor, adapter o evaluator.
+
+Por cada formulario personal observado se guardó únicamente evidencia sanitizada y acotada:
+
+- URL sin query ni fragment;
+- sector e idioma;
+- índice;
+- confianza personal HIGH/MEDIUM;
+- `heading`;
+- `legend`;
+- `introductory_text`;
+- `submit_text`;
+- clase interna del producto;
+- tipos/nombres/labels minimizados de campos.
+
+## Holdout
+
+Se partió con 12 sitios nuevos y se ampliaron lotes únicamente porque muchos sitios no exponían formularios personales en las páginas inspeccionables o bloqueaban la inspección. Ninguno de los sitios de W2.2b.2-QA se utilizó como holdout.
+
+Resumen:
+
+| Métrica | Resultado |
+|---|---:|
+| Sitios intentados | 56 |
+| Sitios con páginas analizadas | 40 |
+| Formularios personales HIGH | 18 |
+| Formularios personales MEDIUM | 0 |
+| Idiomas presentes en formularios adjudicados | Español e inglés |
+
+La muestra final supera el mínimo práctico de 15 formularios reales. No se realizó tuning entre lotes: solo se buscaron sitios frescos adicionales para completar el denominador.
+
+## Matriz manual vs producto
+
+La etiqueta manual responde exclusivamente si los cuatro campos estructurados asociados al mismo formulario expresan una finalidad. No se utilizó `nearby_text` para rescatar casos.
+
+| Caso | Sitio/formulario | Evidencia estructurada resumida | Producto | Manual | Acuerdo | Error |
+|---|---|---|---|---|---|---|
+| H02-1 | CleverIT / home | submit: “Transforma tu futuro digital ahora” | none | none | Sí | - |
+| H02-2 | CleverIT / contact | submit: “Hablemos de tu proyecto” | none | concrete | No | missed_concrete / false_adverse_none |
+| H07-1 | Shopify / checkout | sin evidencia estructurada | unknown | unknown | Sí | - |
+| H12-1 | Zendesk / home | “14-day free trial…” + “Try for free” | none | concrete | No | missed_concrete / false_adverse_none |
+| H12-2 | Zendesk / privacy notice | submit: “Subscribe” | none | generic | No | false_adverse_none |
+| H13-1 | Kibernum | submit: “Conversemos” | none | generic | No | false_adverse_none |
+| H18-1 | Chipax / contact | intro: “Nombre”; submit: “Escríbenos” | none | concrete | No | missed_concrete / false_adverse_none |
+| H19-1 | Fintoc / home | “Completa este formulario y nos pondremos en contacto contigo…” | generic | concrete | No | missed_concrete |
+| H19-2 | Fintoc / privacidad | mismo formulario visible | generic | concrete | No | missed_concrete |
+| H19-3 | Fintoc / smart checkout | mismo formulario visible | generic | concrete | No | missed_concrete |
+| H25-1 | monday.com | intro: “O”; submit: “Empezar” | none | generic | No | false_adverse_none |
+| H25-2 | monday.com | submit: “Empezar” | none | generic | No | false_adverse_none |
+| H26-1 | Intercom / contact sales | submit: “Next” | generic | generic | Sí | - |
+| H35-1 | Zoom / contact sales | heading: “Cuéntenos un poco acerca de usted”; submit incluye “Registrarse” | concrete | concrete | Sí | - |
+| H47-1 | Stripe / contact sales | heading: “Te llevamos al lugar adecuado”; submit: “Continuar” | generic | generic | Sí | - |
+| H48-1 | Slack / contact sales | submit: “Enviar” | generic | generic | Sí | - |
+| H50-1 | GitHub Enterprise / contact | legend: “I'm interested in”; submit: “Contact” | none | generic | No | false_adverse_none |
+| H52-1 | Figma / contact | heading: “Contact sales”; submit: “Submit” | generic | generic | Sí | - |
+
+### Nota sobre Fintoc
+
+El mismo componente de formulario apareció en tres páginas distintas y se cuenta como tres formularios observados porque esa fue la unidad fijada antes del análisis.
+
+La conclusión no depende de esa repetición. Si se deduplican dos de las tres apariciones de Fintoc:
+
+- el acuerdo exacto continúa muy por debajo de 90%;
+- permanecen múltiples `missed_concrete`;
+- permanecen múltiples `false_adverse_none`;
+- la decisión continúa siendo **NEEDS FIX**.
 
 ## Métricas
 
-Las métricas quedan **no calculables**, no en cero: no existe denominador real.
-
 | Métrica | Resultado |
-|---|---|
-| Formularios HIGH revisados | No calculable |
-| Formularios MEDIUM revisados | No calculable |
-| Producto `concrete` | No calculable |
-| Producto `generic` | No calculable |
-| Producto `none` | No calculable |
-| Producto `unknown` | No calculable |
-| `exact_class_agreement` | No calculable |
-| `detected_precision` | No calculable |
-| `false_concrete_promotions` | No calculable |
-| `false_generic_promotions` | No calculable |
-| `missed_concrete` | No calculable |
-| `medium_influenced_results` | No calculable |
-| `multi_form_consolidation_errors` | No calculable |
-| `manual_uncertain` | No calculable |
+|---|---:|
+| Formularios HIGH revisados | 18 |
+| Formularios MEDIUM revisados | 0 |
+| Producto concrete | 1 |
+| Producto generic | 7 |
+| Producto none | 9 |
+| Producto unknown | 1 |
+| Manual concrete | 7 |
+| Manual generic | 9 |
+| Manual none | 1 |
+| Manual unknown | 1 |
+| Exact class agreement | 7/18 = 38,9% |
+| Detected precision | 1/1 = 100% |
+| False concrete promotions | 0 |
+| False generic promotions | 0 |
+| Missed concrete | 6 |
+| False adverse none | 8 |
+| False unknown | 0 |
+| Medium influenced results | 0 observados |
+| Multi-form consolidation errors | 0 |
+| Manual uncertain | 0 |
 
-## Errores
+## Interpretación
 
-El único error adjudicable es operacional: conectividad saliente no disponible y
-ausencia de credenciales para la alternativa GitHub Actions. No se observó evidencia
-suficiente para adjudicar errores A-I de PRV-103.
+### Señal positiva
 
-## Análisis MEDIUM
+La única promoción automática a `concrete` observada, Zoom, fue correcta. Por tanto, en este holdout no aparece el riesgo más grave que se quería evitar: declarar una finalidad concreta sin sustento.
 
-Bloqueado: no se recuperaron formularios MEDIUM. No se puede afirmar que hayan
-influido o no en resultados agregados reales.
+### Problema principal
+
+PRV-103 es demasiado restrictivo para expresiones reales frecuentes.
+
+Los patrones que el producto no reconoce correctamente incluyen, entre otros:
+
+- “Hablemos de tu proyecto”;
+- “Try for free” junto a una prueba gratuita explícita;
+- “Escríbenos”;
+- “Completa este formulario y nos pondremos en contacto contigo…”;
+- “Conversemos” y “Empezar” como contextos genéricos;
+- “Contact” dentro de un formulario explícitamente orientado a contacto.
+
+Esto genera dos efectos:
+
+1. finalidad concreta real degradada a `generic` o `none`;
+2. contexto genérico real degradado a `none`.
+
+El segundo efecto es especialmente importante porque `none -> not_detected` afirma que existe evidencia estructurada pero no una finalidad reconocible. Esa afirmación resultó demasiado fuerte en varios formularios reales.
+
+## Formularios MEDIUM
+
+No apareció ningún formulario personal MEDIUM en el holdout recuperado.
+
+Por lo tanto:
+
+- no existe evidencia real nueva para confirmar o refutar el comportamiento MEDIUM;
+- no se contabiliza como fallo;
+- la protección HIGH/MEDIUM sigue respaldada por tests sintéticos, no por esta muestra real.
 
 ## Consolidación multi-form
 
-Bloqueada: no se recuperaron páginas con múltiples formularios. No se evaluó la
-precedencia agregada en evidencia real.
+Se observaron sitios con varios formularios HIGH, incluidos CleverIT, Zendesk, Fintoc y monday.com.
+
+No se observó un fallo mecánico de la precedencia de consolidación: el aggregate fue consistente con las clases internas generadas por cada formulario.
+
+Las discrepancias de sitio provienen de la clasificación semántica por formulario, no del algoritmo de precedencia multi-form.
+
+## Asociación estructural
+
+No se observó cross-form bleed que produjera una promoción positiva errónea.
+
+Se registran como observaciones de extracción:
+
+- Chipax produjo `introductory_text = "Nombre"`, que parece texto de campo más que una finalidad;
+- monday.com produjo `introductory_text = "O"` en un formulario.
+
+Ninguno produjo una falsa promoción, pero son buenos casos de regresión para una futura evolución del Evidence Contract/extractor si se decide revisarlo.
+
+No se modifica W2.2b.2 en este PR.
 
 ## Regression reference - non-holdout
 
-No ejecutada. Se priorizó el holdout principal y, una vez confirmada la limitación
-global de red, ejecutar referencias habría fallado por la misma causa. No se mezcló
-ninguna referencia anterior con el holdout.
+No se ejecutó.
 
-## Limpieza y no tuning
+La conclusión del holdout nuevo ya es concluyente y agregar sitios usados durante el diseño no mejoraría la independencia de la decisión.
 
-No se creó ningún workflow ni runner dentro del repositorio. El runner local
-efímero quedó fuera del árbol Git y no forma parte del cambio. No se modificaron
-extractor, adapter, evaluator, WebFetcher, catálogos, versiones, API, frontend ni
-base de datos; tampoco se ajustaron regex, palabras clave, precedencia o confianza.
+## Decisión
 
-## Conclusión
+Los criterios previos definían **NEEDS FIX** ante un patrón repetido de `false generic/none`.
 
-**CALIBRATION BLOCKED** por `network_unreachable` en los doce sitios y falta de
-autenticación GitHub para ejecutar el fallback. Esta ejecución no responde si la
-clasificación automática coincide con una revisión humana independiente.
+El holdout presenta ese patrón:
+
+- 8 `false_adverse_none`;
+- 6 `missed_concrete`;
+- acuerdo exacto 38,9%.
+
+Aunque `detected_precision` fue 100% y no hubo `false_concrete_promotion`, el resultado no es suficientemente calibrado para cerrar PRV-103 como estable.
+
+**Clasificación final: NEEDS FIX.**
+
+## No tuning
+
+Esta QA no modifica las reglas.
+
+Se mantienen intactos:
+
+- `_FORM_PURPOSE_*`;
+- `_form_purpose_signal(...)`;
+- `_form_purpose_evidence(...)`;
+- precedencia;
+- confianza;
+- extractor;
+- Evidence Contract;
+- catálogo y scoring.
+
+Esto evita ajustar el clasificador sobre el mismo holdout utilizado para medirlo.
+
+## Versionado
+
+Sin cambios:
+
+- `framework_version = 0.3`;
+- `scoring_version = 0.1`;
+- `actions_version = 2`;
+- Evidence Contract = `v0.2`;
+- controles = 21.
 
 ## Recomendación
 
-Repetir W2.2b.3-QA sin cambiar reglas en un runner con conectividad pública y acceso
-al repositorio. Usar este mismo holdout o reemplazos no observados por quienes
-diseñaron PRV-103, generar la matriz sanitizada y aplicar los umbrales de decisión
-solo después de revisar aproximadamente 15-25 formularios reales. No comenzar otro
-control ni realizar tuning antes de completar esa calibración.
+Mergear este PR únicamente como registro de QA con resultado **NEEDS FIX**.
+
+El siguiente paso debe ser un PR separado:
+
+**W2.2b.3-calibration-fix**
+
+Ese PR puede revisar las discrepancias observadas y proponer una corrección pequeña y conservadora de la semántica `concrete / generic / none / unknown`.
+
+Después del fix debe ejecutarse un **segundo holdout nuevo**, sin reutilizar estos formularios para medir la mejora final.
+
+No avanzar todavía a PRV-104 adicional, destino externo (I) ni campos obligatorios (C) hasta cerrar esta recalibración de PRV-103.
