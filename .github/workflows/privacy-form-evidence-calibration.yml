@@ -1,0 +1,296 @@
+name: Temporary form evidence calibration
+
+on:
+  push:
+    branches:
+      - codex/crear-pr-para-calibracion-de-evidencia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run sanitized real-site form evidence calibration
+        env:
+          PYTHONPATH: backend/src
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import time
+          from pathlib import Path
+          from urllib.parse import urlsplit, urlunsplit
+
+          from bs4 import BeautifulSoup, Tag
+
+          from mininode_api.web_inspector import (
+              WebFetcher,
+              classify_page_candidates,
+              discover_include_links,
+              extract_page,
+          )
+
+          CASES = [
+              ("C01", "E-commerce", "https://www.beardbrand.com/"),
+              ("C02", "Servicios profesionales", "https://www.beneschlaw.com/"),
+              ("C03", "Educación", "https://www.harvard.edu/"),
+              ("C04", "Salud", "https://www.nhs.uk/"),
+              ("C05", "SaaS/tecnología", "https://about.gitlab.com/"),
+              ("C06", "Microempresa/sitio simple", "https://wickedgrounds.com/"),
+              ("C07", "Servicios web", "https://www.djangoproject.com/"),
+              ("C08", "Tecnología", "https://www.mozilla.org/"),
+          ]
+          MAX_FORMS = 24
+          MAX_PAGES_PER_SITE = 4
+
+          def clean_text(value, limit):
+              if value is None:
+                  return None
+              value = " ".join(str(value).split())
+              return value[:limit] or None
+
+          def clean_url(value):
+              if not value:
+                  return None
+              try:
+                  parsed = urlsplit(value)
+              except ValueError:
+                  return None
+              if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+                  return None
+              host = parsed.hostname.lower().rstrip(".")
+              try:
+                  port = parsed.port
+              except ValueError:
+                  port = None
+              if port:
+                  host = f"{host}:{port}"
+              return urlunsplit((parsed.scheme.lower(), host, parsed.path or "/", "", ""))
+
+          def tag_snapshot(tag):
+              if not isinstance(tag, Tag):
+                  return None
+              nested = tag.find(
+                  ["form", "input", "select", "textarea", "button", "label", "legend"]
+              )
+              heading = tag.find(["h1","h2","h3","h4","h5","h6"])
+              return {
+                  "tag": tag.name,
+                  "text": clean_text(tag.get_text(" ", strip=True), 220),
+                  "has_link": bool(tag.find("a", href=True)) or tag.name == "a",
+                  "has_heading": bool(heading) or tag.name in {"h1","h2","h3","h4","h5","h6"},
+                  "has_control": bool(nested),
+              }
+
+          def manual_structure(form_tag):
+              previous = []
+              for sibling in form_tag.previous_siblings:
+                  if not isinstance(sibling, Tag):
+                      continue
+                  snap = tag_snapshot(sibling)
+                  if snap:
+                      previous.append(snap)
+                  if len(previous) >= 4:
+                      break
+
+              following = None
+              for sibling in form_tag.next_siblings:
+                  if isinstance(sibling, Tag):
+                      following = tag_snapshot(sibling)
+                      break
+
+              inside = []
+              for descendant in form_tag.find_all(
+                  ["h1","h2","h3","h4","h5","h6","p","small","div","legend","button","input"],
+                  limit=16,
+              ):
+                  entry = {
+                      "tag": descendant.name,
+                      "text": clean_text(
+                          descendant.get("value")
+                          if descendant.name == "input" and str(descendant.get("type") or "").lower() == "submit"
+                          else descendant.get_text(" ", strip=True),
+                          180,
+                      ),
+                  }
+                  if descendant.name in {"button","input"}:
+                      entry["type"] = str(descendant.get("type") or "").lower() or None
+                  if descendant.name == "div":
+                      entry["has_link"] = bool(descendant.find("a", href=True))
+                      entry["has_heading"] = bool(descendant.find(["h1","h2","h3","h4","h5","h6"]))
+                      entry["has_control"] = bool(descendant.find(["input","select","textarea","button","label","legend"]))
+                  inside.append(entry)
+
+              return {
+                  "previous_siblings_nearest_first": previous,
+                  "following_sibling": following,
+                  "inside_relevant_nodes_dom_order": inside,
+              }
+
+          output = {
+              "baseline": {
+                  "main_sha": "194fc5662154b4d6342314bb332043f907a17ea8",
+                  "evidence_contract_version": "0.2",
+                  "framework_version": "0.2",
+                  "scoring_version": "0.1",
+                  "actions_version": "2",
+              },
+              "cases": [],
+              "forms": [],
+          }
+
+          total_forms = 0
+          for case_id, sector, requested in CASES:
+              case = {
+                  "case_id": case_id,
+                  "sector": sector,
+                  "requested_url": clean_url(requested),
+                  "pages": [],
+                  "errors": [],
+              }
+              started = time.monotonic()
+              deadline = started + 35.0
+              try:
+                  with WebFetcher(inspection_budget=35.0) as fetcher:
+                      home = fetcher.fetch(requested, [requested], deadline=deadline)
+                      if not home.pages or home.pages[0].error or not home.pages[0].html or not home.pages[0].final_url:
+                          err = home.pages[0].error.code if home.pages and home.pages[0].error else "inspection_failed"
+                          case["errors"].append({"phase":"home_fetch","code":err})
+                          output["cases"].append(case)
+                          continue
+
+                      hp = home.pages[0]
+                      pages = [(hp.final_url, hp.html)]
+                      home_extracted = extract_page(hp.html, hp.final_url)
+                      try:
+                          includes = discover_include_links(
+                              hp.html, hp.final_url, fetcher=fetcher, deadline=deadline
+                          )
+                      except Exception:
+                          includes = []
+                      candidates = classify_page_candidates(
+                          hp.final_url, [*home_extracted.links, *includes]
+                      )
+
+                      selected = []
+                      for category in ("contact", "action"):
+                          for candidate in candidates:
+                              if candidate.category == category and candidate.url not in selected:
+                                  selected.append(candidate.url)
+                                  if len([x for x in selected if x]) >= MAX_PAGES_PER_SITE - 1:
+                                      break
+                      for url in selected[: MAX_PAGES_PER_SITE - 1]:
+                          if time.monotonic() >= deadline:
+                              break
+                          result = fetcher.fetch(hp.final_url, [url], deadline=deadline)
+                          for page in result.pages:
+                              if page.error:
+                                  case["errors"].append({
+                                      "phase": page.failure_phase or "candidate_fetch",
+                                      "code": page.error.code,
+                                      "requested_url": clean_url(page.requested_url),
+                                  })
+                              elif page.html and page.final_url:
+                                  pages.append((page.final_url, page.html))
+
+                      for page_url, html in pages:
+                          if total_forms >= MAX_FORMS:
+                              break
+                          case["pages"].append(clean_url(page_url))
+                          extracted = extract_page(html, page_url)
+                          soup = BeautifulSoup(html, "lxml")
+                          for removable in soup.find_all(["script","style","template"]):
+                              removable.decompose()
+                          form_tags = soup.find_all("form")
+                          for index, form_evidence in enumerate(extracted.forms):
+                              if total_forms >= MAX_FORMS:
+                                  break
+                              form_tag = form_tags[index] if index < len(form_tags) else None
+                              parsed_action = urlsplit(form_evidence.action)
+                              field_names = []
+                              for field in form_evidence.fields[:12]:
+                                  field_names.append({
+                                      "type": clean_text(field.type, 40),
+                                      "name": clean_text(field.name, 60),
+                                      "label": clean_text(field.label, 90),
+                                  })
+                              row = {
+                                  "case_id": case_id,
+                                  "sector": sector,
+                                  "source_url": clean_url(form_evidence.source_url),
+                                  "source_hostname": (urlsplit(form_evidence.source_url).hostname or "").lower() or None,
+                                  "form_index": index,
+                                  "heading": clean_text(form_evidence.heading, 160),
+                                  "legend": clean_text(form_evidence.legend, 160),
+                                  "introductory_text": clean_text(form_evidence.introductory_text, 300),
+                                  "submit_text": clean_text(form_evidence.submit_text, 120),
+                                  "method": clean_text(form_evidence.method, 16),
+                                  "field_count": len(form_evidence.fields),
+                                  "fields": field_names,
+                                  "checkbox_count": len(form_evidence.checkboxes),
+                                  "action_scheme": parsed_action.scheme.lower() or None,
+                                  "action_hostname": (parsed_action.hostname or "").lower() or None,
+                                  "nearby_text": clean_text(form_evidence.nearby_text, 420),
+                                  "manual_structure": manual_structure(form_tag) if isinstance(form_tag, Tag) else None,
+                              }
+                              output["forms"].append(row)
+                              total_forms += 1
+              except Exception as exc:
+                  case["errors"].append({
+                      "phase": "unexpected",
+                      "code": type(exc).__name__,
+                  })
+              output["cases"].append(case)
+              if total_forms >= MAX_FORMS:
+                  break
+
+          Path("artifacts").mkdir(exist_ok=True)
+          artifact = Path("artifacts/privacy-form-evidence-calibration.json")
+          artifact.write_text(
+              json.dumps(output, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+
+          compact = {
+              "sites_attempted": len(output["cases"]),
+              "sites_with_pages": sum(bool(c["pages"]) for c in output["cases"]),
+              "forms": len(output["forms"]),
+              "form_summary": [
+                  {
+                      "case": f["case_id"],
+                      "site": f["source_hostname"],
+                      "index": f["form_index"],
+                      "heading": f["heading"],
+                      "legend": f["legend"],
+                      "intro": f["introductory_text"],
+                      "submit": f["submit_text"],
+                  }
+                  for f in output["forms"]
+              ],
+          }
+          print("CALIBRATION_SUMMARY_START")
+          print(json.dumps(compact, ensure_ascii=False, indent=2))
+          print("CALIBRATION_SUMMARY_END")
+          PY
+
+      - name: Upload sanitized calibration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-form-evidence-calibration
+          path: artifacts/privacy-form-evidence-calibration.json
+          if-no-files-found: error
+          retention-days: 7
