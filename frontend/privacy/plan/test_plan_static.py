@@ -52,7 +52,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         for asset in (
             '/styles.css',
             '/privacy/plan-demo/styles.css?v=1',
-            '/privacy/plan-assets/styles.css?v=4',
+            '/privacy/plan-assets/styles.css?v=5',
             '/include.js',
             '/privacy/plan-assets/app.js?v=6',
         ):
