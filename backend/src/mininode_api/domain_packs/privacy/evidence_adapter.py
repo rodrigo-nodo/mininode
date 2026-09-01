@@ -1194,7 +1194,9 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
     r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
     r"\b(?:escribenos)\b",
-    r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+\w+",
+    r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+"
+    r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
+    r"(?!(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\b)\w+",
     r"\breceive\b.{0,20}\bupdates?\b",
 ))
 
@@ -1216,21 +1218,21 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     ]
     if not values:
         return "unknown"
-    useful = [remaining for value in values if (remaining := _without_form_purpose_noise(value))]
-    combined = " ".join(useful)
+    combined = " ".join(values)
     if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
         return "concrete"
     # A generic topic plus a matching action is meaningful only within this form.
-    if "newsletter" in useful and any(
+    if "newsletter" in values and any(
         re.search(r"\b(?:subscribe|suscribirme|suscribete|suscribirse)\b", value)
-        for value in useful
+        for value in values
     ):
         return "concrete"
     if (
-        any(_contains_phrase(value, {"free trial"}) for value in useful)
-        and any(re.search(r"\b(?:try|start|get) for free\b", value) for value in useful)
-    ) or any(_contains_phrase(value, {"prueba gratis", "prueba gratuita"}) for value in useful):
+        any(_contains_phrase(value, {"free trial"}) for value in values)
+        and any(re.search(r"\b(?:try|start|get) for free\b", value) for value in values)
+    ) or any(_contains_phrase(value, {"prueba gratis", "prueba gratuita"}) for value in values):
         return "concrete"
+    useful = [remaining for value in values if (remaining := _without_form_purpose_noise(value))]
     if any(value in _FORM_PURPOSE_GENERIC_EXACT for value in useful) or any(
         _contains_phrase(value, _FORM_PURPOSE_GENERIC_PHRASES)
         for value in useful
