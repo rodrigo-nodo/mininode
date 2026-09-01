@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
         privacy_correction_plan_check,
         privacy_diagnostic_snapshot,
     )
+    from mininode_api.privacy_data.services import data_maps
 
     try:
         learn_feedback.initialize_database()
@@ -65,6 +66,15 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.privacy_correction_plan_check_ready = True
+
+    try:
+        data_maps.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Privacy Data database initialization failed; data maps remain unavailable"
+        )
+    else:
+        app.state.privacy_data_ready = True
     yield
 
 
@@ -98,6 +108,7 @@ def create_app() -> FastAPI:
     app.state.privacy_correction_plan_order_ready = False
     app.state.privacy_diagnostic_snapshot_ready = False
     app.state.privacy_correction_plan_check_ready = False
+    app.state.privacy_data_ready = False
 
     # CORS desde env (coma-separado)
     origins_env = os.getenv("ALLOWED_ORIGINS", "https://mininode.io,https://*.pages.dev")
@@ -172,6 +183,9 @@ def create_app() -> FastAPI:
         app.include_router(privacy_router)
     except Exception as e:
         logging.exception("Failed to include privacy router: %s", e)
+
+    from mininode_api.privacy_data.api.router import router as privacy_data_router
+    app.include_router(privacy_data_router)
 
     from mininode_api.api.learn import router as learn_router
     app.include_router(learn_router)

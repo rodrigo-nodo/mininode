@@ -9,6 +9,12 @@ Mininode ofrece actualmente dos productos relacionados con privacidad:
 - **Privacy Web** - producto operativo actual. Revisa señales públicas visibles del sitio web.
 - **Privacy Data** - próximamente. Ayuda a ordenar el manejo interno de datos personales.
 
+Privacy Data es un producto de primer nivel, separado de Privacy Web y desacoplado
+de Billing. Su backend mantiene el catálogo maestro versionado en el repositorio y
+persiste sus mapas en el schema PostgreSQL `privacy_data`. Los mapas nuevos son
+`draft`, expiran inicialmente a los siete días y se recuperan mediante un token de
+capacidad cuyo hash, nunca el token en claro, es lo único que se persiste.
+
 Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 
 El resultado es orientativo: no constituye una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.
