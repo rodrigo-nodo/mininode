@@ -1,0 +1,52 @@
+name: Privacy semantic LLM W2.S.3
+
+on:
+  push:
+    branches: [work]
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install product and experiment dependencies
+        run: |
+          python -m pip install -r backend/requirements.txt
+          python -m pip install openai
+      - name: Run offline unit tests before API use
+        run: python -m pytest -q backend/tests/domain_packs/privacy/semantic_benchmark
+      - name: Require experiment secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY GitHub Actions secret required."
+            exit 1
+          fi
+      - name: Run frozen baseline
+        run: python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner baseline --output-dir artifacts
+      - name: Run LLM classification twice
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner llm --run 1 --output-dir artifacts
+          python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner llm --run 2 --output-dir artifacts
+      - name: Derive hybrid and stability reports
+        run: |
+          python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner hybrid --output-dir artifacts
+          python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner stability --output-dir artifacts
+          python -m backend.tests.domain_packs.privacy.semantic_benchmark.semantic_llm_runner summary --output-dir artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: privacy-semantic-llm-w2s3
+          path: artifacts/*.json
+          if-no-files-found: warn

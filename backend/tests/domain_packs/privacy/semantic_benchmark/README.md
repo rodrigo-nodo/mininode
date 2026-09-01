@@ -91,3 +91,23 @@ The benchmark adapts fixtures to `EvidenceContract`/`PageEvidence`; production's
 adapter and evaluator must not be changed to accommodate benchmark data. SIP-style
 cases deliberately model PRV-003 as `not_detected`, so the evaluator—not benchmark
 post-processing—produces `not_applicable`.
+
+## W2.S.3 LLM semantic adjudicator experiment
+
+`semantic_llm_runner.py` compares unchanged rules, LLM-only adjudication with
+`gpt-5.6-sol`, and frozen selective routing. It uses the Responses API with strict
+Structured Outputs, `medium` reasoning, prompt version `w2s3-01`, and only the
+complete structured synthetic document as model input. Gold labels and baseline
+predictions are never included in that input. PRV-003 remains a deterministic gate,
+and returned fixture IDs are rejected unless they belong to the input document.
+
+The LLM is called once per applicable `(policy_id, control)` in each run. Hybrid
+results reuse those predictions: PRV-008 keeps `concrete`, PRV-010 keeps `explicit`
+or `explicit_none`, and PRV-012 keeps `explicit`; each control routes baseline
+`generic` or `none`. Two identical runs are required, but quality metrics always use
+run 1 and run 2 only measures class, evidence-ID, and uncertainty stability.
+
+The OpenAI SDK remains an experiment-only lazy dependency. Unit tests use fake
+clients and require neither the SDK, network, nor credentials. The temporary branch-
+scoped workflow installs it and writes JSON artifacts without changing the repo.
+See [`semantic_llm_result.md`](semantic_llm_result.md) for execution status.
