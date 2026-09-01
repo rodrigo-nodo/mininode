@@ -8,6 +8,7 @@ sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.domain_packs.privacy.evaluator import evaluate_control  # noqa: E402
 from mininode_api.domain_packs.privacy.evidence_adapter import adapt_evidence  # noqa: E402
+from mininode_api.web_inspector.extractor import extract_page  # noqa: E402
 from mininode_api.web_inspector.models import (  # noqa: E402
     CheckboxEvidence, ContactEvidence, CookieEvidence, EvidenceContract,
     FieldEvidence, FormEvidence, InspectionEvidence, LinkEvidence, PageEvidence,
@@ -1187,13 +1188,15 @@ def test_new_control_dependency_and_technical_states_are_explicit():
         assert evaluate_control(code, {**evidence, "technical_error": True}, {"PRV-003": "detected"})["result"] == "not_evaluable"
 
 
-def _personal_transport_form(source_url, action, *, confidence="high"):
+def _personal_transport_form(
+    source_url, action, *, confidence="high", method="post"
+):
     field = (
         FieldEvidence("value", "email", "", False)
         if confidence == "high"
         else FieldEvidence("company", "text", "", False)
     )
-    return FormEvidence(source_url, action, "post", [field], [], "", [])
+    return FormEvidence(source_url, action, method, [field], [], "", [])
 
 
 def _evaluate_prv102(contract_evidence):
@@ -1234,6 +1237,106 @@ def test_prv102_insecure_high_form_precedes_secure_and_unknown_forms():
 
     assert result["result"] == "not_detected"
     assert evidence["source_urls"] == ["https://example.com/insecure"]
+
+
+def test_prv102_high_secure_plus_high_unknown_is_not_evaluable():
+    forms = [
+        _personal_transport_form(
+            "https://example.com/secure", "https://example.com/send"
+        ),
+        _personal_transport_form(
+            "https://example.com/unknown", "custom:send"
+        ),
+    ]
+
+    _, result = _evaluate_prv102(contract(forms=forms))
+
+    assert result["result"] == "not_evaluable"
+
+
+@pytest.mark.parametrize(
+    "medium_action", ["https://example.com/send", "http://example.com/send"]
+)
+def test_prv102_high_insecure_precedes_medium_candidate(medium_action):
+    forms = [
+        _personal_transport_form(
+            "https://example.com/insecure", "http://example.com/send"
+        ),
+        _personal_transport_form(
+            "https://example.com/medium", medium_action, confidence="medium"
+        ),
+    ]
+
+    _, result = _evaluate_prv102(contract(forms=forms))
+
+    assert result["result"] == "not_detected"
+
+
+def test_prv102_accepts_external_https_action():
+    personal = _personal_transport_form(
+        "https://empresa.cl/contacto",
+        "https://forms.vendor.example/submit",
+    )
+
+    _, result = _evaluate_prv102(contract(forms=[personal]))
+
+    assert result["result"] == "detected"
+
+
+def test_prv102_get_method_does_not_change_secure_transport():
+    personal = _personal_transport_form(
+        "https://example.com/contact",
+        "https://example.com/send",
+        method="get",
+    )
+
+    _, result = _evaluate_prv102(contract(forms=[personal]))
+
+    assert result["result"] == "detected"
+
+
+@pytest.mark.parametrize(
+    ("action_attribute", "expected_action"),
+    [
+        ('action="/enviar"', "https://example.com/enviar"),
+        ("", "https://example.com/contacto"),
+        ('action=""', "https://example.com/contacto"),
+    ],
+)
+def test_prv102_uses_extractor_resolution_for_relative_and_empty_actions(
+    action_attribute, expected_action
+):
+    source = "https://example.com/contacto"
+    html = (
+        f"<form {action_attribute}>"
+        '<input type="email" name="email">'
+        "</form>"
+    )
+    extracted_form = extract_page(html, source).forms[0]
+
+    assert extracted_form.action == expected_action
+    _, result = _evaluate_prv102(contract(forms=[extracted_form]))
+    assert result["result"] == "detected"
+
+
+def test_prv102_never_exposes_adversarial_action_details():
+    source = "https://example.com/contacto?public=trace#form"
+    action = "https://user:secret@203.0.113.10/send?token=abc123&query=private"
+    personal = _personal_transport_form(source, action)
+    page = PageEvidence(source, 200, "Contacto", "text/html")
+
+    evidence, result = _evaluate_prv102(
+        contract(forms=[personal], pages=[page])
+    )
+
+    assert result["result"] == "detected"
+    assert evidence["source_urls"] == ["https://example.com/contacto"]
+    serialized = repr(evidence).lower()
+    for secret in (
+        "action", "user", "secret", "token", "query", "abc123", "?",
+        "203.0.113.10",
+    ):
+        assert secret not in serialized
 
 
 @pytest.mark.parametrize("with_high", [False, True])

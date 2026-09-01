@@ -118,10 +118,29 @@ def test_documental_framework_matches_productive_catalog():
             assert documented.get(shared_field) == productive.get(shared_field)
 
 
+def test_documental_framework_keeps_v01_history_and_publishes_v02():
+    framework_directory = (
+        BACKEND_SRC.parents[1] / "frontend" / "privacy" / "data"
+    )
+    historical_path = framework_directory / "privacy-framework-v0.1.json"
+    current_path = framework_directory / "privacy-framework-v0.2.json"
+
+    assert historical_path.is_file()
+    historical = json.loads(historical_path.read_text(encoding="utf-8"))["framework"]
+    current = json.loads(current_path.read_text(encoding="utf-8"))["framework"]
+
+    assert historical["version"] == "0.1"
+    assert current["version"] == "0.2"
+    assert "PRV-102" not in {control["code"] for control in historical["controls"]}
+    assert "PRV-102" in {control["code"] for control in current["controls"]}
+
+
 def test_catalog_contains_required_metadata_and_dependencies():
     controls = {control["code"]: control for control in load_controls()}
     assert controls["PRV-101"]["type"] == "context"
     assert controls["PRV-101"]["score_weight"] == 0
+    assert controls["PRV-102"]["impact"] == "medio"
+    assert controls["PRV-102"]["score_weight"] == 1
     assert controls["PRV-004"]["score_weight"] == 0
     assert controls["PRV-004"]["dependency"] == "PRV-003"
     assert controls["PRV-009"]["type"] == "context"
@@ -253,6 +272,9 @@ def test_dependencies_produce_not_applicable():
     assert evaluate_control(
         "PRV-104", {}, {"PRV-101": forms}
     )["result"] == "not_applicable"
+    assert evaluate_control(
+        "PRV-102", {"form_transport": "secure"}, {"PRV-101": forms}
+    )["result"] == "not_applicable"
 
 
 def test_cookies_can_be_not_applicable():
@@ -314,6 +336,44 @@ def test_not_evaluable_is_unscored_and_reduces_coverage():
     assert scored["evaluated_controls"] == 9
     assert scored["applicable_controls"] == 10
     assert scored["coverage"] == 90
+
+
+@pytest.mark.parametrize(
+    ("result", "expected_score"),
+    [("detected", 100), ("not_detected", 0)],
+)
+def test_prv102_score_contribution(result, expected_score):
+    scored = score_privacy([{"control_code": "PRV-102", "result": result}])
+
+    assert scored["score"] == expected_score
+    assert scored["coverage"] == 100
+    assert scored["evaluated_controls"] == 1
+    assert scored["applicable_controls"] == 1
+
+
+def test_prv102_not_applicable_is_excluded_from_scoring_denominator():
+    baseline = score_privacy([
+        {"control_code": "PRV-501", "result": "detected"},
+    ])
+    with_prv102 = score_privacy([
+        {"control_code": "PRV-501", "result": "detected"},
+        {"control_code": "PRV-102", "result": "not_applicable"},
+    ])
+
+    assert with_prv102 == baseline
+    assert with_prv102["applicable_controls"] == 1
+
+
+def test_prv102_not_evaluable_is_unscored_and_reduces_coverage():
+    scored = score_privacy([
+        {"control_code": "PRV-501", "result": "detected"},
+        {"control_code": "PRV-102", "result": "not_evaluable"},
+    ])
+
+    assert scored["score"] == 100
+    assert scored["coverage"] == 50
+    assert scored["evaluated_controls"] == 1
+    assert scored["applicable_controls"] == 2
 
 
 def test_context_never_scores():
