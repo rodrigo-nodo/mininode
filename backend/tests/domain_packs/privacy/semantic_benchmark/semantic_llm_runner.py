@@ -17,8 +17,8 @@ LLM_PROMPT_VERSION = "w2s3-01"
 REASONING_EFFORT = "medium"
 # Experimental estimate only. Snapshot recorded before inference; update only in a future phase.
 PRICE_REFERENCE_DATE = "2026-08-31"
-INPUT_USD_PER_MILLION = 1.25
-OUTPUT_USD_PER_MILLION = 10.00
+INPUT_USD_PER_MILLION = 4.00
+OUTPUT_USD_PER_MILLION = 20.00
 
 ROUTE_TO_LLM = {
     "PRV-008": frozenset({"generic", "none"}),
@@ -158,9 +158,19 @@ def openai_client() -> Client:
         response = sdk.responses.create(
             model=MODEL_ID,
             reasoning={"effort": REASONING_EFFORT},
-            instructions=("Evalúa únicamente el documento recibido. Devuelve una clase semántica y evidencia observable del input; no expongas razonamiento interno. " + CONTROL_PROMPTS[control]),
+            instructions=(
+                "Evalúa únicamente el documento recibido. Devuelve una clase "
+                "semántica y evidencia observable del input; no expongas "
+                "razonamiento interno. evidence_fixture_ids solo puede contener "
+                "fixture_id presentes en el documento recibido. No inventes ni "
+                "modifiques IDs. reason_short debe ser una sola frase breve y "
+                "observable. "
+                + CONTROL_PROMPTS[control]
+            ),
             input=json.dumps(document, ensure_ascii=False),
             text={"format": {"type": "json_schema", "name": "semantic_adjudication", "strict": True, "schema": schema}},
+            store=False,
+            service_tier="default",
         )
         elapsed = time.perf_counter() - started
         parsed = validate_output(control, json.loads(response.output_text), tuple(Fixture(item["fixture_id"], item["text"], "negative", "runtime input") for item in document))
@@ -172,16 +182,42 @@ def openai_client() -> Client:
 
 
 def metrics_for(rows: Iterable[ExperimentalCaseResult], field: str) -> dict[str, Any]:
+    """Return quality metrics only; invalid output remains in the denominator."""
     selected = list(rows)
     metrics = calculate_metrics(CaseResult(row.policy_id, row.control, row.expected_class, getattr(row, field), getattr(row, field) == row.expected_class) for row in selected)
-    calls = sum(row.llm_class != "not_applicable" for row in selected)
-    routed = sum(row.routed for row in selected)
-    latency = sum(row.latency_seconds for row in selected)
-    metrics.update({"llm_calls": calls, "routed_cases": routed, "routing_percentage": routed / len(selected) if selected else 0.0,
-                    "input_tokens": sum(row.input_tokens for row in selected), "output_tokens": sum(row.output_tokens for row in selected),
-                    "reasoning_tokens": sum(row.reasoning_tokens for row in selected), "total_latency_seconds": latency,
-                    "average_latency_per_call": latency / calls if calls else 0.0})
+    metrics["invalid_outputs"] = sum(
+        getattr(row, field) == "invalid_output" for row in selected
+    )
     return metrics
+
+
+def operational_usage(
+    rows: Iterable[ExperimentalCaseResult], scenario: str
+) -> dict[str, Any]:
+    """Separate actual experiment usage from projected selective-hybrid usage."""
+    items = list(rows)
+    if scenario == "rules":
+        used: list[ExperimentalCaseResult] = []
+    elif scenario == "llm_only":
+        used = [row for row in items if row.llm_class != "not_applicable"]
+    elif scenario == "hybrid_selective":
+        used = [row for row in items if row.routed]
+    else:
+        raise ValueError(f"unknown operational scenario: {scenario}")
+    latency = sum(row.latency_seconds for row in used)
+    cost = cost_summary(used)
+    routed = sum(row.routed for row in items) if scenario != "rules" else 0
+    return {
+        "llm_calls": len(used),
+        "routed_cases": routed,
+        "routing_percentage": routed / len(items) if items else 0.0,
+        "input_tokens": sum(row.input_tokens for row in used),
+        "output_tokens": sum(row.output_tokens for row in used),
+        "reasoning_tokens": sum(row.reasoning_tokens for row in used),
+        "total_latency_seconds": latency,
+        "average_latency_per_call": latency / len(used) if used else 0.0,
+        "estimated_cost_usd": cost["estimated_usd"],
+    }
 
 
 def cost_summary(rows: Iterable[ExperimentalCaseResult]) -> dict[str, Any]:
@@ -218,13 +254,23 @@ def main() -> None:
         rows = run_benchmark(); _write(args.output_dir / "baseline.json", {"results": [asdict(x) for x in rows], "metrics": calculate_metrics(rows)}); return
     if args.command == "llm":
         if not args.run: parser.error("llm requires --run 1 or 2")
-        rows = execute(openai_client()); _write(args.output_dir / f"llm-run-{args.run}.json", {"configuration": {"model": MODEL_ID, "prompt_version": LLM_PROMPT_VERSION, "reasoning_effort": REASONING_EFFORT}, "results": [asdict(x) for x in rows], "metrics": metrics_for(rows, "llm_class"), "cost": cost_summary(rows)}); return
+        rows = execute(openai_client()); _write(args.output_dir / f"llm-run-{args.run}.json", {"configuration": {"model": MODEL_ID, "prompt_version": LLM_PROMPT_VERSION, "reasoning_effort": REASONING_EFFORT}, "results": [asdict(x) for x in rows], "quality": metrics_for(rows, "llm_class"), "operational_usage": operational_usage(rows, "llm_only"), "cost": cost_summary(rows)}); return
     def load_run(number: int) -> list[ExperimentalCaseResult]:
         return [ExperimentalCaseResult(**{**x, "llm_evidence_fixture_ids": tuple(x["llm_evidence_fixture_ids"]), "llm_evidence_texts": tuple(x["llm_evidence_texts"])}) for x in json.loads((args.output_dir / f"llm-run-{number}.json").read_text())["results"]]
     run1 = load_run(1)
-    if args.command == "hybrid": _write(args.output_dir / "hybrid-run-1.json", {"results": [asdict(x) for x in run1], "metrics": metrics_for(run1, "hybrid_class")}); return
+    if args.command == "hybrid": _write(args.output_dir / "hybrid-run-1.json", {"results": [asdict(x) for x in run1], "quality": metrics_for(run1, "hybrid_class"), "projected_operational_usage": operational_usage(run1, "hybrid_selective"), "projected_cost": cost_summary(row for row in run1 if row.routed)}); return
     if args.command == "stability": _write(args.output_dir / "stability-report.json", compare_stability(run1, load_run(2))); return
-    _write(args.output_dir / "experiment-summary.json", {"quality_run": 1, "rules": metrics_for(run1, "rules_class"), "llm_only": metrics_for(run1, "llm_class"), "hybrid_selective": metrics_for(run1, "hybrid_class"), "cost": cost_summary(run1), "stability": compare_stability(run1, load_run(2))})
+    run2 = load_run(2)
+    actual_run_1_cost = cost_summary(run1)
+    actual_run_2_cost = cost_summary(run2)
+    projected_hybrid_cost = cost_summary(row for row in run1 if row.routed)
+    _write(args.output_dir / "experiment-summary.json", {
+        "quality_run": 1,
+        "quality": {"rules": metrics_for(run1, "rules_class"), "llm_only": metrics_for(run1, "llm_class"), "hybrid_selective": metrics_for(run1, "hybrid_class")},
+        "operational_usage": {"actual_llm_run_1": operational_usage(run1, "llm_only"), "projected_hybrid_selective_run_1": operational_usage(run1, "hybrid_selective")},
+        "cost": {"actual_llm_run_1": actual_run_1_cost, "projected_hybrid_selective_run_1": projected_hybrid_cost, "actual_total_experiment_cost_two_runs_usd": actual_run_1_cost["estimated_usd"] + actual_run_2_cost["estimated_usd"]},
+        "stability": compare_stability(run1, run2),
+    })
 
 
 if __name__ == "__main__": main()

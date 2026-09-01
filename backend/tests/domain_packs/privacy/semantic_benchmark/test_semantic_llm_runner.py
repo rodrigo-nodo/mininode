@@ -1,6 +1,6 @@
 from dataclasses import replace
 import pytest
-from .semantic_llm_runner import (INPUT_USD_PER_MILLION, OUTPUT_USD_PER_MILLION, Inference, LlmOutput, compare_stability, compose_hybrid, cost_summary, execute, metrics_for, output_schema, run_case, should_route, validate_output)
+from .semantic_llm_runner import (INPUT_USD_PER_MILLION, OUTPUT_USD_PER_MILLION, ROUTE_TO_LLM, Inference, LlmOutput, compare_stability, compose_hybrid, cost_summary, execute, metrics_for, operational_usage, output_schema, run_case, should_route, validate_output)
 from .schema import load_corpus
 
 
@@ -51,6 +51,14 @@ def test_frozen_routing(control, kept, routed):
     assert should_route(control, routed)
 
 
+def test_routing_sets_remain_exactly_frozen():
+    assert ROUTE_TO_LLM == {
+        "PRV-008": frozenset({"generic", "none"}),
+        "PRV-010": frozenset({"generic", "none"}),
+        "PRV-012": frozenset({"generic", "none"}),
+    }
+
+
 def test_hybrid_composition():
     assert compose_hybrid("PRV-008", "none", "concrete") == "concrete"
     assert compose_hybrid("PRV-010", "explicit", "none") == "explicit"
@@ -75,12 +83,44 @@ def test_invalid_output_is_not_repaired():
     result = run_case(case, document, "none", _fake(evidence=("almost-right",)))
     assert result.llm_class == "invalid_output"
     assert result.llm_evidence_fixture_ids == ()
+    metrics = metrics_for([result], "llm_class")
+    assert metrics["invalid_outputs"] == 1
+    assert metrics["exact_matches"] == 0
+    assert metrics["total_cases"] == 1
 
 
-def test_token_and_cost_aggregation():
-    rows = execute(_none_client); applicable = sum(x.input_tokens > 0 for x in rows)
-    assert cost_summary(rows)["estimated_usd"] == applicable * (10 * INPUT_USD_PER_MILLION + 5 * OUTPUT_USD_PER_MILLION) / 1_000_000
-    assert metrics_for(rows, "llm_class")["reasoning_tokens"] == applicable * 2
+def test_rules_operational_usage_is_zero():
+    usage = operational_usage(execute(_none_client), "rules")
+    assert usage["llm_calls"] == 0
+    assert usage["input_tokens"] == usage["output_tokens"] == 0
+    assert usage["reasoning_tokens"] == usage["total_latency_seconds"] == 0
+    assert usage["estimated_cost_usd"] == 0
+
+
+def test_llm_only_usage_is_actual_usage_for_all_applicable_cases():
+    rows = execute(_none_client)
+    applicable = sum(row.llm_class != "not_applicable" for row in rows)
+    usage = operational_usage(rows, "llm_only")
+    assert usage["llm_calls"] == applicable
+    assert usage["input_tokens"] == applicable * 10
+    assert usage["output_tokens"] == applicable * 5
+    assert usage["reasoning_tokens"] == applicable * 2
+    assert usage["total_latency_seconds"] == applicable
+    assert usage["estimated_cost_usd"] == cost_summary(rows)["estimated_usd"]
+
+
+def test_projected_hybrid_usage_and_cost_include_only_routed_cases():
+    rows = execute(_none_client)
+    routed = [row for row in rows if row.routed]
+    usage = operational_usage(rows, "hybrid_selective")
+    assert usage["llm_calls"] == len(routed)
+    assert usage["input_tokens"] == len(routed) * 10
+    assert usage["output_tokens"] == len(routed) * 5
+    expected = len(routed) * (
+        10 * INPUT_USD_PER_MILLION + 5 * OUTPUT_USD_PER_MILLION
+    ) / 1_000_000
+    assert usage["estimated_cost_usd"] == pytest.approx(expected)
+    assert expected == pytest.approx(cost_summary(routed)["estimated_usd"])
 
 
 def test_stability_reports_every_material_difference():
