@@ -15,8 +15,11 @@ El resultado es orientativo: no constituye una certificación legal, una auditor
 
 Cada diagnóstico conserva las versiones canónicas del framework y del scoring dentro
 de su snapshot. `framework_version` debe cambiar cuando un cambio pueda alterar la
-interpretación o el conjunto de controles evaluados. `scoring_version` debe cambiar
-cuando puedan alterarse pesos, factores, exclusiones, rangos o la fórmula del score.
+interpretación, el resultado observable o el conjunto de controles evaluados. Esto
+incluye cambios en criterios, evaluator, extracción o adaptación de evidencia y lógica
+de inspección cuando puedan alterar el resultado producido para un mismo sitio.
+`scoring_version` debe cambiar cuando puedan alterarse pesos, factores, exclusiones,
+rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
 
