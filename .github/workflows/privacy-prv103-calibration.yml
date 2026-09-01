@@ -56,22 +56,16 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("H31", "CRM/SaaS", "en", "https://www.pipedrive.com/en/contact-sales"),
-              ("H32", "Productividad/SaaS", "en", "https://www.airtable.com/contact-sales"),
-              ("H33", "Firma digital/SaaS", "en", "https://www.docusign.com/contact-sales"),
-              ("H34", "Identidad/SaaS", "en", "https://www.okta.com/contact-sales/"),
-              ("H35", "Videoconferencia/SaaS", "en", "https://www.zoom.com/en/contact/contact-sales/"),
-              ("H36", "Comunicación/SaaS", "en", "https://www.twilio.com/en-us/contact-sales"),
-              ("H37", "Observabilidad/SaaS", "en", "https://www.datadoghq.com/about/contact/"),
-              ("H38", "Infraestructura/SaaS", "en", "https://www.cloudflare.com/plans/enterprise/contact/"),
-              ("H39", "Cloud/SaaS", "en", "https://www.digitalocean.com/company/contact/sales"),
-              ("H40", "Seguridad/SaaS", "en", "https://www.sentry.io/contact/"),
-              ("H41", "Contabilidad/SaaS", "es", "https://www.nubox.com/contacto"),
-              ("H42", "Pagos/SaaS", "es", "https://www.haulmer.com/"),
-              ("H43", "Educación/SaaS", "es", "https://www.lirmi.com/"),
-              ("H44", "Idiomas/SaaS", "es", "https://www.poliglota.org/"),
-              ("H45", "CRM/SaaS", "en", "https://www.hubspot.com/contact-sales"),
-              ("H46", "Marketing/SaaS", "en", "https://www.klaviyo.com/contact-us"),
+              ("H47", "Pagos/SaaS", "en", "https://stripe.com/contact/sales"),
+              ("H48", "Comunicación/SaaS", "en", "https://slack.com/contact-sales"),
+              ("H49", "Cloud/SaaS", "en", "https://www.dropbox.com/business/contact"),
+              ("H50", "Dev/SaaS", "en", "https://github.com/enterprise/contact"),
+              ("H51", "Dev/SaaS", "en", "https://about.gitlab.com/sales/"),
+              ("H52", "Diseño/SaaS", "en", "https://www.figma.com/contact/"),
+              ("H53", "Automatización/SaaS", "en", "https://zapier.com/contact-sales"),
+              ("H54", "Pagos/SaaS", "en", "https://www.adyen.com/contact/sales"),
+              ("H55", "Pagos/SaaS", "en", "https://www.mercadopago.cl/developers/es/support"),
+              ("H56", "E-commerce/SaaS", "es", "https://www.jumpseller.cl/contacto"),
           ]
 
           def clean_url(value):
@@ -310,7 +304,7 @@ jobs:
       - name: Upload sanitized calibration artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-calibration-batch3
+          name: privacy-prv103-calibration-batch4
           path: artifacts/privacy-prv103-calibration.json
           if-no-files-found: error
           retention-days: 7
