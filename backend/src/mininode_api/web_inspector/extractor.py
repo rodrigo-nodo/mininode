@@ -30,6 +30,11 @@ TECHNICAL_INPUT_TYPES = {"hidden", "submit", "button", "reset", "image"}
 EMAIL_RE = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
 PHONE_RE = re.compile(r"(?<!\w)\+?\d[\d\s().-]{5,}\d(?!\w)")
 CONTENT_TEXT_LIMIT = 12000
+FORM_HEADING_LIMIT = 160
+FORM_LEGEND_LIMIT = 160
+FORM_INTRODUCTORY_TEXT_LIMIT = 300
+FORM_SUBMIT_TEXT_LIMIT = 120
+_FORM_LOCAL_SIBLING_LIMIT = 3
 _SUBSTANTIVE_TEXT_LENGTH = 40
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
 
@@ -88,6 +93,83 @@ def _label(control: Tag, soup: BeautifulSoup) -> str:
     return str(control.get("aria-label") or control.get("placeholder") or "").strip()
 
 
+def _bounded_text(tag: Tag, limit: int) -> str | None:
+    value = _text(tag)
+    return value[:limit] if value else None
+
+
+def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
+    """Return only context from a small, unambiguous preceding-sibling window."""
+
+    parent = form.parent
+    if not isinstance(parent, Tag) or parent.name in {"body", "html", "header", "nav", "footer"}:
+        return None, None
+
+    heading: str | None = None
+    introduction: str | None = None
+    inspected = 0
+    for sibling in form.previous_siblings:
+        if not isinstance(sibling, Tag):
+            continue
+        if sibling.name == "form":
+            # Text floating between two forms is not sufficiently associated.
+            return None, None
+        if sibling.name in {f"h{level}" for level in range(1, 7)}:
+            heading = _bounded_text(sibling, FORM_HEADING_LIMIT)
+            break
+        if sibling.name not in {"p", "small", "div"} or sibling.find("form"):
+            break
+        inspected += 1
+        if inspected > _FORM_LOCAL_SIBLING_LIMIT:
+            break
+        if introduction is None and not sibling.find(
+            ["input", "select", "textarea", "button", "label", "legend"]
+        ):
+            introduction = _bounded_text(sibling, FORM_INTRODUCTORY_TEXT_LIMIT)
+    return heading, introduction
+
+
+def _form_heading(form: Tag) -> str | None:
+    internal = form.find([f"h{level}" for level in range(1, 7)])
+    if isinstance(internal, Tag):
+        value = _bounded_text(internal, FORM_HEADING_LIMIT)
+        if value:
+            return value
+    return _external_form_context(form)[0]
+
+
+def _form_introductory_text(form: Tag) -> str | None:
+    for candidate in form.find_all(True):
+        if candidate.name in {"input", "select", "textarea", "button"}:
+            break
+        if candidate.name not in {"p", "small", "div"}:
+            continue
+        if candidate.find(["form", "input", "select", "textarea", "button", "label", "legend"]):
+            continue
+        if candidate.find([f"h{level}" for level in range(1, 7)]):
+            continue
+        if candidate.find("a", href=True):
+            continue
+        value = _bounded_text(candidate, FORM_INTRODUCTORY_TEXT_LIMIT)
+        if value:
+            return value
+    return _external_form_context(form)[1]
+
+
+def _form_submit_text(form: Tag) -> str | None:
+    values: list[str] = []
+    for control in form.find_all(["button", "input"]):
+        kind = str(control.get("type") or ("submit" if control.name == "button" else "text")).lower()
+        if kind != "submit":
+            continue
+        value = _text(control) if control.name == "button" else str(control.get("value") or "").strip()
+        value = " ".join(value.split())
+        if value and value not in values:
+            values.append(value)
+    combined = " | ".join(values)
+    return combined[:FORM_SUBMIT_TEXT_LIMIT] or None
+
+
 def _links(soup: BeautifulSoup, source_url: str) -> list[LinkEvidence]:
     result: list[LinkEvidence] = []
     seen: set[str] = set()
@@ -137,6 +219,13 @@ def _forms(soup: BeautifulSoup, source_url: str) -> list[FormEvidence]:
             checkboxes=checkboxes,
             nearby_text=nearby,
             privacy_links=privacy_links,
+            heading=_form_heading(form),
+            legend=next((
+                value for item in form.find_all("legend")
+                if (value := _bounded_text(item, FORM_LEGEND_LIMIT))
+            ), None),
+            introductory_text=_form_introductory_text(form),
+            submit_text=_form_submit_text(form),
         ))
     return results
 
@@ -198,7 +287,7 @@ def build_evidence(
     fetch_result: InspectionFetchResult,
     additional_links: Iterable[LinkEvidence] | None = None,
 ) -> EvidenceContract:
-    """Build Evidence Contract v0.1 from an existing bounded fetch result."""
+    """Build Evidence Contract v0.2 from an existing bounded fetch result."""
 
     pages: list[PageEvidence] = []
     links: list[LinkEvidence] = []
