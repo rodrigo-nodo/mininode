@@ -115,6 +115,10 @@ class FormEvidence:
     checkboxes: list[CheckboxEvidence]
     nearby_text: str
     privacy_links: list[LinkEvidence]
+    heading: str | None = None
+    legend: str | None = None
+    introductory_text: str | None = None
+    submit_text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -134,7 +138,7 @@ class ContactEvidence:
 
 @dataclass(frozen=True)
 class EvidenceContract:
-    """Evidence Contract v0.1; deliberately observational and in-memory only."""
+    """Evidence Contract v0.2; deliberately observational and in-memory only."""
 
     target: TargetEvidence
     inspection: InspectionEvidence
@@ -151,4 +155,9 @@ class EvidenceContract:
         payload = asdict(self)
         for page in payload["pages"]:
             page.pop("content_text", None)
+        for form in payload["forms"]:
+            for internal_field in (
+                "heading", "legend", "introductory_text", "submit_text",
+            ):
+                form.pop(internal_field, None)
         return payload

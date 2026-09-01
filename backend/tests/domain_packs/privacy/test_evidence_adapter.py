@@ -38,6 +38,25 @@ def form(*, field_type="text", name="message", label="Mensaje", nearby_text="", 
     )
 
 
+def test_internal_form_context_does_not_change_current_privacy_evidence_or_results():
+    baseline = form(field_type="email", nearby_text="Política de privacidad")
+    extended = FormEvidence(
+        baseline.source_url, baseline.action, baseline.method, baseline.fields,
+        baseline.checkboxes, baseline.nearby_text, baseline.privacy_links,
+        "Solicita una cotización", "Datos de contacto",
+        "Déjanos tus datos para preparar la propuesta.", "Solicitar cotización",
+    )
+
+    baseline_adapted = adapt_evidence(contract(forms=[baseline]))
+    extended_adapted = adapt_evidence(contract(forms=[extended]))
+
+    assert extended_adapted == baseline_adapted
+    for control_id in ("PRV-101", "PRV-102", "PRV-104"):
+        assert evaluate_control(control_id, extended_adapted[control_id]) == evaluate_control(
+            control_id, baseline_adapted[control_id]
+        )
+
+
 def test_prv001_explicit_text_is_high_confidence():
     link = LinkEvidence("https://example.com/legal", "Política de privacidad", "https://example.com/")
     evidence = adapt_evidence(contract(links=[link]))["PRV-001"]
