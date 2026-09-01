@@ -56,18 +56,24 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("H01", "SaaS/e-commerce", "es", "https://www.bsale.cl/"),
-              ("H02", "Tecnología", "es", "https://cleveritgroup.com/"),
-              ("H03", "Educación", "es", "https://www.uc.cl/"),
-              ("H04", "Salud", "es", "https://www.clinicaalemana.cl/"),
-              ("H05", "Salud", "es", "https://www.achs.cl/"),
-              ("H06", "Servicios", "es", "https://www.laborum.cl/"),
-              ("H07", "E-commerce/SaaS", "en", "https://www.shopify.com/"),
-              ("H08", "SaaS/tecnología", "en", "https://www.hubspot.com/"),
-              ("H09", "SaaS/tecnología", "en", "https://www.salesforce.com/"),
-              ("H10", "Tecnología", "en", "https://wordpress.com/"),
-              ("H11", "SaaS/tecnología", "en", "https://www.squarespace.com/"),
-              ("H12", "Soporte/SaaS", "en", "https://www.zendesk.com/"),
+              ("H13", "Tecnología", "es", "https://www.kibernum.com/"),
+              ("H14", "Tecnología", "es", "https://www.acidlabs.com/"),
+              ("H15", "RRHH/SaaS", "es", "https://www.buk.cl/"),
+              ("H16", "RRHH/SaaS", "es", "https://www.talana.com/"),
+              ("H17", "ERP/SaaS", "es", "https://www.defontana.com/"),
+              ("H18", "Fintech", "es", "https://www.chipax.com/"),
+              ("H19", "Fintech", "es", "https://www.fintoc.com/"),
+              ("H20", "Beneficios/SaaS", "es", "https://betterfly.com/"),
+              ("H21", "RRHH/SaaS", "es", "https://www.rankmi.com/"),
+              ("H22", "Diseño/SaaS", "en", "https://www.canva.com/"),
+              ("H23", "Productividad/SaaS", "en", "https://www.notion.com/"),
+              ("H24", "Productividad/SaaS", "en", "https://asana.com/"),
+              ("H25", "Productividad/SaaS", "en", "https://monday.com/"),
+              ("H26", "Soporte/SaaS", "en", "https://www.intercom.com/"),
+              ("H27", "Marketing/SaaS", "en", "https://mailchimp.com/"),
+              ("H28", "CRM/SaaS", "en", "https://www.zoho.com/"),
+              ("H29", "Tecnología/SaaS", "en", "https://www.atlassian.com/"),
+              ("H30", "Soporte/SaaS", "en", "https://www.freshworks.com/"),
           ]
 
           def clean_url(value):
@@ -306,7 +312,7 @@ jobs:
       - name: Upload sanitized calibration artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-calibration
+          name: privacy-prv103-calibration-batch2
           path: artifacts/privacy-prv103-calibration.json
           if-no-files-found: error
           retention-days: 7
