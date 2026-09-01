@@ -67,6 +67,13 @@ def test_internal_form_context_does_not_change_existing_privacy_controls():
     ({"introductory_text": "All fields required", "submit_text": "Sending"}, "none", "not_detected"),
     ({}, "unknown", "not_evaluable"),
     ({"heading": "Newsletter", "submit_text": "Subscribe"}, "concrete", "detected"),
+    ({"legend": "Contact us Form"}, "generic", "partial"),
+    ({"legend": "Footer - Get In Touch"}, "generic", "partial"),
+    ({"heading": "Contact form"}, "generic", "partial"),
+    ({"heading": "Formulario de contacto"}, "generic", "partial"),
+    ({"introductory_text": "Complete the form to request a quote"}, "concrete", "detected"),
+    ({"introductory_text": "Your message will be reviewed by our team"}, "none", "not_detected"),
+    ({"submit_text": "Send request for a demo"}, "concrete", "detected"),
 ])
 def test_prv103_classifies_structured_same_form_purpose(kwargs, purpose, result):
     adapted = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))

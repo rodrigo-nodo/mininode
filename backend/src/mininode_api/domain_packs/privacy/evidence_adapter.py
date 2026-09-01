@@ -1169,10 +1169,12 @@ _FORM_PURPOSE_NOISE = {
     "all fields required", "required fields", "campos obligatorios", "required",
     "enviando", "sending", "cargando", "loading", "anterior", "previous", "back",
 }
-_FORM_PURPOSE_GENERIC = {
-    "contacto", "contact us", "get in touch", "formulario de contacto",
-    "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
+_FORM_PURPOSE_GENERIC_EXACT = {
+    "contacto", "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
     "siguiente", "next", "mensaje", "message", "newsletter",
+}
+_FORM_PURPOSE_GENERIC_PHRASES = {
+    "contact us", "get in touch", "contact form", "formulario de contacto",
 }
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
@@ -1210,7 +1212,10 @@ def _form_purpose_signal(form: FormEvidence) -> str:
         for value in useful
     ):
         return "concrete"
-    if any(value in _FORM_PURPOSE_GENERIC for value in useful):
+    if any(value in _FORM_PURPOSE_GENERIC_EXACT for value in useful) or any(
+        _contains_phrase(value, _FORM_PURPOSE_GENERIC_PHRASES)
+        for value in useful
+    ):
         return "generic"
     return "none"
 
