@@ -1,264 +1,307 @@
-# W2.2a — Diseño de controles de formularios
+# W2.2a - Diseño de controles de formularios
 
 ## Objetivo y límites
 
-Este documento define la familia de controles de formularios que podrá implementarse
-en W2.2b. Es una decisión de producto y de evidencia, no una implementación. No añade
-controles, no cambia el catálogo ni el scoring y no modifica PRV-101 o PRV-104.
+Este documento decide el alcance de W2.2b. Es una decisión de producto y evidencia,
+no una implementación: no añade controles, no cambia PRV-101 o PRV-104 y no modifica
+catálogo, extracción, adaptación ni scoring.
 
-Privacy Web observa únicamente la interfaz pública obtenida como HTML estático. Una
-señal describe lo observado, no demuestra cumplimiento legal, necesidad empresarial,
-validez del consentimiento ni seguridad del backend. Cuando no pueda establecerse la
-aplicabilidad, el resultado debe ser `not_applicable` o `not_evaluable`, nunca una
-penalización por ausencia.
+Privacy Web observa HTML público estático. Una señal describe lo observado; no prueba
+cumplimiento legal, necesidad empresarial, validez del consentimiento ni seguridad
+interna. La ausencia de evidencia no es incumplimiento cuando la condición puede no
+aplicar.
 
 ## Capacidad actual
 
-El Evidence Contract v0.1 conserva, por formulario, URL de origen, `action` absoluto,
-método, campos, checkboxes, 500 caracteres del contenedor cercano y enlaces de
-privacidad. En campos no checkbox conserva nombre, tipo, etiqueta y atributo HTML
-`required`; en checkboxes solo nombre y etiqueta.
+El Evidence Contract v0.1 conserva por formulario `source_url`, `action` absoluto,
+`method`, campos, checkboxes, 500 caracteres de `nearby_text` y enlaces de privacidad.
+Los campos no checkbox incluyen nombre, tipo, etiqueta y atributo HTML `required`.
+Los checkboxes solo incluyen nombre y etiqueta.
 
-La extracción actual tiene límites relevantes:
+Límites relevantes:
 
-- `nearby_text` es el texto completo del `div`, `section` o `article` padre más cercano;
-  puede mezclar título, controles, botones y otros formularios, y no identifica qué
-  fragmento expresa una finalidad;
-- no conserva texto de botones de envío, `legend`, encabezado asociado ni texto
-  introductorio separado;
-- `required` expresa una restricción HTML, no una indicación visible; tampoco refleja
-  validación JavaScript;
-- los checkboxes no conservan `required`, estado inicial ni asociación semántica;
-- `action` permite analizar transporte y destino, pero no revela qué hará el receptor;
-- el adapter agrega señales de todos los formularios personales y presenta evidencia
-  visible de una sola URL, por lo que un control por formulario necesitará preservar la
-  correspondencia entre observación y resultado.
+- `nearby_text` puede mezclar títulos, botones y varios formularios del contenedor;
+- no se separan encabezado, `legend`, introducción ni texto de envío;
+- `required` es un atributo técnico, no una indicación visible ni validación JavaScript;
+- los checkboxes no conservan `required`, `checked` ni `disabled`;
+- `action` permite observar transporte y hostname, no el tratamiento posterior;
+- la evidencia debe continuar asociada al formulario concreto para consolidar varios
+  formularios sin mezclar señales.
 
-PRV-104 reconoce un enlace/texto de privacidad o una etiqueta de checkbox con términos
-de consentimiento. El campo interno `consent_required` replica hoy la existencia de esa
-etiqueta: **no prueba que el checkbox sea obligatorio**. W2.2b no debe reutilizarlo con
-esa interpretación.
+PRV-104 reconoce información de privacidad o una etiqueta relacionada con aceptación.
+Su valor interno actual `consent_required` replica esa coincidencia textual y **no
+prueba obligatoriedad**. W2.2b no debe reinterpretarlo.
 
-## Clasificación de decisiones
+## Matriz de decisión A-I
 
-- **Evaluación**: señal aplicable y suficientemente determinista para producir una
-  conclusión puntuable.
-- **Contexto**: observación útil, con peso cero, que activa o explica otras revisiones.
-- **Postergar**: hipótesis valiosa, pero el contrato o la precisión actual no permiten
-  un resultado conservador.
-- **No implementar**: la conclusión exige conocer procesos o necesidad interna.
+| Candidato | Valor para usuario | Observable públicamente | Evidencia actual disponible | Evidencia faltante | Riesgo de falso positivo | Automatización | Tipo recomendado | Impacto sugerido si puntuable | Dependency/applicability | Decisión final |
+|---|---|---|---|---|---|---|---|---|---|---|
+| A - Finalidad/contexto | Entender para qué se solicitan los datos | parcial | `nearby_text`, etiquetas y campos | `heading`, `legend`, `introductory_text`, `submit_text` y asociación inequívoca por formulario | medio | parcial | `context` | `no_aplica` | `dependency = PRV-101`; aplica si PRV-101 = `detected` | **CONTEXT NOW**, solo tras extensión mínima |
+| B - Minimización | Facilitar revisión de cantidad y categorías solicitadas | parcial | campos, tipos, nombres, etiquetas y `required` | finalidad confiable y taxonomía por caso de uso | alto | no | `defer` | `no_aplica` | requeriría PRV-101 y finalidad conocida; hoy no permite inferir necesidad | **DEFER** |
+| C - Obligatorios/opcionales | Describir restricciones técnicas del formulario | parcial | `FieldEvidence.required` | indicación visible estructurada; validación dinámica sigue fuera de alcance | medio | parcial | `context` | `no_aplica` | `dependency = PRV-101`; solo observación técnica cuando aplica | **CONTEXT NOW** |
+| D - Consentimiento/aceptación general obligatorio | Ninguno como regla universal; induciría una conclusión incorrecta | no | etiquetas de checkbox y señal parcial de PRV-104 | no existe evidencia capaz de hacer universal esa obligación | alto | no | `reject` | `no_aplica` | no aplicable: no todo formulario requiere checkbox o consentimiento | **REJECT** |
+| E - Marketing separado | Mostrar si una preferencia promocional está separada de la finalidad principal | parcial | etiquetas y formulario asociado | finalidad principal confiable; checkbox `required`, `checked` y `disabled` | medio | parcial | `defer` | `no_aplica` | solo formulario no promocional con opción promocional inequívoca; newsletter dedicado no aplica | **DEFER** |
+| F - Datos especialmente delicados | Priorizar revisión humana de recopilaciones de mayor riesgo | parcial | nombre, tipo y etiqueta de campo | taxonomía conservadora, combinaciones y benchmark de negativos | alto | parcial | `defer` | `no_aplica` | solo etiquetas explícitas dentro de formulario personal; no clasificación jurídica | **DEFER** |
+| G - Menores | Priorizar revisión de formularios aparentemente relacionados con menores | parcial | nombres y etiquetas de campos, `nearby_text` | evidencia por formulario y combinaciones semánticas validadas | alto | parcial | `defer` | `no_aplica` | señal explícita de menor o combinación alumno/apoderado; términos aislados no bastan | **DEFER** |
+| H - Envío seguro | Advertir transporte HTTP observable al cargar o enviar datos | sí | `source_url` y `action` absoluto por formulario | ninguna para la clasificación principal | bajo | sí | `conditional_evaluation` | `medio` | `dependency = PRV-101`; aplica solo si PRV-101 = `detected` | **IMPLEMENT NOW** |
+| I - Destino externo | Mostrar que el envío apunta a otro hostname | sí | `source_url` y `action` absoluto | hostnames pueden derivarse; no requiere ampliar el contrato | bajo | sí | `context` | `no_aplica` | `dependency = PRV-101`; aplica a formularios personales con URL HTTP(S) evaluable | **CONTEXT NOW** |
 
-## Análisis de candidatos
+## Decisión W2.2b
 
-### A. Finalidad o contexto del formulario
+### IMPLEMENT NOW
 
-**Valor.** Alto como señal de transparencia: una persona debería poder entender qué
-ocurrirá al enviar sus datos. Es observable solo cuando el texto está claramente
-asociado al formulario.
+- **H - Envío seguro del formulario.** Nuevo control puntuable, automatizable y
+  condicional a PRV-101.
 
-**Evidencia suficiente.** Una frase cercana que combine una acción o resultado
-concreto con el formulario, por ejemplo solicitar una cotización, reservar una hora,
-inscribirse, postular, descargar un recurso o recibir respuesta a una consulta. También
-pueden aportar un `legend`, encabezado o texto introductorio inequívocamente asociado.
-`Enviar`, `Continuar`, `Formulario`, `Contacto`, `Registro` o una lista de campos no son
-por sí solos finalidad suficiente. Un botón como `Suscribirme al newsletter` sí puede
-ser concreto porque contiene acción y resultado.
+### CONTEXT NOW
 
-**Decisión.** Diseñar un futuro control `conditional_evaluation`, dependiente de
-PRV-101, pero implementarlo en W2.2b inicialmente como **contexto con peso cero**. Sus
-estados serán `concrete`, `generic`, `not_observed` y `not_evaluable`; solo después de
-un benchmark representativo podrá considerarse puntuable. La clasificación debe usar
-un vocabulario acotado de pares acción/resultado y casos negativos, no similitud libre
-ni una coincidencia aislada.
+- **A - Finalidad visible del formulario.** Control contextual después de separar
+  evidencia textual mínima y trazable por formulario.
+- **C - Campos obligatorios/opcionales.** Contexto técnico basado en el atributo HTML
+  `required`; no afirma necesidad, opcionalidad real ni visibilidad.
+- **I - Destino externo observable.** Contexto objetivo cuando `source hostname` y
+  `action hostname` son distintos; no afirma que pertenezcan a organizaciones distintas.
 
-**Requisito previo.** Ampliar el contrato para separar `introductory_text`, `legend`,
-`heading` y `submit_text`, mantenerlos acotados y asociarlos a un formulario estable.
-No usar el `nearby_text` agregado como única prueba.
+### DEFER
 
-### B. Minimización visible
+- **B - Minimización.** Puede existir después como inventario contextual, pero no será
+  puntuable con evidencia actual ni calificará campos como innecesarios.
+- **E - Marketing separado.** Requiere finalidad principal y evidencia adicional del
+  checkbox.
+- **F - Datos especialmente delicados.** Requiere taxonomía y benchmark conservadores.
+- **G - Menores.** Requiere combinaciones explícitas y casos negativos por formulario.
 
-**Valor.** El contraste entre un newsletter que pide solo email y otro que además pide
-RUT, dirección o fecha de nacimiento es útil para una revisión humana.
+### REJECT
 
-**Límite.** El HTML no permite conocer la finalidad completa, obligaciones aplicables,
-prevención de fraude, logística ni otras necesidades reales. Incluso con una finalidad
-visible, una matriz universal de campos “necesarios” produciría falsos positivos.
+- **D - Consentimiento general obligatorio.** Se rechaza el concepto “todo formulario
+  debe tener checkbox o consentimiento”. Esto no elimina PRV-104 ni impide diseñar en
+  el futuro una elección específica cuando exista aplicabilidad observable.
 
-**Decisión.** **No implementar como control puntuable.** W2.2b puede exponer como
-contexto un inventario minimizado de categorías y conteos por formulario, sin usar
-adjetivos como “excesivo”, “innecesario” o “sensible”. Postergar cualquier heurística
-de desproporción hasta contar con finalidad confiable, taxonomías por caso de uso y un
-benchmark; aun entonces debe ser una alerta para revisión, no una conclusión.
+**Conteos:** IMPLEMENT NOW: **1**; CONTEXT NOW: **3**; DEFER: **4**; REJECT: **1**.
 
-### C. Campos obligatorios y opcionales
+## A - Finalidad visible
 
-**Valor.** Los conteos técnicos ayudan a describir la fricción y a revisar si la
-interfaz permite distinguir campos opcionales. No prueban minimización ni validez.
+### Definición de catálogo para W2.2b
 
-**Observabilidad.** `FieldEvidence.required` permite afirmar “tiene atributo HTML
-`required`”, no “se muestra como obligatorio”. La indicación visible exige observar
-texto o símbolos asociados y, para un asterisco, una leyenda visible que explique su
-significado. La ausencia del atributo tampoco prueba que el campo sea opcional por la
-posible validación JavaScript.
+- `type = context`
+- `score_weight = 0`
+- `dependency = PRV-101`
+- aplicabilidad: solo cuando PRV-101 = `detected`
 
-**Decisión.** **Contexto, peso cero.** Registrar por formulario conteos de controles con
-`required` HTML y de indicaciones visibles reconocidas, siempre con nombres distintos.
-No evaluar la proporción ni penalizar la falta de diferenciación en W2.2b.
+No se define como `conditional_evaluation`: en W2.2b es contextual y no puntúa. La
+clasificación semántica interna y los resultados públicos son niveles diferentes:
 
-**Requisito previo.** Añadir evidencia separada como `html_required` y
-`visible_requirement` (`required`, `optional`, `unknown`), conservando el texto o señal
-que justificó la clasificación. No derivar visibilidad del atributo técnico.
+| Evidencia interna | Resultado del control |
+|---|---|
+| `concrete` | `detected` |
+| `generic` | `partial` |
+| `none` | `not_detected` |
+| PRV-101 = `not_detected` | `not_applicable` |
+| limitación técnica o asociación insuficiente | `not_evaluable` |
 
-### D. Consentimiento y aceptación
+Una finalidad concreta combina acción o resultado comprensible, como solicitar una
+cotización, reservar una hora, recibir respuesta o suscribirse a un newsletter.
+`Enviar`, `Continuar`, `Formulario` o `Contacto` aislados son genéricos. El texto debe
+estar inequívocamente asociado al formulario; no basta una frase en otra sección.
 
-Un checkbox puede referirse a privacidad, términos contractuales, promociones, una
-declaración operativa o una preferencia; `Acepto` sin objeto no permite clasificarlos.
-La ausencia de checkbox tampoco indica una brecha, pues no todo tratamiento requiere
-consentimiento y existen otras formas de expresión cuando corresponde.
+## B - Minimización visible
 
-**Decisión.** No crear un control general “consentimiento presente”. Mantener PRV-104
-sin cambios en esta fase y documentar para una evolución posterior su separación en:
+Los campos y categorías observados pueden formar un inventario para revisión humana,
+pero el HTML no revela necesidades contractuales, operativas o regulatorias. No se
+implementará como control puntuable ni se usarán conclusiones como “excesivo” o
+“innecesario”. Incluso con finalidad visible, una matriz universal produciría falsos
+positivos. La decisión es DEFER.
 
-1. información de privacidad asociada al formulario; y
-2. mecanismo específico de elección, evaluado solo cuando una finalidad observable lo
-   haga aplicable.
+## C - Campos obligatorios y opcionales
 
-Esa separación requerirá migración explícita del framework porque cambiará la
-interpretación observable de PRV-104. Un checkbox genérico, la palabra
-`consentimiento` aislada o la mera ausencia de checkbox nunca deben activar una
-conclusión negativa.
+`FieldEvidence.required` permite afirmar únicamente que existe el atributo HTML
+`required`. Su ausencia no demuestra que el campo sea opcional, porque puede existir
+validación dinámica. Tampoco demuestra una indicación visible. W2.2b puede mostrar
+conteos técnicos por formulario con peso cero; `visible_requirement` queda separado y
+solo podrá poblarse desde texto o símbolos explicados visiblemente.
 
-### E. Marketing separado
+## D y E - Aceptación y marketing
 
-**Valor.** En un formulario con finalidad principal no promocional, una opción separada
-como “Quiero recibir promociones” es observable y útil. Si esa opción es técnicamente
-obligatoria, existe una señal fuerte de que la elección promocional no está separada.
+Un checkbox puede representar términos, privacidad, marketing u otra declaración.
+`Acepto` sin objeto es ambiguo y la ausencia de checkbox no es una brecha. PRV-104 se
+mantiene intacto; una futura separación entre información de privacidad y elección
+específica requerirá una decisión y versión de framework propias.
 
-**Aplicabilidad.** Solo aplica cuando coexisten (a) una finalidad principal concreta no
-promocional y (b) un checkbox inequívocamente promocional. No aplica a un formulario
-dedicado exclusivamente a newsletter ni cuando la finalidad principal es desconocida.
-“Acepto”, “novedades” o “comunicaciones” sin contexto son ambiguos.
+Marketing separado solo sería aplicable cuando coexistan una finalidad principal
+concreta no promocional y una opción inequívocamente promocional. Un formulario dedicado
+al newsletter no necesita otro checkbox por esta regla. La evaluación se posterga hasta
+conservar estados técnicos del checkbox y calibrar casos reales.
 
-**Decisión.** Candidato a `conditional_evaluation`, pero **postergado fuera de W2.2b**
-hasta mejorar el contrato y validar un benchmark. Un futuro control podría distinguir
-`separate_optional`, `separate_required`, `ambiguous` y `not_applicable`. Solo
-`separate_required` debería originar una observación adversa, y únicamente cuando la
-obligatoriedad pueda probarse conservadoramente.
+## F y G - Señales de mayor riesgo y menores
 
-**Evidencia necesaria.** `CheckboxEvidence` debe incorporar al menos `required` HTML y
-estado inicial `checked`, mantener etiqueta completa y formulario asociado. Conviene
-preservar también `disabled`; no debe afirmarse que JavaScript permite o impide el envío.
+Nombres como `salud`, `cuenta`, `alumno` o `edad` son ambiguos. Una evolución futura
+podría emitir triggers contextuales de peso cero ante etiquetas explícitas o
+combinaciones fuertes, sin usar categorías jurídicas ni afirmar edad, autorización o
+ilegalidad. W2.2b no los implementará.
 
-### F. Datos especialmente delicados
+## H - Envío seguro del formulario
 
-**Valor.** Puede priorizar una revisión humana, pero los nombres de campo son ambiguos:
-`salud` puede referirse al estado de un servicio, `cuenta` no necesariamente es
-financiera y `huella` puede ser metafórica.
+### Definición propuesta
 
-**Decisión.** No implementar una evaluación ni usar terminología jurídica como “dato
-sensible”. Tras un benchmark, puede incorporarse un **trigger contextual de riesgo
-elevado**, con peso cero, solo ante etiquetas visibles explícitas y combinaciones
-conservadoras (por ejemplo, “número de cuenta bancaria”, “diagnóstico médico” o
-“información de salud”). Una coincidencia en `name`, placeholder o texto general no
-debe bastar. Biometría requiere lenguaje inequívoco sobre captura biométrica, no campos
-comunes de imagen o firma.
+- `type = conditional_evaluation`
+- `dependency = PRV-101`
+- aplicabilidad: solo cuando PRV-101 = `detected`
+- automatización: sí
+- riesgo de falso positivo: bajo
+- impacto sugerido: **medio**
 
-### G. Menores
+Se recomienda impacto medio porque PRV-501 ya evalúa el transporte general del sitio
+con impacto `muy_alto`. H aporta precisión sobre cada punto de recopilación y su
+`action`, pero un impacto alto duplicaría desproporcionadamente el fenómeno de una
+página HTTP. El `action` HTTP específico sigue siendo un hallazgo relevante aunque el
+resto del sitio cumpla PRV-501. Los pesos se decidirán en W2.2b sin modificar ahora
+`scoring.json`.
 
-**Valor.** Expresiones como “fecha de nacimiento del menor” o la combinación “nombre
-del alumno”/“nombre del apoderado” justifican atención especial. `Alumno`, `edad` o
-`fecha de nacimiento` aislados no prueban que la persona sea menor.
+### Resultados y consolidación
 
-**Decisión.** Futuro **contexto/trigger con peso cero**, no control puntuable. Exigir una
-referencia explícita a niño, niña o menor, o una combinación de señales de estudiante y
-apoderado dentro del mismo formulario. Describirlo como “formulario aparentemente
-relacionado con menores”, sin inferir edad, representación, autorización ni legalidad.
-Postergar W2.2b hasta tener evidencia por formulario y casos negativos suficientes.
+- `detected`: **todos** los formularios personales evaluables se cargan desde una página
+  HTTPS y envían a un `action` HTTPS;
+- `not_detected`: existe al menos un formulario personal cuya página es HTTP o cuyo
+  `action` es HTTP;
+- `not_evaluable`: existe evidencia insuficiente o un esquema no HTTP(S), y no existe ya
+  un caso inseguro concluyente;
+- `not_applicable`: PRV-101 = `not_detected`.
 
-### H. Envío seguro del formulario
+Una acción relativa se evalúa después de su resolución absoluta. Con varios formularios,
+un caso HTTP concluyente prevalece sobre casos seguros o desconocidos. Sin casos HTTP,
+cualquier caso desconocido impide afirmar que todos son seguros y produce
+`not_evaluable`; solo si todos son evaluables y seguros resulta `detected`. El control
+no afirma TLS futuro del receptor, cifrado en reposo, seguridad del backend, CSRF ni
+tratamiento posterior. `GET` puede conservarse como contexto técnico, pero no cambia por
+sí solo el resultado de transporte.
 
-**Valor.** Es el candidato más determinista. La URL de origen y el `action` absoluto
-permiten observar el transporte previsto sin inferir seguridad del backend.
+## I - Destino externo observable
 
-**Reglas propuestas.** Control `conditional_evaluation`, dependiente de PRV-101:
+W2.2b puede derivar `source hostname` y `action hostname` de las URLs existentes. Si son
+distintos, `destination_external_observed = true` y la evidencia dirá: “El formulario
+envía datos a un hostname distinto del sitio revisado”. Si son iguales, será `false`.
 
-- `detected`: página de origen HTTPS y `action` HTTPS;
-- `not_detected`: página de origen HTTP o `action` HTTP;
-- `not_evaluable`: esquema no HTTP(S), URL inválida o evidencia incompleta;
-- `not_applicable`: PRV-101 no detecta formularios personales.
+La primera versión compara hostnames normalizados literalmente. Por ello
+`empresa.cl` y `forms.empresa.cl` son distintos y la señal **no** afirma que sean
+organizaciones diferentes. No requiere Public Suffix List. Una futura evolución podrá
+agrupar dominios relacionados. No se infiere cesión, encargado, proveedor, transferencia
+o incumplimiento, y nunca se navega al `action` para clasificarlo.
 
-Una acción relativa resuelta a HTTPS equivale a acción HTTPS. El dominio, subdominio o
-carácter tercero no cambia el resultado. El control evalúa transporte observable, no
-TLS del receptor al momento futuro del envío, cifrado en reposo, autenticación, CSRF,
-logs ni controles internos. El método `GET` debe informarse como contexto separado
-porque puede exponer valores en URL e historiales, pero no debe convertir por sí solo
-“envío seguro” en una conclusión sobre el backend.
+## Evidence Contract mínimo
 
-**Decisión.** **Implementar y puntuar en W2.2b**, evaluando cada formulario personal y
-consolidando conservadoramente: cualquier formulario con transporte HTTP produce
-`not_detected`; evidencia incompleta produce `not_evaluable` salvo que ya exista un
-caso HTTP concluyente. Antes de fijar peso e impacto se debe validar coherencia con
-PRV-501 y evitar doble penalización desproporcionada en `scoring.json`.
+| Campo | ¿Existe hoy? | ¿Se necesita W2.2b? | Motivo |
+|---|---|---|---|
+| `source_url` | sí | H, A, C, I | Origen y trazabilidad por formulario |
+| `action` | sí, absoluto | H, I | Esquema de envío y hostname de destino |
+| `method` | sí | contexto opcional | No decide H; permite describir GET/POST |
+| `FieldEvidence.required` | sí | C | Observación técnica, no visible |
+| `CheckboxEvidence.required` | no | futuro E | Distinguir una restricción HTML promocional |
+| `CheckboxEvidence.checked` | no | futuro E | Conocer estado inicial estático |
+| `CheckboxEvidence.disabled` | no | futuro E | Evitar interpretar opciones no operables |
+| `heading` | no | A | Señal de finalidad asociada |
+| `legend` | no | A | Contexto semántico del formulario/fieldset |
+| `introductory_text` | no | A | Frase de finalidad separada y acotada |
+| `submit_text` | no | A | Acción/resultado explícito, por ejemplo “Reservar” |
+| `visible_requirement` | no | C, opcional | Separar indicación visible de atributo HTML |
+| categorías de campo | parcial, derivadas en adapter | C/contexto; futuro B/F/G | Inventario minimizado sin inferir necesidad |
+| `source hostname` | no, derivable | I | Comparación objetiva del origen |
+| `action hostname` | no, derivable | I | Comparación objetiva del destino |
 
-### I. Envío a terceros
+**Necesario para H:** no requiere campos nuevos; necesita usar `source_url` y `action`
+por cada formulario personal y conservar consolidación trazable.
 
-**Observabilidad.** Puede compararse el hostname normalizado de `source_url` y `action`.
-La comparación debe distinguir mismo host, subdominio relacionado y registrable domain
-distinto; puertos y `www` no deben crear terceros artificiales. Sin Public Suffix List
-o regla equivalente no es seguro decidir relaciones como `empresa.co.cl`.
+**Necesario para A/C/I:** A requiere `heading`, `legend`, `introductory_text` y
+`submit_text`. C puede empezar con `FieldEvidence.required`; `visible_requirement` es
+opcional y nunca se deriva de `required`. I deriva hostnames y no amplía el contrato.
 
-**Límite.** Un destino distinto puede ser un proveedor legítimo y no revela el rol,
-contrato, finalidad ni transferencias posteriores.
+**Futuro E/F/G:** estados del checkbox corresponden a E. Categorías semánticas y
+benchmarks corresponden a F/G. No deben incorporarse anticipadamente a W2.2b.
 
-**Decisión.** **Contexto con peso cero**, denominado “destino externo observable”, no
-“cesión” ni incumplimiento. Puede alimentar en el futuro una vista transversal de
-terceros, pero no debe pertenecer a Cookies ni penalizarse automáticamente. W2.2b solo
-debe incorporarlo si se añade una resolución robusta de dominio registrable; de lo
-contrario se posterga. Debe mostrar los hostnames de origen y destino y nunca navegar
-al `action` para comprobarlo.
+## Plan sintético de casos
 
-## Cambio mínimo aprobado para W2.2b
+No se implementan tests en W2.2a; estos casos definen los fixtures de W2.2b.
 
-1. Implementar el control condicional y puntuable de **envío seguro** descrito en H.
-2. Ampliar el Evidence Contract solo con lo necesario para mantener evidencia por
-   formulario y resultados trazables; la URL de origen y `action` actuales ya cubren la
-   clasificación principal.
-3. Incorporar la **finalidad visible** como control contextual de peso cero únicamente
-   si antes se separan y acotan `introductory_text`, `legend`, `heading` y
-   `submit_text`, con fixtures positivos, genéricos y ambiguos. Si esa ampliación no
-   cabe en un cambio pequeño, se divide en una fase de Evidence Contract previa.
-4. No implementar todavía minimización puntuable, consentimiento general, marketing
-   separado, datos de riesgo elevado ni menores.
-5. El destino externo puede añadirse como contexto solo con una clasificación de
-   dominio registrable probada; no es requisito para cerrar W2.2b.
+### H - Envío seguro
 
-Los códigos, impacto y pesos definitivos se asignarán al actualizar el catálogo. No se
-reutilizará un código por conveniencia ni se cambiarán PRV-101/PRV-104 silenciosamente.
+| Caso | Resultado esperado |
+|---|---|
+| Página HTTPS + acción relativa resuelta a HTTPS | `detected` |
+| Página HTTPS + acción absoluta HTTPS | `detected` |
+| Página HTTPS + acción HTTP | `not_detected` |
+| Página HTTP + acción HTTPS | `not_detected` |
+| Varios formularios personales, uno HTTP | `not_detected` |
+| Esquema inválido/incompleto, sin caso HTTP concluyente | `not_evaluable` |
+| Sin formularios personales | `not_applicable` |
 
-## Requisitos de evidencia y pruebas
+### A - Finalidad visible
 
-Toda implementación posterior debe:
+| Caso | Evidencia interna / resultado |
+|---|---|
+| “Envíanos tus datos para solicitar una cotización” asociado | `concrete` / `detected` |
+| “Completa el formulario para reservar una hora” asociado | `concrete` / `detected` |
+| “Contacto” sin resultado o uso descrito | `generic` / `partial` |
+| Botón “Enviar” aislado | `generic` / `partial` |
+| Botón “Suscribirme al newsletter” | `concrete` / `detected` |
+| Texto concreto en una sección no asociada | `none` / `not_detected` |
+| Varios formularios en una página | clasificación independiente y consolidación trazable |
 
-- producir evidencia por formulario y seleccionar una URL pública trazable;
-- diferenciar hechos HTML (`required`, `checked`, método, esquema) de interpretación
-  visible;
-- conservar valores minimizados y acotados, sin cuerpos completos ni valores escritos
-  por usuarios;
-- cubrir acciones ausentes, relativas, absolutas HTTPS/HTTP, esquemas no HTTP, página
-  HTTP, múltiples formularios y destinos externos;
-- cubrir textos concretos, genéricos y negativos en español e inglés para cualquier
-  clasificador semántico añadido;
-- probar `not_applicable` por dependencia, `not_evaluable` por evidencia insuficiente y
-  consolidación de múltiples formularios;
-- ejecutar el benchmark antes de volver puntuable una señal contextual;
-- incrementar `framework_version` cuando la extracción, adaptación, criterio o conjunto
-  de controles pueda cambiar el diagnóstico; cambiar `scoring_version` solo si cambian
-  pesos, factores, exclusiones, rangos o fórmula.
+### I - Destino externo
 
-## Riesgos explícitamente no cubiertos
+| Caso | Contexto esperado |
+|---|---|
+| Mismo hostname | `destination_external_observed = false` |
+| Hostname distinto | `destination_external_observed = true` |
+| Subdominio distinto | `true`, sin inferir organización distinta |
+| Acción relativa | `false` tras resolución al hostname de origen |
+| Acción inexistente | usa la URL de origen absoluta actual; `false` |
+| Acción inválida o no HTTP(S) | `not_evaluable`, sin inferencias |
 
-Este diseño no comprueba validación JavaScript, contenido cargado dinámicamente,
-requests realizados por scripts en lugar del `action`, seguridad del receptor, uso
-posterior de datos, legitimación, necesidad, consentimiento jurídicamente válido ni
-condiciones contractuales con proveedores. Esas ausencias deben presentarse como
-límites del alcance, no como hallazgos adversos.
+## Plan de calibración real
+
+El benchmark posterior usará sitios seleccionados y revisados manualmente, sin fijar
+URLs en esta fase.
+
+| Perfil | Fenómenos a buscar |
+|---|---|
+| E-commerce | cuenta/checkout, newsletter, marketing, muchos campos, varios formularios, acciones HTTPS/externas |
+| Servicios profesionales | contacto simple, cotización, finalidad concreta o genérica, formulario externo |
+| Educación | contacto, admisión/reserva, varios formularios, muchos campos, finalidad y acciones HTTPS |
+| Salud | reserva/contacto, formulario externo, muchos campos, finalidad clara/genérica, transporte |
+| SaaS | registro/demo, newsletter, marketing, formulario externo, varios formularios |
+| Microempresa/simple | contacto mínimo, acción relativa, finalidad genérica, ausencia de formularios personales |
+
+La calibración medirá falsos positivos y negativos por formulario para A, verificará
+todas las combinaciones de esquema de H y confirmará que I describe hostnames sin
+atribuir relaciones jurídicas u organizacionales.
+
+## Orden de implementación
+
+1. **W2.2b.1 - Envío seguro del formulario:** implementar H con evidencia actual,
+   consolidación, catálogo, acciones y pruebas focalizadas.
+2. **W2.2b.2 - Extensión mínima por formulario:** añadir solo la evidencia textual
+   separada y acotada necesaria para A, preservando trazabilidad.
+3. **W2.2b.3 - Finalidad visible:** implementar A como `context`, peso cero y dependencia
+   PRV-101, con el mapeo definido.
+4. **W2.2b.4 - Destino externo observable:** implementar I como comparación objetiva de
+   hostname y contexto de peso cero, sin ampliar el contrato.
+5. **W2.2b.5 - Required técnico:** implementar C como contexto solo si la presentación
+   aporta valor comprobado; no bloquear H, A o I por esta señal.
+
+No ampliar esta secuencia a marketing, menores o datos especialmente delicados.
+
+## Versionado y producción
+
+W2.2a mantiene `framework_version = 0.1` y `scoring_version = 0.1` porque solo cambia
+documentación. Producción, catálogo, score y resultados permanecen intactos.
+
+W2.2b deberá incrementar `framework_version` al agregar controles o cambiar extracción
+o adaptación de forma que pueda alterar resultados. `scoring_version` cambiará solo si
+cambian pesos, factores, exclusiones, rangos o fórmula. Asignar impacto sugerido no
+modifica por sí mismo ninguna versión mientras siga siendo diseño documental.
+
+## Fuera de alcance
+
+Este diseño no comprueba JavaScript, contenido dinámico, requests que omiten `action`,
+seguridad del receptor, uso posterior de datos, legitimación, necesidad, consentimiento
+jurídicamente válido ni contratos con proveedores. Estas limitaciones no son hallazgos
+adversos.
