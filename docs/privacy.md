@@ -13,6 +13,13 @@ Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad 
 
 El resultado es orientativo: no constituye una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.
 
+Cada diagnóstico conserva las versiones canónicas del framework y del scoring dentro
+de su snapshot. `framework_version` debe cambiar cuando un cambio pueda alterar la
+interpretación o el conjunto de controles evaluados. `scoring_version` debe cambiar
+cuando puedan alterarse pesos, factores, exclusiones, rangos o la fórmula del score.
+Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
+no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
+
 ## Foco técnico actual
 
 - Backend: Python/FastAPI en Render.

@@ -54,7 +54,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=1',
             '/privacy/plan-assets/styles.css?v=4',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=5',
+            '/privacy/plan-assets/app.js?v=6',
         ):
             self.assertIn(asset, HTML)
 
@@ -148,7 +148,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=5"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=6"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -182,6 +182,26 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("result.items.forEach", APP)
         self.assertIn("elements.checkAvailable.hidden = true", APP)
         self.assertIn("elements.checkCreated.textContent = friendlyDate(check.created_at)", APP)
+
+    def test_incomparable_result_shows_only_current_score_and_explanation(self):
+        self.assertIn('id="check-not-comparable" hidden', HTML)
+        self.assertIn("Esta revisión utiliza una versión diferente del análisis.", HTML)
+        self.assertIn("Score de la revisión actual:", HTML)
+        branch = APP[APP.index("if (notComparable)"):APP.index("elements.checkBefore.textContent")]
+        self.assertIn("checkComparison.hidden = notComparable", APP)
+        self.assertIn("checkNotComparable.hidden = !notComparable", APP)
+        self.assertIn("checkCurrentScore.textContent = `${result.current_score} / 100`", branch)
+        self.assertIn("return;", branch)
+        self.assertNotIn("score_change", branch)
+        self.assertNotIn("corrected_count", branch)
+        self.assertNotIn("pending_count", branch)
+        self.assertNotIn("Sin cambios en el score", branch)
+        self.assertNotIn("+", branch)
+
+    def test_legacy_v1_result_without_comparability_uses_historical_rendering(self):
+        self.assertIn("result.comparability?.status === 'not_comparable'", APP)
+        self.assertIn("elements.checkBefore.textContent = `${result.original_score} / 100`", APP)
+        self.assertIn("elements.checkNow.textContent = `${result.current_score} / 100`", APP)
 
     def test_expired_check_keeps_cta_disabled(self):
         expired_branch = APP[APP.index("if (check.status === 'expired')"):APP.index("elements.checkStart.hidden = false")]
