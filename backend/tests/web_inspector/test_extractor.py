@@ -182,6 +182,29 @@ def test_associates_immediately_preceding_heading_and_introduction():
     assert form.submit_text == "Reservar"
 
 
+def test_external_privacy_link_is_not_used_as_form_introduction():
+    form = extract_page("""
+        <section>
+          <p><a href="/privacy">Política de privacidad</a></p>
+          <form><input type="email"></form>
+        </section>
+    """, "https://example.com/").forms[0]
+
+    assert form.introductory_text is None
+
+
+def test_external_wrapper_with_nested_heading_is_ambiguous():
+    form = extract_page("""
+        <section>
+          <div><h2>Newsletter</h2><p>Recibe novedades.</p></div>
+          <form><input type="email"></form>
+        </section>
+    """, "https://example.com/").forms[0]
+
+    assert form.heading is None
+    assert form.introductory_text is None
+
+
 def test_neighboring_forms_do_not_share_structured_context():
     forms = extract_page("""
         <section>
