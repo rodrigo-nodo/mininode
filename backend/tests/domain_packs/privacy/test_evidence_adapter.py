@@ -75,6 +75,7 @@ def test_internal_form_context_does_not_change_existing_privacy_controls():
     ({"introductory_text": "Your message will be reviewed by our team"}, "unknown", "not_evaluable"),
     ({"submit_text": "Send request for a demo"}, "concrete", "detected"),
     ({"submit_text": "Hablemos de tu proyecto"}, "concrete", "detected"),
+    ({"submit_text": "Conversemos sobre el proyecto"}, "concrete", "detected"),
     ({"submit_text": "Conversemos"}, "generic", "partial"),
     ({"introductory_text": "Completa este formulario y nos pondremos en contacto contigo"}, "concrete", "detected"),
     ({"submit_text": "Escríbenos"}, "concrete", "detected"),
@@ -86,6 +87,11 @@ def test_internal_form_context_does_not_change_existing_privacy_controls():
     ({"legend": "I'm interested in", "submit_text": "Contact"}, "generic", "partial"),
     ({"heading": "Transforma tu futuro digital ahora"}, "unknown", "not_evaluable"),
     ({"submit_text": "Suscríbete ya Enviando"}, "concrete", "detected"),
+    ({"submit_text": "We'll get back to you"}, "concrete", "detected"),
+    ({"submit_text": "We will contact you"}, "concrete", "detected"),
+    ({"submit_text": "We'll contact you"}, "concrete", "detected"),
+    ({"introductory_text": "All fields required"}, "none", "not_detected"),
+    ({"submit_text": "Sending"}, "none", "not_detected"),
 ])
 def test_prv103_classifies_structured_same_form_purpose(kwargs, purpose, result):
     adapted = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))
@@ -109,7 +115,7 @@ def test_prv103_does_not_infer_from_nearby_fields_or_privacy_evidence():
 
 
 @pytest.mark.parametrize("text", [
-    "Hablemos", "Proyecto", "Sales", "Free",
+    "Hablemos", "Hablemos de tu", "Conversemos sobre el", "Proyecto", "Sales", "Free",
 ])
 def test_prv103_does_not_promote_unrecognized_words_to_concrete(text):
     evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
