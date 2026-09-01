@@ -1,162 +1,279 @@
 # PRV-102 - calibración en sitios públicos reales (W2.2b.1-QA)
 
-## Estado de la ejecución
+## Resultado
 
-**network calibration blocked**
+**PASS WITH OBSERVATIONS**
 
-La calibración no pudo ejecutarse porque el entorno no permitió conexiones de
-salida directas desde `WebFetcher`. Los seis intentos fallaron durante
-`home_fetch`, antes de obtener HTML, con `PrivacyInspectionError:
-http_fetch_failed`, `ConnectError` y detalle técnico `network_unreachable`.
+PRV-102 se validó sobre seis sitios públicos reales usando el pipeline productivo actual mediante GitHub Actions. Los seis casos finalmente utilizados pudieron diagnosticarse y el resultado de PRV-102 coincidió con la revisión manual independiente en 6/6.
 
-Por lo tanto, este documento **no presenta resultados inventados ni sustituye la
-muestra real por fixtures sintéticos**. No es posible asignar `PASS`, `PASS WITH
-OBSERVATIONS` o `NEEDS FIX` hasta repetir la ejecución en un entorno que permita
-al pipeline actual acceder directamente a sitios públicos.
+No se observaron:
 
-También se intentó preparar la ejecución temporal solicitada en GitHub Actions,
-pero este entorno no dispone de un remote Git configurado ni de credenciales para
-el repositorio privado. `gh auth status` indicó que no existe una sesión de GitHub
-y `gh pr view 167 --repo rodrigo-nodo/mininode` no pudo autenticarse. Por ello no
-fue posible subir el workflow temporal a la rama del PR #167 ni iniciar un run.
-Esto es un bloqueo de acceso a GitHub desde el entorno de trabajo, no evidencia de
-que los runners de GitHub Actions carezcan de conectividad a los seis sitios.
+- false positive promotions;
+- false adverse;
+- penalizaciones causadas únicamente por formularios MEDIUM;
+- filtraciones del `action` completo en la evidencia pública.
+
+La calibración se clasifica como **PASS WITH OBSERVATIONS** porque la muestra real no incluyó:
+
+- un formulario personal HIGH con transporte HTTP;
+- un candidato personal MEDIUM;
+- un `action` HTTPS hacia hostname externo.
+
+Estos fenómenos continúan cubiertos por tests sintéticos, pero no fueron observados naturalmente en esta muestra real.
 
 ## Línea base
 
 | Campo | Valor |
 |---|---|
-| Fecha de intento | 2026-09-01 |
-| Main SHA | `457dee7da163f9541bc2e55e01f94f69f860e26a` |
+| Fecha | 2026-09-01 |
+| Main SHA evaluado | `457dee7da163f9541bc2e55e01f94f69f860e26a` |
 | `framework_version` | `0.2` |
 | `scoring_version` | `0.1` |
 | `actions_version` | `2` |
-| Código o catálogos modificados | No |
+| Producción modificada durante calibración | No |
+| Catálogos modificados | No |
 
-## Intento de GitHub Actions
+## Ejecución
 
-| Campo | Resultado |
-|---|---|
-| GitHub Actions ejecutado | No |
-| Motivo | Sin remote Git ni credenciales para actualizar el PR privado #167 |
-| Workflow run URL | No disponible; no se pudo iniciar un run |
-| Artifact esperado | `privacy-prv102-calibration` |
-| Artifact obtenido | No; no hubo run |
-| Sitios diagnosticados mediante Actions | 0 |
-| Workflow temporal presente en el estado final | No |
-| Runner temporal presente en el estado final | No |
+La primera ejecución local desde el entorno Codex quedó bloqueada por conectividad saliente (`network_unreachable`).
 
-No se incorporó un workflow o runner sin posibilidad de ejecutarlo: hacerlo no
-habría aportado evidencia real y habría contradicho el requisito de que el estado
-final del PR fuera únicamente documental. La ejecución en Actions sigue pendiente
-en un entorno con permisos para actualizar la rama del PR.
+Luego se ejecutó la calibración mediante un workflow temporal de GitHub Actions. Los primeros sitios de e-commerce y salud seleccionados originalmente no fueron inspeccionables por respuestas HTTP del propio sitio, por lo que se reemplazaron conservando el sector:
 
-## Metodología intentada
+- E-commerce: Patagonia y luego Bookshop fueron reemplazados por Beardbrand.
+- Salud: Mayo Clinic fue reemplazado por NHS.
 
-Se invocó localmente `diagnose_privacy_url(...)`, sin mocks y sin modificar el
-pipeline, una vez para cada URL solicitada. La llamada usa el `WebFetcher` real y
-falló en la lectura inicial de HOME. No se ejecutó ningún `action`, no se envió
-ningún formulario y no se introdujeron datos personales.
+No se modificó ninguna regla de PRV-101 o PRV-102 después de observar los resultados.
 
-La segunda lectura manual independiente no se realizó: sin HTML obtenido no
-existían hechos visibles que pudieran etiquetarse con rigor. En particular, no se
-usó `_form_transport(...)` ni se conservaron HTML, cuerpos, cookies, headers,
-queries, credenciales o tokens.
+Ejecuciones relevantes:
 
-## Casos previstos e intentos de red
+- Run inicial: https://github.com/rodrigo-nodo/mininode/actions/runs/33518106555
+- Run con reemplazo de salud: https://github.com/rodrigo-nodo/mininode/actions/runs/33518320612
+- Run final de seis casos diagnosticables: https://github.com/rodrigo-nodo/mininode/actions/runs/33518493862
 
-Estas URLs constituyen intentos de cobertura sectorial, no casos calibrados ni
-afirmaciones sobre los formularios que contienen.
+Artifact final:
 
-| Caso | Sector | URL pública solicitada | Operación bloqueada | Resultado técnico |
-|---|---|---|---|---|
-| C01 | E-commerce | `https://www.patagonia.com/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
-| C02 | Servicios profesionales | `https://www.beneschlaw.com/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
-| C03 | Educación | `https://www.harvard.edu/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
-| C04 | Salud | `https://www.mayoclinic.org/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
-| C05 | SaaS/tecnología | `https://about.gitlab.com/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
-| C06 | Microempresa/sitio simple | `https://wickedgrounds.com/` | Lectura HOME del pipeline | `home_fetch`: `ConnectError` / `network_unreachable` |
+- nombre: `privacy-prv102-calibration`
+- artifact id: `9804636915`
+- retención temporal: 7 días
+
+El workflow temporal fue eliminado después de documentar los resultados.
+
+## Metodología
+
+Para cada sitio se ejecutó el pipeline real:
+
+`diagnose_privacy_url(...)`
+
+sin mocks y sin modificar producción.
+
+Se registró de forma sanitizada:
+
+- URL solicitada y URL final;
+- páginas solicitadas y analizadas;
+- resultado/confianza de PRV-101;
+- resultado/confianza de PRV-102;
+- `framework_version`;
+- `scoring_version`;
+- evidencia mínima de formularios para revisión.
+
+No se enviaron formularios ni se introdujeron datos personales.
+
+Para la revisión manual se observaron únicamente hechos estructurados del formulario:
+
+- campos visibles;
+- esquema de la página;
+- esquema del `action`;
+- método;
+- contexto suficiente para decidir si el formulario era razonablemente personal.
+
+La etiqueta manual de PRV-102 se aplicó según la especificación aprobada y no se tomó del resultado productivo.
 
 ## Matriz de resultados
 
-No existe una matriz de resultados de producto/manual válida. En los seis casos
-el bloqueo ocurrió antes de producir `site_url`, `pages_requested`,
-`pages_analyzed`, `scope.limited`, PRV-101 o PRV-102. En consecuencia:
+| Caso | Sector | Sitio final | Páginas analizadas | PRV-101 producto | PRV-102 producto | PRV-102 esperado manual | Acuerdo |
+|---|---|---|---:|---|---|---|---|
+| C01 | E-commerce | `beardbrand.com` | 2 | detected | detected | detected | Sí |
+| C02 | Servicios profesionales | `beneschlaw.com` | 2 | detected | detected | detected | Sí |
+| C03 | Educación | `harvard.edu` | 3 | not_detected | not_applicable | not_applicable | Sí |
+| C04 | Salud | `nhs.uk` | 1 | not_detected | not_applicable | not_applicable | Sí |
+| C05 | SaaS/tecnología | `about.gitlab.com` | 4 | not_detected | not_applicable | not_applicable | Sí |
+| C06 | Microempresa/sitio simple | `wickedgrounds.com` | 2 | detected | detected | detected | Sí |
 
-| Métrica | Resultado disponible |
+Resumen:
+
+| Métrica | Resultado |
 |---|---:|
-| Sitios intentados | 6 |
-| Sitios efectivamente diagnosticados | 0 |
-| Acuerdos producto/manual | 0/0 (no evaluable) |
-| `detected` | 0 observados |
-| `not_detected` | 0 observados |
-| `not_evaluable` | 0 observados |
-| `not_applicable` | 0 observados |
-| Formularios personales HIGH | 0 observados |
-| Formularios personales MEDIUM | 0 observados |
-| Actions HTTPS externos | 0 observados |
+| Sitios diagnosticados | 6/6 |
+| Acuerdos producto/manual | 6/6 |
+| PRV-102 detected | 3 |
+| PRV-102 not_detected | 0 |
+| PRV-102 not_evaluable | 0 |
+| PRV-102 not_applicable | 3 |
+| False positive promotions | 0 |
+| False adverse | 0 |
+| Casos MEDIUM observados | 0 |
+| Action HTTPS externo observado | 0 |
 
-Los ceros significan **ausencia de observaciones**, no resultados negativos ni
-confirmación de comportamiento.
+## Revisión por caso
 
-## Discrepancias y riesgos prioritarios
+### C01 - E-commerce
 
-No fue posible comparar producto y etiqueta manual. Por ello no se clasifican
-discrepancias A–H ni se infieren defectos de PRV-101 o PRV-102.
+Beardbrand expuso un formulario de email en HOME. La evidencia manual mostró un campo email y transporte HTTPS tanto en la página como en el destino declarado.
 
-| Riesgo | Resultado |
-|---|---|
-| False positive promotions | No medible |
-| False adverse | No medible |
-| Penalización causada solo por MEDIUM | No medible |
-| Action HTTPS externo penalizado | No medible |
-| Consolidación de varios formularios | No medible |
+Esperado manual: `detected`.
 
-El bloqueo pertenece al entorno de ejecución y no constituye por sí solo una
-discrepancia `G. technical_limitation` de un sitio diagnosticado, porque ninguna
-inspección llegó a comenzar.
+Producto: `detected`.
 
-## Minimización de evidencia
+No se observó discrepancia.
 
-La comprobación solicitada sobre la evidencia pública de PRV-102 es **no
-evaluable (0/6)**: no se produjo evidencia pública. Los registros conservados en
-este documento contienen únicamente URL solicitada y categoría técnica del fallo;
-no contienen actions, queries, credenciales, tokens, IP literales, HTML, bodies,
-cookies ni headers privados.
+### C02 - Servicios profesionales
+
+Benesch expuso varios formularios, incluyendo formularios de contacto con nombre, email, teléfono y mensaje. Todos los formularios personales relevantes observados usaron HTTPS en source y action.
+
+También se observaron formularios de búsqueda. Aunque su clasificación como formulario personal puede discutirse de forma aislada, no altera el resultado PRV-102 de este caso porque existen además formularios personales claros y todos los transportes observados son HTTPS.
+
+Esperado manual: `detected`.
+
+Producto: `detected`.
+
+No se observó discrepancia de score para PRV-102.
+
+### C03 - Educación
+
+Harvard no presentó formularios personales en las páginas inspeccionadas.
+
+Esperado manual: `not_applicable`.
+
+Producto: `not_applicable`.
+
+### C04 - Salud
+
+NHS presentó un formulario de búsqueda, pero no un formulario que razonablemente recopilara datos personales dentro del alcance observado.
+
+Esperado manual: `not_applicable`.
+
+Producto: `not_applicable`.
+
+### C05 - SaaS/tecnología
+
+GitLab permitió llegar a la página de contacto, pero los formularios estructurados observados no contenían campos personales utilizables por PRV-101.
+
+Esperado manual: `not_applicable`.
+
+Producto: `not_applicable`.
+
+### C06 - Microempresa/sitio simple
+
+Wicked Grounds permitió descubrir de forma adaptativa su página de contacto. Se observó un formulario con nombre, email y mensaje, con source HTTPS y action HTTPS.
+
+Esperado manual: `detected`.
+
+Producto: `detected`.
+
+## PRV-101
+
+No se observó un falso positivo de PRV-101 capaz de cambiar incorrectamente el resultado de PRV-102 en esta muestra.
+
+Sí queda una observación útil en C02: campos de búsqueda de texto libre pueden ser clasificados como personales por la lógica actual. En este caso no produjo una decisión adversa ni una promoción incorrecta porque existían además formularios personales claros y todo el transporte observado era HTTPS.
+
+No se recomienda ajustar PRV-101 a partir de este único caso.
+
+## Formularios MEDIUM
+
+No se observaron candidatos MEDIUM en los seis casos finales.
+
+Por tanto, la regla:
+
+`MEDIUM` por sí solo no puede producir `not_detected`
+
+queda validada por tests sintéticos, pero no por evidencia real en esta muestra.
+
+Esto es una limitación de cobertura del benchmark, no un fallo observado.
+
+## Action HTTPS externo
+
+No apareció de forma natural un formulario personal cuyo `action` HTTPS apuntara a un hostname externo.
+
+El comportamiento esperado continúa cubierto por tests sintéticos:
+
+HTTPS externo no debe ser penalizado solo por cambiar de hostname.
+
+## Minimización
+
+**PASS 6/6**
+
+La salida productiva sanitizada de PRV-102 no expuso:
+
+- `action` completo;
+- query strings;
+- credenciales;
+- tokens;
+- IP del destino;
+- valores introducidos por usuarios.
+
+La evidencia pública utilizada por PRV-102 conservó únicamente trazas de origen sanitizadas cuando correspondía.
 
 ## Descubrimiento adaptativo
 
-No hubo expansión adaptativa. Los fallos ocurrieron en HOME, antes de descubrir o
-clasificar enlaces candidatos y antes de poder registrar páginas solicitadas o
-analizadas. Por tanto, no puede concluirse si el pipeline habría alcanzado páginas
-de contacto, reserva, cotización o demo.
+No se observó un problema sistemático.
+
+Casos relevantes:
+
+- C02 analizó HOME y una página adicional de contacto.
+- C03 analizó tres páginas.
+- C05 analizó cuatro páginas y alcanzó la zona de contacto.
+- C06 descubrió y analizó `/contact/`, donde estaba el formulario personal.
+
+C06 confirma específicamente que un formulario ausente en HOME puede ser descubierto por la expansión adaptativa y luego evaluado por PRV-102.
+
+## Discrepancias
+
+No hubo discrepancias producto/manual de PRV-102 en los seis casos finales.
+
+Por tanto:
+
+| Tipo | Cantidad |
+|---|---:|
+| personal_form_detection con impacto PRV-102 | 0 |
+| adaptive_page_discovery | 0 |
+| source_scheme | 0 |
+| action_resolution | 0 |
+| transport_consolidation | 0 |
+| confidence_handling | 0 |
+| technical_limitation en muestra final | 0 |
+| manual_label_uncertain | 0 |
+
+Los sitios descartados por 403/404 corresponden a limitaciones de inspección del sitio y no forman parte de los seis casos finales calibrados.
 
 ## Conclusión
 
-**Resultado: network calibration blocked (sin clasificación de calibración).**
+**PASS WITH OBSERVATIONS**
 
-La muestra no permite aplicar el criterio de aprobación ni afirmar que PRV-102
-esté calibrado. Tampoco aporta evidencia de un error de score: simplemente no hubo
-diagnósticos. Producción, API, frontend, base de datos, controles, scoring, actions
-y versiones permanecen sin cambios.
+PRV-102 se comportó correctamente en los seis casos reales finalmente diagnosticados:
 
-El bloqueo confirmado de red corresponde al entorno Codex. GitHub Actions no fue
-ejecutado por falta de acceso autenticado al PR, por lo que no se atribuye un
-bloqueo de red a Actions y no existe run URL ni artifact que reportar.
+- 6/6 acuerdo producto/manual;
+- 0 false positive promotions;
+- 0 false adverse;
+- 0 penalizaciones por MEDIUM;
+- minimización PASS 6/6;
+- sin evidencia de problema sistemático de descubrimiento adaptativo.
+
+Las observaciones pendientes son de cobertura del benchmark: no aparecieron naturalmente un transporte HTTP inseguro, un candidato MEDIUM ni un action HTTPS externo.
+
+No existe evidencia que justifique modificar PRV-102 en esta fase.
 
 ## Recomendación
 
-Repetir exactamente la calibración documental sobre el mismo SHA en un entorno
-con salida directa a Internet compatible con `WebFetcher`. Solo después de obtener
-los seis diagnósticos se debe:
+Cerrar W2.2b.1-QA con **PASS WITH OBSERVATIONS** y mantener:
 
-1. realizar la revisión manual independiente de los formularios obtenidos;
-2. completar la matriz producto/manual y la tabla sanitizada por formulario;
-3. verificar minimización en 6/6 y descubrimiento adaptativo;
-4. contar promociones falsas, resultados adversos, MEDIUM y actions HTTPS
-   externos; y
-5. asignar `PASS`, `PASS WITH OBSERVATIONS` o `NEEDS FIX`.
+- `framework_version = 0.2`;
+- `scoring_version = 0.1`;
+- `actions_version = 2`.
 
-No se recomienda cambiar reglas a partir de este intento bloqueado. Cualquier
-corrección futura debe realizarse en un PR posterior y revisar el cambio de
-`framework_version` de `0.2` a `0.3` si puede alterar resultados de PRV-102.
+No cambiar reglas a partir de esta muestra.
+
+El siguiente paso puede avanzar a W2.2b.2, manteniendo como observaciones futuras:
+
+- incorporar en una calibración posterior un caso real MEDIUM si aparece naturalmente;
+- incorporar un action HTTPS externo si aparece naturalmente;
+- continuar usando tests sintéticos para los casos HTTP inseguros, sin buscar ni explotar sitios vulnerables.
