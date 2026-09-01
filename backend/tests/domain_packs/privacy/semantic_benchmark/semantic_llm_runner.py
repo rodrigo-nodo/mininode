@@ -82,7 +82,7 @@ def output_schema(control: str) -> dict[str, Any]:
         "type": "object",
         "properties": {
             "predicted_class": {"type": "string", "enum": sorted(VALID_CLASSES[control] - {"not_applicable"})},
-            "evidence_fixture_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
+            "evidence_fixture_ids": {"type": "array", "items": {"type": "string"}},
             "reason_short": {"type": "string", "minLength": 1, "maxLength": 240},
             "uncertain": {"type": "boolean"},
         },
