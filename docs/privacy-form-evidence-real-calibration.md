@@ -88,7 +88,7 @@ No evaluó todavía si el texto constituye una finalidad concreta o genérica.
 | C04 | Salud | `nhs.uk` | 1 | 1 |
 | C05 | SaaS/tecnología | `about.gitlab.com` | 3 | 3 |
 | C06 | Microempresa/sitio simple | `wickedgrounds.com` | 2 | 1 |
-| C07 | Servicios web | `djangoproject.com` / `djangoproject.com` | 2 | 3 |
+| C07 | Servicios web | `www.djangoproject.com` | 2 | 3 |
 | C08 | Tecnología | `mozilla.org` | 2 | 3 |
 
 Resumen:
