@@ -1171,10 +1171,13 @@ _FORM_PURPOSE_NOISE = {
 }
 _FORM_PURPOSE_GENERIC_EXACT = {
     "contacto", "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
-    "siguiente", "next", "mensaje", "message", "newsletter",
+    "siguiente", "next", "mensaje", "message", "newsletter", "subscribe",
+    "conversemos", "empezar", "comenzar", "start", "get started", "contact",
+    "i m interested", "i m interested in",
 }
 _FORM_PURPOSE_GENERIC_PHRASES = {
     "contact us", "get in touch", "contact form", "formulario de contacto",
+    "contact sales",
 }
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
@@ -1188,9 +1191,20 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
     r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
     r"\bsend\b.{0,20}\b(?:an inquiry|us a message)\b",
-    r"\b(?:we will contact you|we ll get back to you)\b",
+    r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
+    r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
+    r"\b(?:escribenos)\b",
+    r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+\w+",
     r"\breceive\b.{0,20}\bupdates?\b",
 ))
+
+
+def _without_form_purpose_noise(value: str) -> str:
+    """Remove only explicitly known operational text from a structured value."""
+    useful = value
+    for noise in sorted(_FORM_PURPOSE_NOISE, key=len, reverse=True):
+        useful = re.sub(rf"\b{re.escape(noise)}\b", " ", useful)
+    return " ".join(useful.split())
 
 
 def _form_purpose_signal(form: FormEvidence) -> str:
@@ -1202,7 +1216,7 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     ]
     if not values:
         return "unknown"
-    useful = [value for value in values if value not in _FORM_PURPOSE_NOISE]
+    useful = [remaining for value in values if (remaining := _without_form_purpose_noise(value))]
     combined = " ".join(useful)
     if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
         return "concrete"
@@ -1212,12 +1226,17 @@ def _form_purpose_signal(form: FormEvidence) -> str:
         for value in useful
     ):
         return "concrete"
+    if (
+        any(_contains_phrase(value, {"free trial"}) for value in useful)
+        and any(re.search(r"\b(?:try|start|get) for free\b", value) for value in useful)
+    ) or any(_contains_phrase(value, {"prueba gratis", "prueba gratuita"}) for value in useful):
+        return "concrete"
     if any(value in _FORM_PURPOSE_GENERIC_EXACT for value in useful) or any(
         _contains_phrase(value, _FORM_PURPOSE_GENERIC_PHRASES)
         for value in useful
     ):
         return "generic"
-    return "none"
+    return "none" if not useful else "unknown"
 
 
 def _form_purpose_evidence(

@@ -1,5 +1,5 @@
 {
-  "version": "0.3",
+  "version": "0.4",
   "controls": [
     {
       "code": "PRV-001",
@@ -394,9 +394,9 @@
       "criteria": {
         "detected": "Los formularios personales evaluables contienen una finalidad concreta y reconocible asociada al formulario.",
         "partial": "Se identifica contexto asociado al formulario, pero la finalidad observada es genérica o insuficientemente concreta.",
-        "not_detected": "Se dispone de evidencia estructurada asociada al formulario, pero no se identifica una finalidad visible reconocible.",
+        "not_detected": "Se dispone de evidencia estructurada asociada al formulario y toda ella es reconociblemente técnica, operativa o sin una finalidad visible identificable.",
         "not_applicable": "PRV-101 = not_detected.",
-        "not_evaluable": "PRV-101 = not_evaluable, la aplicabilidad del formulario es insuficientemente confiable o no existe evidencia estructurada suficiente para determinar la finalidad visible."
+        "not_evaluable": "PRV-101 = not_evaluable, la aplicabilidad del formulario es insuficientemente confiable, no existe evidencia estructurada suficiente o el texto asociado no permite determinar la finalidad con confianza."
       }
     },
     {

@@ -16,10 +16,10 @@ from mininode_api.domain_packs.privacy.versioning import (  # noqa: E402
 
 
 def test_canonical_catalogs_expose_current_versions():
-    assert load_control_catalog()["version"] == "0.3"
+    assert load_control_catalog()["version"] == "0.4"
     assert load_scoring()["version"] == "0.1"
     assert diagnostic_versions() == {
-        "framework_version": "0.3",
+        "framework_version": "0.4",
         "scoring_version": "0.1",
     }
 
@@ -28,7 +28,7 @@ def test_canonical_catalogs_expose_current_versions():
     ("original", "current", "status", "reason"),
     [
         (("0.1", "0.1"), ("0.1", "0.1"), "comparable", None),
-        (("0.2", "0.1"), ("0.3", "0.1"), "not_comparable", "framework_version_mismatch"),
+        (("0.3", "0.1"), ("0.4", "0.1"), "not_comparable", "framework_version_mismatch"),
         (("0.1", "0.1"), ("0.1", "0.2"), "not_comparable", "scoring_version_mismatch"),
         ((None, None), ("0.1", "0.1"), "not_comparable", "missing_version"),
         (("0.1", "0.1"), (None, None), "not_comparable", "missing_version"),
