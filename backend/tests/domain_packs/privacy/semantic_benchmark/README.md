@@ -108,6 +108,8 @@ or `explicit_none`, and PRV-012 keeps `explicit`; each control routes baseline
 run 1 and run 2 only measures class, evidence-ID, and uncertainty stability.
 
 The OpenAI SDK remains an experiment-only lazy dependency. Unit tests use fake
-clients and require neither the SDK, network, nor credentials. The temporary branch-
-scoped workflow installs it and writes JSON artifacts without changing the repo.
-See [`semantic_llm_result.md`](semantic_llm_result.md) for execution status.
+clients and require neither the SDK, network, nor credentials. W2.S.3 completed two
+runs; run 1 is the official quality result and run 2 measures stability only. The
+temporary workflow was removed after success, while the historical Actions artifact
+remains available. See [`semantic_llm_result.md`](semantic_llm_result.md) for the
+measured result and decision not to integrate this variant into production.
