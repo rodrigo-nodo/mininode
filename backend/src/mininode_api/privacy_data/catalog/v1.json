@@ -1,0 +1,605 @@
+{
+  "catalog_version": "1",
+  "industry_profiles": [
+    {
+      "code": "commerce_ecommerce",
+      "label": "Comercio / e-commerce"
+    },
+    {
+      "code": "accounting",
+      "label": "Contabilidad"
+    },
+    {
+      "code": "legal_services",
+      "label": "Servicios jurídicos"
+    },
+    {
+      "code": "hr_payroll",
+      "label": "RRHH / remuneraciones"
+    },
+    {
+      "code": "health",
+      "label": "Salud"
+    },
+    {
+      "code": "education_training",
+      "label": "Educación / capacitación"
+    },
+    {
+      "code": "technology",
+      "label": "Tecnología"
+    },
+    {
+      "code": "professional_services",
+      "label": "Otros servicios profesionales"
+    },
+    {
+      "code": "other",
+      "label": "Otro"
+    }
+  ],
+  "activity_types": [
+    {
+      "code": "sales",
+      "label": "Ventas"
+    },
+    {
+      "code": "marketing",
+      "label": "Marketing"
+    },
+    {
+      "code": "customer_support",
+      "label": "Atención y soporte"
+    },
+    {
+      "code": "service_delivery",
+      "label": "Prestación del servicio"
+    },
+    {
+      "code": "collaborators",
+      "label": "Colaboradores"
+    },
+    {
+      "code": "suppliers",
+      "label": "Proveedores"
+    },
+    {
+      "code": "finance_accounting",
+      "label": "Finanzas y contabilidad"
+    },
+    {
+      "code": "digital_users",
+      "label": "Usuarios de sitio o aplicación"
+    },
+    {
+      "code": "other",
+      "label": "Otra actividad"
+    }
+  ],
+  "people_categories": [
+    {
+      "code": "customers",
+      "label": "Customers"
+    },
+    {
+      "code": "prospects",
+      "label": "Prospects"
+    },
+    {
+      "code": "contacts",
+      "label": "Contacts"
+    },
+    {
+      "code": "employees",
+      "label": "Employees"
+    },
+    {
+      "code": "contractors",
+      "label": "Contractors"
+    },
+    {
+      "code": "candidates",
+      "label": "Candidates"
+    },
+    {
+      "code": "former_employees",
+      "label": "Former employees"
+    },
+    {
+      "code": "suppliers_individuals",
+      "label": "Suppliers individuals"
+    },
+    {
+      "code": "company_representatives",
+      "label": "Company representatives"
+    },
+    {
+      "code": "users",
+      "label": "Users"
+    },
+    {
+      "code": "patients",
+      "label": "Patients"
+    },
+    {
+      "code": "students_participants",
+      "label": "Students participants"
+    },
+    {
+      "code": "guardians_tutors",
+      "label": "Guardians tutors"
+    },
+    {
+      "code": "client_workers",
+      "label": "Client workers"
+    },
+    {
+      "code": "client_suppliers",
+      "label": "Client suppliers"
+    },
+    {
+      "code": "related_third_persons",
+      "label": "Related third persons"
+    },
+    {
+      "code": "other",
+      "label": "Other"
+    }
+  ],
+  "personal_data_types": [
+    {
+      "code": "identification",
+      "label": "Identification"
+    },
+    {
+      "code": "contact",
+      "label": "Contact"
+    },
+    {
+      "code": "financial",
+      "label": "Financial"
+    },
+    {
+      "code": "employment",
+      "label": "Employment"
+    },
+    {
+      "code": "tax",
+      "label": "Tax"
+    },
+    {
+      "code": "health",
+      "label": "Health"
+    },
+    {
+      "code": "academic",
+      "label": "Academic"
+    },
+    {
+      "code": "family",
+      "label": "Family"
+    },
+    {
+      "code": "image_media",
+      "label": "Image media"
+    },
+    {
+      "code": "legal_contractual",
+      "label": "Legal contractual"
+    },
+    {
+      "code": "commercial_behavior",
+      "label": "Commercial behavior"
+    },
+    {
+      "code": "digital",
+      "label": "Digital"
+    },
+    {
+      "code": "documents",
+      "label": "Documents"
+    },
+    {
+      "code": "other",
+      "label": "Other"
+    }
+  ],
+  "storage_locations": [
+    {
+      "code": "spreadsheets",
+      "label": "Spreadsheets"
+    },
+    {
+      "code": "local_files",
+      "label": "Local files"
+    },
+    {
+      "code": "cloud_storage",
+      "label": "Cloud storage"
+    },
+    {
+      "code": "business_system",
+      "label": "Business system"
+    },
+    {
+      "code": "accounting_system",
+      "label": "Accounting system"
+    },
+    {
+      "code": "website_platform",
+      "label": "Website platform"
+    },
+    {
+      "code": "messaging_apps",
+      "label": "Messaging apps"
+    },
+    {
+      "code": "paper",
+      "label": "Paper"
+    },
+    {
+      "code": "other_storage",
+      "label": "Other storage"
+    }
+  ],
+  "data_channels": [
+    {
+      "code": "email",
+      "label": "Email"
+    },
+    {
+      "code": "messaging",
+      "label": "WhatsApp u otra mensajería"
+    },
+    {
+      "code": "social_media",
+      "label": "Redes sociales"
+    },
+    {
+      "code": "external_portal",
+      "label": "Portal externo"
+    },
+    {
+      "code": "file_transfer",
+      "label": "Transferencia de archivos"
+    },
+    {
+      "code": "other_channel",
+      "label": "Otro canal"
+    }
+  ],
+  "purposes": [
+    {
+      "code": "quotation",
+      "label": "Quotation"
+    },
+    {
+      "code": "sales_contracting",
+      "label": "Sales contracting"
+    },
+    {
+      "code": "commercial_follow_up",
+      "label": "Commercial follow up"
+    },
+    {
+      "code": "service_delivery",
+      "label": "Service delivery"
+    },
+    {
+      "code": "customer_support",
+      "label": "Customer support"
+    },
+    {
+      "code": "billing",
+      "label": "Billing"
+    },
+    {
+      "code": "collections",
+      "label": "Collections"
+    },
+    {
+      "code": "payments",
+      "label": "Payments"
+    },
+    {
+      "code": "refunds",
+      "label": "Refunds"
+    },
+    {
+      "code": "accounting",
+      "label": "Accounting"
+    },
+    {
+      "code": "tax_compliance",
+      "label": "Tax compliance"
+    },
+    {
+      "code": "marketing_communications",
+      "label": "Marketing communications"
+    },
+    {
+      "code": "promotions_campaigns",
+      "label": "Promotions campaigns"
+    },
+    {
+      "code": "loyalty",
+      "label": "Loyalty"
+    },
+    {
+      "code": "recruitment",
+      "label": "Recruitment"
+    },
+    {
+      "code": "employment_management",
+      "label": "Employment management"
+    },
+    {
+      "code": "payroll",
+      "label": "Payroll"
+    },
+    {
+      "code": "attendance",
+      "label": "Attendance"
+    },
+    {
+      "code": "benefits",
+      "label": "Benefits"
+    },
+    {
+      "code": "training",
+      "label": "Training"
+    },
+    {
+      "code": "supplier_management",
+      "label": "Supplier management"
+    },
+    {
+      "code": "procurement",
+      "label": "Procurement"
+    },
+    {
+      "code": "order_fulfillment",
+      "label": "Order fulfillment"
+    },
+    {
+      "code": "shipping_delivery",
+      "label": "Shipping delivery"
+    },
+    {
+      "code": "authentication",
+      "label": "Authentication"
+    },
+    {
+      "code": "account_management",
+      "label": "Account management"
+    },
+    {
+      "code": "security",
+      "label": "Security"
+    },
+    {
+      "code": "legal_contract_management",
+      "label": "Legal contract management"
+    },
+    {
+      "code": "reporting",
+      "label": "Reporting"
+    },
+    {
+      "code": "certification",
+      "label": "Certification"
+    },
+    {
+      "code": "other",
+      "label": "Other"
+    }
+  ],
+  "access_roles": [
+    {
+      "code": "owner_only",
+      "label": "Owner only"
+    },
+    {
+      "code": "owner_management",
+      "label": "Owner management"
+    },
+    {
+      "code": "administration",
+      "label": "Administration"
+    },
+    {
+      "code": "sales",
+      "label": "Sales"
+    },
+    {
+      "code": "marketing",
+      "label": "Marketing"
+    },
+    {
+      "code": "finance_accounting",
+      "label": "Finance accounting"
+    },
+    {
+      "code": "hr",
+      "label": "Hr"
+    },
+    {
+      "code": "operations",
+      "label": "Operations"
+    },
+    {
+      "code": "customer_support",
+      "label": "Customer support"
+    },
+    {
+      "code": "service_professionals",
+      "label": "Service professionals"
+    },
+    {
+      "code": "supervisors_management",
+      "label": "Supervisors management"
+    },
+    {
+      "code": "technology_it",
+      "label": "Technology it"
+    },
+    {
+      "code": "other_staff",
+      "label": "Other staff"
+    },
+    {
+      "code": "unknown",
+      "label": "Unknown"
+    },
+    {
+      "code": "other",
+      "label": "Other"
+    }
+  ],
+  "third_party_types": [
+    {
+      "code": "technology_provider",
+      "label": "Technology provider"
+    },
+    {
+      "code": "accounting_advisor",
+      "label": "Accounting advisor"
+    },
+    {
+      "code": "legal_advisor",
+      "label": "Legal advisor"
+    },
+    {
+      "code": "hr_labor_provider",
+      "label": "Hr labor provider"
+    },
+    {
+      "code": "payment_provider",
+      "label": "Payment provider"
+    },
+    {
+      "code": "delivery_provider",
+      "label": "Delivery provider"
+    },
+    {
+      "code": "marketing_provider",
+      "label": "Marketing provider"
+    },
+    {
+      "code": "service_provider",
+      "label": "Service provider"
+    },
+    {
+      "code": "client_organization",
+      "label": "Client organization"
+    },
+    {
+      "code": "public_authority",
+      "label": "Public authority"
+    },
+    {
+      "code": "certification_entity",
+      "label": "Certification entity"
+    },
+    {
+      "code": "external_professional",
+      "label": "External professional"
+    },
+    {
+      "code": "other_third_party",
+      "label": "Other third party"
+    },
+    {
+      "code": "unknown",
+      "label": "Unknown"
+    }
+  ],
+  "third_party_relationships": [
+    {
+      "code": "shared",
+      "label": "Shared"
+    },
+    {
+      "code": "access",
+      "label": "Access"
+    },
+    {
+      "code": "processed",
+      "label": "Processed"
+    },
+    {
+      "code": "unknown",
+      "label": "Unknown"
+    }
+  ],
+  "retention": {
+    "statuses": [
+      {
+        "code": "defined",
+        "label": "Defined"
+      },
+      {
+        "code": "variable",
+        "label": "Variable"
+      },
+      {
+        "code": "unknown",
+        "label": "Unknown"
+      }
+    ],
+    "units": [
+      {
+        "code": "days",
+        "label": "Days"
+      },
+      {
+        "code": "months",
+        "label": "Months"
+      },
+      {
+        "code": "years",
+        "label": "Years"
+      }
+    ]
+  },
+  "data_context": [
+    {
+      "code": "own_operations",
+      "label": "Own operations"
+    },
+    {
+      "code": "client_service",
+      "label": "Client service"
+    },
+    {
+      "code": "both",
+      "label": "Both"
+    }
+  ],
+  "business_size": [
+    {
+      "code": "solo",
+      "label": "Trabajo solo / negocio unipersonal"
+    },
+    {
+      "code": "micro",
+      "label": "Microempresa"
+    },
+    {
+      "code": "small",
+      "label": "Pequeña empresa"
+    },
+    {
+      "code": "medium",
+      "label": "Mediana empresa"
+    },
+    {
+      "code": "large",
+      "label": "Empresa grande"
+    },
+    {
+      "code": "unknown",
+      "label": "No estoy seguro"
+    }
+  ]
+}
