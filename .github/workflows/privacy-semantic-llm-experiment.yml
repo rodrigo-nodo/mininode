@@ -21,7 +21,7 @@ jobs:
       - name: Install product and experiment dependencies
         run: |
           python -m pip install -r backend/requirements.txt
-          python -m pip install openai
+          python -m pip install pytest
       - name: Run offline unit tests before API use
         run: python -m pytest -q backend/tests/domain_packs/privacy/semantic_benchmark
       - name: Require experiment secret
