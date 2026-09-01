@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "controls": [
     {
       "code": "PRV-001",
@@ -347,6 +347,30 @@
         "detected": "Se identifica al menos un formulario público que solicita uno o más datos potencialmente personales.",
         "not_detected": "Se revisan las páginas públicas consideradas y no se identifican formularios que soliciten datos potencialmente personales.",
         "not_evaluable": "Una limitación técnica impide revisar adecuadamente los formularios del sitio."
+      }
+    },
+    {
+      "code": "PRV-102",
+      "domain": "Formularios",
+      "name": "Envío seguro del formulario",
+      "impact": "medio",
+      "automatable": "si",
+      "type": "conditional_evaluation",
+      "score_weight": 1,
+      "dependency": "PRV-101",
+      "applicability": "Solo aplica cuando PRV-101 = detected.",
+      "expected_evidence": [
+        "Esquema HTTPS de la página que contiene el formulario.",
+        "Esquema HTTPS del destino declarado por el action.",
+        "URL pública de origen del formulario."
+      ],
+      "type_justification": "El control solo aplica cuando se observa un formulario que recopila datos potencialmente personales. Una vez aplicable, el esquema de transporte de la página y del destino del formulario es una señal técnica pública y determinista.",
+      "base_recommendation": "Mantener bajo HTTPS tanto la página que contiene el formulario como el destino declarado para su envío.",
+      "criteria": {
+        "detected": "Todos los formularios personales de alta confianza observados se cargan desde páginas HTTPS y declaran destinos HTTPS.",
+        "not_detected": "Se observó al menos un formulario personal de alta confianza cuya página o destino declarado utiliza HTTP.",
+        "not_applicable": "No se observaron formularios que recopilen datos potencialmente personales.",
+        "not_evaluable": "No fue posible determinar con suficiente confianza el transporte de todos los formularios personales relevantes."
       }
     },
     {

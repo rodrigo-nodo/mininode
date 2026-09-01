@@ -31,6 +31,7 @@ EXPECTED_ACTIONS = {
     "PRV-012": {"partial", "not_detected"},
     "PRV-013": {"partial", "not_detected"},
     "PRV-014": {"partial", "not_detected"},
+    "PRV-102": {"not_detected"},
     "PRV-104": {"partial", "not_detected"},
     "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
@@ -118,6 +119,7 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
             ({"consent_basis_declared": True, "consent_withdrawal": "generic"}, {"PRV-003": "detected"}),
             ({"consent_basis_declared": True, "consent_withdrawal": "none"}, {"PRV-003": "detected"}),
         ],
+        "PRV-102": [({"form_transport": "insecure"}, {"PRV-101": "detected"})],
         "PRV-104": [
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),
             ({"privacy_information": False, "consent_mechanism": False}, {"PRV-101": "detected"}),

@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "actions": {
     "PRV-001": {
       "not_detected": {
@@ -215,6 +215,16 @@
           "Precisar la posibilidad de retiro o revocación en el contexto del tratamiento basado en consentimiento."
         ],
         "validation_step": "Abrir la política seleccionada y comprobar que, en el contexto del tratamiento basado en consentimiento, puede identificarse de forma clara el retiro o la revocación."
+      }
+    },
+    "PRV-102": {
+      "not_detected": {
+        "action_steps": [
+          "Revisar que la página que contiene el formulario esté publicada bajo HTTPS.",
+          "Configurar el destino del formulario para utilizar HTTPS o una ruta relativa que permanezca bajo HTTPS.",
+          "Evitar destinos HTTP para formularios que recopilan datos personales."
+        ],
+        "validation_step": "Abrir la página del formulario y comprobar que tanto la página como el destino declarado para el envío utilizan HTTPS."
       }
     },
     "PRV-104": {
