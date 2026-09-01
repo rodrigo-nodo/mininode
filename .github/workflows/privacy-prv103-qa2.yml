@@ -56,36 +56,31 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("Q41", "SaaS", "en", "https://www.loom.com/contact-sales"),
-              ("Q42", "SaaS", "en", "https://www.coda.io/contact-sales"),
-              ("Q43", "SaaS", "en", "https://www.front.com/contact-us"),
-              ("Q44", "SaaS", "en", "https://www.ironcladapp.com/contact"),
-              ("Q45", "SaaS", "en", "https://www.aircall.io/contact-sales/"),
-              ("Q46", "SaaS", "en", "https://www.dialpad.com/contact-sales/"),
-              ("Q47", "SaaS", "en", "https://www.ringcentral.com/contact-us.html"),
-              ("Q48", "SaaS", "en", "https://www.8x8.com/contact-us"),
-              ("Q49", "SaaS", "en", "https://www.sprinklr.com/contact-us/"),
-              ("Q50", "SaaS", "en", "https://www.contentsquare.com/contact-us/"),
-              ("Q51", "SaaS", "en", "https://www.amplitude.com/contact-sales"),
-              ("Q52", "SaaS", "en", "https://mixpanel.com/contact-sales/"),
-              ("Q53", "SaaS", "en", "https://www.fullstory.com/contact/"),
-              ("Q54", "SaaS", "en", "https://www.heap.io/contact"),
-              ("Q55", "SaaS", "en", "https://www.hotjar.com/contact-sales/"),
-              ("Q56", "SaaS", "en", "https://www.pendo.io/contact/"),
-              ("Q57", "SaaS", "en", "https://www.walkme.com/contact-us/"),
-              ("Q58", "SaaS", "en", "https://www.userzoom.com/contact-us/"),
-              ("Q59", "SaaS", "en", "https://www.medallia.com/contact-us/"),
-              ("Q60", "SaaS", "en", "https://www.surveymonkey.com/mp/contact-us/"),
-              ("Q61", "Servicios", "es", "https://www.wom.cl/contacto/"),
-              ("Q62", "Servicios", "es", "https://www.vtr.com/contacto"),
-              ("Q63", "Educación", "es", "https://www.aiep.cl/contacto/"),
-              ("Q64", "Educación", "es", "https://www.santotomas.cl/contacto/"),
-              ("Q65", "Salud", "es", "https://www.ucchristus.cl/contacto"),
-              ("Q66", "Salud", "es", "https://www.clinicalascondes.cl/contacto"),
-              ("Q67", "Retail", "es", "https://www.falabella.com/falabella-cl/page/contactanos"),
-              ("Q68", "Retail", "es", "https://www.paris.cl/contacto/"),
-              ("Q69", "Servicios", "es", "https://www.copec.cl/contacto/"),
-              ("Q70", "Servicios", "es", "https://www.enel.cl/es/clientes/contacto.html"),
+              ("Q71", "SaaS", "en", "https://www.mural.co/contact-sales"),
+              ("Q72", "SaaS", "en", "https://www.aha.io/contact-sales"),
+              ("Q73", "SaaS", "en", "https://www.productboard.com/contact-sales/"),
+              ("Q74", "SaaS", "en", "https://www.gainsight.com/contact-us/"),
+              ("Q75", "SaaS", "en", "https://www.churnzero.com/contact/"),
+              ("Q76", "SaaS", "en", "https://www.totango.com/contact-us/"),
+              ("Q77", "SaaS", "en", "https://www.chargebee.com/contact-sales/"),
+              ("Q78", "SaaS", "en", "https://www.recurly.com/contact-sales/"),
+              ("Q79", "SaaS", "en", "https://www.paddle.com/contact"),
+              ("Q80", "SaaS", "en", "https://www.zuora.com/contact-us/"),
+              ("Q81", "SaaS", "en", "https://www.blackline.com/contact-us/"),
+              ("Q82", "SaaS", "en", "https://www.workiva.com/contact-us"),
+              ("Q83", "SaaS", "en", "https://www.anaplan.com/contact-us/"),
+              ("Q84", "SaaS", "en", "https://www.alteryx.com/contact-us"),
+              ("Q85", "SaaS", "en", "https://www.knime.com/contact"),
+              ("Q86", "SaaS", "en", "https://www.confluent.io/contact/"),
+              ("Q87", "SaaS", "en", "https://www.snowflake.com/contact/"),
+              ("Q88", "SaaS", "en", "https://www.mongodb.com/contact"),
+              ("Q89", "SaaS", "en", "https://www.elastic.co/contact"),
+              ("Q90", "SaaS", "en", "https://www.databricks.com/company/contact"),
+              ("Q91", "Servicios", "es", "https://www.mundo.cl/contacto/"),
+              ("Q92", "Educación", "es", "https://www.unab.cl/contacto/"),
+              ("Q93", "Educación", "es", "https://www.uandes.cl/contacto/"),
+              ("Q94", "Salud", "es", "https://www.vidaintegra.cl/contacto"),
+              ("Q95", "Retail", "es", "https://www.ripley.cl/contacto"),
           ]
 
           def clean_url(value):
@@ -323,7 +318,7 @@ jobs:
       - name: Upload sanitized QA2 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-qa2-batch3
+          name: privacy-prv103-qa2-batch4
           path: artifacts/privacy-prv103-qa2.json
           if-no-files-found: error
           retention-days: 7
