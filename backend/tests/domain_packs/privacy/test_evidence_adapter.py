@@ -72,8 +72,20 @@ def test_internal_form_context_does_not_change_existing_privacy_controls():
     ({"heading": "Contact form"}, "generic", "partial"),
     ({"heading": "Formulario de contacto"}, "generic", "partial"),
     ({"introductory_text": "Complete the form to request a quote"}, "concrete", "detected"),
-    ({"introductory_text": "Your message will be reviewed by our team"}, "none", "not_detected"),
+    ({"introductory_text": "Your message will be reviewed by our team"}, "unknown", "not_evaluable"),
     ({"submit_text": "Send request for a demo"}, "concrete", "detected"),
+    ({"submit_text": "Hablemos de tu proyecto"}, "concrete", "detected"),
+    ({"submit_text": "Conversemos"}, "generic", "partial"),
+    ({"introductory_text": "Completa este formulario y nos pondremos en contacto contigo"}, "concrete", "detected"),
+    ({"submit_text": "Escríbenos"}, "concrete", "detected"),
+    ({"heading": "14-day free trial", "submit_text": "Try for free"}, "concrete", "detected"),
+    ({"heading": "Prueba gratuita", "submit_text": "Empezar"}, "concrete", "detected"),
+    ({"submit_text": "Empezar"}, "generic", "partial"),
+    ({"submit_text": "Contact"}, "generic", "partial"),
+    ({"heading": "Contact sales", "submit_text": "Submit"}, "generic", "partial"),
+    ({"legend": "I'm interested in", "submit_text": "Contact"}, "generic", "partial"),
+    ({"heading": "Transforma tu futuro digital ahora"}, "unknown", "not_evaluable"),
+    ({"submit_text": "Suscríbete ya Enviando"}, "concrete", "detected"),
 ])
 def test_prv103_classifies_structured_same_form_purpose(kwargs, purpose, result):
     adapted = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))
@@ -94,6 +106,20 @@ def test_prv103_does_not_infer_from_nearby_fields_or_privacy_evidence():
     )
     evidence = adapt_evidence(contract(forms=[candidate]))["PRV-103"]
     assert evidence["form_purpose"] == "unknown"
+
+
+@pytest.mark.parametrize("text", [
+    "Hablemos", "Proyecto", "Sales", "Free",
+])
+def test_prv103_does_not_promote_unrecognized_words_to_concrete(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "unknown"
+
+
+@pytest.mark.parametrize("text", ["Contact", "Start", "I'm interested"])
+def test_prv103_generic_exact_text_is_never_promoted_to_concrete(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "generic"
 
 
 def test_prv103_exposes_only_sanitized_determining_form_urls():
