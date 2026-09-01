@@ -117,14 +117,22 @@ def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
         if sibling.name in {f"h{level}" for level in range(1, 7)}:
             heading = _bounded_text(sibling, FORM_HEADING_LIMIT)
             break
-        if sibling.name not in {"p", "small", "div"} or sibling.find("form"):
+        if sibling.name not in {"p", "small", "div"}:
             break
         inspected += 1
         if inspected > _FORM_LOCAL_SIBLING_LIMIT:
             break
-        if introduction is None and not sibling.find(
-            ["input", "select", "textarea", "button", "label", "legend"]
+        if (
+            sibling.find(
+                [
+                    "form", "input", "select", "textarea", "button", "label", "legend",
+                    *[f"h{level}" for level in range(1, 7)],
+                ]
+            )
+            or sibling.find("a", href=True)
         ):
+            break
+        if introduction is None:
             introduction = _bounded_text(sibling, FORM_INTRODUCTORY_TEXT_LIMIT)
     return heading, introduction
 
