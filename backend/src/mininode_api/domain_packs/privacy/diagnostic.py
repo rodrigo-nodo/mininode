@@ -8,6 +8,7 @@ from .evaluator import evaluate_control
 from .evidence_adapter import CONTROL_CODES, adapt_evidence
 from .prioritization import prioritize_findings
 from .scoring import score_privacy
+from .versioning import diagnostic_versions
 
 
 def run_privacy_diagnostic(contract: EvidenceContract) -> dict:
@@ -22,6 +23,7 @@ def run_privacy_diagnostic(contract: EvidenceContract) -> dict:
     controls = list(previous_results.values())
     score = score_privacy(controls)
     return {
+        **diagnostic_versions(),
         "controls": controls,
         **score,
         "priorities": prioritize_findings(controls),

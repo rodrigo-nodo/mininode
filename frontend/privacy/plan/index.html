@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=1">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=4">
   <script src="/include.js" defer></script>
-  <script src="/privacy/plan-assets/app.js?v=5" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=6" defer></script>
 </head>
 <body>
   <div data-include="/partials/header-nav.html"></div>
@@ -52,11 +52,20 @@
           <p id="check-message" role="alert" hidden></p>
         </div>
         <div id="check-result" hidden>
-          <div class="check-scores"><p>Antes<strong id="check-before"></strong></p><p>Ahora<strong id="check-now"></strong></p></div>
-          <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
-          <h3 class="check-result__title">Resultado de las mejoras</h3>
-          <div class="check-counts"><p><strong id="check-corrected"></strong><span id="check-corrected-label"></span></p><p><strong id="check-pending"></strong><span id="check-pending-label"></span></p></div>
-          <ul id="check-items"></ul><p>Comprobación realizada <time id="check-created"></time></p>
+          <div id="check-comparison">
+            <div class="check-scores"><p>Antes<strong id="check-before"></strong></p><p>Ahora<strong id="check-now"></strong></p></div>
+            <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
+            <h3 class="check-result__title">Resultado de las mejoras</h3>
+            <div class="check-counts"><p><strong id="check-corrected"></strong><span id="check-corrected-label"></span></p><p><strong id="check-pending"></strong><span id="check-pending-label"></span></p></div>
+            <ul id="check-items"></ul>
+          </div>
+          <div id="check-not-comparable" hidden>
+            <h3 class="check-result__title">Resultado de la revisión actual</h3>
+            <p>Esta revisión utiliza una versión diferente del análisis. Para evitar una comparación engañosa, no mostramos una variación directa respecto del diagnóstico anterior.</p>
+            <p>El diagnóstico original fue realizado con una versión anterior de Privacy Web.</p>
+            <p class="check-current-score">Score de la revisión actual: <strong id="check-current-score"></strong></p>
+          </div>
+          <p>Comprobación realizada <time id="check-created"></time></p>
         </div>
         <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
       </section>

@@ -15,6 +15,8 @@
 .check-scores strong, .check-change { color: var(--ink); font-size: 1.6rem; }
 .check-change { border-bottom: 1px solid var(--border); margin: 8px 0 24px; padding-bottom: 24px; }
 .check-result__title { font-size: 1rem; margin: 0 0 14px; }
+.check-current-score { margin-top: 20px; }
+.check-current-score strong { color: var(--ink); font-size: 1.35rem; }
 .check-counts { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 520px; }
 .check-counts p { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: grid; gap: 2px; margin: 0; padding: 16px; }
 .check-counts strong { color: var(--ink); font-size: 1.65rem; line-height: 1.2; }

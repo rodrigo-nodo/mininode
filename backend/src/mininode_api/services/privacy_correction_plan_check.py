@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.types.json import Jsonb
 
+from mininode_api.domain_packs.privacy.versioning import diagnostic_comparability
 from mininode_api.services import privacy_correction_plan, privacy_diagnostic_snapshot
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
@@ -130,7 +131,24 @@ def get_check_metadata(plan_id: UUID, *, now: datetime | None = None) -> dict:
 def compare_diagnostics(
     plan: Mapping, original: Mapping, current: Mapping
 ) -> dict:
-    """Compare only original plan items, keyed by stable control code."""
+    """Compare plan items only when both diagnostics share canonical versions."""
+    comparability = diagnostic_comparability(original, current)
+    original_score = original["score"]
+    current_score = current["score"]
+    if comparability["status"] == "not_comparable":
+        return {
+            "version": "2",
+            "comparability": comparability,
+            "original_score": original_score,
+            "current_score": current_score,
+            "score_change": None,
+            "total_plan_items": None,
+            "corrected_count": None,
+            "pending_count": None,
+            "not_evaluable_count": None,
+            "items": [],
+        }
+
     current_controls = {
         item.get("control_code"): item for item in current.get("controls", [])
     }
@@ -151,10 +169,9 @@ def compare_diagnostics(
             "name": plan_item.get("name", code),
             "status": check_status,
         })
-    original_score = original["score"]
-    current_score = current["score"]
     return {
-        "version": "1",
+        "version": "2",
+        "comparability": comparability,
         "original_score": original_score,
         "current_score": current_score,
         "score_change": current_score - original_score,

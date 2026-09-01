@@ -19,13 +19,17 @@ PLAN = {
 }
 
 
+def versioned(snapshot):
+    return {"framework_version": "0.1", "scoring_version": "0.1", **snapshot}
+
+
 def test_expiration_uses_only_paid_at():
     paid_at = datetime(2026, 8, 25, tzinfo=timezone.utc)
     assert service.expires_at(paid_at) == paid_at + timedelta(days=90)
 
 
 def test_deterministic_comparison_uses_plan_codes_and_snapshot_scores():
-    original = {
+    original = versioned({
         "score": 26,
         "controls": [
             {"control_code": "PRV-001", "result": "not_detected"},
@@ -33,8 +37,8 @@ def test_deterministic_comparison_uses_plan_codes_and_snapshot_scores():
             {"control_code": "PRV-007", "result": "not_detected"},
             {"control_code": "PRV-999", "result": "detected"},
         ],
-    }
-    current = {
+    })
+    current = versioned({
         "score": 73,
         "controls": [
             {"control_code": "PRV-001", "result": "detected"},
@@ -42,10 +46,16 @@ def test_deterministic_comparison_uses_plan_codes_and_snapshot_scores():
             {"control_code": "PRV-007", "result": "not_evaluable"},
             {"control_code": "PRV-999", "result": "not_detected"},
         ],
-    }
+    })
     result = service.compare_diagnostics(PLAN, original, current)
     assert result == {
-        "version": "1", "original_score": 26, "current_score": 73,
+        "version": "2",
+        "comparability": {
+            "status": "comparable", "reason": None,
+            "original": {"framework_version": "0.1", "scoring_version": "0.1"},
+            "current": {"framework_version": "0.1", "scoring_version": "0.1"},
+        },
+        "original_score": 26, "current_score": 73,
         "score_change": 47, "total_plan_items": 3, "corrected_count": 1,
         "pending_count": 1, "not_evaluable_count": 1,
         "items": [
@@ -83,14 +93,33 @@ def test_new_transparency_controls_use_generic_corrected_comparison():
         {"control_code": "PRV-013", "name": "Reclamo ante la Agencia"},
         {"control_code": "PRV-014", "name": "Retiro del consentimiento"},
     ]}
-    original = {"score": 40, "controls": [
+    original = versioned({"score": 40, "controls": [
         {"control_code": "PRV-013", "result": "not_detected"},
         {"control_code": "PRV-014", "result": "partial"},
-    ]}
-    current = {"score": 70, "controls": [
+    ]})
+    current = versioned({"score": 70, "controls": [
         {"control_code": "PRV-013", "result": "detected"},
         {"control_code": "PRV-014", "result": "detected"},
-    ]}
+    ]})
     result = service.compare_diagnostics(plan, original, current)
     assert result["corrected_count"] == 2
     assert [item["status"] for item in result["items"]] == ["corrected", "corrected"]
+
+
+def test_incomparable_diagnostics_do_not_claim_score_or_item_changes():
+    original = versioned({"score": 62, "controls": []})
+    current = versioned({"score": 74, "controls": []})
+    current["framework_version"] = "0.2"
+
+    result = service.compare_diagnostics(PLAN, original, current)
+
+    assert result["version"] == "2"
+    assert result["comparability"]["status"] == "not_comparable"
+    assert result["comparability"]["reason"] == "framework_version_mismatch"
+    assert result["original_score"] == 62
+    assert result["current_score"] == 74
+    assert result["score_change"] is None
+    assert result["corrected_count"] is None
+    assert result["pending_count"] is None
+    assert result["not_evaluable_count"] is None
+    assert result["items"] == []

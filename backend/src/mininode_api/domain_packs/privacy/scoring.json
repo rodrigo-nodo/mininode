@@ -1,4 +1,5 @@
 {
+  "version": "0.1",
   "impact_weights": {
     "bajo": 1,
     "medio": 2,
