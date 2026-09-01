@@ -249,6 +249,14 @@ def evaluate_control(
             result = "not_detected"
     elif control_code == "PRV-101":
         result = "detected" if evidence.get("personal_data_form") else "not_detected"
+    elif control_code == "PRV-102":
+        transport = evidence.get("form_transport")
+        if transport == "secure":
+            result = "detected"
+        elif transport == "insecure":
+            result = "not_detected"
+        else:
+            result = "not_evaluable"
     elif control_code == "PRV-104":
         information = evidence.get("privacy_information", False)
         consent = evidence.get("consent_mechanism", False)

@@ -161,16 +161,17 @@ resto del sitio cumpla PRV-501. Los pesos se decidirán en W2.2b sin modificar a
 
 - `detected`: **todos** los formularios personales evaluables se cargan desde una página
   HTTPS y envían a un `action` HTTPS;
-- `not_detected`: existe al menos un formulario personal cuya página es HTTP o cuyo
-  `action` es HTTP;
+- `not_detected`: existe al menos un formulario personal de confianza alta cuya página
+  es HTTP o cuyo `action` es HTTP;
 - `not_evaluable`: existe evidencia insuficiente o un esquema no HTTP(S), y no existe ya
   un caso inseguro concluyente;
 - `not_applicable`: PRV-101 = `not_detected`.
 
 Una acción relativa se evalúa después de su resolución absoluta. Con varios formularios,
-un caso HTTP concluyente prevalece sobre casos seguros o desconocidos. Sin casos HTTP,
-cualquier caso desconocido impide afirmar que todos son seguros y produce
-`not_evaluable`; solo si todos son evaluables y seguros resulta `detected`. El control
+un caso HTTP de confianza alta prevalece sobre casos seguros o desconocidos. Sin ese
+caso concluyente, un candidato personal de confianza media o cualquier transporte
+desconocido impide afirmar que todos son seguros y produce `not_evaluable`; solo si
+todos los formularios personales son de confianza alta, evaluables y seguros resulta `detected`. El control
 no afirma TLS futuro del receptor, cifrado en reposo, seguridad del backend, CSRF ni
 tratamiento posterior. `GET` puede conservarse como contexto técnico, pero no cambia por
 sí solo el resultado de transporte.

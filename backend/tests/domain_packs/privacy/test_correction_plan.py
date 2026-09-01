@@ -101,3 +101,17 @@ def test_new_actionable_controls_flow_through_generic_plan_engine():
     ], initial_score=50)
     assert [item["control_code"] for item in plan["items"]] == ["PRV-013", "PRV-014"]
     assert all(item["action_steps"] and item["validation_step"] for item in plan["items"])
+
+
+def test_prv102_insecure_transport_generates_complete_actionable_item():
+    plan = build_correction_plan(
+        [finding("PRV-102", "not_detected")], initial_score=75
+    )
+
+    assert plan["version"] == "1"
+    assert plan["actions_version"] == "2"
+    assert plan["item_count"] == 1
+    assert {
+        "control_code", "finding", "recommendation", "action_steps",
+        "validation_step",
+    } <= set(plan["items"][0])

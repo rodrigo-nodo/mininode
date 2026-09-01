@@ -48,6 +48,7 @@ def test_malformed_html_is_accepted_and_cookie_in_script_is_not_visible():
     result = extract_page("<title>Broken</title><form><input aria-label='Value'><script>we use cookies", "http://example.com")
     assert result.title == "Broken"
     assert result.forms[0].fields[0].label == "Value"
+    assert result.forms[0].action == "http://example.com"
     assert result.banner_detected is False
 
 

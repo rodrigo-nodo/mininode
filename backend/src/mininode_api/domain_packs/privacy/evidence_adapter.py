@@ -28,6 +28,7 @@ CONTROL_CODES = (
     "PRV-013",
     "PRV-014",
     "PRV-101",
+    "PRV-102",
     "PRV-104",
     "PRV-201",
     "PRV-301",
@@ -1113,6 +1114,55 @@ def _personal_form(form: FormEvidence) -> tuple[bool, str | None]:
     return False, None
 
 
+def _transport_scheme(url: str) -> str:
+    """Classify only an observable, interpretable HTTP(S) transport URL."""
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme in {"http", "https"} and parsed.hostname:
+            return parsed.scheme
+    except (TypeError, ValueError):
+        pass
+    return "unknown"
+
+
+def _form_transport(
+    contract: EvidenceContract,
+    personal_forms: list[tuple[FormEvidence, str]],
+) -> dict:
+    """Consolidate personal-form transport without retaining form actions."""
+    insecure: list[FormEvidence] = []
+    unknown: list[FormEvidence] = []
+    secure: list[FormEvidence] = []
+
+    for form, confidence in personal_forms:
+        source_scheme = _transport_scheme(form.source_url)
+        action_scheme = _transport_scheme(form.action)
+        if confidence == "high" and "http" in {source_scheme, action_scheme}:
+            insecure.append(form)
+        elif confidence == "medium" or "unknown" in {source_scheme, action_scheme}:
+            unknown.append(form)
+        else:
+            secure.append(form)
+
+    selected = insecure or unknown or secure
+    if insecure:
+        form_transport = "insecure"
+    elif unknown or not secure:
+        form_transport = "unknown"
+    else:
+        form_transport = "secure"
+    evidence = {
+        "form_transport": form_transport,
+        "confidence": "high" if insecure or (secure and not unknown) else "low",
+    }
+    source_urls = _inspected_source_urls(
+        contract, [form.source_url for form in selected]
+    )
+    if source_urls:
+        evidence["source_urls"] = source_urls
+    return evidence
+
+
 def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
     """Recognize an explicit contact page with communication-oriented fields."""
 
@@ -1225,6 +1275,11 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     else:
         prv101["technical_error"] = True
 
+    prv102 = _form_transport(contract, personal_forms)
+    if not sufficient:
+        prv102["technical_error"] = True
+        prv102["confidence"] = "low"
+
     privacy_link = any(form.privacy_links for form, _ in personal_forms)
     privacy_information = privacy_link or any(
         _contains_phrase(form.nearby_text, _PRIVACY_INFORMATION_TERMS)
@@ -1314,6 +1369,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "PRV-013": prv013,
         "PRV-014": prv014,
         "PRV-101": prv101,
+        "PRV-102": prv102,
         "PRV-104": prv104,
         "PRV-201": prv201,
         "PRV-301": prv301,

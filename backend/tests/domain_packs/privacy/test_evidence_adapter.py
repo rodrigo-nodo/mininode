@@ -1185,3 +1185,80 @@ def test_new_control_dependency_and_technical_states_are_explicit():
         assert evaluate_control(code, evidence, {"PRV-003": "not_detected"})["result"] == "not_applicable"
         assert evaluate_control(code, evidence, {"PRV-003": "not_evaluable"})["result"] == "not_evaluable"
         assert evaluate_control(code, {**evidence, "technical_error": True}, {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+def _personal_transport_form(source_url, action, *, confidence="high"):
+    field = (
+        FieldEvidence("value", "email", "", False)
+        if confidence == "high"
+        else FieldEvidence("company", "text", "", False)
+    )
+    return FormEvidence(source_url, action, "post", [field], [], "", [])
+
+
+def _evaluate_prv102(contract_evidence):
+    adapted = adapt_evidence(contract_evidence)
+    prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
+    return adapted["PRV-102"], evaluate_control(
+        "PRV-102", adapted["PRV-102"], {"PRV-101": prv101}
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "action", "expected"),
+    [
+        ("https://example.com/contact", "https://example.com/send", "detected"),
+        ("https://example.com/contact", "http://example.com/send", "not_detected"),
+        ("http://example.com/contact", "https://example.com/send", "not_detected"),
+        ("https://example.com/contact", "mailto:privacy@example.com", "not_evaluable"),
+        ("invalid", "https://example.com/send", "not_evaluable"),
+    ],
+)
+def test_prv102_classifies_high_confidence_form_transport(source, action, expected):
+    personal = _personal_transport_form(source, action)
+    evidence, result = _evaluate_prv102(contract(forms=[personal]))
+
+    assert result["result"] == expected
+    assert "action" not in repr(evidence)
+
+
+def test_prv102_insecure_high_form_precedes_secure_and_unknown_forms():
+    forms = [
+        _personal_transport_form("https://example.com/secure", "https://example.com/send"),
+        _personal_transport_form("https://example.com/unknown", "custom:send"),
+        _personal_transport_form("https://example.com/insecure", "http://example.com/send"),
+    ]
+    pages = [PageEvidence(item.source_url, 200, "Formulario", "text/html") for item in forms]
+
+    evidence, result = _evaluate_prv102(contract(forms=forms, pages=pages))
+
+    assert result["result"] == "not_detected"
+    assert evidence["source_urls"] == ["https://example.com/insecure"]
+
+
+@pytest.mark.parametrize("with_high", [False, True])
+def test_prv102_medium_candidate_prevents_positive_or_negative_score(with_high):
+    forms = [
+        _personal_transport_form(
+            "https://example.com/medium", "http://example.com/send", confidence="medium"
+        )
+    ]
+    if with_high:
+        forms.append(_personal_transport_form(
+            "https://example.com/secure", "https://example.com/send"
+        ))
+
+    _, result = _evaluate_prv102(contract(forms=forms))
+
+    assert result["result"] == "not_evaluable"
+
+
+def test_prv102_is_not_applicable_without_personal_forms():
+    _, result = _evaluate_prv102(contract())
+    assert result["result"] == "not_applicable"
+
+
+def test_prv102_technical_error_is_not_evaluable():
+    evidence = {"form_transport": "insecure", "technical_error": True}
+    result = evaluate_control("PRV-102", evidence, {"PRV-101": "detected"})
+    assert result["result"] == "not_evaluable"

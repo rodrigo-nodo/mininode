@@ -37,6 +37,7 @@ EXPECTED = {
     "PRV-013": ("Reclamo ante la Agencia", "alto", "conditional_evaluation"),
     "PRV-014": ("Retiro del consentimiento", "alto", "conditional_evaluation"),
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
+    "PRV-102": ("Envío seguro del formulario", "medio", "conditional_evaluation"),
     "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
     "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
     "PRV-301": ("Canal de contacto visible", "bajo", "evaluation"),
@@ -87,7 +88,7 @@ def evaluated_scenario():
 
 def test_catalog_matches_the_approved_controls_exactly():
     controls = load_controls()
-    assert len(controls) == 19
+    assert len(controls) == 20
     assert {
         control["code"]: (control["name"], control["impact"], control["type"])
         for control in controls
@@ -100,7 +101,7 @@ def test_documental_framework_matches_productive_catalog():
         / "frontend"
         / "privacy"
         / "data"
-        / "privacy-framework-v0.1.json"
+        / "privacy-framework-v0.2.json"
     )
     framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
         "framework"
@@ -188,6 +189,7 @@ def test_catalog_criteria_match_active_evaluator_results():
             "not_evaluable",
         },
         "PRV-101": {"detected", "not_detected", "not_evaluable"},
+        "PRV-102": {"detected", "not_detected", "not_applicable", "not_evaluable"},
         "PRV-104": {
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
