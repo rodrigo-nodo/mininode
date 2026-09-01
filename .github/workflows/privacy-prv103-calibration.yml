@@ -56,24 +56,22 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("H13", "Tecnología", "es", "https://www.kibernum.com/"),
-              ("H14", "Tecnología", "es", "https://www.acidlabs.com/"),
-              ("H15", "RRHH/SaaS", "es", "https://www.buk.cl/"),
-              ("H16", "RRHH/SaaS", "es", "https://www.talana.com/"),
-              ("H17", "ERP/SaaS", "es", "https://www.defontana.com/"),
-              ("H18", "Fintech", "es", "https://www.chipax.com/"),
-              ("H19", "Fintech", "es", "https://www.fintoc.com/"),
-              ("H20", "Beneficios/SaaS", "es", "https://betterfly.com/"),
-              ("H21", "RRHH/SaaS", "es", "https://www.rankmi.com/"),
-              ("H22", "Diseño/SaaS", "en", "https://www.canva.com/"),
-              ("H23", "Productividad/SaaS", "en", "https://www.notion.com/"),
-              ("H24", "Productividad/SaaS", "en", "https://asana.com/"),
-              ("H25", "Productividad/SaaS", "en", "https://monday.com/"),
-              ("H26", "Soporte/SaaS", "en", "https://www.intercom.com/"),
-              ("H27", "Marketing/SaaS", "en", "https://mailchimp.com/"),
-              ("H28", "CRM/SaaS", "en", "https://www.zoho.com/"),
-              ("H29", "Tecnología/SaaS", "en", "https://www.atlassian.com/"),
-              ("H30", "Soporte/SaaS", "en", "https://www.freshworks.com/"),
+              ("H31", "CRM/SaaS", "en", "https://www.pipedrive.com/en/contact-sales"),
+              ("H32", "Productividad/SaaS", "en", "https://www.airtable.com/contact-sales"),
+              ("H33", "Firma digital/SaaS", "en", "https://www.docusign.com/contact-sales"),
+              ("H34", "Identidad/SaaS", "en", "https://www.okta.com/contact-sales/"),
+              ("H35", "Videoconferencia/SaaS", "en", "https://www.zoom.com/en/contact/contact-sales/"),
+              ("H36", "Comunicación/SaaS", "en", "https://www.twilio.com/en-us/contact-sales"),
+              ("H37", "Observabilidad/SaaS", "en", "https://www.datadoghq.com/about/contact/"),
+              ("H38", "Infraestructura/SaaS", "en", "https://www.cloudflare.com/plans/enterprise/contact/"),
+              ("H39", "Cloud/SaaS", "en", "https://www.digitalocean.com/company/contact/sales"),
+              ("H40", "Seguridad/SaaS", "en", "https://www.sentry.io/contact/"),
+              ("H41", "Contabilidad/SaaS", "es", "https://www.nubox.com/contacto"),
+              ("H42", "Pagos/SaaS", "es", "https://www.haulmer.com/"),
+              ("H43", "Educación/SaaS", "es", "https://www.lirmi.com/"),
+              ("H44", "Idiomas/SaaS", "es", "https://www.poliglota.org/"),
+              ("H45", "CRM/SaaS", "en", "https://www.hubspot.com/contact-sales"),
+              ("H46", "Marketing/SaaS", "en", "https://www.klaviyo.com/contact-us"),
           ]
 
           def clean_url(value):
@@ -312,7 +310,7 @@ jobs:
       - name: Upload sanitized calibration artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-calibration-batch2
+          name: privacy-prv103-calibration-batch3
           path: artifacts/privacy-prv103-calibration.json
           if-no-files-found: error
           retention-days: 7
