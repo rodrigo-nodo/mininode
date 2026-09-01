@@ -48,7 +48,7 @@ jobs:
           )
 
           CASES = [
-              ("C01", "E-commerce", "https://www.bookshop.org/"),
+              ("C01", "E-commerce", "https://www.beardbrand.com/"),
               ("C02", "Servicios profesionales", "https://www.beneschlaw.com/"),
               ("C03", "Educación", "https://www.harvard.edu/"),
               ("C04", "Salud", "https://www.nhs.uk/"),
