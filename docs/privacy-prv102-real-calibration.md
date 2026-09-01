@@ -1,4 +1,4 @@
-# PRV-102 — calibración en sitios públicos reales (W2.2b.1-QA)
+# PRV-102 - calibración en sitios públicos reales (W2.2b.1-QA)
 
 ## Estado de la ejecución
 
@@ -14,6 +14,14 @@ muestra real por fixtures sintéticos**. No es posible asignar `PASS`, `PASS WIT
 OBSERVATIONS` o `NEEDS FIX` hasta repetir la ejecución en un entorno que permita
 al pipeline actual acceder directamente a sitios públicos.
 
+También se intentó preparar la ejecución temporal solicitada en GitHub Actions,
+pero este entorno no dispone de un remote Git configurado ni de credenciales para
+el repositorio privado. `gh auth status` indicó que no existe una sesión de GitHub
+y `gh pr view 167 --repo rodrigo-nodo/mininode` no pudo autenticarse. Por ello no
+fue posible subir el workflow temporal a la rama del PR #167 ni iniciar un run.
+Esto es un bloqueo de acceso a GitHub desde el entorno de trabajo, no evidencia de
+que los runners de GitHub Actions carezcan de conectividad a los seis sitios.
+
 ## Línea base
 
 | Campo | Valor |
@@ -24,6 +32,24 @@ al pipeline actual acceder directamente a sitios públicos.
 | `scoring_version` | `0.1` |
 | `actions_version` | `2` |
 | Código o catálogos modificados | No |
+
+## Intento de GitHub Actions
+
+| Campo | Resultado |
+|---|---|
+| GitHub Actions ejecutado | No |
+| Motivo | Sin remote Git ni credenciales para actualizar el PR privado #167 |
+| Workflow run URL | No disponible; no se pudo iniciar un run |
+| Artifact esperado | `privacy-prv102-calibration` |
+| Artifact obtenido | No; no hubo run |
+| Sitios diagnosticados mediante Actions | 0 |
+| Workflow temporal presente en el estado final | No |
+| Runner temporal presente en el estado final | No |
+
+No se incorporó un workflow o runner sin posibilidad de ejecutarlo: hacerlo no
+habría aportado evidencia real y habría contradicho el requisito de que el estado
+final del PR fuera únicamente documental. La ejecución en Actions sigue pendiente
+en un entorno con permisos para actualizar la rama del PR.
 
 ## Metodología intentada
 
@@ -113,6 +139,10 @@ La muestra no permite aplicar el criterio de aprobación ni afirmar que PRV-102
 esté calibrado. Tampoco aporta evidencia de un error de score: simplemente no hubo
 diagnósticos. Producción, API, frontend, base de datos, controles, scoring, actions
 y versiones permanecen sin cambios.
+
+El bloqueo confirmado de red corresponde al entorno Codex. GitHub Actions no fue
+ejecutado por falta de acceso autenticado al PR, por lo que no se atribuye un
+bloqueo de red a Actions y no existe run URL ni artifact que reportar.
 
 ## Recomendación
 
