@@ -48,10 +48,10 @@ jobs:
           )
 
           CASES = [
-              ("C01", "E-commerce", "https://www.patagonia.com/"),
+              ("C01", "E-commerce", "https://www.bookshop.org/"),
               ("C02", "Servicios profesionales", "https://www.beneschlaw.com/"),
               ("C03", "Educación", "https://www.harvard.edu/"),
-              ("C04", "Salud", "https://www.mayoclinic.org/"),
+              ("C04", "Salud", "https://www.nhs.uk/"),
               ("C05", "SaaS/tecnología", "https://about.gitlab.com/"),
               ("C06", "Microempresa/sitio simple", "https://wickedgrounds.com/"),
           ]
