@@ -51,13 +51,13 @@ class ActivityAnswers(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     people_categories: list[str] = Field(default_factory=list)
-    may_include_minors: bool = False
+    may_include_minors: bool | None = None
     personal_data_types: list[str] = Field(default_factory=list)
     storage_locations: list[str] = Field(default_factory=list)
     data_channels: list[str] = Field(default_factory=list)
     purposes: list[str] = Field(default_factory=list)
     access_roles: list[str] = Field(default_factory=list)
-    has_third_parties: bool = False
+    has_third_parties: bool | None = None
     third_parties: list[ThirdParty] = Field(default_factory=list)
     retention: Retention = Field(default_factory=Retention)
 
@@ -74,8 +74,8 @@ class ActivityAnswers(BaseModel):
         for exclusive in ("owner_only", "unknown"):
             if exclusive in self.access_roles and len(self.access_roles) > 1:
                 raise ValueError(f"{exclusive} must be the only access role")
-        if not self.has_third_parties and self.third_parties:
-            raise ValueError("third_parties must be empty when has_third_parties is false")
+        if self.has_third_parties is not True and self.third_parties:
+            raise ValueError("third_parties require has_third_parties=true")
         return self
 
 
