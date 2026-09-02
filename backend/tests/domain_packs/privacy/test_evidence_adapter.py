@@ -142,8 +142,16 @@ def test_prv103_generic_exact_text_is_never_promoted_to_concrete(text):
     "Fill out this form to download the guide",
     "Para ver el informe, completa el formulario",
     "Completa este formulario para obtener la guía",
+    "Para ver las galerías completas, completa el siguiente formulario",
+    "Completa el siguiente formulario para descargar la guía",
+    "Selecciona los temas que te interesaría recibir",
+    "Selecciona los contenidos que quieres recibir",
+    "Elige las comunicaciones que deseas recibir",
+    "Select the topics you want to receive",
+    "Choose the updates you would like to receive",
     "Recibir temas seleccionados",
     "Recibir contenido y comunicaciones",
+    "Recibir información",
     "Receive product information",
     "Evalúa tu experiencia",
     "Evaluate your experience",
@@ -174,7 +182,9 @@ def test_prv103_recognizes_bounded_team_contact_as_generic(text):
 @pytest.mark.parametrize("text", [
     "team", "support", "ticket", "free", "free resources", "learn for free",
     "experience", "feedback", "opinion", "content", "information", "topics",
-    "Complete the form", "A new path for ambitious organizations",
+    "Complete the form", "El siguiente formulario", "Selecciona los temas",
+    "Temas que te interesan", "select topics", "choose content",
+    "interested in topics", "A new path for ambitious organizations",
 ])
 def test_prv103_does_not_promote_isolated_or_unknown_semantic_text(text):
     evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
