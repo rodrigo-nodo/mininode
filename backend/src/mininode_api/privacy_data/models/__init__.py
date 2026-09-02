@@ -1,5 +1,9 @@
 """Privacy Data API models."""
 
-from .data_map import CreatedDataMapResponse, DataMapResponse
+from .activity import ActivityCreate, ActivityResponse, ActivityUpdate
+from .data_map import CreatedDataMapResponse, DataMapResponse, DataMapUpdate
 
-__all__ = ["CreatedDataMapResponse", "DataMapResponse"]
+__all__ = [
+    "ActivityCreate", "ActivityResponse", "ActivityUpdate",
+    "CreatedDataMapResponse", "DataMapResponse", "DataMapUpdate",
+]

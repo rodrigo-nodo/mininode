@@ -35,6 +35,20 @@ CREATE TABLE IF NOT EXISTS privacy_data.data_maps (
     recommendations_generated_at TIMESTAMPTZ NULL,
     metadata JSONB
 );
+
+CREATE TABLE IF NOT EXISTS privacy_data.activities (
+    id UUID PRIMARY KEY,
+    data_map_id UUID NOT NULL REFERENCES privacy_data.data_maps(id) ON DELETE CASCADE,
+    activity_type TEXT NOT NULL,
+    data_context TEXT NOT NULL,
+    position INTEGER NOT NULL CHECK (position >= 0),
+    answers JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS activities_data_map_position_idx
+    ON privacy_data.activities (data_map_id, position);
 """
 
 
@@ -62,6 +76,22 @@ class StoredDataMap:
 class CreatedDataMap:
     token: str
     data_map: StoredDataMap
+
+
+@dataclass(frozen=True)
+class StoredActivity:
+    id: UUID
+    data_map_id: UUID
+    activity_type: str
+    data_context: str
+    position: int
+    answers: dict
+    created_at: datetime
+    updated_at: datetime
+
+
+class ActivityNotFoundError(Exception):
+    pass
 
 
 def _database_url() -> str:
@@ -127,3 +157,99 @@ def get_data_map(token: str, *, now: datetime | None = None) -> StoredDataMap:
     if data_map.expires_at <= (now or datetime.now(timezone.utc)):
         raise DataMapExpiredError("Data map has expired")
     return data_map
+
+
+def update_data_map(data_map: StoredDataMap, changes: dict) -> StoredDataMap:
+    if not changes:
+        return data_map
+    assignments = [f"{field} = %s" for field in changes]
+    values = list(changes.values())
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            UPDATE privacy_data.data_maps
+            SET {', '.join(assignments)}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            RETURNING id, status, industry_profile, business_size,
+                      catalog_version, created_at, updated_at, expires_at
+            """,
+            (*values, data_map.id),
+        )
+        row = cursor.fetchone()
+    return StoredDataMap(*row)
+
+
+def create_activity(data_map: StoredDataMap, payload: dict) -> StoredActivity:
+    activity_id = uuid4()
+    position = payload.get("position")
+    with _connection() as connection, connection.cursor() as cursor:
+        if position is None:
+            cursor.execute(
+                "SELECT COALESCE(MAX(position) + 1, 0) FROM privacy_data.activities WHERE data_map_id = %s",
+                (data_map.id,),
+            )
+            position = cursor.fetchone()[0]
+        cursor.execute(
+            """
+            INSERT INTO privacy_data.activities (
+                id, data_map_id, activity_type, data_context, position, answers,
+                created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id, data_map_id, activity_type, data_context, position,
+                      answers, created_at, updated_at
+            """,
+            (activity_id, data_map.id, payload["activity_type"], payload["data_context"],
+             position, Jsonb(payload["answers"])),
+        )
+        row = cursor.fetchone()
+    return StoredActivity(*row)
+
+
+def list_activities(data_map: StoredDataMap) -> list[StoredActivity]:
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, data_map_id, activity_type, data_context, position,
+                   answers, created_at, updated_at
+            FROM privacy_data.activities WHERE data_map_id = %s
+            ORDER BY position ASC, created_at ASC
+            """,
+            (data_map.id,),
+        )
+        rows = cursor.fetchall()
+    return [StoredActivity(*row) for row in rows]
+
+
+def update_activity(data_map: StoredDataMap, activity_id: UUID, changes: dict) -> StoredActivity:
+    if not changes:
+        assignments = "updated_at = updated_at"
+        values = []
+    else:
+        assignments = ", ".join(f"{field} = %s" for field in changes)
+        values = [Jsonb(value) if field == "answers" else value for field, value in changes.items()]
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            UPDATE privacy_data.activities
+            SET {assignments}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND data_map_id = %s
+            RETURNING id, data_map_id, activity_type, data_context, position,
+                      answers, created_at, updated_at
+            """,
+            (*values, activity_id, data_map.id),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise ActivityNotFoundError("Activity not found")
+    return StoredActivity(*row)
+
+
+def delete_activity(data_map: StoredDataMap, activity_id: UUID) -> None:
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "DELETE FROM privacy_data.activities WHERE id = %s AND data_map_id = %s RETURNING id",
+            (activity_id, data_map.id),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise ActivityNotFoundError("Activity not found")
