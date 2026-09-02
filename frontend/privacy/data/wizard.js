@@ -1,5 +1,6 @@
 const API = '/api/privacy/data';
 const TOKEN_KEY = 'mininode_privacy_data_token';
+const DEBUG = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
 
 export const emptyAnswers = () => ({
   people_categories: [], may_include_minors: null, personal_data_types: [],
@@ -69,11 +70,19 @@ class FriendlyError extends Error {
 }
 
 export async function request(path, options = {}) {
+  const started = typeof performance !== 'undefined' ? performance.now() : null;
   let response;
-  try { response = await fetch(API + path, {headers: {'Content-Type': 'application/json'}, ...options}); }
-  catch { throw new FriendlyError(0); }
-  if (!response.ok) throw new FriendlyError(response.status);
-  return response.status === 204 ? null : response.json();
+  try {
+    try { response = await fetch(API + path, {headers: {'Content-Type': 'application/json'}, ...options}); }
+    catch { throw new FriendlyError(0); }
+    if (!response.ok) throw new FriendlyError(response.status);
+    return response.status === 204 ? null : response.json();
+  } finally {
+    if (DEBUG && started != null) {
+      const method = options.method || 'GET';
+      console.info(`[Privacy Data] ${method} ${path}: ${Math.round(performance.now() - started)} ms`);
+    }
+  }
 }
 
 const questions = [
@@ -90,25 +99,37 @@ const questions = [
 
 class Wizard {
   constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set()}); }
+  loading(title, detail) { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><section class="pd-loading" role="status"><strong>${title}</strong><p>${detail}</p></section>`); }
   async init() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    this.loading(token ? 'Recuperando tu mapa…' : 'Preparando tu mapa…', token ? 'Cargando tus respuestas anteriores.' : 'Estamos revisando si ya existe un mapa guardado en este navegador.');
     try {
-      this.catalog = await request('/catalog');
-      const token = localStorage.getItem(TOKEN_KEY);
       if (token) {
-        this.shell('<p class="eyebrow">Privacy Data</p><h1>Privacy Data</h1><p>Recuperando tu mapa…</p>');
         try {
           this.token = token;
-          this.map = await request(`/maps/${token}`);
-          this.activities = await request(`/maps/${token}/activities`);
+          [this.catalog, this.map, this.activities] = await Promise.all([
+            request('/catalog'),
+            request(`/maps/${token}`),
+            request(`/maps/${token}/activities`),
+          ]);
           const unanswered = unansweredBooleanActivities(this.activities);
           this.minorsUnanswered = unanswered.minors;
           this.thirdPartiesUnanswered = unanswered.thirdParties;
           this.selected = this.activities.map(a => a.activity_type);
           this.screen = 'resume';
         } catch (error) {
-          if ([404, 410].includes(error.status)) { localStorage.removeItem(TOKEN_KEY); this.error = error.message; }
-          else throw error;
+          if ([404, 410].includes(error.status)) {
+            localStorage.removeItem(TOKEN_KEY);
+            this.token = null;
+            this.map = null;
+            this.activities = [];
+            this.selected = [];
+            this.catalog = await request('/catalog');
+            this.error = error.message;
+          } else throw error;
         }
+      } else {
+        this.catalog = await request('/catalog');
       }
     } catch (error) { this.error = error.message; }
     this.render();
@@ -133,7 +154,7 @@ class Wizard {
     const other = all.filter(option => !primaryCodes.includes(option.code));
     const render = options => options.map(option => `<label class="pd-option"><input type="checkbox" name="choice" value="${option.code}" ${selected.includes(option.code) ? 'checked' : ''}><span>${option.label}</span></label>`).join('');
     const hasSelectedOther = other.some(option => selected.includes(option.code));
-    return `<fieldset data-section="people_categories"><legend>Opciones habituales</legend><div class="pd-grid">${render(primary)}</div><details ${hasSelectedOther ? 'open' : ''}><summary>Ver otras opciones</summary><div class="pd-grid">${render(other)}</div></details></fieldset>`;
+    return `<fieldset class="pd-people" data-section="people_categories"><legend>Opciones habituales</legend><div class="pd-grid">${render(primary)}</div><details ${hasSelectedOther ? 'open' : ''}><summary>Ver otras opciones</summary><div class="pd-grid">${render(other)}</div></details></fieldset>`;
   }
   booleanOptions(selected, name) { return `<fieldset class="pd-grid"><legend class="visually-hidden">Selecciona Sí o No</legend><label class="pd-option"><input type="radio" name="${name}" value="yes" ${selected === true ? 'checked' : ''}><span>Sí</span></label><label class="pd-option"><input type="radio" name="${name}" value="no" ${selected === false ? 'checked' : ''}><span>No</span></label></fieldset>`; }
   shell(body) { this.root.innerHTML = `${this.error ? `<p class="pd-error" role="alert">${this.error}</p>` : ''}${body}<p class="pd-save" role="status">${this.saving ? 'Guardando…' : this.saved ? 'Guardado' : ''}</p>`; }
@@ -158,7 +179,7 @@ class Wizard {
       const existing = answers.third_parties.find(item => item.type === type.code);
       return `<section class="pd-third ${existing ? 'is-selected' : ''}"><label class="pd-option"><input type="checkbox" name="third-type" value="${type.code}" ${existing ? 'checked' : ''}><span>${type.label}</span></label><div class="pd-third__relationships"><p>¿Qué ocurre con la información?</p>${this.options('third_party_relationships', existing?.relationships || [], 'checkbox', `relationship-${type.code}`)}</div></section>`;
     }).join('');
-    return `${this.booleanOptions(yes, 'has-third-parties')}<div class="pd-third-list" ${yes ? '' : 'hidden'}><h3>¿Qué tipo de persona o empresa externa participa?</h3>${cards}</div>`;
+    return `${this.booleanOptions(yes, 'has-third-parties')}<div class="pd-third-list" data-third-list ${yes === true ? '' : 'inert style="display:none"'}><h3>¿Qué tipo de persona o empresa externa participa?</h3>${cards}</div>`;
   }
   activity() {
     const type = this.selected[this.activityIndex];
@@ -173,7 +194,7 @@ class Wizard {
     else if (key === 'purposes') content = `<label class="pd-filter">Buscar una finalidad<input class="pd-search" type="search" data-purpose-filter placeholder="Buscar una finalidad"></label>${this.options('purposes', answers.purposes || [])}`;
     else if (section) content = this.options(section, answers[key] || []);
     else if (key === 'third_parties') content = this.thirdParties(this.thirdPartiesUnanswered.has(existing.id) ? {...answers, has_third_parties: null} : answers);
-    else content = `${this.options('retention.statuses', [answers.retention.status], 'radio')}<div class="pd-fields"><label>Valor<input type="number" min="1" name="retention-value" value="${answers.retention.value || ''}"></label><label>Unidad<select name="retention-unit"><option value="">Selecciona</option>${this.catalog.retention.units.map(x => `<option value="${x.code}" ${answers.retention.unit === x.code ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label><label>Nota opcional<input name="retention-note" value="${answers.retention.note || ''}"></label></div>`;
+    else content = `${this.options('retention.statuses', [answers.retention.status], 'radio')}<div class="pd-fields" data-retention-fields ${answers.retention.status === 'defined' ? '' : 'inert style="display:none"'}><label>Valor<input type="number" min="1" name="retention-value" value="${answers.retention.value || ''}"></label><label>Unidad<select name="retention-unit"><option value="">Selecciona</option>${this.catalog.retention.units.map(x => `<option value="${x.code}" ${answers.retention.unit === x.code ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label><label>Nota opcional<input name="retention-note" value="${answers.retention.note || ''}"></label></div>`;
     this.shell(`${this.progress('Mapa')}<p class="pd-subprogress">${label} · ${this.q + 1} de ${questions.length}</p><h2>${title}</h2>${key === 'access_roles' ? '<p>Puede ser usted, personas que trabajan con usted o áreas de su organización.</p>' : ''}${content}<div class="pd-actions"><button class="pd-back" data-go="question-back">Atrás</button><button class="btn btn--primary" data-go="question-save">Guardar y continuar</button></div>`);
   }
   checked(section, name = 'choice') { return [...(this.root.querySelector(`[data-section="${section}"]`)?.querySelectorAll(`input[name="${name}"]:checked`) || [])].map(input => input.value); }
@@ -215,7 +236,7 @@ class Wizard {
   }
   async patchActivity(activity, answers) { const updated = await request(`/maps/${this.token}/activities/${activity.id}`, {method: 'PATCH', body: JSON.stringify({answers})}); this.activities = this.activities.map(a => a.id === updated.id ? updated : a); }
   size() { this.shell(`${this.progress('Final')}<h2>Para ajustar mejor el contexto, ¿qué tamaño tiene tu negocio?</h2><p>Es opcional y no cambia tus respuestas.</p>${this.options('business_size', this.map.business_size ? [this.map.business_size] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="map-back">Atrás</button><button class="pd-back" data-go="skip-size">Omitir</button><button class="btn btn--primary" data-go="save-size">Continuar</button></div>`); }
-  finish() { const summary = totals(this.activities); const stats = [['activities', 'actividades'], ['people_categories', 'tipos de personas'], ['personal_data_types', 'tipos de datos'], ['storage_locations', 'lugares de almacenamiento'], ['data_channels', 'canales'], ['third_party_types', 'tipos de terceros']]; this.shell(`${this.progress('Final')}<h1>Tu mapa está listo</h1><p class="pd-lead">Ya organizamos las principales actividades donde aparecen datos personales en tu negocio.</p><div class="pd-summary">${stats.map(([key, label]) => `<div class="pd-stat"><strong>${summary[key]}</strong>${label}</div>`).join('')}</div><div class="pd-cards">${this.activities.map(a => `<article class="pd-card"><h3>${this.label('activity_types', a.activity_type)}</h3>${['people_categories', 'personal_data_types', 'storage_locations', 'data_channels', 'access_roles'].map(section => `<p>${(a.answers[section] || []).map(code => this.label(section, code)).join(' · ') || 'Sin selección'}</p>`).join('')}</article>`).join('')}</div><p class="pd-note">El siguiente paso será revisar este mapa para detectar aspectos que conviene ordenar.</p>`); }
+  finish() { this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p><section class="pd-coming"><strong>Revisión del mapa - Próximamente</strong><p>Estamos construyendo esta etapa de Privacy Data. Tu mapa quedó guardado temporalmente para que puedas volver y revisarlo.</p></section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`); }
   label(section, code) { return this.catalog[section]?.find(item => item.code === code)?.label || code; }
   bind() {
     this.root.addEventListener('click', event => this.action(event));
@@ -223,7 +244,14 @@ class Wizard {
     this.root.addEventListener('change', event => {
       if (event.target.name?.startsWith('relationship-') && event.target.checked) { const group = event.target.closest('fieldset'); if (event.target.value === 'unknown') group.querySelectorAll('input').forEach(input => { input.checked = input === event.target; }); else group.querySelector('input[value="unknown"]').checked = false; }
       if (event.target.name === 'choice' && event.target.type === 'checkbox' && event.target.checked) { const group = event.target.closest('fieldset'); if (['owner_only', 'unknown'].includes(event.target.value)) group.querySelectorAll('input').forEach(input => { input.checked = input === event.target; }); else group.querySelectorAll('input[value="owner_only"],input[value="unknown"]').forEach(input => { input.checked = false; }); }
-      if (event.target.name === 'has-third-parties') this.root.querySelector('.pd-third-list').hidden = event.target.value === 'no';
+      if (event.target.name === 'has-third-parties') {
+        const list = this.root.querySelector('[data-third-list]');
+        if (list) { const show = event.target.value === 'yes'; list.style.display = show ? 'grid' : 'none'; list.inert = !show; }
+      }
+      if (event.target.closest('[data-section="retention.statuses"]')) {
+        const fields = this.root.querySelector('[data-retention-fields]');
+        if (fields) { const show = event.target.value === 'defined'; fields.style.display = show ? 'flex' : 'none'; fields.inert = !show; }
+      }
       if (event.target.name === 'third-type') event.target.closest('.pd-third').classList.toggle('is-selected', event.target.checked);
     });
   }
@@ -248,6 +276,7 @@ class Wizard {
     if (go === 'question-back') { this.q = this.q > 0 ? this.q - 1 : -1; return this.render(); }
     if (go === 'question-save') return this.run(() => this.saveQuestion());
     if (go === 'map-back') { this.screen = 'map'; this.activityIndex = this.selected.length - 1; this.q = questions.length - 1; return this.render(); }
+    if (go === 'edit-map') { this.screen = 'activities'; this.pendingRemoval = []; return this.render(); }
     if (['skip-size', 'save-size'].includes(go)) return this.run(async () => { const value = go === 'skip-size' ? null : this.checked('business_size')[0]; this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})}); this.screen = 'finish'; });
   }
 }
