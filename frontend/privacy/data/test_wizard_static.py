@@ -93,3 +93,29 @@ def test_existing_map_is_resumed_from_landing_instead_of_recreated():
 def test_data_context_copy_is_plain_language():
     assert "¿De dónde vienen principalmente los datos que manejas en esta actividad?" in JS
     assert "Selecciona de dónde vienen los datos." in JS
+
+
+def test_loading_keeps_hero_visible_and_supports_debug_timing():
+    assert "Ordena cómo tu negocio maneja los datos personales por dentro." in HTML
+    assert "Preparando tu mapa…" in HTML
+    assert "Recuperando tu mapa…" in JS
+    assert "debug" in JS
+    assert "[Privacy Data]" in JS
+
+
+def test_people_options_have_plain_grouping_without_default_fieldset_box():
+    assert 'class="pd-people"' in JS
+
+
+def test_third_parties_and_retention_are_conditionally_interactive():
+    assert "data-third-list" in JS
+    assert "inert style=\"display:none\"" in JS
+    assert "data-retention-fields" in JS
+    assert "event.target.value === 'defined'" in JS
+
+
+def test_finish_goes_directly_to_review_teaser():
+    assert "Ahora revisemos tu mapa" in JS
+    assert "Revisión del mapa - Próximamente" in JS
+    assert "Volver y editar mi mapa" in JS
+    assert "data-go=\"edit-map\"" in JS
