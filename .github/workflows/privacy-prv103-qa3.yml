@@ -56,36 +56,31 @@ jobs:
           from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 
           CASES = [
-              ("R01", "SaaS", "en", "https://linear.app/contact"),
-              ("R02", "SaaS", "en", "https://vercel.com/contact/sales"),
-              ("R03", "SaaS", "en", "https://www.netlify.com/contact/"),
-              ("R04", "SaaS", "en", "https://snyk.io/contact-us/"),
-              ("R05", "SaaS", "en", "https://newrelic.com/contact-us"),
-              ("R06", "SaaS", "en", "https://www.pagerduty.com/contact-us/"),
-              ("R07", "SaaS", "en", "https://www.splunk.com/en_us/about-splunk/contact-us.html"),
-              ("R08", "SaaS", "en", "https://www.hashicorp.com/contact"),
-              ("R09", "SaaS", "en", "https://grafana.com/contact/"),
-              ("R10", "SaaS", "en", "https://circleci.com/contact/"),
-              ("R11", "SaaS", "en", "https://www.docker.com/company/contact/"),
-              ("R12", "SaaS", "en", "https://www.postman.com/contact-sales/"),
-              ("R13", "SaaS", "en", "https://www.browserstack.com/contact"),
-              ("R14", "SaaS", "en", "https://saucelabs.com/contact-us"),
-              ("R15", "SaaS", "en", "https://www.fivetran.com/contact"),
-              ("R16", "SaaS", "en", "https://airbyte.com/contact-sales"),
-              ("R17", "SaaS", "en", "https://www.getdbt.com/contact"),
-              ("R18", "SaaS", "en", "https://www.alation.com/contact-us/"),
-              ("R19", "SaaS", "en", "https://www.collibra.com/us/en/contact-us"),
-              ("R20", "SaaS", "en", "https://www.informatica.com/about-us/contact-us.html"),
-              ("R21", "Fintech", "es", "https://www.bci.cl/personas/contacto"),
-              ("R22", "Fintech", "es", "https://www.scotiabankchile.cl/contacto"),
-              ("R23", "Servicios", "es", "https://www.entel.cl/contacto/"),
-              ("R24", "Servicios", "es", "https://www.cajalosandes.cl/contacto"),
-              ("R25", "Retail", "es", "https://www.jumbo.cl/contacto"),
-              ("R26", "Retail", "es", "https://www.lider.cl/contacto"),
-              ("R27", "Salud", "es", "https://www.cruzverde.cl/contacto"),
-              ("R28", "Salud", "es", "https://salcobrand.cl/contacto"),
-              ("R29", "Educación", "es", "https://www.udp.cl/contacto/"),
-              ("R30", "Educación", "es", "https://www.usach.cl/contacto"),
+              ("R31", "SaaS", "en", "https://www.jetbrains.com/company/contacts/"),
+              ("R32", "SaaS", "en", "https://www.semrush.com/company/contacts/"),
+              ("R33", "SaaS", "en", "https://www.celonis.com/contact-us/"),
+              ("R34", "SaaS", "en", "https://atlan.com/contact-sales/"),
+              ("R35", "SaaS", "en", "https://www.montecarlodata.com/contact/"),
+              ("R36", "SaaS", "en", "https://www.astronomer.io/contact/"),
+              ("R37", "SaaS", "en", "https://www.prefect.io/contact"),
+              ("R38", "SaaS", "en", "https://dagster.io/contact"),
+              ("R39", "SaaS", "en", "https://www.rudderstack.com/contact/"),
+              ("R40", "SaaS", "en", "https://hightouch.com/contact-sales"),
+              ("R41", "SaaS", "en", "https://www.getcensus.com/contact"),
+              ("R42", "SaaS", "en", "https://www.metabase.com/contact/"),
+              ("R43", "SaaS", "en", "https://www.thoughtspot.com/contact-us"),
+              ("R44", "SaaS", "en", "https://www.sisense.com/contact-us/"),
+              ("R45", "SaaS", "en", "https://www.microstrategy.com/contact-us"),
+              ("R46", "SaaS", "en", "https://www.dynatrace.com/contact/"),
+              ("R47", "SaaS", "en", "https://www.appdynamics.com/company/contact-us"),
+              ("R48", "Fintech", "es", "https://banco.santander.cl/personas/contacto"),
+              ("R49", "Fintech", "es", "https://www.bancochile.cl/contacto"),
+              ("R50", "Fintech", "es", "https://www.itau.cl/contacto"),
+              ("R51", "Servicios", "es", "https://www.afphabitat.cl/contacto/"),
+              ("R52", "Salud", "es", "https://www.consalud.cl/contacto"),
+              ("R53", "Retail", "es", "https://www.lapolar.cl/contacto"),
+              ("R54", "Educación", "es", "https://www.uchile.cl/contacto"),
+              ("R55", "Educación", "es", "https://www.uai.cl/contacto"),
           ]
 
           def clean_url(value):
@@ -323,7 +318,7 @@ jobs:
       - name: Upload sanitized QA3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-qa3
+          name: privacy-prv103-qa3-batch2
           path: artifacts/privacy-prv103-qa3.json
           if-no-files-found: error
           retention-days: 7
