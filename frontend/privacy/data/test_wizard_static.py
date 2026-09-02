@@ -114,13 +114,9 @@ def test_third_parties_and_retention_are_conditionally_interactive():
     assert "event.target.value === 'defined'" in JS
 
 
-def test_finish_renders_automatic_review_and_keeps_recovery_section():
+def test_finish_goes_directly_to_review_teaser():
     assert "Ahora revisemos tu mapa" in JS
-    assert "`/maps/${this.token}/review`" in JS
-    assert "Conviene revisar" in JS
-    assert "Ten presente" in JS
-    assert "No encontramos aspectos pendientes dentro de esta primera revisión." in JS
-    assert "Guarda tu mapa para continuar después" in JS
+    assert "Revisión del mapa - Próximamente" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
 
