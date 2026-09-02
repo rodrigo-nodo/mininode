@@ -115,7 +115,7 @@ def test_prv103_does_not_infer_from_nearby_fields_or_privacy_evidence():
 
 
 @pytest.mark.parametrize("text", [
-    "Hablemos", "Hablemos de tu", "Conversemos sobre el", "Proyecto", "Sales", "Free",
+    "Hablemos de tu", "Conversemos sobre el", "Proyecto", "Sales", "Free",
 ])
 def test_prv103_does_not_promote_unrecognized_words_to_concrete(text):
     evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
@@ -180,7 +180,32 @@ def test_prv103_recognizes_bounded_team_contact_as_generic(text):
 
 
 @pytest.mark.parametrize("text", [
-    "team", "support", "ticket", "free", "free resources", "learn for free",
+    "Send message", "Talk to ExampleCo", "Connect with us", "Contáctanos",
+    "Enviar Formulario", "Confirmar", "SUBSCRIBIRME", "Tell us a bit more",
+])
+def test_prv103_recognizes_qa3_generalized_generic_purposes(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "generic"
+
+
+@pytest.mark.parametrize("text", [
+    "Iniciar sesión",
+    "Sign in",
+    "Access my account",
+    "Send my question to technical support",
+    "Solicita soporte y envía tu consulta",
+    "Free 14-day trial - Get started",
+    "Sign up for a free trial",
+    "Comienza tu prueba gratis",
+])
+def test_prv103_recognizes_qa3_generalized_concrete_purposes(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "concrete"
+
+
+@pytest.mark.parametrize("text", [
+    "team", "support", "help", "question", "account", "cuenta", "free", "gratis",
+    "trial", "prueba", "ticket", "free resources", "learn for free",
     "experience", "feedback", "opinion", "content", "information", "topics",
     "Complete the form", "El siguiente formulario", "Selecciona los temas",
     "Temas que te interesan", "select topics", "choose content",
@@ -189,6 +214,20 @@ def test_prv103_recognizes_bounded_team_contact_as_generic(text):
 def test_prv103_does_not_promote_isolated_or_unknown_semantic_text(text):
     evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
     assert evidence["form_purpose"] == "unknown"
+
+
+@pytest.mark.parametrize("text", ["message", "form"])
+def test_prv103_keeps_isolated_form_terms_generic_not_concrete(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "generic"
+
+
+@pytest.mark.parametrize("text", [
+    "Sending", "Enviando", "Loading", "Cargando", "Previous", "Anterior", "Back",
+])
+def test_prv103_keeps_operational_states_out_of_generic(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", submit_text=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "none"
 
 
 def test_prv103_keeps_operational_noise_none_and_medium_not_evaluable():
