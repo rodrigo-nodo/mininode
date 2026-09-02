@@ -77,3 +77,19 @@ def test_save_does_not_render_before_reading_dom():
     run_body = JS.split("async run(action) {", 1)[1].split("progress(active)", 1)[0]
     assert "this.saving = true; this.render()" not in run_body
     assert "finally { this.saving = false; this.render(); }" in run_body
+
+
+def test_loading_copy_is_visible_before_and_during_recovery():
+    assert "Cargando…" in HTML
+    assert "Recuperando tu mapa…" in JS
+
+
+def test_existing_map_is_resumed_from_landing_instead_of_recreated():
+    assert "const hasMap = Boolean(this.map && this.token)" in JS
+    assert "hasMap ? 'resume' : 'create'" in JS
+    assert "this.activities = []; this.selected = []" in JS
+
+
+def test_data_context_copy_is_plain_language():
+    assert "¿De dónde vienen principalmente los datos que manejas en esta actividad?" in JS
+    assert "Selecciona de dónde vienen los datos." in JS
