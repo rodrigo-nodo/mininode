@@ -565,11 +565,11 @@
   "data_context": [
     {
       "code": "own_operations",
-      "label": "Datos del propio negocio"
+      "label": "De mi propio negocio"
     },
     {
       "code": "client_service",
-      "label": "Datos gestionados al prestar servicios a clientes"
+      "label": "Me los entrega un cliente para realizar un servicio"
     },
     {
       "code": "both",
