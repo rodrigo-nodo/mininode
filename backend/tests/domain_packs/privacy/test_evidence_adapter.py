@@ -128,6 +128,68 @@ def test_prv103_generic_exact_text_is_never_promoted_to_concrete(text):
     assert evidence["form_purpose"] == "generic"
 
 
+@pytest.mark.parametrize("text", [
+    "Create a support ticket",
+    "Open support ticket",
+    "Submit a support request",
+    "Create a case",
+    "Our team will follow up",
+    "We will reply shortly",
+    "We'll respond soon",
+    "Try the reporting service for free",
+    "Start secure analytics for free",
+    "Complete the form to access the research report",
+    "Fill out this form to download the guide",
+    "Para ver el informe, completa el formulario",
+    "Completa este formulario para obtener la guía",
+    "Recibir temas seleccionados",
+    "Recibir contenido y comunicaciones",
+    "Receive product information",
+    "Evalúa tu experiencia",
+    "Evaluate your experience",
+    "Provide us feedback",
+    "Comparte tu opinión",
+    "Tell us what you think",
+    "Did you find what you were looking for?",
+])
+def test_prv103_recognizes_generalized_concrete_purposes(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", introductory_text=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "concrete"
+
+
+@pytest.mark.parametrize("text", [
+    "Contact our team",
+    "Contact the team",
+    "Talk to our sales team",
+    "Speak with our support team",
+    "Contacta a nuestro equipo",
+    "Habla con nuestro equipo",
+    "Habla con ventas",
+])
+def test_prv103_recognizes_bounded_team_contact_as_generic(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "generic"
+
+
+@pytest.mark.parametrize("text", [
+    "team", "support", "ticket", "free", "free resources", "learn for free",
+    "experience", "feedback", "opinion", "content", "information", "topics",
+    "Complete the form", "A new path for ambitious organizations",
+])
+def test_prv103_does_not_promote_isolated_or_unknown_semantic_text(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "unknown"
+
+
+def test_prv103_keeps_operational_noise_none_and_medium_not_evaluable():
+    noise = adapt_evidence(contract(forms=[form(field_type="email", submit_text="Sending")]))
+    assert noise["PRV-103"]["form_purpose"] == "none"
+
+    medium = adapt_evidence(contract(forms=[form(name="country", label="", heading="Create a support ticket")]))
+    assert medium["PRV-101"]["confidence"] == "medium"
+    assert medium["PRV-103"] == {"form_purpose": "unknown", "confidence": "low"}
+
+
 def test_prv103_exposes_only_sanitized_determining_form_urls():
     forms = [
         form(field_type="email", heading="Request a demo"),

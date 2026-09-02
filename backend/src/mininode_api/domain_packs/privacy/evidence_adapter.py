@@ -1177,13 +1177,17 @@ _FORM_PURPOSE_GENERIC_EXACT = {
 }
 _FORM_PURPOSE_GENERIC_PHRASES = {
     "contact us", "get in touch", "contact form", "formulario de contacto",
-    "contact sales",
+    "contact sales", "contact our team", "contact the team", "talk to our team",
+    "speak with our team", "talk to our sales team", "speak with our sales team",
+    "talk to our support team", "speak with our support team",
+    "contacta a nuestro equipo", "contacta con nuestro equipo",
+    "habla con nuestro equipo", "habla con ventas",
 }
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
     r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
     r"\b(?:enviar|envia|envianos)\b.{0,30}\b(?:consulta|mensaje)\b",
-    r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias)\b",
+    r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias|temas?|contenido|informacion|comunicaciones?|actualizaciones?|promociones?)\b",
     r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
     r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
     r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account)\b",
@@ -1193,6 +1197,21 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsend\b.{0,20}\b(?:an inquiry|us a message)\b",
     r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
     r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
+    r"\b(?:create|open)\s+(?:a\s+)?(?:support\s+)?ticket\b",
+    r"\bsubmit\s+(?:a\s+)?support\s+request\b",
+    r"\bcreate\s+(?:a\s+)?case\b",
+    r"\b(?:our team|we)\s+(?:(?:will|ll)\s+)?(?:reply|respond|follow up)\b",
+    r"\b(?:try|start)\s+(?!to\s+learn\b)(?:[a-z0-9]+[ -]?){1,6}for free\b",
+    r"\b(?:complete|fill out)\s+(?:this |the )?form\s+to\s+(?:access|view|download|receive|get)\s+\S+",
+    r"\bpara\s+(?:acceder(?: a)?|ver|descargar|recibir|obtener)\s+\S+.{0,80}\bcomplet(?:a|ar|e)\s+(?:este |el )?formulario\b",
+    r"\bcomplet(?:a|ar|e)\s+(?:este |el )?formulario.{0,80}\bpara\s+(?:acceder(?: a)?|ver|descargar|recibir|obtener)\s+\S+",
+    r"\breceive\b.{0,40}\b(?:topics?|content|information|communications?|updates?|promotions?)\b",
+    r"\b(?:evalua|evaluar|califica|calificar)\b.{0,30}\b(?:tu |su |la )?experiencia\b",
+    r"\b(?:rate|evaluate)\s+(?:your|the)\s+experience\b",
+    r"\b(?:give|provide)\s+(?:us\s+)?feedback\b",
+    r"\b(?:comparte|compartir)\s+(?:tu|su)\s+opinion\b",
+    r"\btell us what you think\b",
+    r"\b(?:encontraste|encontro|did you find)\b.{0,50}\b(?:buscabas|buscaba|what you (?:were )?looking for)\b",
     r"\b(?:escribenos)\b",
     r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+"
     r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
