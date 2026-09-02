@@ -401,11 +401,11 @@
     },
     {
       "code": "owner_management",
-      "label": "Dueño o administración"
+      "label": "Dueño, socios o gerencia"
     },
     {
       "code": "administration",
-      "label": "Administración"
+      "label": "Personal administrativo"
     },
     {
       "code": "sales",
