@@ -64,6 +64,30 @@ export function totals(activities) {
   return result;
 }
 
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+})[character]);
+
+export function reviewMarkup(observations, catalog, state = {}) {
+  if (state.loading) return '<section class="pd-review" aria-live="polite"><p role="status">Revisando tu mapa…</p></section>';
+  if (state.error) return '<section class="pd-review" aria-live="polite"><p>No pudimos completar la revisión del mapa en este momento.</p><button class="btn btn--primary" data-go="retry-review">Reintentar revisión</button></section>';
+  if (!observations?.length) return '<section class="pd-review"><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
+
+  const label = (section, code) => catalog?.[section]?.find(item => item.code === code)?.label || '';
+  const group = (type, heading) => {
+    const items = observations.filter(observation => observation.type === type);
+    if (!items.length) return '';
+    const cards = items.map(observation => {
+      const activity = label('activity_types', observation.activity_type);
+      const thirdParty = observation.third_party_type ? label('third_party_types', observation.third_party_type) : '';
+      const context = [activity, thirdParty].filter(Boolean).map(escapeHtml).join(' · ');
+      return `<article class="pd-review-card"><h3>${escapeHtml(observation.title)}</h3>${context ? `<p class="pd-review-card__context">${context}</p>` : ''}<p>${escapeHtml(observation.description)}</p></article>`;
+    }).join('');
+    return `<section class="pd-review-group"><h2>${heading}</h2><div class="pd-review-list">${cards}</div></section>`;
+  };
+  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} aspectos en esta primera revisión.</p>${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</section>`;
+}
+
 class FriendlyError extends Error {
   constructor(status, message) {
     super(message || (status === 503 ? 'Privacy Data no está disponible temporalmente.'
@@ -104,7 +128,7 @@ const questions = [
 ];
 
 class Wizard {
-  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: ''}); }
+  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: '', reviewObservations: null, reviewLoading: false, reviewError: false}); }
   loading(title, detail) { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><section class="pd-loading" role="status"><strong>${title}</strong><p>${detail}</p></section>`); }
   async init() {
     const recoveryToken = typeof window !== 'undefined' ? recoveryTokenFromHash(window.location.hash) : null;
@@ -251,7 +275,24 @@ class Wizard {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
-    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p><section class="pd-coming"><strong>Revisión del mapa - Próximamente</strong><p>Estamos construyendo esta etapa de Privacy Data. Tu mapa quedó guardado temporalmente para que puedas volver y revisarlo.</p></section><section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+    const review = reviewMarkup(this.reviewObservations, this.catalog, {loading: this.reviewLoading, error: this.reviewError});
+    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+  }
+  async loadReview() {
+    this.reviewLoading = true;
+    this.reviewError = false;
+    this.render();
+    try { this.reviewObservations = await request(`/maps/${this.token}/review`); }
+    catch { this.reviewObservations = null; this.reviewError = true; }
+    finally { this.reviewLoading = false; this.render(); }
+  }
+  async generateRecoveryLink() {
+    try {
+      const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
+      this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
+      this.copyStatus = '';
+    } catch { this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.'; }
+    this.render();
   }
   label(section, code) { return this.catalog[section]?.find(item => item.code === code)?.label || code; }
   bind() {
@@ -295,15 +336,9 @@ class Wizard {
     if (go === 'generate-recovery-link') {
       this.copyStatus = 'Preparando tu enlace…';
       this.render();
-      try {
-        const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
-        this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
-        this.copyStatus = '';
-      } catch {
-        this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.';
-      }
-      return this.render();
+      return this.generateRecoveryLink();
     }
+    if (go === 'retry-review') return this.loadReview();
     if (go === 'copy-recovery-link') {
       try {
         await navigator.clipboard.writeText(this.recoveryUrl);
@@ -318,13 +353,11 @@ class Wizard {
       const value = go === 'skip-size' ? null : this.checked('business_size')[0];
       this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})});
       this.screen = 'finish';
-      try {
-        const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
-        this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
-        this.copyStatus = '';
-      } catch {
-        this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.';
-      }
+      this.reviewObservations = null;
+      this.reviewLoading = true;
+      this.reviewError = false;
+      this.render();
+      await Promise.allSettled([this.loadReview(), this.generateRecoveryLink()]);
     });
   }
 }

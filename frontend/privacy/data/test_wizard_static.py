@@ -80,7 +80,7 @@ def test_save_does_not_render_before_reading_dom():
 
 
 def test_loading_copy_is_visible_before_and_during_recovery():
-    assert "Cargando…" in HTML
+    assert "Preparando tu mapa…" in HTML
     assert "Recuperando tu mapa…" in JS
 
 
@@ -114,11 +114,21 @@ def test_third_parties_and_retention_are_conditionally_interactive():
     assert "event.target.value === 'defined'" in JS
 
 
-def test_finish_goes_directly_to_review_teaser():
+def test_finish_shows_automatic_review_and_keeps_editing_available():
     assert "Ahora revisemos tu mapa" in JS
-    assert "Revisión del mapa - Próximamente" in JS
+    assert "Revisión del mapa - Próximamente" not in JS
+    assert "request(`/maps/${this.token}/review`)" in JS
+    assert "reviewMarkup(this.reviewObservations" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
+
+
+def test_review_and_recovery_load_independently_each_time_wizard_finishes():
+    finish_action = JS.split("if (['skip-size', 'save-size'].includes(go))", 1)[1]
+    assert "this.reviewObservations = null" in finish_action
+    assert "Promise.allSettled([this.loadReview(), this.generateRecoveryLink()])" in finish_action
+    assert "retry-review" in JS
+    assert "this.generateRecoveryLink()" in finish_action
 
 
 def test_recovery_link_is_separate_capability_and_uses_url_fragment():
