@@ -49,12 +49,16 @@ def test_initialization_links_order_to_diagnostic_without_uniqueness(monkeypatch
     assert "correction_plan_id UUID NULL REFERENCES privacy.correction_plan(id)" in sql
     assert "site_url TEXT NOT NULL" in sql and "site_url TEXT UNIQUE" not in sql
     assert "email TEXT NOT NULL" in sql and "email TEXT UNIQUE" not in sql
-    assert "amount INTEGER NOT NULL CHECK (amount = 49900)" in sql
+    assert "CHECK (amount IN (49900, 9900))" in sql
+    assert "pg_get_constraintdef(oid) ~ '^CHECK \\(\\(amount = 49900\\)\\)$'" in sql
+    assert "DROP CONSTRAINT %I" in sql
+    assert "correction_plan_order_amount_allowed_check" in sql
     assert "currency = 'CLP'" in sql
     assert "product_code = 'PRIVACY_CORRECTION_PLAN'" in sql
     assert "status IN ('pending_payment', 'paid', 'cancelled')" in sql
     assert "access_token" not in sql
     assert "ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ NULL" in sql
+    assert service.PRODUCT_AMOUNT == 9900
 
 
 def test_create_uses_diagnostic_site_and_backend_commercial_values(monkeypatch):
@@ -65,7 +69,7 @@ def test_create_uses_diagnostic_site_and_backend_commercial_values(monkeypatch):
     _, params = executions[0]
     assert isinstance(params[0], UUID)
     assert params[1:] == (diagnostic.id, "https://example.com/", "buyer@example.com",
-                          "PRIVACY_CORRECTION_PLAN", 49900, "CLP", "pending_payment")
+                          "PRIVACY_CORRECTION_PLAN", 9900, "CLP", "pending_payment")
     assert created.diagnostic_id == diagnostic.id
 
 

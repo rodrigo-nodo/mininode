@@ -132,7 +132,7 @@ assert.equal(elements.get('correction-order-open').disabled, false);
 assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-A');
 assert.equal(elements.get('privacy-no-priorities').hidden, true);
 assert.match(html, /Plan de corrección/);
-assert.match(html, /Obtener plan de corrección/);
+assert.match(html, /Activar Privacy Web por 1 mes/);
 assert.match(html, /Conocer Privacy Data/);
 assert.equal(elements.get('request-error').textContent, '');
 

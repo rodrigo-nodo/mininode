@@ -45,7 +45,7 @@ def test_public_post_accepts_only_diagnostic_and_email(client, monkeypatch):
     assert response.status_code == 201
     assert response.json() == {
         "order_id": str(order.id), "product": "PRIVACY_CORRECTION_PLAN",
-        "amount": 49900, "currency": "CLP", "status": "pending_payment",
+        "amount": 9900, "currency": "CLP", "status": "pending_payment",
     }
     assert calls == [{"diagnostic_id": order.diagnostic_id, "email": "buyer@example.com"}]
     assert not {"email", "access_token", "plan_path"}.intersection(response.json())

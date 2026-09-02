@@ -14,7 +14,7 @@ import psycopg
 from mininode_api.services import privacy_diagnostic_snapshot
 
 PRODUCT_CODE = "PRIVACY_CORRECTION_PLAN"
-PRODUCT_AMOUNT = 49900
+PRODUCT_AMOUNT = 9900
 PRODUCT_CURRENCY = "CLP"
 INITIAL_STATUS = "pending_payment"
 
@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
     site_url TEXT NOT NULL,
     email TEXT NOT NULL,
     product_code TEXT NOT NULL CHECK (product_code = 'PRIVACY_CORRECTION_PLAN'),
-    amount INTEGER NOT NULL CHECK (amount = 49900),
+    amount INTEGER NOT NULL CONSTRAINT correction_plan_order_amount_allowed_check
+        CHECK (amount IN (49900, 9900)),
     currency TEXT NOT NULL CHECK (currency = 'CLP'),
     status TEXT NOT NULL CHECK (status IN ('pending_payment', 'paid', 'cancelled')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -40,6 +41,34 @@ ALTER TABLE privacy.correction_plan_order
 
 ALTER TABLE privacy.correction_plan_order
     ADD COLUMN IF NOT EXISTS correction_plan_id UUID NULL;
+
+DO $$
+DECLARE
+    legacy_constraint RECORD;
+BEGIN
+    FOR legacy_constraint IN
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'privacy.correction_plan_order'::regclass
+          AND contype = 'c'
+          AND pg_get_constraintdef(oid) ~ '^CHECK \\(\\(amount = 49900\\)\\)$'
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE privacy.correction_plan_order DROP CONSTRAINT %I',
+            legacy_constraint.conname
+        );
+    END LOOP;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'correction_plan_order_amount_allowed_check'
+          AND conrelid = 'privacy.correction_plan_order'::regclass
+    ) THEN
+        ALTER TABLE privacy.correction_plan_order
+            ADD CONSTRAINT correction_plan_order_amount_allowed_check
+            CHECK (amount IN (49900, 9900));
+    END IF;
+END $$;
 
 DO $$
 BEGIN
