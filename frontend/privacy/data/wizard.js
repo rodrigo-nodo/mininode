@@ -95,6 +95,7 @@ class Wizard {
       this.catalog = await request('/catalog');
       const token = localStorage.getItem(TOKEN_KEY);
       if (token) {
+        this.shell('<p class="eyebrow">Privacy Data</p><h1>Privacy Data</h1><p>Recuperando tu mapa…</p>');
         try {
           this.token = token;
           this.map = await request(`/maps/${token}`);
@@ -145,7 +146,7 @@ class Wizard {
     if (this.screen === 'size') return this.size();
     return this.finish();
   }
-  landing() { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><div class="pd-actions"><button class="btn btn--primary" data-go="${this.screen === 'resume' ? 'resume' : 'create'}">${this.screen === 'resume' ? 'Continuar mi mapa' : 'Crear mi mapa'}</button></div>`); }
+  landing() { const hasMap = Boolean(this.map && this.token); this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><div class="pd-actions"><button class="btn btn--primary" data-go="${hasMap ? 'resume' : 'create'}">${hasMap ? 'Continuar mi mapa' : 'Crear mi mapa'}</button></div>`); }
   industry() { this.shell(`${this.progress('Rubro')}<h2>¿A qué se dedica principalmente tu negocio?</h2><p class="pd-lead">Esto nos ayuda a mostrar ejemplos más cercanos a tu realidad.</p>${this.options('industry_profiles', this.map.industry_profile ? [this.map.industry_profile] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="landing">Atrás</button><button class="btn btn--primary" data-go="save-industry">Guardar y continuar</button></div>`); }
   activitySelection() {
     const confirmation = this.pendingRemoval.length ? `<section class="pd-confirm" role="alert"><strong>Quitaste una actividad que ya tenía información guardada.</strong><p>Si continúas, eliminaremos esa actividad del mapa.</p><div class="pd-actions"><button class="pd-back" data-go="cancel-removal">Cancelar</button><button class="btn btn--primary" data-go="confirm-removal">Eliminar y continuar</button></div></section>` : '';
@@ -163,7 +164,7 @@ class Wizard {
     const type = this.selected[this.activityIndex];
     const existing = this.activities.find(a => a.activity_type === type);
     const label = this.label('activity_types', type);
-    if (this.q < 0) return this.shell(`${this.progress('Mapa')}<p class="pd-subprogress">${label} · De quién son los datos</p><h2>¿De quién son principalmente los datos que manejas aquí?</h2>${this.options('data_context', existing ? [existing.data_context] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="activities">Atrás</button><button class="btn btn--primary" data-go="context">Guardar y continuar</button></div>`);
+    if (this.q < 0) return this.shell(`${this.progress('Mapa')}<p class="pd-subprogress">${label} · Origen de los datos</p><h2>¿De dónde vienen principalmente los datos que manejas en esta actividad?</h2>${this.options('data_context', existing ? [existing.data_context] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="activities">Atrás</button><button class="btn btn--primary" data-go="context">Guardar y continuar</button></div>`);
     const [key, title, section] = questions[this.q];
     const answers = existing.answers;
     let content;
@@ -228,7 +229,7 @@ class Wizard {
   }
   async action(event) {
     const go = event.target.dataset.go; if (!go) return;
-    if (go === 'create') return this.run(async () => { const created = await request('/maps', {method: 'POST', body: '{}'}); this.token = created.token; this.map = created.map; localStorage.setItem(TOKEN_KEY, this.token); this.screen = 'industry'; });
+    if (go === 'create') return this.run(async () => { this.activities = []; this.selected = []; this.pendingRemoval = []; this.minorsUnanswered = new Set(); this.thirdPartiesUnanswered = new Set(); this.activityIndex = 0; this.q = -1; const created = await request('/maps', {method: 'POST', body: '{}'}); this.token = created.token; this.map = created.map; localStorage.setItem(TOKEN_KEY, this.token); this.screen = 'industry'; });
     if (go === 'resume') { this.screen = this.map.industry_profile ? 'activities' : 'industry'; return this.render(); }
     if (['landing', 'industry', 'activities'].includes(go)) { this.screen = go; this.pendingRemoval = []; return this.render(); }
     if (go === 'save-industry') { const value = this.checked('industry_profiles')[0]; if (!value) { this.error = 'Selecciona un rubro.'; return this.render(); } return this.run(async () => { this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({industry_profile: value})}); this.screen = 'activities'; }); }
@@ -243,7 +244,7 @@ class Wizard {
     }
     if (go === 'cancel-removal') { this.selected = [...new Set([...this.pendingSelection, ...this.pendingRemoval.map(a => a.activity_type)])]; this.pendingRemoval = []; return this.render(); }
     if (go === 'confirm-removal') return this.run(async () => { for (const activity of this.pendingRemoval) await request(`/maps/${this.token}/activities/${activity.id}`, {method: 'DELETE'}); const removed = new Set(this.pendingRemoval.map(a => a.id)); this.activities = this.activities.filter(a => !removed.has(a.id)); this.selected = this.pendingSelection; this.pendingRemoval = []; this.activityIndex = 0; this.q = -1; this.screen = 'map'; });
-    if (go === 'context') { const context = this.checked('data_context')[0]; if (!context) { this.error = 'Selecciona de quién son los datos.'; return this.render(); } return this.run(async () => { let activity = this.activities.find(a => a.activity_type === this.selected[this.activityIndex]); if (!activity) { activity = await request(`/maps/${this.token}/activities`, {method: 'POST', body: JSON.stringify({activity_type: this.selected[this.activityIndex], data_context: context, position: this.activityIndex, answers: emptyAnswers()})}); this.activities.push(activity); this.minorsUnanswered.add(activity.id); this.thirdPartiesUnanswered.add(activity.id); } else if (activity.data_context !== context) { activity = await request(`/maps/${this.token}/activities/${activity.id}`, {method: 'PATCH', body: JSON.stringify({data_context: context})}); this.activities = this.activities.map(a => a.id === activity.id ? activity : a); } this.q = 0; }); }
+    if (go === 'context') { const context = this.checked('data_context')[0]; if (!context) { this.error = 'Selecciona de dónde vienen los datos.'; return this.render(); } return this.run(async () => { let activity = this.activities.find(a => a.activity_type === this.selected[this.activityIndex]); if (!activity) { activity = await request(`/maps/${this.token}/activities`, {method: 'POST', body: JSON.stringify({activity_type: this.selected[this.activityIndex], data_context: context, position: this.activityIndex, answers: emptyAnswers()})}); this.activities.push(activity); this.minorsUnanswered.add(activity.id); this.thirdPartiesUnanswered.add(activity.id); } else if (activity.data_context !== context) { activity = await request(`/maps/${this.token}/activities/${activity.id}`, {method: 'PATCH', body: JSON.stringify({data_context: context})}); this.activities = this.activities.map(a => a.id === activity.id ? activity : a); } this.q = 0; }); }
     if (go === 'question-back') { this.q = this.q > 0 ? this.q - 1 : -1; return this.render(); }
     if (go === 'question-save') return this.run(() => this.saveQuestion());
     if (go === 'map-back') { this.screen = 'map'; this.activityIndex = this.selected.length - 1; this.q = questions.length - 1; return this.render(); }
