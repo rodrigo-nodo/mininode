@@ -8,7 +8,8 @@ JS = (HERE / "wizard.js").read_text()
 def test_accessible_shell_and_privacy_copy():
     assert 'lang="es"' in HTML
     assert 'aria-live="polite"' in HTML
-    assert "No ingreses nombres, RUT ni datos personales" in JS
+    assert "No pedimos datos personales reales" in JS
+    assert "No ingreses nombres, RUT ni datos personales" not in JS
     assert 'type="${type}"' in JS
 
 
@@ -56,9 +57,23 @@ def test_removal_confirmation_and_purposes_filter_exist():
     assert "data-purpose-filter" in JS
 
 
-def test_recovered_default_false_booleans_require_confirmation():
+def test_boolean_recovery_preserves_false_and_pending():
     assert "unansweredBooleanActivities(this.activities)" in JS
-    assert "activity.answers.may_include_minors !== true" in JS
-    assert "activity.answers.has_third_parties !== true" in JS
+    assert "activity.answers.may_include_minors == null" in JS
+    assert "activity.answers.has_third_parties == null" in JS
     assert "this.minorsUnanswered = unanswered.minors" in JS
     assert "this.thirdPartiesUnanswered = unanswered.thirdParties" in JS
+
+
+def test_contextual_people_keeps_catalog_as_source_of_truth():
+    assert "PEOPLE_BY_ACTIVITY" in JS
+    assert "PEOPLE_BY_INDUSTRY" in JS
+    assert "this.catalog.people_categories" in JS
+    assert "Opciones habituales" in JS
+    assert "Ver otras opciones" in JS
+
+
+def test_save_does_not_render_before_reading_dom():
+    run_body = JS.split("async run(action) {", 1)[1].split("progress(active)", 1)[0]
+    assert "this.saving = true; this.render()" not in run_body
+    assert "finally { this.saving = false; this.render(); }" in run_body
