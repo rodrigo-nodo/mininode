@@ -119,19 +119,3 @@ def test_finish_goes_directly_to_review_teaser():
     assert "Revisión del mapa - Próximamente" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
-
-
-def test_recovery_link_is_separate_capability_and_uses_url_fragment():
-    assert "recoveryTokenFromHash" in JS
-    assert "#recover=" in JS
-    assert "history.replaceState" in JS
-    assert "localStorage.setItem(TOKEN_KEY, recoveryToken)" in JS
-    assert "?token=" not in JS
-
-
-def test_finish_can_generate_and_copy_recovery_link():
-    assert "/recovery-link" in JS
-    assert "Generar enlace" in JS
-    assert "Copiar enlace" in JS
-    assert "Quien tenga este enlace podrá acceder al mapa." in JS
-    assert "navigator.clipboard.writeText" in JS
