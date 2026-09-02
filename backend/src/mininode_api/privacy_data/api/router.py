@@ -10,6 +10,7 @@ from mininode_api.privacy_data.models import (
     CreatedDataMapResponse,
     DataMapResponse,
     DataMapUpdate,
+    RecoveryLinkResponse,
 )
 from mininode_api.privacy_data.services import data_maps
 
@@ -50,6 +51,11 @@ def retrieve_map(token: str):
 def patch_map(token: str, payload: DataMapUpdate):
     # The service resolves the capability token before applying this allow-listed update.
     return data_maps.update_data_map(_get_map(token), payload.model_dump(exclude_unset=True))
+
+
+@router.post("/maps/{token}/recovery-link", response_model=RecoveryLinkResponse, dependencies=[Depends(require_database)])
+def create_recovery_link(token: str):
+    return data_maps.create_recovery_token(_get_map(token))
 
 
 @router.get("/maps/{token}/activities", response_model=list[ActivityResponse], dependencies=[Depends(require_database)])
