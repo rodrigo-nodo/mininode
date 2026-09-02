@@ -32,7 +32,7 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework es `0.5`; el scoring permanece en `0.1`.
+La versión vigente del framework es `0.6`; el scoring permanece en `0.1`.
 
 ## Foco técnico actual
 
@@ -62,7 +62,11 @@ compuesta únicamente por ruido técnico u operativo conocido; el texto semánti
 reconocido se clasifica como `unknown`. El reconocimiento conservador cubre acciones y
 resultados explícitamente relacionados —como solicitudes con respuesta, acceso a
 contenido, recepción de comunicaciones y feedback—, mientras que el contacto con un
-equipo sin un resultado específico permanece como finalidad genérica.
+equipo sin un resultado específico permanece como finalidad genérica. También trata
+como genéricas las invitaciones acotadas de contacto, envío, confirmación y suscripción,
+y reconoce conservadoramente como concretos el acceso explícito a una cuenta, la
+combinación de soporte con el envío de una pregunta y una prueba gratuita acompañada
+de una acción inequívoca para iniciarla.
 
 El Plan de corrección Privacy Web es un producto único de pago único por CLP
 $49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden

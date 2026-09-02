@@ -102,7 +102,7 @@ def test_documental_framework_matches_productive_catalog():
         / "frontend"
         / "privacy"
         / "data"
-        / "privacy-framework-v0.5.json"
+        / "privacy-framework-v0.6.json"
     )
     framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
         "framework"
@@ -119,7 +119,7 @@ def test_documental_framework_matches_productive_catalog():
             assert documented.get(shared_field) == productive.get(shared_field)
 
 
-def test_documental_framework_keeps_history_and_publishes_v05():
+def test_documental_framework_keeps_history_and_publishes_v06():
     framework_directory = (
         BACKEND_SRC.parents[1] / "frontend" / "privacy" / "data"
     )
@@ -127,7 +127,8 @@ def test_documental_framework_keeps_history_and_publishes_v05():
     v02_path = framework_directory / "privacy-framework-v0.2.json"
     v03_path = framework_directory / "privacy-framework-v0.3.json"
     v04_path = framework_directory / "privacy-framework-v0.4.json"
-    current_path = framework_directory / "privacy-framework-v0.5.json"
+    v05_path = framework_directory / "privacy-framework-v0.5.json"
+    current_path = framework_directory / "privacy-framework-v0.6.json"
 
     assert historical_path.is_file()
     assert v04_path.is_file()
@@ -135,13 +136,15 @@ def test_documental_framework_keeps_history_and_publishes_v05():
     v02 = json.loads(v02_path.read_text(encoding="utf-8"))["framework"]
     v03 = json.loads(v03_path.read_text(encoding="utf-8"))["framework"]
     v04 = json.loads(v04_path.read_text(encoding="utf-8"))["framework"]
+    v05 = json.loads(v05_path.read_text(encoding="utf-8"))["framework"]
     current = json.loads(current_path.read_text(encoding="utf-8"))["framework"]
 
     assert historical["version"] == "0.1"
     assert v02["version"] == "0.2"
     assert v03["version"] == "0.3"
     assert v04["version"] == "0.4"
-    assert current["version"] == "0.5"
+    assert v05["version"] == "0.5"
+    assert current["version"] == "0.6"
     assert "PRV-102" not in {control["code"] for control in historical["controls"]}
     assert "PRV-102" in {control["code"] for control in v02["controls"]}
     assert "PRV-103" not in {control["code"] for control in historical["controls"]}

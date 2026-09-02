@@ -1173,7 +1173,8 @@ _FORM_PURPOSE_GENERIC_EXACT = {
     "contacto", "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
     "siguiente", "next", "mensaje", "message", "newsletter", "subscribe",
     "conversemos", "empezar", "comenzar", "start", "get started", "contact",
-    "i m interested", "i m interested in",
+    "i m interested", "i m interested in", "confirm", "confirmar", "suscribirme",
+    "subscribirme", "suscribirse", "contactanos", "contactenos", "contactar", "hablemos",
 }
 _FORM_PURPOSE_GENERIC_PHRASES = {
     "contact us", "get in touch", "contact form", "formulario de contacto",
@@ -1181,8 +1182,14 @@ _FORM_PURPOSE_GENERIC_PHRASES = {
     "speak with our team", "talk to our sales team", "speak with our sales team",
     "talk to our support team", "speak with our support team",
     "contacta a nuestro equipo", "contacta con nuestro equipo",
-    "habla con nuestro equipo", "habla con ventas",
+    "habla con nuestro equipo", "habla con ventas", "talk to us", "connect with us",
+    "send message", "send a message", "tell us a bit more", "enviar formulario",
+    "enviar el formulario",
 }
+_FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    # Bounded form-oriented invitation; the target may be any organization name.
+    r"^talk to (?:us|[a-z0-9][a-z0-9&.'-]*(?: [a-z0-9][a-z0-9&.'-]*){0,3})$",
+))
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
     r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
@@ -1219,7 +1226,23 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
     r"(?!(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\b)\w+",
     r"\breceive\b.{0,20}\bupdates?\b",
+    r"^(?:iniciar|inicia) sesion$",
+    r"^acceder a (?:mi|tu) cuenta$",
+    r"^(?:sign in|log in|login|access my account)$",
 ))
+_FORM_PURPOSE_SUPPORT_SIGNAL = re.compile(
+    r"\b(?:technical support|support|help|advis(?:or|er)|soporte|ayuda|asesoria)\b"
+)
+_FORM_PURPOSE_QUESTION_ACTION = re.compile(
+    r"\b(?:ask|send|submit)\b.{0,45}\b(?:question|inquiry|request)\b|"
+    r"\b(?:envia|enviar|solicita|solicitar)\b.{0,45}\b(?:pregunta|consulta|solicitud)\b"
+)
+_FORM_PURPOSE_FREE_TRIAL = re.compile(
+    r"\bfree(?: [a-z0-9]+){0,3} trial\b|\bprueba(?: [a-z0-9]+){0,2} (?:gratis|gratuita)\b"
+)
+_FORM_PURPOSE_TRIAL_ACTION = re.compile(
+    r"\b(?:start|try|sign up|get started|comienza|comenzar|inicia|iniciar)\b"
+)
 
 
 def _without_form_purpose_noise(value: str) -> str:
@@ -1242,6 +1265,16 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     combined = " ".join(values)
     if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
         return "concrete"
+    if (
+        _FORM_PURPOSE_SUPPORT_SIGNAL.search(combined)
+        and _FORM_PURPOSE_QUESTION_ACTION.search(combined)
+    ):
+        return "concrete"
+    if (
+        _FORM_PURPOSE_FREE_TRIAL.search(combined)
+        and _FORM_PURPOSE_TRIAL_ACTION.search(combined)
+    ):
+        return "concrete"
     # A generic topic plus a matching action is meaningful only within this form.
     if "newsletter" in values and any(
         re.search(r"\b(?:subscribe|suscribirme|suscribete|suscribirse)\b", value)
@@ -1257,6 +1290,10 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     if any(value in _FORM_PURPOSE_GENERIC_EXACT for value in useful) or any(
         _contains_phrase(value, _FORM_PURPOSE_GENERIC_PHRASES)
         for value in useful
+    ) or any(
+        pattern.fullmatch(value)
+        for value in useful
+        for pattern in _FORM_PURPOSE_GENERIC_PATTERNS
     ):
         return "generic"
     return "none" if not useful else "unknown"
