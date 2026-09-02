@@ -102,7 +102,7 @@ def test_documental_framework_matches_productive_catalog():
         / "frontend"
         / "privacy"
         / "data"
-        / "privacy-framework-v0.4.json"
+        / "privacy-framework-v0.5.json"
     )
     framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
         "framework"
@@ -119,14 +119,14 @@ def test_documental_framework_matches_productive_catalog():
             assert documented.get(shared_field) == productive.get(shared_field)
 
 
-def test_documental_framework_keeps_history_and_publishes_v04():
+def test_documental_framework_keeps_history_and_publishes_v05():
     framework_directory = (
         BACKEND_SRC.parents[1] / "frontend" / "privacy" / "data"
     )
     historical_path = framework_directory / "privacy-framework-v0.1.json"
     v02_path = framework_directory / "privacy-framework-v0.2.json"
     v03_path = framework_directory / "privacy-framework-v0.3.json"
-    current_path = framework_directory / "privacy-framework-v0.4.json"
+    current_path = framework_directory / "privacy-framework-v0.5.json"
 
     assert historical_path.is_file()
     historical = json.loads(historical_path.read_text(encoding="utf-8"))["framework"]
@@ -137,7 +137,7 @@ def test_documental_framework_keeps_history_and_publishes_v04():
     assert historical["version"] == "0.1"
     assert v02["version"] == "0.2"
     assert v03["version"] == "0.3"
-    assert current["version"] == "0.4"
+    assert current["version"] == "0.5"
     assert "PRV-102" not in {control["code"] for control in historical["controls"]}
     assert "PRV-102" in {control["code"] for control in v02["controls"]}
     assert "PRV-103" not in {control["code"] for control in historical["controls"]}
