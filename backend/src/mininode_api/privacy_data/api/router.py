@@ -10,8 +10,10 @@ from mininode_api.privacy_data.models import (
     CreatedDataMapResponse,
     DataMapResponse,
     DataMapUpdate,
+    MapObservationResponse,
     RecoveryLinkResponse,
 )
+from mininode_api.privacy_data.review import review_data_map
 from mininode_api.privacy_data.services import data_maps
 
 router = APIRouter(prefix="/privacy/data", tags=["Privacy Data"])
@@ -56,6 +58,16 @@ def patch_map(token: str, payload: DataMapUpdate):
 @router.post("/maps/{token}/recovery-link", response_model=RecoveryLinkResponse, dependencies=[Depends(require_database)])
 def create_recovery_link(token: str):
     return data_maps.create_recovery_token(_get_map(token))
+
+
+@router.get(
+    "/maps/{token}/review",
+    response_model=list[MapObservationResponse],
+    dependencies=[Depends(require_database)],
+)
+def get_map_review(token: str):
+    data_map = _get_map(token)
+    return review_data_map(data_map, data_maps.list_activities(data_map))
 
 
 @router.get("/maps/{token}/activities", response_model=list[ActivityResponse], dependencies=[Depends(require_database)])

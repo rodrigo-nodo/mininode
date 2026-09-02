@@ -28,6 +28,16 @@ class RecoveryLinkResponse(BaseModel):
     expires_at: datetime
 
 
+class MapObservationResponse(BaseModel):
+    code: Literal["D01", "D02", "D03", "D04", "D05", "D06"]
+    type: Literal["review", "notice"]
+    title: str
+    description: str
+    activity_id: UUID
+    activity_type: str
+    third_party_type: str | None = None
+
+
 class DataMapUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

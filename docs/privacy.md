@@ -18,6 +18,10 @@ Cada mapa puede persistir actividades categóricas ordenadas en
 `privacy_data.activities`; su creación, consulta, edición y eliminación siempre se
 autorizan a través del token del mapa padre. Las respuestas se validan contra el
 catálogo versionado, sin almacenar datos identificatorios de personas concretas.
+La revisión inicial de Privacy Data se calcula al solicitarla, sin persistir el
+resultado. Sus reglas determinísticas D01-D06 presentan únicamente señales objetivas
+como aspectos que conviene revisar o tener presentes; no producen scoring ni una
+conclusión de cumplimiento.
 
 Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 

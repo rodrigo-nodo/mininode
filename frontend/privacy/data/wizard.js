@@ -64,6 +64,24 @@ export function totals(activities) {
   return result;
 }
 
+const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+})[character]);
+
+export function reviewMarkup(observations, activityLabel, thirdPartyLabel) {
+  if (observations == null) return '<section class="pd-review" aria-live="polite"><p>Revisando tu mapa…</p></section>';
+  if (!observations.length) return '<section class="pd-review"><p><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong></p><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
+  const cards = type => observations.filter(item => item.type === type).map(item => {
+    const context = [activityLabel(item.activity_type), item.third_party_type ? thirdPartyLabel(item.third_party_type) : null].filter(Boolean).map(escapeHtml).join(' · ');
+    return `<article class="pd-review-card"><h3>${escapeHtml(item.title)}</h3><p class="pd-review-card__context">${context}</p><p>${escapeHtml(item.description)}</p></article>`;
+  }).join('');
+  const section = (type, title) => {
+    const content = cards(type);
+    return content ? `<section class="pd-review-group"><h2>${title}</h2><div class="pd-review-cards">${content}</div></section>` : '';
+  };
+  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} ${observations.length === 1 ? 'aspecto' : 'aspectos'} que conviene revisar.</p>${section('review', 'Conviene revisar')}${section('notice', 'Ten presente')}</section>`;
+}
+
 class FriendlyError extends Error {
   constructor(status, message) {
     super(message || (status === 503 ? 'Privacy Data no está disponible temporalmente.'
@@ -104,7 +122,7 @@ const questions = [
 ];
 
 class Wizard {
-  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: ''}); }
+  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), review: null, recoveryUrl: '', copyStatus: ''}); }
   loading(title, detail) { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><section class="pd-loading" role="status"><strong>${title}</strong><p>${detail}</p></section>`); }
   async init() {
     const recoveryToken = typeof window !== 'undefined' ? recoveryTokenFromHash(window.location.hash) : null;
@@ -251,7 +269,8 @@ class Wizard {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
-    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p><section class="pd-coming"><strong>Revisión del mapa - Próximamente</strong><p>Estamos construyendo esta etapa de Privacy Data. Tu mapa quedó guardado temporalmente para que puedas volver y revisarlo.</p></section><section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+    const review = reviewMarkup(this.review, code => this.label('activity_types', code), code => this.label('third_party_types', code));
+    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   label(section, code) { return this.catalog[section]?.find(item => item.code === code)?.label || code; }
   bind() {
@@ -318,11 +337,17 @@ class Wizard {
       const value = go === 'skip-size' ? null : this.checked('business_size')[0];
       this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})});
       this.screen = 'finish';
-      try {
-        const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
+      const [reviewResult, recoveryResult] = await Promise.allSettled([
+        request(`/maps/${this.token}/review`),
+        request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'}),
+      ]);
+      if (reviewResult.status === 'fulfilled') this.review = reviewResult.value;
+      else this.error = reviewResult.reason.message;
+      if (recoveryResult.status === 'fulfilled') {
+        const created = recoveryResult.value;
         this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
         this.copyStatus = '';
-      } catch {
+      } else {
         this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.';
       }
     });
