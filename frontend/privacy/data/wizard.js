@@ -85,7 +85,8 @@ export function reviewMarkup(observations, catalog, state = {}) {
     }).join('');
     return `<section class="pd-review-group"><h2>${heading}</h2><div class="pd-review-list">${cards}</div></section>`;
   };
-  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} aspectos en esta primera revisión.</p>${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</section>`;
+  const subject = observations.length === 1 ? 'aspecto' : 'aspectos';
+  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} ${subject} en esta primera revisión.</p>${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</section>`;
 }
 
 class FriendlyError extends Error {
