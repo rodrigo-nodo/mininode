@@ -1,0 +1,329 @@
+name: Temporary PRV-103 QA3
+
+on:
+  push:
+    branches:
+      - qa/privacy-prv103-qa3
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run sanitized PRV-103 QA3 holdout
+        env:
+          PYTHONPATH: backend/src
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import time
+          from pathlib import Path
+          from urllib.parse import urlsplit, urlunsplit
+
+          from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
+          from mininode_api.domain_packs.privacy.evidence_adapter import (
+              _form_purpose_signal,
+              _personal_form,
+          )
+          from mininode_api.services.privacy_diagnostic import (
+              MAX_PAGES_ATTEMPTED,
+              _needed_categories,
+              _next_candidate,
+          )
+          from mininode_api.web_inspector import (
+              InspectionFetchResult,
+              WebFetcher,
+              build_evidence,
+              classify_page_candidates,
+              discover_include_links,
+              extract_page,
+          )
+          from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
+
+          CASES = [
+              ("R01", "SaaS", "en", "https://linear.app/contact"),
+              ("R02", "SaaS", "en", "https://vercel.com/contact/sales"),
+              ("R03", "SaaS", "en", "https://www.netlify.com/contact/"),
+              ("R04", "SaaS", "en", "https://snyk.io/contact-us/"),
+              ("R05", "SaaS", "en", "https://newrelic.com/contact-us"),
+              ("R06", "SaaS", "en", "https://www.pagerduty.com/contact-us/"),
+              ("R07", "SaaS", "en", "https://www.splunk.com/en_us/about-splunk/contact-us.html"),
+              ("R08", "SaaS", "en", "https://www.hashicorp.com/contact"),
+              ("R09", "SaaS", "en", "https://grafana.com/contact/"),
+              ("R10", "SaaS", "en", "https://circleci.com/contact/"),
+              ("R11", "SaaS", "en", "https://www.docker.com/company/contact/"),
+              ("R12", "SaaS", "en", "https://www.postman.com/contact-sales/"),
+              ("R13", "SaaS", "en", "https://www.browserstack.com/contact"),
+              ("R14", "SaaS", "en", "https://saucelabs.com/contact-us"),
+              ("R15", "SaaS", "en", "https://www.fivetran.com/contact"),
+              ("R16", "SaaS", "en", "https://airbyte.com/contact-sales"),
+              ("R17", "SaaS", "en", "https://www.getdbt.com/contact"),
+              ("R18", "SaaS", "en", "https://www.alation.com/contact-us/"),
+              ("R19", "SaaS", "en", "https://www.collibra.com/us/en/contact-us"),
+              ("R20", "SaaS", "en", "https://www.informatica.com/about-us/contact-us.html"),
+              ("R21", "Fintech", "es", "https://www.bci.cl/personas/contacto"),
+              ("R22", "Fintech", "es", "https://www.scotiabankchile.cl/contacto"),
+              ("R23", "Servicios", "es", "https://www.entel.cl/contacto/"),
+              ("R24", "Servicios", "es", "https://www.cajalosandes.cl/contacto"),
+              ("R25", "Retail", "es", "https://www.jumbo.cl/contacto"),
+              ("R26", "Retail", "es", "https://www.lider.cl/contacto"),
+              ("R27", "Salud", "es", "https://www.cruzverde.cl/contacto"),
+              ("R28", "Salud", "es", "https://salcobrand.cl/contacto"),
+              ("R29", "Educación", "es", "https://www.udp.cl/contacto/"),
+              ("R30", "Educación", "es", "https://www.usach.cl/contacto"),
+          ]
+
+          def clean_url(value):
+              if not value:
+                  return None
+              try:
+                  parts = urlsplit(value)
+              except ValueError:
+                  return None
+              if parts.scheme.lower() not in {"http", "https"} or not parts.hostname:
+                  return None
+              host = parts.hostname.lower().rstrip(".")
+              try:
+                  port = parts.port
+              except ValueError:
+                  port = None
+              if port and not ((parts.scheme.lower()=="http" and port==80) or (parts.scheme.lower()=="https" and port==443)):
+                  host = f"{host}:{port}"
+              return urlunsplit((parts.scheme.lower(), host, parts.path or "/", "", ""))
+
+          def text(value, limit):
+              if value is None:
+                  return None
+              value = " ".join(str(value).split())
+              return value[:limit] or None
+
+          def control_result(diagnostic, code):
+              return next(
+                  (item for item in diagnostic["controls"] if item["control_code"] == code),
+                  None,
+              )
+
+          output = {
+              "baseline": {
+                  "main_sha": "c72312186dc6fa458af1c2692a1976576801abe7",
+                  "framework_version": "0.5",
+                  "scoring_version": "0.1",
+                  "actions_version": "2",
+                  "evidence_contract_version": "0.2",
+                  "controls": 21,
+              },
+              "cases": [],
+              "forms": [],
+          }
+
+          for case_id, sector, language, requested in CASES:
+              case = {
+                  "case_id": case_id,
+                  "sector": sector,
+                  "language": language,
+                  "requested_url": clean_url(requested),
+                  "pages_requested": 0,
+                  "pages_analyzed": 0,
+                  "errors": [],
+                  "prv101": None,
+                  "prv103": None,
+              }
+              deadline = time.monotonic() + INSPECTION_BUDGET_SECONDS
+              attempted_urls = {requested}
+              categories_attempted = []
+
+              try:
+                  with WebFetcher(inspection_budget=INSPECTION_BUDGET_SECONDS) as fetcher:
+                      home_result = fetcher.fetch(requested, [requested], deadline=deadline)
+                      case["pages_requested"] = 1
+                      if (
+                          home_result.pages_fetched != 1
+                          or not home_result.pages
+                          or home_result.pages[0].error
+                          or home_result.pages[0].html is None
+                          or home_result.pages[0].final_url is None
+                      ):
+                          page = home_result.pages[0] if home_result.pages else None
+                          case["errors"].append({
+                              "phase": getattr(page, "failure_phase", None) or "home_fetch",
+                              "code": getattr(getattr(page, "error", None), "code", None) or "inspection_failed",
+                              "status_code": getattr(page, "status_code", None),
+                          })
+                          output["cases"].append(case)
+                          continue
+
+                      home_page = home_result.pages[0]
+                      home_evidence = extract_page(home_page.html, home_page.final_url)
+                      try:
+                          include_links = discover_include_links(
+                              home_page.html,
+                              home_page.final_url,
+                              fetcher=fetcher,
+                              deadline=deadline,
+                          )
+                      except Exception as exc:
+                          include_links = []
+                          case["errors"].append({
+                              "phase": "include_discovery",
+                              "code": type(exc).__name__,
+                          })
+
+                      candidates = classify_page_candidates(
+                          home_page.final_url,
+                          [*home_evidence.links, *include_links],
+                      )
+                      attempted_urls.add(home_page.final_url)
+                      combined = InspectionFetchResult(
+                          target_url=requested,
+                          pages_requested=1,
+                          pages_fetched=1,
+                          pages=list(home_result.pages),
+                          errors=list(home_result.errors),
+                      )
+
+                      def evaluate():
+                          contract = build_evidence(combined, additional_links=include_links)
+                          return contract, run_privacy_diagnostic(contract)
+
+                      contract, diagnostic = evaluate()
+                      while True:
+                          needed = _needed_categories(diagnostic)
+                          if not needed:
+                              break
+                          if combined.pages_requested >= MAX_PAGES_ATTEMPTED:
+                              combined.limited = True
+                              break
+                          if time.monotonic() >= deadline:
+                              combined.limited = True
+                              break
+                          candidate = _next_candidate(candidates, attempted_urls, needed)
+                          if candidate is None:
+                              break
+                          attempted_urls.add(candidate.url)
+                          categories_attempted.append(candidate.category)
+                          result = fetcher.fetch(
+                              home_page.final_url, [candidate.url], deadline=deadline
+                          )
+                          combined.pages_requested += 1
+                          combined.pages.extend(result.pages)
+                          combined.errors.extend(result.errors)
+                          combined.pages_fetched += result.pages_fetched
+                          combined.limited |= result.limited
+                          combined.limited |= combined.pages_requested >= MAX_PAGES_ATTEMPTED
+                          contract, diagnostic = evaluate()
+
+                      contract, diagnostic = evaluate()
+                      case["pages_requested"] = combined.pages_requested
+                      case["pages_analyzed"] = combined.pages_fetched
+                      case["categories_attempted"] = categories_attempted
+                      case["site_url"] = clean_url(home_page.final_url)
+                      case["framework_version"] = diagnostic.get("framework_version")
+                      case["scoring_version"] = diagnostic.get("scoring_version")
+                      case["prv101"] = control_result(diagnostic, "PRV-101")
+                      case["prv103"] = control_result(diagnostic, "PRV-103")
+
+                      for error in combined.errors:
+                          if isinstance(error, dict):
+                              case["errors"].append({
+                                  "phase": error.get("phase"),
+                                  "code": error.get("code"),
+                              })
+
+                      for index, form in enumerate(contract.forms):
+                          is_personal, confidence = _personal_form(form)
+                          if not is_personal:
+                              continue
+                          purpose = (
+                              _form_purpose_signal(form)
+                              if confidence == "high"
+                              else "unknown"
+                          )
+                          fields = []
+                          for field in form.fields[:10]:
+                              fields.append({
+                                  "type": text(field.type, 32),
+                                  "name": text(field.name, 48),
+                                  "label": text(field.label, 80),
+                              })
+                          output["forms"].append({
+                              "case_id": case_id,
+                              "sector": sector,
+                              "language": language,
+                              "source_url": clean_url(form.source_url),
+                              "hostname": (urlsplit(form.source_url).hostname or "").lower() or None,
+                              "form_index": index,
+                              "personal_confidence": confidence,
+                              "heading": text(form.heading, 160),
+                              "legend": text(form.legend, 160),
+                              "introductory_text": text(form.introductory_text, 300),
+                              "submit_text": text(form.submit_text, 120),
+                              "product_purpose": purpose,
+                              "field_count": len(form.fields),
+                              "fields": fields,
+                              "checkbox_count": len(form.checkboxes),
+                          })
+
+              except Exception as exc:
+                  case["errors"].append({
+                      "phase": "unexpected",
+                      "code": type(exc).__name__,
+                  })
+
+              output["cases"].append(case)
+
+          Path("artifacts").mkdir(exist_ok=True)
+          path = Path("artifacts/privacy-prv103-qa3.json")
+          path.write_text(
+              json.dumps(output, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+
+          summary = {
+              "sites_attempted": len(output["cases"]),
+              "sites_with_pages": sum(c["pages_analyzed"] > 0 for c in output["cases"]),
+              "personal_forms": len(output["forms"]),
+              "high_forms": sum(f["personal_confidence"] == "high" for f in output["forms"]),
+              "medium_forms": sum(f["personal_confidence"] == "medium" for f in output["forms"]),
+              "purpose_counts": {
+                  value: sum(f["product_purpose"] == value for f in output["forms"])
+                  for value in ("concrete", "generic", "none", "unknown")
+              },
+              "site_results": [
+                  {
+                      "case_id": c["case_id"],
+                      "site": c.get("site_url") or c["requested_url"],
+                      "pages_analyzed": c["pages_analyzed"],
+                      "prv101": (c["prv101"] or {}).get("result"),
+                      "prv103": (c["prv103"] or {}).get("result"),
+                      "errors": c["errors"],
+                  }
+                  for c in output["cases"]
+              ],
+          }
+          print("PRV103_QA3_SUMMARY_START")
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          print("PRV103_QA3_SUMMARY_END")
+          PY
+
+      - name: Upload sanitized QA3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa3
+          path: artifacts/privacy-prv103-qa3.json
+          if-no-files-found: error
+          retention-days: 7
