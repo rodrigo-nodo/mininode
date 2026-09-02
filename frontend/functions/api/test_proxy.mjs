@@ -138,13 +138,3 @@ test('keeps protected and existing allowlist behavior unchanged', async () => {
   assert.equal(missingKey.json.error, 'Falta MININODE_API_KEY (Pages Secret)');
   assert.equal(missingKey.calls.length, 0);
 });
-
-test('allows only GET for Privacy Data map review', async () => {
-  const result = await request('/api/privacy/data/maps/capability_token-123/review', 'GET', { withoutApiKey: true });
-  assert.equal(result.response.status, 200);
-  assert.equal(result.calls[0].url, 'https://backend.example/privacy/data/maps/capability_token-123/review');
-  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
-  for (const method of ['POST', 'PATCH', 'DELETE']) {
-    await assertRejected('/api/privacy/data/maps/capability_token-123/review', method);
-  }
-});

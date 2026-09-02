@@ -43,7 +43,7 @@ def review_data_map(
                 code="D01",
                 type="review",
                 title="No está claro cuánto tiempo guardas esta información",
-                description="Indicastes que no estás seguro del período de conservación. Conviene definir cuánto tiempo necesitas mantener esta información.",
+                description="Indicaste que no estás seguro del período de conservación. Conviene definir cuánto tiempo necesitas mantener esta información.",
             ))
         if retention_status == "variable":
             observations.append(_observation(
@@ -59,7 +59,7 @@ def review_data_map(
                 code="D03",
                 type="review",
                 title="No está claro quién puede acceder a esta información",
-                description="Indicastes que no estás seguro de quién puede acceder. Conviene identificar qué personas o áreas realmente necesitan acceso.",
+                description="Indicaste que no estás seguro de quién puede acceder. Conviene identificar qué personas o áreas realmente necesitan acceso.",
             ))
         if answers.get("has_third_parties") is True:
             observations.append(_observation(

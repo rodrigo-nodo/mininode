@@ -5,8 +5,8 @@
 .pd-filter{display:grid;gap:6px;max-width:420px}.pd-third-list{display:grid;gap:12px}.pd-third{border:1px solid var(--border);border-radius:var(--radius-md);padding:12px}.pd-third>.pd-option{border:0;background:transparent}.pd-third__relationships{display:none;padding-inline:10px}.pd-third.is-selected .pd-third__relationships{display:block}.pd-third__relationships .pd-grid{margin-block:12px}.pd-confirm{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--primary-light)}
 @media(max-width:640px){.pd-grid,.pd-cards{grid-template-columns:1fr}.pd-summary{grid-template-columns:repeat(2,1fr)}.pd-actions{position:sticky;bottom:0;background:var(--bg);padding:12px 0}.pd-actions .btn{flex:1}.pd-fields{flex-direction:column}}
 
-.pd-loading{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;margin-top:24px;background:var(--bg-elev)}
-.pd-loading p{margin-bottom:0;color:var(--muted)}
+.pd-loading,.pd-coming{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;margin-top:24px;background:var(--bg-elev)}
+.pd-loading p,.pd-coming p{margin-bottom:0;color:var(--muted)}
 .pd-people{border:0;padding:0;margin:24px 0}
 .pd-people>legend{font-weight:700;padding:0}
 .pd-people>.pd-grid{margin-top:12px}
@@ -16,4 +16,3 @@
 .pd-recovery__label{display:grid;gap:8px;max-width:100%}
 .pd-recovery__input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg)}
 .pd-warning,.pd-copy-status{color:var(--muted);font-size:.92rem}
-.pd-review{margin-top:28px}.pd-review__summary{font-size:1.1rem;font-weight:700}.pd-review-group{margin-top:26px}.pd-review-group h2{font-size:1.35rem}.pd-review-cards{display:grid;gap:12px}.pd-review-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--bg-elev)}.pd-review-card h3{font-size:1.05rem;margin:0}.pd-review-card p{color:var(--muted);margin-bottom:0}.pd-review-card .pd-review-card__context{color:var(--fg);font-size:.9rem;font-weight:700;margin-top:8px}

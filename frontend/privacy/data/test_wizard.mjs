@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities} from './wizard.js';
+import {buildThirdParties, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, totals, unansweredBooleanActivities} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -34,12 +34,3 @@ console.log('Privacy Data wizard unit checks passed');
 assert.equal(recoveryTokenFromHash('#recover=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'), 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-');
 assert.equal(recoveryTokenFromHash('#recover=short'), null);
 assert.equal(recoveryTokenFromHash('#other=value'), null);
-
-const renderedReview = reviewMarkup([
-  {type: 'review', title: 'Revisar acceso', description: 'Descripción', activity_type: 'sales'},
-  {type: 'notice', title: 'Hay terceros', description: 'Descripción', activity_type: 'sales'},
-], () => 'Ventas', () => 'Proveedor');
-assert.match(renderedReview, /Conviene revisar/);
-assert.match(renderedReview, /Ten presente/);
-assert.match(renderedReview, /Ventas/);
-assert.match(reviewMarkup([], () => '', () => ''), /No encontramos aspectos pendientes/);
