@@ -10,3 +10,9 @@
 .pd-people{border:0;padding:0;margin:24px 0}
 .pd-people>legend{font-weight:700;padding:0}
 .pd-people>.pd-grid{margin-top:12px}
+
+.pd-recovery{border-top:1px solid var(--border);margin-top:28px;padding-top:24px}
+.pd-recovery h2{font-size:1.35rem}
+.pd-recovery__label{display:grid;gap:8px;max-width:100%}
+.pd-recovery__input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg)}
+.pd-warning,.pd-copy-status{color:var(--muted);font-size:.92rem}
