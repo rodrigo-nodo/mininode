@@ -49,6 +49,16 @@ CREATE TABLE IF NOT EXISTS privacy_data.activities (
 
 CREATE INDEX IF NOT EXISTS activities_data_map_position_idx
     ON privacy_data.activities (data_map_id, position);
+
+CREATE TABLE IF NOT EXISTS privacy_data.recovery_tokens (
+    id UUID PRIMARY KEY,
+    data_map_id UUID NOT NULL REFERENCES privacy_data.data_maps(id) ON DELETE CASCADE,
+    recovery_token_hash TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS recovery_tokens_data_map_idx
+    ON privacy_data.recovery_tokens (data_map_id);
 """
 
 
@@ -76,6 +86,12 @@ class StoredDataMap:
 class CreatedDataMap:
     token: str
     data_map: StoredDataMap
+
+
+@dataclass(frozen=True)
+class CreatedRecoveryToken:
+    recovery_token: str
+    expires_at: datetime
 
 
 @dataclass(frozen=True)
@@ -141,14 +157,22 @@ def create_data_map() -> CreatedDataMap:
 def get_data_map(token: str, *, now: datetime | None = None) -> StoredDataMap:
     if not token:
         raise DataMapNotFoundError("Data map not found")
+    token_hash = hash_token(token)
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, status, industry_profile, business_size, catalog_version,
-                   created_at, updated_at, expires_at
-            FROM privacy_data.data_maps WHERE public_token_hash = %s
+            SELECT dm.id, dm.status, dm.industry_profile, dm.business_size, dm.catalog_version,
+                   dm.created_at, dm.updated_at, dm.expires_at
+            FROM privacy_data.data_maps dm
+            WHERE dm.public_token_hash = %s
+               OR EXISTS (
+                    SELECT 1
+                    FROM privacy_data.recovery_tokens rt
+                    WHERE rt.data_map_id = dm.id
+                      AND rt.recovery_token_hash = %s
+               )
             """,
-            (hash_token(token),),
+            (token_hash, token_hash),
         )
         row = cursor.fetchone()
     if row is None:
@@ -157,6 +181,20 @@ def get_data_map(token: str, *, now: datetime | None = None) -> StoredDataMap:
     if data_map.expires_at <= (now or datetime.now(timezone.utc)):
         raise DataMapExpiredError("Data map has expired")
     return data_map
+
+
+def create_recovery_token(data_map: StoredDataMap) -> CreatedRecoveryToken:
+    recovery_token = secrets.token_urlsafe(TOKEN_BYTES)
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO privacy_data.recovery_tokens (
+                id, data_map_id, recovery_token_hash, created_at
+            ) VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+            """,
+            (uuid4(), data_map.id, hash_token(recovery_token)),
+        )
+    return CreatedRecoveryToken(recovery_token=recovery_token, expires_at=data_map.expires_at)
 
 
 def update_data_map(data_map: StoredDataMap, changes: dict) -> StoredDataMap:
