@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, totals, unansweredBooleanActivities} from './wizard.js';
+import {buildThirdParties, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -34,3 +34,26 @@ console.log('Privacy Data wizard unit checks passed');
 assert.equal(recoveryTokenFromHash('#recover=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'), 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-');
 assert.equal(recoveryTokenFromHash('#recover=short'), null);
 assert.equal(recoveryTokenFromHash('#other=value'), null);
+
+const catalog = {
+  activity_types: [{code: 'sales', label: 'Ventas'}],
+  third_party_types: [{code: 'technology_provider', label: 'Proveedor de tecnología'}],
+};
+const review = reviewMarkup([
+  {code: 'D01', type: 'review', title: 'Conservación', description: 'Define un período.', activity_type: 'sales'},
+  {code: 'D05', type: 'notice', title: 'Participan terceros', description: 'Tenlo presente.', activity_type: 'sales', third_party_type: 'technology_provider'},
+], catalog);
+assert.match(review, /Encontramos 2 aspectos en esta primera revisión\./);
+assert.match(review, /Conviene revisar/);
+assert.match(review, /Ten presente/);
+assert.match(review, /Ventas/);
+assert.match(review, /Ventas · Proveedor de tecnología/);
+assert.doesNotMatch(review, /D01|D05|technology_provider/);
+assert.doesNotMatch(reviewMarkup([{type: 'review', title: 'Uno', description: 'Detalle', activity_type: 'sales'}], catalog), /Ten presente/);
+assert.match(reviewMarkup([], catalog), /No encontramos aspectos pendientes dentro de esta primera revisión\./);
+assert.match(reviewMarkup([], catalog), /Esto no significa que exista cumplimiento completo\./);
+assert.match(reviewMarkup(null, catalog, {loading: true}), /Revisando tu mapa…/);
+const reviewError = reviewMarkup(null, catalog, {error: true});
+assert.match(reviewError, /No pudimos completar la revisión del mapa en este momento\./);
+assert.match(reviewError, /Reintentar revisión/);
+assert.match(reviewMarkup([{type: 'review', title: '<script>', description: 'A&B', activity_type: 'sales'}], catalog), /&lt;script&gt;.*A&amp;B/);

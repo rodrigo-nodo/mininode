@@ -35,7 +35,9 @@ export const onRequest = async (ctx) => {
   const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(method);
   const isPrivacyData = /^privacy\/data\/(catalog|maps(?:\/[A-Za-z0-9_-]+(?:\/(?:activities(?:\/[0-9a-f-]+)?|recovery-link))?)?)$/.test(destPathPublic);
   const isAllowedPrivacyData = isPrivacyData && ['GET', 'POST', 'PATCH', 'DELETE'].includes(method);
-  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData) {
+  const isPrivacyDataReview = /^privacy\/data\/maps\/[A-Za-z0-9_-]+\/review$/.test(destPathPublic);
+  const isAllowedPrivacyDataReview = isPrivacyDataReview && method === 'GET';
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -90,9 +92,9 @@ export const onRequest = async (ctx) => {
   const headers = new Headers();
   if (contentType) headers.set('Content-Type', contentType);
   headers.set('Accept', 'application/json');
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
 
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !env.MININODE_API_KEY) {
+  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !env.MININODE_API_KEY) {
     return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY (Pages Secret)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
