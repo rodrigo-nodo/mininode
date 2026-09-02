@@ -2,9 +2,9 @@ const API = '/api/privacy/data';
 const TOKEN_KEY = 'mininode_privacy_data_token';
 
 export const emptyAnswers = () => ({
-  people_categories: [], may_include_minors: false, personal_data_types: [],
+  people_categories: [], may_include_minors: null, personal_data_types: [],
   storage_locations: [], data_channels: [], purposes: [], access_roles: [],
-  has_third_parties: false, third_parties: [],
+  has_third_parties: null, third_parties: [],
   retention: {status: 'unknown', value: null, unit: null, note: null},
 });
 
@@ -25,9 +25,28 @@ export function buildThirdParties(types, relationships, existing = []) {
 
 export function unansweredBooleanActivities(activities) {
   return {
-    minors: new Set(activities.filter(activity => activity.answers.may_include_minors !== true).map(activity => activity.id)),
-    thirdParties: new Set(activities.filter(activity => activity.answers.has_third_parties !== true).map(activity => activity.id)),
+    minors: new Set(activities.filter(activity => activity.answers.may_include_minors == null).map(activity => activity.id)),
+    thirdParties: new Set(activities.filter(activity => activity.answers.has_third_parties == null).map(activity => activity.id)),
   };
+}
+
+const PEOPLE_BY_ACTIVITY = {
+  sales: ['customers', 'prospects', 'contacts', 'company_representatives', 'users'],
+  marketing: ['customers', 'prospects', 'contacts', 'users'],
+  customer_support: ['customers', 'contacts', 'users', 'company_representatives'],
+  service_delivery: ['customers', 'contacts', 'users', 'company_representatives', 'client_workers', 'related_third_persons'],
+  collaborators: ['employees', 'contractors', 'candidates', 'former_employees'],
+  suppliers: ['suppliers_individuals', 'company_representatives', 'contacts'],
+  finance_accounting: ['customers', 'suppliers_individuals', 'employees', 'contractors', 'company_representatives'],
+  digital_users: ['users', 'customers', 'prospects', 'contacts'],
+  other: ['customers', 'contacts', 'employees', 'suppliers_individuals', 'users'],
+};
+const PEOPLE_BY_INDUSTRY = {
+  health: ['patients', 'guardians_tutors'],
+  education_training: ['students_participants', 'guardians_tutors'],
+};
+export function peopleSuggestions(activityType, industryProfile) {
+  return [...new Set([...(PEOPLE_BY_ACTIVITY[activityType] || []), ...(PEOPLE_BY_INDUSTRY[industryProfile] || [])])];
 }
 
 export function totals(activities) {
@@ -94,7 +113,7 @@ class Wizard {
     this.render();
   }
   async run(action) {
-    this.error = ''; this.saving = true; this.render();
+    this.error = ''; this.saving = true;
     try { await action(); this.saved = true; }
     catch (error) { this.error = error.message; }
     finally { this.saving = false; this.render(); }
@@ -104,7 +123,18 @@ class Wizard {
   options(section, selected, type = 'checkbox', name = 'choice') {
     return `<fieldset class="pd-grid" data-section="${section}"><legend class="visually-hidden">Opciones</legend>${this.choices(section).map(option => `<label class="pd-option"><input type="${type}" name="${name}" value="${option.code}" ${selected.includes(option.code) ? 'checked' : ''}><span>${option.label}</span></label>`).join('')}</fieldset>`;
   }
-  booleanOptions(selected, name) { return `<fieldset class="pd-grid"><legend class="visually-hidden">Selecciona Sí o No</legend><label class="pd-option"><input type="radio" name="${name}" value="yes" ${selected ? 'checked' : ''}><span>Sí</span></label><label class="pd-option"><input type="radio" name="${name}" value="no" ${selected === false ? 'checked' : ''}><span>No</span></label></fieldset>`; }
+  peopleOptions(selected, activityType) {
+    const suggested = peopleSuggestions(activityType, this.map?.industry_profile);
+    const all = this.catalog.people_categories;
+    const valid = new Set(all.map(option => option.code));
+    const primaryCodes = suggested.filter(code => valid.has(code));
+    const primary = all.filter(option => primaryCodes.includes(option.code));
+    const other = all.filter(option => !primaryCodes.includes(option.code));
+    const render = options => options.map(option => `<label class="pd-option"><input type="checkbox" name="choice" value="${option.code}" ${selected.includes(option.code) ? 'checked' : ''}><span>${option.label}</span></label>`).join('');
+    const hasSelectedOther = other.some(option => selected.includes(option.code));
+    return `<fieldset data-section="people_categories"><legend>Opciones habituales</legend><div class="pd-grid">${render(primary)}</div><details ${hasSelectedOther ? 'open' : ''}><summary>Ver otras opciones</summary><div class="pd-grid">${render(other)}</div></details></fieldset>`;
+  }
+  booleanOptions(selected, name) { return `<fieldset class="pd-grid"><legend class="visually-hidden">Selecciona Sí o No</legend><label class="pd-option"><input type="radio" name="${name}" value="yes" ${selected === true ? 'checked' : ''}><span>Sí</span></label><label class="pd-option"><input type="radio" name="${name}" value="no" ${selected === false ? 'checked' : ''}><span>No</span></label></fieldset>`; }
   shell(body) { this.root.innerHTML = `${this.error ? `<p class="pd-error" role="alert">${this.error}</p>` : ''}${body}<p class="pd-save" role="status">${this.saving ? 'Guardando…' : this.saved ? 'Guardado' : ''}</p>`; }
   render() {
     if (!this.catalog) return this.shell(`<h1>Privacy Data</h1><p>${this.error || 'Cargando…'}</p>`);
@@ -133,11 +163,12 @@ class Wizard {
     const type = this.selected[this.activityIndex];
     const existing = this.activities.find(a => a.activity_type === type);
     const label = this.label('activity_types', type);
-    if (this.q < 0) return this.shell(`${this.progress('Mapa')}<p class="pd-subprogress">${label} · De quién son los datos</p><h2>¿De quién son principalmente los datos que manejas aquí?</h2><p class="pd-note">No ingreses nombres, RUT ni datos personales de personas. Solo necesitamos saber qué tipos de información maneja tu negocio.</p>${this.options('data_context', existing ? [existing.data_context] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="activities">Atrás</button><button class="btn btn--primary" data-go="context">Guardar y continuar</button></div>`);
+    if (this.q < 0) return this.shell(`${this.progress('Mapa')}<p class="pd-subprogress">${label} · De quién son los datos</p><h2>¿De quién son principalmente los datos que manejas aquí?</h2>${this.options('data_context', existing ? [existing.data_context] : [], 'radio')}<div class="pd-actions"><button class="pd-back" data-go="activities">Atrás</button><button class="btn btn--primary" data-go="context">Guardar y continuar</button></div>`);
     const [key, title, section] = questions[this.q];
     const answers = existing.answers;
     let content;
-    if (key === 'may_include_minors') content = `<p>Por ejemplo, hijos de clientes, estudiantes, pacientes menores o personas bajo tutela.</p>${this.booleanOptions(this.minorsUnanswered.has(existing.id) ? null : answers.may_include_minors, 'minors')}`;
+    if (key === 'people_categories') content = this.peopleOptions(answers.people_categories || [], type);
+    else if (key === 'may_include_minors') content = `<p>Por ejemplo, hijos de clientes, estudiantes, pacientes menores o personas bajo tutela.</p>${this.booleanOptions(this.minorsUnanswered.has(existing.id) ? null : answers.may_include_minors, 'minors')}`;
     else if (key === 'purposes') content = `<label class="pd-filter">Buscar una finalidad<input class="pd-search" type="search" data-purpose-filter placeholder="Buscar una finalidad"></label>${this.options('purposes', answers.purposes || [])}`;
     else if (section) content = this.options(section, answers[key] || []);
     else if (key === 'third_parties') content = this.thirdParties(this.thirdPartiesUnanswered.has(existing.id) ? {...answers, has_third_parties: null} : answers);
