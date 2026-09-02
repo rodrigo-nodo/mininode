@@ -25,7 +25,7 @@ def records(*, status="pending_payment", plan_id=None, expired=True):
     )
     order = orders.CorrectionPlanOrder(
         uuid4(), diagnostic_id, plan_id, "https://ignored.example/", "buyer@example.com",
-        orders.PRODUCT_CODE, 49900, "CLP", status, now, now,
+        orders.PRODUCT_CODE, orders.PRODUCT_AMOUNT, "CLP", status, now, now,
     )
     return order, diagnostic
 

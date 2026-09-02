@@ -68,7 +68,7 @@ const renderCheck = (check) => {
   if (!check) { document.querySelector('#improvement-check').hidden = true; return; }
   if (check.expires_at) elements.checkDeadline.textContent = `Disponible hasta: ${friendlyDate(check.expires_at)}`;
   if (check.status === 'used') { renderCheckResult(check); return; }
-  if (check.status === 'expired') { elements.checkDeadline.textContent = 'El plazo de 90 días para realizar la comprobación incluida ha finalizado.'; elements.checkRecommendation.hidden = true; elements.checkFree.hidden = false; return; }
+  if (check.status === 'expired') { elements.checkDeadline.textContent = 'El plazo para realizar la comprobación incluida ha finalizado.'; elements.checkRecommendation.hidden = true; elements.checkFree.hidden = false; return; }
   elements.checkStart.hidden = false;
 };
 const render = ({ site_url: siteUrl, plan, check }) => {

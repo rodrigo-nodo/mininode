@@ -205,7 +205,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
     def test_expired_check_keeps_cta_disabled(self):
         expired_branch = APP[APP.index("if (check.status === 'expired')"):APP.index("elements.checkStart.hidden = false")]
-        self.assertIn("El plazo de 90 días", expired_branch)
+        self.assertIn("El plazo para realizar la comprobación", expired_branch)
         self.assertNotIn("checkStart.hidden = false", expired_branch)
 
     def test_continuous_monitoring_is_only_revealed_for_used_check(self):

@@ -16,7 +16,9 @@ from mininode_api.domain_packs.privacy.versioning import diagnostic_comparabilit
 from mininode_api.services import privacy_correction_plan, privacy_diagnostic_snapshot
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
-CHECK_WINDOW = timedelta(days=90)
+CHECK_WINDOW = timedelta(days=30)
+LEGACY_CHECK_WINDOW = timedelta(days=90)
+LEGACY_PRODUCT_AMOUNT = 49900
 
 INITIALIZE_SQL = """
 CREATE SCHEMA IF NOT EXISTS privacy;
@@ -43,7 +45,7 @@ class ImprovementCheckUsedError(Exception):
 
 
 class ImprovementCheckExpiredError(Exception):
-    """The included check is outside its 90-day window."""
+    """The included check is outside its validity window."""
 
 
 class ImprovementCheckUnavailableError(Exception):
@@ -60,6 +62,7 @@ class CheckContext:
     diagnostic_id: UUID
     site_url: str
     paid_at: datetime
+    amount: int
     plan_snapshot: dict
 
 
@@ -81,15 +84,16 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def expires_at(paid_at: datetime) -> datetime:
+def expires_at(paid_at: datetime, amount: int = 9900) -> datetime:
     """Compute the check deadline exclusively from the trusted payment time."""
-    return paid_at + CHECK_WINDOW
+    window = LEGACY_CHECK_WINDOW if amount == LEGACY_PRODUCT_AMOUNT else CHECK_WINDOW
+    return paid_at + window
 
 
 def _context(cursor, plan_id: UUID) -> CheckContext:
     cursor.execute(
         """
-        SELECT o.id, o.diagnostic_id, d.site_url, o.paid_at, p.plan_snapshot,
+        SELECT o.id, o.diagnostic_id, d.site_url, o.paid_at, o.amount, p.plan_snapshot,
                o.status
         FROM privacy.correction_plan p
         JOIN privacy.correction_plan_order o ON o.correction_plan_id = p.id
@@ -101,10 +105,10 @@ def _context(cursor, plan_id: UUID) -> CheckContext:
     row = cursor.fetchone()
     if row is None:
         raise ImprovementCheckNotFoundError()
-    order_id, diagnostic_id, site_url, paid_at, plan_snapshot, order_status = row
+    order_id, diagnostic_id, site_url, paid_at, amount, plan_snapshot, order_status = row
     if order_status != "paid" or paid_at is None:
         raise ImprovementCheckUnavailableError()
-    return CheckContext(order_id, diagnostic_id, site_url, paid_at, plan_snapshot)
+    return CheckContext(order_id, diagnostic_id, site_url, paid_at, amount, plan_snapshot)
 
 
 def _existing(cursor, plan_id: UUID):
@@ -122,7 +126,7 @@ def get_check_metadata(plan_id: UUID, *, now: datetime | None = None) -> dict:
         existing = _existing(cursor, plan_id)
     if existing:
         return {"status": "used", "created_at": existing[0], "result": existing[1]}
-    deadline = expires_at(context.paid_at)
+    deadline = expires_at(context.paid_at, context.amount)
     if (now or datetime.now(timezone.utc)) > deadline:
         return {"status": "expired", "expires_at": deadline}
     return {"status": "available", "expires_at": deadline}
@@ -199,7 +203,7 @@ def perform_check(access_token: str, *, now: datetime | None = None) -> dict:
         context = _context(cursor, plan_id)
         if _existing(cursor, plan_id):
             raise ImprovementCheckUsedError()
-        if current_time > expires_at(context.paid_at):
+        if current_time > expires_at(context.paid_at, context.amount):
             raise ImprovementCheckExpiredError()
 
         try:

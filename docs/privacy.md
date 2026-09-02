@@ -68,8 +68,12 @@ y reconoce conservadoramente como concretos el acceso explícito a una cuenta, l
 combinación de soporte con el envío de una pregunta y una prueba gratuita acompañada
 de una acción inequívoca para iniciarla.
 
-El Plan de corrección Privacy Web es un producto único de pago único por CLP
-$49.900 (`PRIVACY_CORRECTION_PLAN`). La solicitud pública crea solamente una orden
+El diagnóstico Privacy Web es gratuito. Privacy Web activo cuesta CLP $9.900 por un
+mes, sin renovación automática por ahora, y mantiene internamente el código
+`PRIVACY_CORRECTION_PLAN`. Incluye el Plan de corrección, instrucciones concretas,
+orientación para comprobar cada mejora y una comprobación incluida. La implementación
+técnica por una persona es un servicio adicional que se evalúa por separado y no forma
+parte del precio. La solicitud pública crea solamente una orden
 `pending_payment` con el identificador del snapshot y un email normalizado. El precio, la
 moneda, el producto y el estado son definidos por el backend. Crear una orden no
 genera el Plan, su token o su entrega. Durante el Design Partner, la generación puede
@@ -81,13 +85,16 @@ cuando se integre posteriormente un proveedor de pagos. El enlace se entrega
 manualmente y no se almacena el token en texto plano en la orden. El snapshot permite
 solicitar el Plan durante las 24 horas posteriores
 al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
-deduplicación en este MVP. El Plan incluye una única comprobación de mejoras
-utilizable hasta 90 días después de `paid_at`, que durante el Design Partner es el
+deduplicación en este MVP. La oferta vigente incluye una única comprobación de mejoras
+utilizable hasta 30 días después de `paid_at`, que durante el Design Partner es el
 momento de activación manual. Esta capacidad vuelve a inspeccionar la URL persistida
 en el diagnóstico original, crea un nuevo snapshot y compara solamente las mejoras
 del Plan por código de control estable. Un advisory lock por Plan y una restricción
 única evitan la doble ejecución. El diagnóstico gratuito no queda
 limitado por la compra y puede volver a ejecutarse independientemente del Plan.
+Como compatibilidad legacy, las órdenes históricas de CLP $49.900 conservan su ventana
+de comprobación de 90 días mediante el monto persistido; no se reescriben. El constraint
+de monto admite CLP $49.900 y CLP $9.900, pero todas las órdenes nuevas usan CLP $9.900.
 La ventana de 24 horas se valida al crear la orden, no al activarla posteriormente.
 Las activaciones de una misma orden se serializan y la vinculación exige que siga
 `pending_payment`, evitando generar dos planes por reintentos. La creación del Plan y

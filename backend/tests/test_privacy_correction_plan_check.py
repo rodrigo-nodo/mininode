@@ -1,4 +1,5 @@
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,9 +24,42 @@ def versioned(snapshot):
     return {"framework_version": "0.1", "scoring_version": "0.1", **snapshot}
 
 
-def test_expiration_uses_only_paid_at():
+def test_current_and_legacy_expiration_use_paid_at_and_persisted_amount():
     paid_at = datetime(2026, 8, 25, tzinfo=timezone.utc)
-    assert service.expires_at(paid_at) == paid_at + timedelta(days=90)
+    assert service.expires_at(paid_at, 9900) == paid_at + timedelta(days=30)
+    assert service.expires_at(paid_at, 49900) == paid_at + timedelta(days=90)
+
+
+@pytest.mark.parametrize("offset,expected", [
+    (timedelta(days=30), "available"),
+    (timedelta(days=30, microseconds=1), "expired"),
+])
+def test_current_offer_metadata_boundary(monkeypatch, offset, expected):
+    paid_at = datetime(2026, 8, 25, tzinfo=timezone.utc)
+    context = service.CheckContext(
+        "order", "diagnostic", "https://stored.example", paid_at, 9900, PLAN
+    )
+
+    class Connection:
+        def cursor(self):
+            return self
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    @contextmanager
+    def connection():
+        yield Connection()
+
+    monkeypatch.setattr(service, "_connection", connection)
+    monkeypatch.setattr(service, "_context", lambda cursor, plan_id: context)
+    monkeypatch.setattr(service, "_existing", lambda cursor, plan_id: None)
+
+    metadata = service.get_check_metadata("plan", now=paid_at + offset)
+
+    assert metadata["status"] == expected
+    assert metadata["expires_at"] == paid_at + timedelta(days=30)
 
 
 def test_deterministic_comparison_uses_plan_codes_and_snapshot_scores():
@@ -80,12 +114,13 @@ def test_context_uses_joined_diagnostic_site_not_caller_input():
         statement = ""
         def execute(self, statement, params): self.statement = statement
         def fetchone(self):
-            return ("order", "diagnostic", "https://stored.example", datetime.now(timezone.utc), PLAN, "paid")
+            return ("order", "diagnostic", "https://stored.example", datetime.now(timezone.utc), 9900, PLAN, "paid")
     cursor = Cursor()
     context = service._context(cursor, "plan")
     assert context.site_url == "https://stored.example"
     assert "JOIN privacy.diagnostic" in cursor.statement
     assert "d.site_url" in cursor.statement
+    assert "o.amount" in cursor.statement
 
 
 def test_new_transparency_controls_use_generic_corrected_comparison():
