@@ -151,6 +151,7 @@ def test_documental_framework_keeps_history_and_publishes_v06():
     assert "PRV-103" not in {control["code"] for control in v02["controls"]}
     assert "PRV-103" in {control["code"] for control in v03["controls"]}
     assert "PRV-103" in {control["code"] for control in v04["controls"]}
+    assert "PRV-103" in {control["code"] for control in v05["controls"]}
     assert {"PRV-102", "PRV-103"} <= {control["code"] for control in current["controls"]}
 
 
