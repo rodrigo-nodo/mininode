@@ -51,6 +51,8 @@ def test_initialization_defines_data_map_table(monkeypatch):
     assert "public_token_hash TEXT UNIQUE NOT NULL" in sql
     assert "status IN ('draft', 'completed')" in sql
     assert "metadata JSONB" in sql
+    assert "CREATE TABLE IF NOT EXISTS privacy_data.recovery_tokens" in sql
+    assert "recovery_token_hash TEXT UNIQUE NOT NULL" in sql
 
 
 def test_create_stores_only_token_hash_and_seven_day_expiration(monkeypatch):
@@ -73,7 +75,8 @@ def test_lookup_hashes_token_and_handles_missing_or_expired(monkeypatch):
     executions = fake_connection(monkeypatch, [stored_row()])
     found = data_maps.get_data_map(token)
     assert found.status == "draft"
-    assert executions[0][1] == (data_maps.hash_token(token),)
+    token_hash = data_maps.hash_token(token)
+    assert executions[0][1] == (token_hash, token_hash)
 
     fake_connection(monkeypatch)
     with pytest.raises(data_maps.DataMapNotFoundError):
@@ -129,3 +132,28 @@ def test_map_api_reports_invalid_and_expired_tokens(client, monkeypatch):
     assert client.get("/privacy/data/maps/invalid").status_code == 404
     monkeypatch.setattr(data_maps, "get_data_map", lambda token: (_ for _ in ()).throw(data_maps.DataMapExpiredError("Data map has expired")))
     assert client.get("/privacy/data/maps/expired").status_code == 410
+
+
+def test_recovery_token_is_stored_hashed_and_inherits_map_expiration(monkeypatch):
+    data_map = data_maps.StoredDataMap(*stored_row())
+    executions = fake_connection(monkeypatch)
+    created = data_maps.create_recovery_token(data_map)
+    sql, params = executions[0]
+    assert "INSERT INTO privacy_data.recovery_tokens" in sql
+    assert params[1] == data_map.id
+    assert params[2] == data_maps.hash_token(created.recovery_token)
+    assert created.recovery_token not in params
+    assert created.expires_at == data_map.expires_at
+
+
+def test_recovery_link_api_returns_capability_without_hash(client, monkeypatch):
+    data_map = data_maps.StoredDataMap(*stored_row())
+    created = data_maps.CreatedRecoveryToken("recovery-secret", data_map.expires_at)
+    monkeypatch.setattr(data_maps, "get_data_map", lambda token: data_map)
+    monkeypatch.setattr(data_maps, "create_recovery_token", lambda current: created)
+
+    response = client.post("/privacy/data/maps/current-token/recovery-link")
+    assert response.status_code == 200
+    assert response.json()["recovery_token"] == "recovery-secret"
+    assert response.json()["expires_at"] == data_map.expires_at.isoformat()
+    assert "hash" not in response.text.lower()
