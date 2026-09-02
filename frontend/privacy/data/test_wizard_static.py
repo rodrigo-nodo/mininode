@@ -129,9 +129,10 @@ def test_recovery_link_is_separate_capability_and_uses_url_fragment():
     assert "?token=" not in JS
 
 
-def test_finish_can_generate_and_copy_recovery_link():
+def test_finish_generates_and_can_copy_recovery_link():
     assert "/recovery-link" in JS
-    assert "Generar enlace" in JS
+    assert "Preparando tu enlace…" in JS
+    assert "Reintentar" in JS
     assert "Copiar enlace" in JS
     assert "Quien tenga este enlace podrá acceder al mapa." in JS
     assert "navigator.clipboard.writeText" in JS
