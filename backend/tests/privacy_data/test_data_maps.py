@@ -155,5 +155,6 @@ def test_recovery_link_api_returns_capability_without_hash(client, monkeypatch):
     response = client.post("/privacy/data/maps/current-token/recovery-link")
     assert response.status_code == 200
     assert response.json()["recovery_token"] == "recovery-secret"
-    assert response.json()["expires_at"] == data_map.expires_at.isoformat()
+    expires_at = datetime.fromisoformat(response.json()["expires_at"].replace("Z", "+00:00"))
+    assert expires_at == data_map.expires_at
     assert "hash" not in response.text.lower()
