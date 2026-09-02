@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, emptyAnswers, exclusive, totals} from './wizard.js';
+import {buildThirdParties, emptyAnswers, exclusive, totals, unansweredBooleanActivities} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -12,6 +12,12 @@ assert.deepEqual(thirdParties,[
   {type:'technology',relationships:['access','processed']},
 ]);
 assert.deepEqual(buildThirdParties(['accountant'],{accountant:['access','unknown']},existing)[0].relationships,['unknown']);
+const recovered=unansweredBooleanActivities([
+  {id:'yes',answers:{may_include_minors:true,has_third_parties:true}},
+  {id:'no',answers:{may_include_minors:false,has_third_parties:false}},
+]);
+assert.deepEqual([...recovered.minors],['no']);
+assert.deepEqual([...recovered.thirdParties],['no']);
 const summary=totals([
   {answers:{people_categories:['customers'],personal_data_types:['contact'],storage_locations:['cloud'],data_channels:[],third_parties:[]}},
   {answers:{people_categories:['customers'],personal_data_types:['contact','identity'],storage_locations:['cloud'],data_channels:['email'],third_parties:[{type:'accountant'}]}}
