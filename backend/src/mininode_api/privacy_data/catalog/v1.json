@@ -79,167 +79,167 @@
   "people_categories": [
     {
       "code": "customers",
-      "label": "Customers"
+      "label": "Clientes"
     },
     {
       "code": "prospects",
-      "label": "Prospects"
+      "label": "Potenciales clientes"
     },
     {
       "code": "contacts",
-      "label": "Contacts"
+      "label": "Contactos"
     },
     {
       "code": "employees",
-      "label": "Employees"
+      "label": "Trabajadores"
     },
     {
       "code": "contractors",
-      "label": "Contractors"
+      "label": "Colaboradores a honorarios"
     },
     {
       "code": "candidates",
-      "label": "Candidates"
+      "label": "Candidatos"
     },
     {
       "code": "former_employees",
-      "label": "Former employees"
+      "label": "Ex trabajadores"
     },
     {
       "code": "suppliers_individuals",
-      "label": "Suppliers individuals"
+      "label": "Proveedores personas naturales"
     },
     {
       "code": "company_representatives",
-      "label": "Company representatives"
+      "label": "Representantes de empresas"
     },
     {
       "code": "users",
-      "label": "Users"
+      "label": "Usuarios"
     },
     {
       "code": "patients",
-      "label": "Patients"
+      "label": "Pacientes"
     },
     {
       "code": "students_participants",
-      "label": "Students participants"
+      "label": "Estudiantes o participantes"
     },
     {
       "code": "guardians_tutors",
-      "label": "Guardians tutors"
+      "label": "Apoderados o tutores"
     },
     {
       "code": "client_workers",
-      "label": "Client workers"
+      "label": "Trabajadores de clientes"
     },
     {
       "code": "client_suppliers",
-      "label": "Client suppliers"
+      "label": "Proveedores de clientes"
     },
     {
       "code": "related_third_persons",
-      "label": "Related third persons"
+      "label": "Otras personas relacionadas"
     },
     {
       "code": "other",
-      "label": "Other"
+      "label": "Otro"
     }
   ],
   "personal_data_types": [
     {
       "code": "identification",
-      "label": "Identification"
+      "label": "Identificación"
     },
     {
       "code": "contact",
-      "label": "Contact"
+      "label": "Contacto"
     },
     {
       "code": "financial",
-      "label": "Financial"
+      "label": "Financieros"
     },
     {
       "code": "employment",
-      "label": "Employment"
+      "label": "Laborales"
     },
     {
       "code": "tax",
-      "label": "Tax"
+      "label": "Tributarios"
     },
     {
       "code": "health",
-      "label": "Health"
+      "label": "Salud"
     },
     {
       "code": "academic",
-      "label": "Academic"
+      "label": "Académicos"
     },
     {
       "code": "family",
-      "label": "Family"
+      "label": "Familiares"
     },
     {
       "code": "image_media",
-      "label": "Image media"
+      "label": "Imágenes, fotografías o videos"
     },
     {
       "code": "legal_contractual",
-      "label": "Legal contractual"
+      "label": "Legales o contractuales"
     },
     {
       "code": "commercial_behavior",
-      "label": "Commercial behavior"
+      "label": "Comerciales o de comportamiento"
     },
     {
       "code": "digital",
-      "label": "Digital"
+      "label": "Digitales"
     },
     {
       "code": "documents",
-      "label": "Documents"
+      "label": "Documentos"
     },
     {
       "code": "other",
-      "label": "Other"
+      "label": "Otros datos"
     }
   ],
   "storage_locations": [
     {
       "code": "spreadsheets",
-      "label": "Spreadsheets"
+      "label": "Planillas o Excel"
     },
     {
       "code": "local_files",
-      "label": "Local files"
+      "label": "Archivos en computador"
     },
     {
       "code": "cloud_storage",
-      "label": "Cloud storage"
+      "label": "Almacenamiento en la nube"
     },
     {
       "code": "business_system",
-      "label": "Business system"
+      "label": "Sistema de gestión del negocio"
     },
     {
       "code": "accounting_system",
-      "label": "Accounting system"
+      "label": "Sistema contable"
     },
     {
       "code": "website_platform",
-      "label": "Website platform"
+      "label": "Sitio web o plataforma"
     },
     {
       "code": "messaging_apps",
-      "label": "Messaging apps"
+      "label": "Aplicaciones de mensajería"
     },
     {
       "code": "paper",
-      "label": "Paper"
+      "label": "Documentos en papel"
     },
     {
       "code": "other_storage",
-      "label": "Other storage"
+      "label": "Otro lugar"
     }
   ],
   "data_channels": [
@@ -271,145 +271,145 @@
   "purposes": [
     {
       "code": "quotation",
-      "label": "Quotation"
+      "label": "Cotizaciones"
     },
     {
       "code": "sales_contracting",
-      "label": "Sales contracting"
+      "label": "Ventas o contratación"
     },
     {
       "code": "commercial_follow_up",
-      "label": "Commercial follow up"
+      "label": "Seguimiento comercial"
     },
     {
       "code": "service_delivery",
-      "label": "Service delivery"
+      "label": "Prestación del servicio"
     },
     {
       "code": "customer_support",
-      "label": "Customer support"
+      "label": "Atención y soporte"
     },
     {
       "code": "billing",
-      "label": "Billing"
+      "label": "Facturación"
     },
     {
       "code": "collections",
-      "label": "Collections"
+      "label": "Cobranza"
     },
     {
       "code": "payments",
-      "label": "Payments"
+      "label": "Pagos"
     },
     {
       "code": "refunds",
-      "label": "Refunds"
+      "label": "Devoluciones"
     },
     {
       "code": "accounting",
-      "label": "Accounting"
+      "label": "Contabilidad"
     },
     {
       "code": "tax_compliance",
-      "label": "Tax compliance"
+      "label": "Obligaciones tributarias"
     },
     {
       "code": "marketing_communications",
-      "label": "Marketing communications"
+      "label": "Comunicaciones de marketing"
     },
     {
       "code": "promotions_campaigns",
-      "label": "Promotions campaigns"
+      "label": "Promociones o campañas"
     },
     {
       "code": "loyalty",
-      "label": "Loyalty"
+      "label": "Fidelización"
     },
     {
       "code": "recruitment",
-      "label": "Recruitment"
+      "label": "Selección de personas"
     },
     {
       "code": "employment_management",
-      "label": "Employment management"
+      "label": "Gestión de trabajadores"
     },
     {
       "code": "payroll",
-      "label": "Payroll"
+      "label": "Remuneraciones"
     },
     {
       "code": "attendance",
-      "label": "Attendance"
+      "label": "Asistencia"
     },
     {
       "code": "benefits",
-      "label": "Benefits"
+      "label": "Beneficios"
     },
     {
       "code": "training",
-      "label": "Training"
+      "label": "Capacitación"
     },
     {
       "code": "supplier_management",
-      "label": "Supplier management"
+      "label": "Gestión de proveedores"
     },
     {
       "code": "procurement",
-      "label": "Procurement"
+      "label": "Compras"
     },
     {
       "code": "order_fulfillment",
-      "label": "Order fulfillment"
+      "label": "Preparación de pedidos"
     },
     {
       "code": "shipping_delivery",
-      "label": "Shipping delivery"
+      "label": "Despacho o entrega"
     },
     {
       "code": "authentication",
-      "label": "Authentication"
+      "label": "Inicio de sesión o autenticación"
     },
     {
       "code": "account_management",
-      "label": "Account management"
+      "label": "Gestión de cuentas"
     },
     {
       "code": "security",
-      "label": "Security"
+      "label": "Seguridad"
     },
     {
       "code": "legal_contract_management",
-      "label": "Legal contract management"
+      "label": "Gestión legal o contractual"
     },
     {
       "code": "reporting",
-      "label": "Reporting"
+      "label": "Reportes"
     },
     {
       "code": "certification",
-      "label": "Certification"
+      "label": "Certificación"
     },
     {
       "code": "other",
-      "label": "Other"
+      "label": "Otra finalidad"
     }
   ],
   "access_roles": [
     {
       "code": "owner_only",
-      "label": "Owner only"
+      "label": "Solo yo"
     },
     {
       "code": "owner_management",
-      "label": "Owner management"
+      "label": "Dueño o administración"
     },
     {
       "code": "administration",
-      "label": "Administration"
+      "label": "Administración"
     },
     {
       "code": "sales",
-      "label": "Sales"
+      "label": "Ventas"
     },
     {
       "code": "marketing",
@@ -417,163 +417,163 @@
     },
     {
       "code": "finance_accounting",
-      "label": "Finance accounting"
+      "label": "Finanzas o contabilidad"
     },
     {
       "code": "hr",
-      "label": "Hr"
+      "label": "Recursos humanos"
     },
     {
       "code": "operations",
-      "label": "Operations"
+      "label": "Operaciones"
     },
     {
       "code": "customer_support",
-      "label": "Customer support"
+      "label": "Atención al cliente"
     },
     {
       "code": "service_professionals",
-      "label": "Service professionals"
+      "label": "Profesionales que prestan el servicio"
     },
     {
       "code": "supervisors_management",
-      "label": "Supervisors management"
+      "label": "Jefaturas o supervisores"
     },
     {
       "code": "technology_it",
-      "label": "Technology it"
+      "label": "Tecnología o soporte TI"
     },
     {
       "code": "other_staff",
-      "label": "Other staff"
+      "label": "Otras personas del negocio"
     },
     {
       "code": "unknown",
-      "label": "Unknown"
+      "label": "No estoy seguro"
     },
     {
       "code": "other",
-      "label": "Other"
+      "label": "Otro"
     }
   ],
   "third_party_types": [
     {
       "code": "technology_provider",
-      "label": "Technology provider"
+      "label": "Proveedor de tecnología"
     },
     {
       "code": "accounting_advisor",
-      "label": "Accounting advisor"
+      "label": "Contador o asesor contable"
     },
     {
       "code": "legal_advisor",
-      "label": "Legal advisor"
+      "label": "Abogado o asesor legal"
     },
     {
       "code": "hr_labor_provider",
-      "label": "Hr labor provider"
+      "label": "Proveedor de RRHH o remuneraciones"
     },
     {
       "code": "payment_provider",
-      "label": "Payment provider"
+      "label": "Proveedor de pagos"
     },
     {
       "code": "delivery_provider",
-      "label": "Delivery provider"
+      "label": "Empresa de despacho o entrega"
     },
     {
       "code": "marketing_provider",
-      "label": "Marketing provider"
+      "label": "Proveedor de marketing"
     },
     {
       "code": "service_provider",
-      "label": "Service provider"
+      "label": "Otro proveedor de servicios"
     },
     {
       "code": "client_organization",
-      "label": "Client organization"
+      "label": "Empresa cliente"
     },
     {
       "code": "public_authority",
-      "label": "Public authority"
+      "label": "Organismo público"
     },
     {
       "code": "certification_entity",
-      "label": "Certification entity"
+      "label": "Entidad certificadora"
     },
     {
       "code": "external_professional",
-      "label": "External professional"
+      "label": "Profesional externo"
     },
     {
       "code": "other_third_party",
-      "label": "Other third party"
+      "label": "Otro tercero"
     },
     {
       "code": "unknown",
-      "label": "Unknown"
+      "label": "No estoy seguro"
     }
   ],
   "third_party_relationships": [
     {
       "code": "shared",
-      "label": "Shared"
+      "label": "Le enviamos información"
     },
     {
       "code": "access",
-      "label": "Access"
+      "label": "Puede acceder a la información"
     },
     {
       "code": "processed",
-      "label": "Processed"
+      "label": "Procesa información por nosotros"
     },
     {
       "code": "unknown",
-      "label": "Unknown"
+      "label": "No estoy seguro"
     }
   ],
   "retention": {
     "statuses": [
       {
         "code": "defined",
-        "label": "Defined"
+        "label": "Sí, tenemos un plazo definido"
       },
       {
         "code": "variable",
-        "label": "Variable"
+        "label": "Depende del caso"
       },
       {
         "code": "unknown",
-        "label": "Unknown"
+        "label": "No estoy seguro"
       }
     ],
     "units": [
       {
         "code": "days",
-        "label": "Days"
+        "label": "Días"
       },
       {
         "code": "months",
-        "label": "Months"
+        "label": "Meses"
       },
       {
         "code": "years",
-        "label": "Years"
+        "label": "Años"
       }
     ]
   },
   "data_context": [
     {
       "code": "own_operations",
-      "label": "Own operations"
+      "label": "Datos del propio negocio"
     },
     {
       "code": "client_service",
-      "label": "Client service"
+      "label": "Datos gestionados al prestar servicios a clientes"
     },
     {
       "code": "both",
-      "label": "Both"
+      "label": "Ambos"
     }
   ],
   "business_size": [
