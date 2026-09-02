@@ -23,6 +23,11 @@ class CreatedDataMapResponse(BaseModel):
     map: DataMapResponse
 
 
+class RecoveryLinkResponse(BaseModel):
+    recovery_token: str
+    expires_at: datetime
+
+
 class DataMapUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
