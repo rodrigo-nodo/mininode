@@ -33,7 +33,7 @@ export const onRequest = async (ctx) => {
     && method === 'POST';
   const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
   const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(method);
-  const isPrivacyData = /^privacy\/data\/(catalog|maps(?:\/[A-Za-z0-9_-]+(?:\/activities(?:\/[0-9a-f-]+)?)?)?)$/.test(destPathPublic);
+  const isPrivacyData = /^privacy\/data\/(catalog|maps(?:\/[A-Za-z0-9_-]+(?:\/(?:activities(?:\/[0-9a-f-]+)?|recovery-link))?)?)$/.test(destPathPublic);
   const isAllowedPrivacyData = isPrivacyData && ['GET', 'POST', 'PATCH', 'DELETE'].includes(method);
   if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
