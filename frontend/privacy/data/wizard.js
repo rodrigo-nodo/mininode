@@ -250,8 +250,8 @@ class Wizard {
   finish() {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
-      : `<div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Generar enlace</button></div>`;
-    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p><section class="pd-coming"><strong>Revisión del mapa - Próximamente</strong><p>Estamos construyendo esta etapa de Privacy Data. Tu mapa quedó guardado temporalmente para que puedas volver y revisarlo.</p></section><section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes generar un enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+      : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
+    this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p><section class="pd-coming"><strong>Revisión del mapa - Próximamente</strong><p>Estamos construyendo esta etapa de Privacy Data. Tu mapa quedó guardado temporalmente para que puedas volver y revisarlo.</p></section><section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   label(section, code) { return this.catalog[section]?.find(item => item.code === code)?.label || code; }
   bind() {
@@ -292,11 +292,18 @@ class Wizard {
     if (go === 'question-back') { this.q = this.q > 0 ? this.q - 1 : -1; return this.render(); }
     if (go === 'question-save') return this.run(() => this.saveQuestion());
     if (go === 'map-back') { this.screen = 'map'; this.activityIndex = this.selected.length - 1; this.q = questions.length - 1; return this.render(); }
-    if (go === 'generate-recovery-link') return this.run(async () => {
-      const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
-      this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
-      this.copyStatus = '';
-    });
+    if (go === 'generate-recovery-link') {
+      this.copyStatus = 'Preparando tu enlace…';
+      this.render();
+      try {
+        const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
+        this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
+        this.copyStatus = '';
+      } catch {
+        this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.';
+      }
+      return this.render();
+    }
     if (go === 'copy-recovery-link') {
       try {
         await navigator.clipboard.writeText(this.recoveryUrl);
@@ -307,7 +314,18 @@ class Wizard {
       return this.render();
     }
     if (go === 'edit-map') { this.screen = 'activities'; this.pendingRemoval = []; return this.render(); }
-    if (['skip-size', 'save-size'].includes(go)) return this.run(async () => { const value = go === 'skip-size' ? null : this.checked('business_size')[0]; this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})}); this.screen = 'finish'; });
+    if (['skip-size', 'save-size'].includes(go)) return this.run(async () => {
+      const value = go === 'skip-size' ? null : this.checked('business_size')[0];
+      this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})});
+      this.screen = 'finish';
+      try {
+        const created = await request(`/maps/${this.token}/recovery-link`, {method: 'POST', body: '{}'});
+        this.recoveryUrl = `${window.location.origin}${window.location.pathname}#recover=${encodeURIComponent(created.recovery_token)}`;
+        this.copyStatus = '';
+      } catch {
+        this.copyStatus = 'No pudimos generar el enlace. Intenta nuevamente.';
+      }
+    });
   }
 }
 
