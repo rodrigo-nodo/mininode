@@ -14,6 +14,10 @@ de Billing. Su backend mantiene el catálogo maestro versionado en el repositori
 persiste sus mapas en el schema PostgreSQL `privacy_data`. Los mapas nuevos son
 `draft`, expiran inicialmente a los siete días y se recuperan mediante un token de
 capacidad cuyo hash, nunca el token en claro, es lo único que se persiste.
+Cada mapa puede persistir actividades categóricas ordenadas en
+`privacy_data.activities`; su creación, consulta, edición y eliminación siempre se
+autorizan a través del token del mapa padre. Las respuestas se validan contra el
+catálogo versionado, sin almacenar datos identificatorios de personas concretas.
 
 Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 
