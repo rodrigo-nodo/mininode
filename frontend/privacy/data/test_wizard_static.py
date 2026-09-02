@@ -54,3 +54,11 @@ def test_removal_confirmation_and_purposes_filter_exist():
     assert "cancel-removal" in JS
     assert "Buscar una finalidad" in JS
     assert "data-purpose-filter" in JS
+
+
+def test_recovered_default_false_booleans_require_confirmation():
+    assert "unansweredBooleanActivities(this.activities)" in JS
+    assert "activity.answers.may_include_minors !== true" in JS
+    assert "activity.answers.has_third_parties !== true" in JS
+    assert "this.minorsUnanswered = unanswered.minors" in JS
+    assert "this.thirdPartiesUnanswered = unanswered.thirdParties" in JS

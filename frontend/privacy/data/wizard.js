@@ -23,6 +23,13 @@ export function buildThirdParties(types, relationships, existing = []) {
   });
 }
 
+export function unansweredBooleanActivities(activities) {
+  return {
+    minors: new Set(activities.filter(activity => activity.answers.may_include_minors !== true).map(activity => activity.id)),
+    thirdParties: new Set(activities.filter(activity => activity.answers.has_third_parties !== true).map(activity => activity.id)),
+  };
+}
+
 export function totals(activities) {
   const fields = ['people_categories', 'personal_data_types', 'storage_locations', 'data_channels'];
   const result = {activities: activities.length};
@@ -73,6 +80,9 @@ class Wizard {
           this.token = token;
           this.map = await request(`/maps/${token}`);
           this.activities = await request(`/maps/${token}/activities`);
+          const unanswered = unansweredBooleanActivities(this.activities);
+          this.minorsUnanswered = unanswered.minors;
+          this.thirdPartiesUnanswered = unanswered.thirdParties;
           this.selected = this.activities.map(a => a.activity_type);
           this.screen = 'resume';
         } catch (error) {
