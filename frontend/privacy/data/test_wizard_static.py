@@ -14,16 +14,16 @@ def test_accessible_shell_and_privacy_copy():
 
 def test_catalog_and_map_contracts_are_consumed():
     assert "request('/catalog')" in JS
-    assert "request('/maps',{method:'POST'" in JS
+    assert "request('/maps', {method: 'POST'" in JS
     assert "request(`/maps/${token}`)" in JS
     assert "request(`/maps/${token}/activities`)" in JS
-    assert "method:'PATCH'" in JS
-    assert "method:'POST'" in JS
+    assert "method: 'PATCH'" in JS
+    assert "method: 'POST'" in JS
 
 
 def test_token_is_local_only_and_not_rendered():
     assert "mininode_privacy_data_token" in JS
-    assert "localStorage.setItem(TOKEN_KEY,this.token)" in JS
+    assert "localStorage.setItem(TOKEN_KEY, this.token)" in JS
     assert "this.shell(`${this.token}" not in JS
 
 
@@ -38,3 +38,19 @@ def test_errors_are_friendly_and_expired_tokens_removed():
         assert str(status) in JS
     assert "localStorage.removeItem(TOKEN_KEY)" in JS
     assert "response.json()" in JS
+
+
+def test_minors_and_third_parties_are_explicit_steps():
+    assert "¿Podría haber información de menores de edad?" in JS
+    assert "Responde si podría haber información de menores de edad." in JS
+    assert "¿Alguna persona o empresa externa participa" in JS
+    assert "has-third-parties" in JS
+    assert "answers.third_parties = []" in JS
+
+
+def test_removal_confirmation_and_purposes_filter_exist():
+    assert "Quitaste una actividad que ya tenía información guardada." in JS
+    assert "method: 'DELETE'" in JS
+    assert "cancel-removal" in JS
+    assert "Buscar una finalidad" in JS
+    assert "data-purpose-filter" in JS
