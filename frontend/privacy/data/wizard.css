@@ -18,8 +18,7 @@
 .pd-warning,.pd-copy-status{color:var(--muted);font-size:.92rem}
 .pd-review{margin-top:28px}.pd-review>p{color:var(--muted)}
 .pd-review__summary{font-size:1.05rem}
-.pd-review-group{margin-top:28px}.pd-review-group h2{font-size:1.35rem}
-.pd-review-list{display:grid;gap:12px}
-.pd-review-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--bg-elev)}
-.pd-review-card h3{font-size:1.05rem;margin:0 0 8px}.pd-review-card p{margin:8px 0 0;color:var(--muted)}
-.pd-review-card .pd-review-card__context{color:var(--fg);font-size:.9rem;font-weight:600}
+.pd-review-activity{border-top:1px solid var(--border);margin-top:28px;padding-top:20px}.pd-review-activity h2{font-size:1.35rem;margin:0 0 12px}
+.pd-review-activity__context{color:var(--muted);margin:4px 0}
+.pd-review-group{margin-top:22px}.pd-review-group h3{font-size:1.05rem;margin:0 0 10px}
+.pd-review-item{margin:8px 0;color:var(--muted)}.pd-review-item strong{color:var(--fg)}
