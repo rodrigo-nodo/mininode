@@ -38,6 +38,48 @@ def codes(*activities):
     return [item.code for item in review_data_map(stored_map(), list(activities))]
 
 
+@pytest.mark.parametrize(("changes", "code", "topic", "action"), [
+    (
+        {"retention": {"status": "unknown"}},
+        "D01", "Conservación",
+        "Define cuánto tiempo necesitas conservar estos datos.",
+    ),
+    (
+        {"retention": {"status": "variable"}},
+        "D02", "Conservación",
+        "Define criterios para decidir cuánto tiempo conservarlos según cada caso.",
+    ),
+    (
+        {"access_roles": ["unknown"]},
+        "D03", "Accesos",
+        "Identifica quién necesita acceder a ellos.",
+    ),
+    (
+        {
+            "has_third_parties": True,
+            "third_parties": [{"type": "other", "relationships": ["unknown"]}],
+        },
+        "D04", "Terceros",
+        "Aclara qué información recibe o puede consultar este tercero.",
+    ),
+    (
+        {"has_third_parties": True},
+        "D05", "Terceros",
+        "Mantén identificados los terceros que participan.",
+    ),
+    (
+        {"may_include_minors": True},
+        "D06", "Menores",
+        "Revisa qué datos de menores manejas y para qué.",
+    ),
+])
+def test_observations_include_topic_and_action(changes, code, topic, action):
+    data_map = stored_map()
+    observations = review_data_map(data_map, [activity(data_map, **changes)])
+    observation = next(item for item in observations if item.code == code)
+    assert (observation.topic, observation.action) == (topic, action)
+
+
 @pytest.mark.parametrize(("status", "expected"), [
     ("unknown", ["D01"]), ("variable", ["D02"]), ("defined", []),
 ])
@@ -125,7 +167,12 @@ def test_review_endpoint_accepts_normal_and_recovery_tokens_without_exposing_has
     for token in ("normal-token", "recovery-token"):
         response = client.get(f"/privacy/data/maps/{token}/review")
         assert response.status_code == 200
-        assert response.json()[0]["code"] == "D06"
+        observation = response.json()[0]
+        assert observation["code"] == "D06"
+        assert observation["topic"] == "Menores"
+        assert observation["action"] == "Revisa qué datos de menores manejas y para qué."
+        assert "title" in observation
+        assert "description" in observation
         assert "hash" not in response.text.lower()
         assert "data_map_id" not in response.text
     assert seen == ["normal-token", "recovery-token"]

@@ -31,6 +31,8 @@ class RecoveryLinkResponse(BaseModel):
 class MapObservationResponse(BaseModel):
     code: Literal["D01", "D02", "D03", "D04", "D05", "D06"]
     type: Literal["review", "notice"]
+    topic: str
+    action: str
     title: str
     description: str
     activity_id: UUID
