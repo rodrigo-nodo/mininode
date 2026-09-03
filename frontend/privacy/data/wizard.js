@@ -68,25 +68,62 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
-export function reviewMarkup(observations, catalog, state = {}) {
+export function canonicalActivities(activities = []) {
+  const timestamp = value => {
+    const parsed = Date.parse(value || '');
+    return Number.isNaN(parsed) ? -Infinity : parsed;
+  };
+  const newest = (left, right) => {
+    const updated = timestamp(right.updated_at) - timestamp(left.updated_at);
+    if (updated) return updated;
+    const created = timestamp(right.created_at) - timestamp(left.created_at);
+    if (created) return created;
+    return String(right.id ?? '').localeCompare(String(left.id ?? ''));
+  };
+  const byType = new Map();
+  for (const activity of activities) {
+    const current = byType.get(activity.activity_type);
+    if (!current || newest(activity, current) < 0) byType.set(activity.activity_type, activity);
+  }
+  return [...byType.values()].sort((left, right) =>
+    (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER)
+    || String(left.activity_type ?? '').localeCompare(String(right.activity_type ?? ''))
+    || String(left.id ?? '').localeCompare(String(right.id ?? '')));
+}
+
+export function reviewMarkup(observations, catalog, activities = [], state = {}) {
   if (state.loading) return '<section class="pd-review" aria-live="polite"><p role="status">Revisando tu mapa…</p></section>';
   if (state.error) return '<section class="pd-review" aria-live="polite"><p>No pudimos completar la revisión del mapa en este momento.</p><button class="btn btn--primary" data-go="retry-review">Reintentar revisión</button></section>';
-  if (!observations?.length) return '<section class="pd-review"><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
 
   const label = (section, code) => catalog?.[section]?.find(item => item.code === code)?.label || '';
-  const group = (type, heading) => {
-    const items = observations.filter(observation => observation.type === type);
-    if (!items.length) return '';
-    const cards = items.map(observation => {
-      const activity = label('activity_types', observation.activity_type);
-      const thirdParty = observation.third_party_type ? label('third_party_types', observation.third_party_type) : '';
-      const context = [activity, thirdParty].filter(Boolean).map(escapeHtml).join(' · ');
-      return `<article class="pd-review-card"><h3>${escapeHtml(observation.title)}</h3>${context ? `<p class="pd-review-card__context">${context}</p>` : ''}<p>${escapeHtml(observation.description)}</p></article>`;
-    }).join('');
-    return `<section class="pd-review-group"><h2>${heading}</h2><div class="pd-review-list">${cards}</div></section>`;
+  const canonical = canonicalActivities(activities);
+  const canonicalIds = new Set(canonical.map(activity => String(activity.id)));
+  const visible = (observations || []).filter(observation => canonicalIds.has(String(observation.activity_id)));
+  if (!visible.length) return '<section class="pd-review"><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
+
+  const activityBlock = activity => {
+    let items = visible.filter(observation => String(observation.activity_id) === String(activity.id));
+    const unclearThirdParty = items.some(observation => observation.code === 'D04');
+    if (unclearThirdParty) items = items.filter(observation => observation.code !== 'D05');
+    const group = (type, heading) => {
+      const grouped = items.filter(observation => observation.type === type);
+      if (!grouped.length) return '';
+      const rows = grouped.map(observation => {
+        const thirdParty = observation.code === 'D04' && observation.third_party_type
+          ? label('third_party_types', observation.third_party_type) : '';
+        const topic = [observation.topic || observation.title, thirdParty].filter(Boolean).join(' · ');
+        return `<p class="pd-review-item"><strong>${escapeHtml(topic)}</strong> - ${escapeHtml(observation.action || observation.description)}</p>`;
+      }).join('');
+      return `<section class="pd-review-group"><h3>${heading}</h3>${rows}</section>`;
+    };
+    const people = (activity.answers?.people_categories || []).map(code => label('people_categories', code)).filter(Boolean);
+    const data = (activity.answers?.personal_data_types || []).map(code => label('personal_data_types', code)).filter(Boolean);
+    const context = `${people.length ? `<p class="pd-review-activity__context"><strong>Personas:</strong> ${people.map(escapeHtml).join(' · ')}</p>` : ''}${data.length ? `<p class="pd-review-activity__context"><strong>Datos:</strong> ${data.map(escapeHtml).join(' · ')}</p>` : ''}`;
+    return `<article class="pd-review-activity"><h2>${escapeHtml(label('activity_types', activity.activity_type))}</h2>${context}${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</article>`;
   };
-  const subject = observations.length === 1 ? 'aspecto' : 'aspectos';
-  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} ${subject} en esta primera revisión.</p>${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</section>`;
+  const shown = canonical.filter(activity => visible.some(observation => String(observation.activity_id) === String(activity.id)));
+  const summary = shown.length === 1 ? 'Encontramos temas para ordenar en esta actividad.' : `Encontramos temas para ordenar en ${shown.length} actividades.`;
+  return `<section class="pd-review"><p class="pd-review__summary">${summary}</p>${shown.map(activityBlock).join('')}</section>`;
 }
 
 class FriendlyError extends Error {
@@ -276,7 +313,7 @@ class Wizard {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
-    const review = reviewMarkup(this.reviewObservations, this.catalog, {loading: this.reviewLoading, error: this.reviewError});
+    const review = reviewMarkup(this.reviewObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
     this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   async loadReview() {

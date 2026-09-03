@@ -118,7 +118,7 @@ def test_finish_shows_automatic_review_and_keeps_editing_available():
     assert "Ahora revisemos tu mapa" in JS
     assert "Revisión del mapa - Próximamente" not in JS
     assert "request(`/maps/${this.token}/review`)" in JS
-    assert "reviewMarkup(this.reviewObservations" in JS
+    assert "reviewMarkup(this.reviewObservations, this.catalog, this.activities" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
 
