@@ -39,7 +39,11 @@ const catalog = {
   activity_types: [{code: 'sales', label: 'Ventas'}, {code: 'collaborators', label: 'Gestión de trabajadores'}],
   people_categories: [{code: 'customers', label: 'Clientes'}, {code: 'employees', label: 'Trabajadores'}],
   personal_data_types: [{code: 'contact', label: 'Contacto'}, {code: 'billing', label: 'Facturación'}],
-  third_party_types: [{code: 'technology_provider', label: 'Proveedor de tecnología'}],
+  third_party_types: [
+    {code: 'technology_provider', label: 'Proveedor de tecnología'},
+    {code: 'hr_labor_provider', label: 'Proveedor de RRHH o remuneraciones'},
+    {code: 'unknown', label: 'No estoy seguro'},
+  ],
 };
 const activities = [
   {id: 'sales-id', activity_type: 'sales', answers: {people_categories: ['customers'], personal_data_types: ['contact', 'billing']}},
@@ -49,7 +53,7 @@ const observations = [
   {code: 'D01', type: 'review', topic: 'Conservación', action: 'Define cuánto tiempo.', title: 'Título legacy', description: 'Descripción legacy', activity_id: 'sales-id', activity_type: 'sales'},
   {code: 'D03', type: 'review', topic: 'Accesos', action: 'Identifica quién accede.', activity_id: 'sales-id', activity_type: 'sales'},
   {code: 'D05', type: 'notice', topic: 'Terceros general', action: 'Mantén identificados los terceros.', activity_id: 'sales-id', activity_type: 'sales'},
-  {code: 'D04', type: 'notice', topic: 'Terceros', action: 'Aclara qué información recibe o puede consultar este tercero.', activity_id: 'sales-id', activity_type: 'sales', third_party_type: 'technology_provider'},
+  {code: 'D04', type: 'review', topic: 'Terceros', action: 'Aclara qué información recibe o puede consultar este tercero.', activity_id: 'sales-id', activity_type: 'sales', third_party_type: 'technology_provider'},
   {code: 'D03', type: 'review', topic: 'Accesos', action: 'Limita los accesos.', activity_id: 'staff-id', activity_type: 'collaborators'},
 ];
 assert.equal(groupReviewByActivity(observations, activities).length, 2);
@@ -67,10 +71,20 @@ assert.equal((review.match(/<h3>Ventas<\/h3>/g) || []).length, 1);
 assert.match(review, /Clientes · Contacto · Facturación/);
 assert.match(review, /Trabajadores/);
 assert.match(review, /Conviene revisar/);
-assert.match(review, /Ten presente/);
+assert.doesNotMatch(review, /Ten presente/);
 assert.match(review, /<strong>Conservación<\/strong>.*Define cuánto tiempo\./);
+assert.match(review, /Conviene revisar.*<strong>Terceros<\/strong>/);
 assert.match(review, /Aclara qué información recibe o puede consultar el proveedor de tecnología\./);
 assert.doesNotMatch(review, /Título legacy|Descripción legacy|D0[1-6]|Terceros general|sales|technology_provider/);
+
+const thirdPartyAction = 'Aclara qué información recibe o puede consultar este tercero.';
+const d04For = thirdPartyType => reviewMarkup([
+  {code: 'D04', type: 'review', topic: 'Terceros', action: thirdPartyAction, activity_id: 'sales-id', activity_type: 'sales', third_party_type: thirdPartyType},
+], catalog, activities);
+assert.match(d04For('hr_labor_provider'), /el proveedor de RRHH o remuneraciones\./);
+assert.match(d04For('unknown'), /consultar este tercero\./);
+assert.doesNotMatch(d04For('unknown'), /el no estoy seguro/);
+assert.match(d04For('missing_type'), /consultar este tercero\./);
 
 const singleReview = reviewMarkup([observations[0]], catalog, activities);
 assert.match(singleReview, /Encontramos temas para ordenar en esta actividad\./);

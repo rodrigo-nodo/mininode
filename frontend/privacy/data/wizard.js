@@ -98,9 +98,10 @@ export function deduplicateThirdPartyObservations(observations) {
 function visibleReviewAction(observation, catalog) {
   if (observation.code !== 'D04' || !observation.third_party_type) return observation.action;
   const label = catalogLabel(catalog, 'third_party_types', observation.third_party_type);
-  if (!label) return observation.action;
+  if (!label || observation.third_party_type === 'unknown' || label === 'No estoy seguro') return observation.action;
   const article = /^(Empresa|Entidad)\b/.test(label) ? 'la' : 'el';
-  return observation.action.replace(/este tercero/i, `${article} ${label.toLocaleLowerCase('es')}`);
+  const labelInSentence = label.charAt(0).toLocaleLowerCase('es') + label.slice(1);
+  return observation.action.replace(/este tercero/i, `${article} ${labelInSentence}`);
 }
 
 function reviewItemsMarkup(observations, catalog, type, heading) {
