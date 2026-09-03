@@ -68,25 +68,63 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character =>
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
-export function reviewMarkup(observations, catalog, state = {}) {
+export function catalogLabel(catalog, section, code) {
+  return catalog?.[section]?.find(item => item.code === code)?.label || '';
+}
+
+export function activityContext(activity, catalog) {
+  const answers = activity?.answers || {};
+  return ['people_categories', 'personal_data_types']
+    .flatMap(section => (answers[section] || []).map(code => catalogLabel(catalog, section, code)))
+    .filter(Boolean);
+}
+
+export function groupReviewByActivity(observations, activities = []) {
+  const activitiesById = new Map(activities.map(activity => [activity.id, activity]));
+  const groups = new Map();
+  for (const observation of observations || []) {
+    const key = observation.activity_id;
+    if (!groups.has(key)) groups.set(key, {activity: activitiesById.get(key), observations: []});
+    groups.get(key).observations.push(observation);
+  }
+  return [...groups.values()];
+}
+
+export function deduplicateThirdPartyObservations(observations) {
+  const hasSpecificThirdParty = observations.some(observation => observation.code === 'D04');
+  return hasSpecificThirdParty ? observations.filter(observation => observation.code !== 'D05') : [...observations];
+}
+
+function visibleReviewAction(observation, catalog) {
+  if (observation.code !== 'D04' || !observation.third_party_type) return observation.action;
+  const label = catalogLabel(catalog, 'third_party_types', observation.third_party_type);
+  if (!label) return observation.action;
+  const article = /^(Empresa|Entidad)\b/.test(label) ? 'la' : 'el';
+  return observation.action.replace(/este tercero/i, `${article} ${label.toLocaleLowerCase('es')}`);
+}
+
+function reviewItemsMarkup(observations, catalog, type, heading) {
+  const items = observations.filter(observation => observation.type === type);
+  if (!items.length) return '';
+  return `<section class="pd-review-section"><h4>${heading}</h4><ul>${items.map(observation => `<li><strong>${escapeHtml(observation.topic)}</strong> - ${escapeHtml(visibleReviewAction(observation, catalog))}</li>`).join('')}</ul></section>`;
+}
+
+export function reviewMarkup(observations, catalog, activities = [], state = {}) {
   if (state.loading) return '<section class="pd-review" aria-live="polite"><p role="status">Revisando tu mapa…</p></section>';
   if (state.error) return '<section class="pd-review" aria-live="polite"><p>No pudimos completar la revisión del mapa en este momento.</p><button class="btn btn--primary" data-go="retry-review">Reintentar revisión</button></section>';
   if (!observations?.length) return '<section class="pd-review"><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
 
-  const label = (section, code) => catalog?.[section]?.find(item => item.code === code)?.label || '';
-  const group = (type, heading) => {
-    const items = observations.filter(observation => observation.type === type);
-    if (!items.length) return '';
-    const cards = items.map(observation => {
-      const activity = label('activity_types', observation.activity_type);
-      const thirdParty = observation.third_party_type ? label('third_party_types', observation.third_party_type) : '';
-      const context = [activity, thirdParty].filter(Boolean).map(escapeHtml).join(' · ');
-      return `<article class="pd-review-card"><h3>${escapeHtml(observation.title)}</h3>${context ? `<p class="pd-review-card__context">${context}</p>` : ''}<p>${escapeHtml(observation.description)}</p></article>`;
-    }).join('');
-    return `<section class="pd-review-group"><h2>${heading}</h2><div class="pd-review-list">${cards}</div></section>`;
-  };
-  const subject = observations.length === 1 ? 'aspecto' : 'aspectos';
-  return `<section class="pd-review"><p class="pd-review__summary">Encontramos ${observations.length} ${subject} en esta primera revisión.</p>${group('review', 'Conviene revisar')}${group('notice', 'Ten presente')}</section>`;
+  const groups = groupReviewByActivity(observations, activities);
+  const summary = groups.length === 1
+    ? 'Encontramos temas para ordenar en esta actividad.'
+    : `Encontramos temas para ordenar en ${groups.length} actividades.`;
+  const activityBlocks = groups.map(({activity, observations: activityObservations}) => {
+    const visibleObservations = deduplicateThirdPartyObservations(activityObservations);
+    const activityType = activity?.activity_type || activityObservations[0]?.activity_type;
+    const context = activityContext(activity, catalog).map(escapeHtml).join(' · ');
+    return `<article class="pd-review-activity"><h3>${escapeHtml(catalogLabel(catalog, 'activity_types', activityType))}</h3>${context ? `<p class="pd-review-activity__context">${context}</p>` : ''}${reviewItemsMarkup(visibleObservations, catalog, 'review', 'Conviene revisar')}${reviewItemsMarkup(visibleObservations, catalog, 'notice', 'Ten presente')}</article>`;
+  }).join('');
+  return `<section class="pd-review"><p class="pd-review__summary">${summary}</p><div class="pd-review-activities">${activityBlocks}</div></section>`;
 }
 
 class FriendlyError extends Error {
@@ -276,7 +314,7 @@ class Wizard {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
-    const review = reviewMarkup(this.reviewObservations, this.catalog, {loading: this.reviewLoading, error: this.reviewError});
+    const review = reviewMarkup(this.reviewObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
     this.shell(`${this.progress('Final')}<h1>Ahora revisemos tu mapa</h1><p class="pd-lead">Ya organizamos dónde aparecen los datos personales y cómo se manejan en tu negocio.</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   async loadReview() {

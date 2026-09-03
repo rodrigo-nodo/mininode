@@ -3,6 +3,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 HTML = (HERE / "index.html").read_text()
 JS = (HERE / "wizard.js").read_text()
+CSS = (HERE / "wizard.css").read_text()
 
 
 def test_accessible_shell_and_privacy_copy():
@@ -118,9 +119,22 @@ def test_finish_shows_automatic_review_and_keeps_editing_available():
     assert "Ahora revisemos tu mapa" in JS
     assert "Revisión del mapa - Próximamente" not in JS
     assert "request(`/maps/${this.token}/review`)" in JS
-    assert "reviewMarkup(this.reviewObservations" in JS
+    assert "reviewMarkup(this.reviewObservations, this.catalog, this.activities" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
+
+
+def test_review_is_grouped_by_activity_with_compact_topics_and_context():
+    assert "groupReviewByActivity" in JS
+    assert "activityContext" in JS
+    assert "deduplicateThirdPartyObservations" in JS
+    assert "people_categories', 'personal_data_types" in JS
+    assert "observation.topic" in JS
+    assert "visibleReviewAction(observation, catalog)" in JS
+    assert "observation.title" not in JS
+    assert "observation.description" not in JS
+    assert ".pd-review-activity" in CSS
+    assert ".pd-review-card" not in CSS
 
 
 def test_review_and_recovery_load_independently_each_time_wizard_finishes():
