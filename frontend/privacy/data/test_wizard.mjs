@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, canonicalActivities, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities} from './wizard.js';
+import {buildThirdParties, canonicalActivities, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -39,7 +39,14 @@ const catalog = {
   activity_types: [{code: 'sales', label: 'Ventas'}, {code: 'collaborators', label: 'RRHH'}],
   people_categories: [{code: 'customers', label: 'Clientes'}, {code: 'contacts', label: 'Contactos'}],
   personal_data_types: [{code: 'contact', label: 'Contacto'}, {code: 'tax', label: 'Tributarios'}],
-  third_party_types: [{code: 'technology_provider', label: 'Proveedor de tecnología'}],
+  third_party_types: [
+    {code: 'technology_provider', label: 'Proveedor de tecnología'},
+    {code: 'hr_labor_provider', label: 'Proveedor de RRHH o remuneraciones'},
+    {code: 'client_organization', label: 'Empresa cliente'},
+    {code: 'certification_entity', label: 'Entidad certificadora'},
+    {code: 'unknown', label: 'No estoy seguro'},
+    {code: 'uncertain_alias', label: 'No estoy seguro'},
+  ],
 };
 const activities = [
   {id: 'sales-old', activity_type: 'sales', updated_at: '2026-01-01T00:00:00Z', created_at: '2025-01-01T00:00:00Z', answers: {people_categories: ['customers'], personal_data_types: ['contact']}},
@@ -78,10 +85,25 @@ assert.doesNotMatch(contextMarkup({people_categories: ['missing'], personal_data
 
 const d04Review = reviewMarkup([
   {code: 'D05', type: 'notice', topic: 'Terceros', action: 'General.', activity_id: 'sales-new', activity_type: 'sales'},
-  {code: 'D04', type: 'review', topic: 'Terceros', action: 'Aclara su acceso.', activity_id: 'sales-new', activity_type: 'sales', third_party_type: 'technology_provider'},
+  {code: 'D04', type: 'review', topic: 'Terceros', action: 'Aclara qué información recibe o puede consultar este tercero.', activity_id: 'sales-new', activity_type: 'sales', third_party_type: 'technology_provider'},
 ], catalog, activities);
-assert.match(d04Review, /Terceros · Proveedor de tecnología.*Aclara su acceso\./);
+assert.match(d04Review, /<strong>Terceros<\/strong> - Aclara qué información recibe o puede consultar el proveedor de tecnología\./);
+assert.doesNotMatch(d04Review, /Terceros · Proveedor de tecnología/);
 assert.doesNotMatch(d04Review, /General\.|Ten presente/);
+const d04 = third_party_type => visibleReviewAction({
+  code: 'D04', third_party_type, action: 'Aclara qué información recibe o puede consultar este tercero.',
+}, catalog);
+assert.equal(d04('hr_labor_provider'), 'Aclara qué información recibe o puede consultar el proveedor de RRHH o remuneraciones.');
+assert.equal(d04('client_organization'), 'Aclara qué información recibe o puede consultar la empresa cliente.');
+assert.equal(d04('certification_entity'), 'Aclara qué información recibe o puede consultar la entidad certificadora.');
+assert.equal(d04('unknown'), 'Aclara qué información recibe o puede consultar este tercero.');
+assert.equal(d04('uncertain_alias'), 'Aclara qué información recibe o puede consultar este tercero.');
+assert.equal(d04('missing'), 'Aclara qué información recibe o puede consultar este tercero.');
+const d05Only = reviewMarkup([
+  {code: 'D05', type: 'notice', topic: 'Terceros', action: 'Mantén identificados los terceros que participan.', activity_id: 'sales-new', activity_type: 'sales'},
+], catalog, activities);
+assert.match(d05Only, /Ten presente.*<strong>Terceros<\/strong> - Mantén identificados los terceros que participan\./);
+assert.doesNotMatch(d05Only, /Conviene revisar/);
 const rrhh = reviewMarkup([{code: 'D03', type: 'review', topic: 'Accesos', action: 'Identifica.', activity_id: 'rrhh', activity_type: 'collaborators'}], catalog, [{id: 'rrhh', activity_type: 'collaborators', answers: {}}]);
 assert.match(rrhh, /RRHH/);
 const unknown = reviewMarkup([{code: 'D03', type: 'review', topic: 'Accesos', action: 'Identifica.', activity_id: 'unknown', activity_type: 'sales'}], catalog, [{id: 'unknown', activity_type: 'sales', answers: {people_categories: ['unknown'], personal_data_types: ['unknown']}}]);
