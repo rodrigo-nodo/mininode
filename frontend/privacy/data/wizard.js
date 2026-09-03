@@ -91,6 +91,16 @@ export function canonicalActivities(activities = []) {
     || String(left.id ?? '').localeCompare(String(right.id ?? '')));
 }
 
+export function visibleReviewAction(observation, catalog) {
+  const action = observation.action || '';
+  if (observation.code !== 'D04' || observation.third_party_type === 'unknown') return action;
+  const thirdParty = catalog?.third_party_types?.find(item => item.code === observation.third_party_type)?.label?.trim();
+  if (!thirdParty || thirdParty === 'No estoy seguro') return action;
+  const article = /^(Empresa|Entidad)\b/.test(thirdParty) ? 'la' : 'el';
+  const naturalLabel = thirdParty.charAt(0).toLocaleLowerCase('es') + thirdParty.slice(1);
+  return action.replace('este tercero', `${article} ${naturalLabel}`);
+}
+
 export function reviewMarkup(observations, catalog, activities = [], state = {}) {
   if (state.loading) return '<section class="pd-review" aria-live="polite"><p role="status">Revisando tu mapa…</p></section>';
   if (state.error) return '<section class="pd-review" aria-live="polite"><p>No pudimos completar la revisión del mapa en este momento.</p><button class="btn btn--primary" data-go="retry-review">Reintentar revisión</button></section>';
@@ -108,12 +118,8 @@ export function reviewMarkup(observations, catalog, activities = [], state = {})
     const group = (type, heading) => {
       const grouped = items.filter(observation => observation.type === type);
       if (!grouped.length) return '';
-      const rows = grouped.map(observation => {
-        const thirdParty = observation.code === 'D04' && observation.third_party_type
-          ? label('third_party_types', observation.third_party_type) : '';
-        const topic = [observation.topic || observation.title, thirdParty].filter(Boolean).join(' · ');
-        return `<p class="pd-review-item"><strong>${escapeHtml(topic)}</strong> - ${escapeHtml(observation.action || observation.description)}</p>`;
-      }).join('');
+      const rows = grouped.map(observation =>
+        `<p class="pd-review-item"><strong>${escapeHtml(observation.topic)}</strong> - ${escapeHtml(visibleReviewAction(observation, catalog))}</p>`).join('');
       return `<section class="pd-review-group"><h3>${heading}</h3>${rows}</section>`;
     };
     const people = (activity.answers?.people_categories || []).map(code => label('people_categories', code)).filter(Boolean);
