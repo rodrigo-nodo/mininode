@@ -21,7 +21,9 @@ catálogo versionado, sin almacenar datos identificatorios de personas concretas
 La revisión inicial de Privacy Data se calcula al solicitarla, sin persistir el
 resultado. Sus reglas determinísticas D01-D06 presentan únicamente señales objetivas
 como aspectos que conviene revisar o tener presentes; no producen scoring ni una
-conclusión de cumplimiento.
+conclusión de cumplimiento. Cada observación de `/review` incluye `topic` y `action`
+como orientación simple asociada al hallazgo; no representan una obligación legal,
+certificación, conclusión de cumplimiento ni evidencia de que la acción fue realizada.
 
 Privacy Web realiza un diagnóstico inicial de señales públicas de privacidad presentes en un sitio web.
 

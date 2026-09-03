@@ -13,6 +13,8 @@ from mininode_api.privacy_data.services.data_maps import StoredActivity, StoredD
 class MapObservation:
     code: Literal["D01", "D02", "D03", "D04", "D05", "D06"]
     type: Literal["review", "notice"]
+    topic: str
+    action: str
     title: str
     description: str
     activity_id: UUID
@@ -42,6 +44,8 @@ def review_data_map(
                 activity,
                 code="D01",
                 type="review",
+                topic="Conservación",
+                action="Define cuánto tiempo necesitas conservar estos datos.",
                 title="No está claro cuánto tiempo guardas esta información",
                 description="Indicaste que no estás seguro del período de conservación. Conviene definir cuánto tiempo necesitas mantener esta información.",
             ))
@@ -50,6 +54,8 @@ def review_data_map(
                 activity,
                 code="D02",
                 type="review",
+                topic="Conservación",
+                action="Define criterios para decidir cuánto tiempo conservarlos según cada caso.",
                 title="El tiempo de conservación depende del caso",
                 description="El período de conservación cambia según la situación. Conviene definir criterios simples para saber cuándo mantener o eliminar esta información.",
             ))
@@ -58,6 +64,8 @@ def review_data_map(
                 activity,
                 code="D03",
                 type="review",
+                topic="Accesos",
+                action="Identifica quién necesita acceder a ellos.",
                 title="No está claro quién puede acceder a esta información",
                 description="Indicaste que no estás seguro de quién puede acceder. Conviene identificar qué personas o áreas realmente necesitan acceso.",
             ))
@@ -66,6 +74,8 @@ def review_data_map(
                 activity,
                 code="D05",
                 type="notice",
+                topic="Terceros",
+                action="Mantén identificados los terceros que participan.",
                 title="Participan personas o empresas externas",
                 description="Esta actividad involucra terceros. Conviene tener presente qué información reciben, a qué pueden acceder y para qué la utilizan.",
             ))
@@ -75,6 +85,8 @@ def review_data_map(
                         activity,
                         code="D04",
                         type="review",
+                        topic="Terceros",
+                        action="Aclara qué información recibe o puede consultar este tercero.",
                         title="No está claro qué hace un tercero con la información",
                         description="Hay una persona o empresa externa involucrada, pero no está claro qué ocurre con la información que recibe o puede acceder.",
                         third_party_type=third_party.get("type"),
@@ -84,6 +96,8 @@ def review_data_map(
                 activity,
                 code="D06",
                 type="review",
+                topic="Menores",
+                action="Revisa qué datos de menores manejas y para qué.",
                 title="Esta actividad podría incluir información de menores de edad",
                 description="La información de menores requiere especial atención. Conviene identificar claramente qué datos se manejan y para qué se utilizan.",
             ))
