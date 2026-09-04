@@ -242,6 +242,32 @@
       "label": "Otro lugar"
     }
   ],
+  "data_origins": [
+    {
+      "code": "direct_person",
+      "label": "Directamente de la persona"
+    },
+    {
+      "code": "client_company",
+      "label": "De una empresa cliente"
+    },
+    {
+      "code": "provider_third_party",
+      "label": "De un proveedor o tercero"
+    },
+    {
+      "code": "public_sources",
+      "label": "De fuentes públicas"
+    },
+    {
+      "code": "business_systems",
+      "label": "De sistemas o registros del negocio"
+    },
+    {
+      "code": "unknown",
+      "label": "No estoy seguro"
+    }
+  ],
   "data_channels": [
     {
       "code": "email",

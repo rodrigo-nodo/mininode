@@ -51,20 +51,21 @@ class ActivityAnswers(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     people_categories: list[str] = Field(default_factory=list)
-    may_include_minors: bool | None = None
+    may_include_minors: bool | Literal["unknown"] | None = None
     personal_data_types: list[str] = Field(default_factory=list)
     storage_locations: list[str] = Field(default_factory=list)
+    data_origins: list[str] = Field(default_factory=list)
     data_channels: list[str] = Field(default_factory=list)
     purposes: list[str] = Field(default_factory=list)
     access_roles: list[str] = Field(default_factory=list)
-    has_third_parties: bool | None = None
+    has_third_parties: bool | Literal["unknown"] | None = None
     third_parties: list[ThirdParty] = Field(default_factory=list)
     retention: Retention = Field(default_factory=Retention)
 
     @model_validator(mode="after")
     def validate_answers(self):
         sections = (
-            "people_categories", "personal_data_types", "storage_locations",
+            "people_categories", "personal_data_types", "storage_locations", "data_origins",
             "data_channels", "purposes", "access_roles",
         )
         for section in sections:
@@ -83,7 +84,7 @@ class ActivityCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     activity_type: str
-    data_context: Literal["own_operations", "client_service", "both"]
+    data_context: Literal["unconfirmed", "own_operations", "client_service", "both"]
     position: int | None = Field(default=None, ge=0)
     answers: ActivityAnswers = Field(default_factory=ActivityAnswers)
 
@@ -98,7 +99,7 @@ class ActivityUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     activity_type: str | None = None
-    data_context: Literal["own_operations", "client_service", "both"] | None = None
+    data_context: Literal["unconfirmed", "own_operations", "client_service", "both"] | None = None
     position: int | None = Field(default=None, ge=0)
     answers: ActivityAnswers | None = None
 

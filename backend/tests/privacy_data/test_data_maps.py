@@ -106,6 +106,10 @@ def test_catalog_v1_contains_product_and_transversal_sections(client):
     assert "identification" in {item["code"] for item in catalog["personal_data_types"]}
     messaging = next(item for item in catalog["data_channels"] if item["code"] == "messaging")
     assert messaging["label"] == "WhatsApp u otra mensajería"
+    assert [item["code"] for item in catalog["data_origins"]] == [
+        "direct_person", "client_company", "provider_third_party", "public_sources",
+        "business_systems", "unknown",
+    ]
 
 
 def test_map_api_round_trip_never_exposes_hash(client, monkeypatch):

@@ -79,6 +79,7 @@ def test_create_activity_is_associated_with_token_map_and_never_exposes_internal
     {"activity_type": "invalid", "data_context": "own_operations", "answers": answers()},
     {"activity_type": "sales", "data_context": "invalid", "answers": answers()},
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(people_categories=["invalid"])},
+    {"activity_type": "sales", "data_context": "own_operations", "answers": answers(data_origins=["invalid"])},
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(access_roles=["owner_only", "sales"])},
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(access_roles=["unknown", "administration"])},
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(
@@ -107,6 +108,102 @@ def test_third_party_id_is_generated_and_preserved(client, monkeypatch):
     payload["answers"]["third_parties"][0]["id"] = generated
     second = client.post("/privacy/data/maps/token/activities", json=payload)
     assert second.json()["answers"]["third_parties"][0]["id"] == generated
+
+
+def test_data_origins_round_trip_and_legacy_answers_default(client, monkeypatch):
+    data_map = stored_map()
+    monkeypatch.setattr(data_maps, "get_data_map", lambda token: data_map)
+    monkeypatch.setattr(
+        data_maps,
+        "create_activity",
+        lambda dm, payload: activity(dm, activity_answers=payload["answers"]),
+    )
+
+    response = client.post("/privacy/data/maps/token/activities", json={
+        "activity_type": "sales",
+        "data_context": "own_operations",
+        "answers": answers(data_origins=["direct_person", "business_systems"]),
+    })
+    assert response.status_code == 201
+    assert response.json()["answers"]["data_origins"] == [
+        "direct_person", "business_systems",
+    ]
+
+    legacy = activity(data_map)
+    legacy.answers.pop("data_origins", None)
+    monkeypatch.setattr(data_maps, "list_activities", lambda dm: [legacy])
+    response = client.get("/privacy/data/maps/token/activities")
+    assert response.status_code == 200
+    assert response.json()[0]["answers"]["data_origins"] == []
+
+
+@pytest.mark.parametrize("field", ["may_include_minors", "has_third_parties"])
+def test_uncertain_boolean_answers_are_accepted(client, monkeypatch, field):
+    data_map = stored_map()
+    monkeypatch.setattr(data_maps, "get_data_map", lambda token: data_map)
+    monkeypatch.setattr(
+        data_maps,
+        "create_activity",
+        lambda dm, payload: activity(dm, activity_answers=payload["answers"]),
+    )
+    response = client.post("/privacy/data/maps/token/activities", json={
+        "activity_type": "sales",
+        "data_context": "own_operations",
+        "answers": answers(**{field: "unknown"}),
+    })
+    assert response.status_code == 201
+    assert response.json()["answers"][field] == "unknown"
+
+
+@pytest.mark.parametrize("has_third_parties", [False, None, "unknown"])
+def test_third_parties_require_explicit_true(client, has_third_parties):
+    payload = {
+        "activity_type": "sales",
+        "data_context": "own_operations",
+        "answers": answers(
+            has_third_parties=has_third_parties,
+            third_parties=[{"type": "technology_provider", "relationships": ["access"]}],
+        ),
+    }
+    assert client.post("/privacy/data/maps/token/activities", json=payload).status_code == 422
+
+
+def test_unconfirmed_data_context_can_be_created_then_updated(client, monkeypatch):
+    data_map = stored_map()
+    created = activity(data_map)
+    seen = []
+    monkeypatch.setattr(data_maps, "get_data_map", lambda token: data_map)
+
+    def create(dm, payload):
+        seen.append(payload["data_context"])
+        return data_maps.StoredActivity(
+            created.id, dm.id, payload["activity_type"], payload["data_context"], 0,
+            payload["answers"], NOW, NOW,
+        )
+
+    def update(dm, activity_id, values):
+        seen.append(values["data_context"])
+        return data_maps.StoredActivity(
+            activity_id, dm.id, created.activity_type, values["data_context"], 0,
+            created.answers, NOW, NOW,
+        )
+
+    monkeypatch.setattr(data_maps, "create_activity", create)
+    monkeypatch.setattr(data_maps, "update_activity", update)
+    response = client.post("/privacy/data/maps/token/activities", json={
+        "activity_type": "sales", "data_context": "unconfirmed",
+    })
+    assert response.status_code == 201
+    assert response.json()["data_context"] == "unconfirmed"
+
+    for context in ("own_operations", "client_service", "both"):
+        response = client.patch(
+            f"/privacy/data/maps/token/activities/{created.id}",
+            json={"data_context": context},
+        )
+        assert response.status_code == 200
+        assert response.json()["data_context"] == context
+    assert seen == ["unconfirmed", "own_operations", "client_service", "both"]
 
 
 def test_list_patch_delete_and_cross_map_protection(client, monkeypatch):

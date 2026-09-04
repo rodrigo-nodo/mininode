@@ -29,7 +29,7 @@ class RecoveryLinkResponse(BaseModel):
 
 
 class MapObservationResponse(BaseModel):
-    code: Literal["D01", "D02", "D03", "D04", "D05", "D06"]
+    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08"]
     type: Literal["review", "notice"]
     topic: str
     action: str

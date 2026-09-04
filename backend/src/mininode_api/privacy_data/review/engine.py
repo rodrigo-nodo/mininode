@@ -11,7 +11,7 @@ from mininode_api.privacy_data.services.data_maps import StoredActivity, StoredD
 
 @dataclass(frozen=True)
 class MapObservation:
-    code: Literal["D01", "D02", "D03", "D04", "D05", "D06"]
+    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08"]
     type: Literal["review", "notice"]
     topic: str
     action: str
@@ -33,7 +33,7 @@ def _observation(activity: StoredActivity, **values) -> MapObservation:
 def review_data_map(
     data_map: StoredDataMap, activities: list[StoredActivity]
 ) -> list[MapObservation]:
-    """Return objective D01-D06 observations without persisting a result."""
+    """Return objective D01-D08 observations without persisting a result."""
     del data_map  # Part of the stable engine boundary; the first rules are activity-only.
     observations: list[MapObservation] = []
     for activity in activities:
@@ -91,6 +91,16 @@ def review_data_map(
                         description="Hay una persona o empresa externa involucrada, pero no está claro qué ocurre con la información que recibe o puede acceder.",
                         third_party_type=third_party.get("type"),
                     ))
+        elif answers.get("has_third_parties") == "unknown":
+            observations.append(_observation(
+                activity,
+                code="D08",
+                type="review",
+                topic="Terceros",
+                action="Revisa si alguien fuera de tu negocio recibe, puede ver o utiliza esta información.",
+                title="No está claro si personas o empresas externas participan",
+                description="Aún no está claro si alguien externo participa en esta actividad o tiene contacto con la información.",
+            ))
         if answers.get("may_include_minors") is True:
             observations.append(_observation(
                 activity,
@@ -100,5 +110,15 @@ def review_data_map(
                 action="Revisa qué datos de menores manejas y para qué.",
                 title="Esta actividad podría incluir información de menores de edad",
                 description="La información de menores requiere especial atención. Conviene identificar claramente qué datos se manejan y para qué se utilizan.",
+            ))
+        elif answers.get("may_include_minors") == "unknown":
+            observations.append(_observation(
+                activity,
+                code="D07",
+                type="review",
+                topic="Menores",
+                action="Revisa si entre estas personas podría haber menores de edad.",
+                title="No está claro si esta actividad incluye información de menores",
+                description="Aún no está claro si la información de esta actividad podría corresponder a menores de edad.",
             ))
     return observations

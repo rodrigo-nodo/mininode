@@ -72,6 +72,16 @@ def codes(*activities):
         "D06", "Menores",
         "Revisa qué datos de menores manejas y para qué.",
     ),
+    (
+        {"may_include_minors": "unknown"},
+        "D07", "Menores",
+        "Revisa si entre estas personas podría haber menores de edad.",
+    ),
+    (
+        {"has_third_parties": "unknown"},
+        "D08", "Terceros",
+        "Revisa si alguien fuera de tu negocio recibe, puede ver o utiliza esta información.",
+    ),
 ])
 def test_observations_include_topic_and_action(changes, code, topic, action):
     data_map = stored_map()
@@ -124,6 +134,20 @@ def test_d06_activates_only_when_minors_is_true():
     data_map = stored_map()
     assert codes(activity(data_map, may_include_minors=True)) == ["D06"]
     assert codes(activity(data_map, may_include_minors=False)) == []
+
+
+def test_d07_activates_only_when_minors_are_unknown():
+    data_map = stored_map()
+    assert codes(activity(data_map, may_include_minors="unknown")) == ["D07"]
+    assert "D07" not in codes(activity(data_map, may_include_minors=True))
+    assert "D07" not in codes(activity(data_map, may_include_minors=False))
+
+
+def test_d08_activates_only_when_third_parties_are_unknown():
+    data_map = stored_map()
+    assert codes(activity(data_map, has_third_parties="unknown")) == ["D08"]
+    assert codes(activity(data_map, has_third_parties=True)) == ["D05"]
+    assert codes(activity(data_map, has_third_parties=False)) == []
 
 
 def test_one_activity_can_generate_multiple_observations():
