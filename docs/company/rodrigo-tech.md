@@ -19,6 +19,18 @@
 
 Rodrigo Tech funciona como una **firma de tecnología que arma la solución y utiliza una red de especialistas para ejecutarla**.
 
+## Decisión societaria
+
+Rodrigo Tech se proyecta como una **sociedad separada de Rodrigo Hub** cuando exista el primer negocio real que justifique operar con clientes y Delivery Partners.
+
+La razón principal no es tributaria. Es de **separación de riesgo y claridad de negocio**:
+
+- Tech asume contratos de proyectos;
+- puede comprometer alcance, plazo y calidad;
+- subcontrata o coordina Delivery Partners;
+- puede enfrentar riesgos de ejecución, confidencialidad, propiedad intelectual y responsabilidad profesional;
+- estos riesgos no deberían mezclarse innecesariamente con los activos propios de Hub.
+
 ## Rol de Rodrigo Tech
 
 Rodrigo Tech se encarga de:
