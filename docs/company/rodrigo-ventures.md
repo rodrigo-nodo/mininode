@@ -1,109 +1,101 @@
-# Rodrigo Ventures SpA - Definición inicial
-
-## Qué es
-
-**Rodrigo Ventures SpA** es la empresa legal y administrativa que puede contener distintas unidades de negocio, marcas y productos.
-
-La idea es mantener **una sola sociedad** en esta etapa y separar internamente los negocios por unidad, marca, producto o proyecto.
+# Rodrigo Ventures - Paraguas corporativo
 
 ## Qué significa "Ventures"
 
 **Ventures** puede traducirse, según contexto, como **emprendimientos**, **iniciativas** o **nuevos negocios**.
 
-En este caso transmite la idea de una empresa que **crea, desarrolla y opera distintos negocios y proyectos**, sin limitarse a una sola actividad.
+En este caso transmite la idea de un paraguas que **crea, desarrolla y agrupa distintos negocios**, sin limitarse a una sola actividad.
 
 No significa necesariamente fondo de inversión ni capital de riesgo.
 
-## Estructura propuesta
+## Decisión actual
+
+**Rodrigo Ventures no se constituirá inicialmente como una tercera sociedad.**
+
+Se utilizará por ahora como **nombre paraguas corporativo/comercial** para comunicar negocios relacionados pero jurídicamente separados cuando corresponda.
+
+La estructura objetivo inicial es:
 
 ```text
-RODRIGO VENTURES SpA
+RODRIGO VENTURES
+paraguas corporativo
 │
-├── RODRIGO HUB
-│   Productos y negocios digitales
-│   │
-│   ├── MININODE
-│   │   ├── Privacy Web
-│   │   ├── Privacy Data
-│   │   └── futuros productos
-│   │
-│   └── futuras marcas / productos
+├── RODRIGO HUB SpA
+│   Productos digitales, SaaS y agentes
+│   ├── Privacy Web
+│   ├── Privacy Data
+│   └── futuros productos
 │
-├── RODRIGO TECH
-│   Arquitectura · Datos · IA
-│   Diagnóstico · Asesoría · Implementación
-│
-└── RODRIGO MEDIA
-    Contenido · Recursos · Audiencia
-    Briefs · Guides · Micro-ebooks · otros formatos
+└── RODRIGO TECH SpA
+    Arquitectura · Datos · IA
+    Diagnóstico · Asesoría · Implementación
+    Delivery Partners
 ```
 
-## Rol de cada unidad
+Rodrigo Media puede mantenerse inicialmente como una línea o marca de contenido y evaluarse por separado cuando exista una necesidad comercial o jurídica real.
+
+## Por qué separar Hub y Tech
+
+La decisión es separar jurídicamente ambos negocios porque tienen **naturaleza y riesgos distintos**.
 
 ### Rodrigo Hub
 
-Unidad orientada a **crear y operar productos y negocios digitales**.
-
-Mininode es una marca dentro de Rodrigo Hub. Mañana pueden existir otras marcas o productos independientes de Mininode.
+- desarrolla activos propios;
+- opera SaaS y agentes;
+- acumula código, propiedad intelectual, clientes recurrentes y MRR;
+- puede desarrollar productos que eventualmente se vendan o reciban inversión;
+- puede ser operado inicialmente por Rodrigo sin terceros de ejecución.
 
 ### Rodrigo Tech
 
-Unidad de servicios profesionales y proyectos.
+- vende proyectos y servicios a clientes;
+- asume compromisos de alcance, plazo y calidad;
+- puede utilizar Delivery Partners especializados;
+- incorpora riesgos contractuales, de ejecución, confidencialidad y responsabilidad profesional distintos a los de Hub.
 
-Propuesta:
+### Principio de separación
 
-> **Diseñamos e implementamos soluciones de tecnología, datos e IA.**
+> **Los activos escalables de Hub no deberían quedar expuestos innecesariamente al riesgo contractual de los proyectos de Tech.**
 
-Puede trabajar con una red de Delivery Partners especializados.
+La separación también facilita:
 
-### Rodrigo Media
+- contabilidad y P&L por negocio;
+- entrada futura de socios distintos;
+- incorporación de inversionistas;
+- venta de una unidad;
+- contratos y financiamiento independientes;
+- eventual incorporación de nuevas sociedades bajo el paraguas Rodrigo Ventures.
 
-Unidad de contenido y audiencia.
+## Secuencia propuesta
 
-Su función inicial es:
+### Etapa 1 - ahora
 
-- educar;
-- crear contenido útil;
-- construir audiencia;
-- apoyar la generación de oportunidades para las otras unidades.
+Constituir **Rodrigo Hub SpA** y comenzar a operar los productos propios.
 
-Más adelante puede generar ingresos propios mediante contenidos, formación, auspicios u otros modelos.
+### Etapa 2 - cuando exista negocio real
 
-## Modelo legal y administrativo inicial
+Constituir **Rodrigo Tech SpA** antes de contratar proyectos relevantes con clientes y Delivery Partners.
 
-En esta etapa, la propuesta es:
+### Etapa 3 - futuro
 
-- una sola sociedad: **Rodrigo Ventures SpA**;
-- un solo RUT;
-- una sola contabilidad;
-- una sola facturación legal;
-- varias unidades de negocio internas.
+Evaluar constituir **Rodrigo Ventures SpA** como sociedad matriz/holding solamente cuando exista una razón concreta: varias sociedades operativas, inversión, socios, planificación patrimonial, financiamiento o necesidad de control corporativo.
 
-Rodrigo Hub, Rodrigo Tech, Rodrigo Media y Mininode pueden funcionar como nombres comerciales, unidades o marcas sin ser sociedades distintas.
+## Comunicación comercial
 
-## Gestión interna
+Cuando se comunique el conjunto:
 
-Para entender el desempeño de cada unidad se pueden utilizar dimensiones contables o centros de resultado.
+```text
+RODRIGO VENTURES
 
-Ejemplo:
+HUB
+Productos digitales
 
-- Unidad: Rodrigo Hub / Rodrigo Tech / Rodrigo Media / Corporativo
-- Producto o proyecto: Mininode / Privacy Web / Privacy Data / Cliente X / Briefs / Guides
+TECH
+Arquitectura, Datos e IA
+```
 
-Esto permite obtener un P&L (Profit & Loss / Estado de Resultados) por unidad sin crear sociedades distintas.
-
-## Principio
-
-**Una empresa legal simple por detrás y distintas propuestas comerciales por delante.**
-
-La separación en sociedades distintas se evaluaría más adelante si aparece una razón concreta, por ejemplo:
-
-- entrada de un socio diferente;
-- inversionistas;
-- venta futura de una unidad;
-- riesgos significativamente distintos;
-- volumen o complejidad que justifique separar jurídicamente las operaciones.
+En contratos, facturas y obligaciones legales debe aparecer siempre la sociedad que realmente presta el servicio correspondiente.
 
 ## Estado
 
-Definición inicial para discusión y evolución. No constituye asesoría legal, tributaria ni contable definitiva. La constitución, objeto social, actividades económicas, régimen tributario y marcas deben revisarse formalmente antes de su implementación.
+Definición empresarial en evolución. No constituye asesoría legal, tributaria ni contable definitiva. La constitución, objeto social, actividades económicas, domicilio, régimen tributario y marcas deben validarse formalmente antes de implementación.
