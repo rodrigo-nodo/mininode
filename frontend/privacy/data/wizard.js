@@ -343,6 +343,8 @@ class Wizard {
     if (this.screen === 'industry') return this.industry();
     if (this.screen === 'activities') return this.activitySelection();
     if (this.screen === 'map') return this.activity();
+    if (this.screen === 'activity-complete') return this.activityComplete();
+    if (this.screen === 'progress-map') return this.progressMap();
     if (this.screen === 'size') return this.size();
     return this.finish();
   }
@@ -384,6 +386,19 @@ class Wizard {
     else if (key === 'third_parties') content = this.thirdParties(this.thirdPartiesUnanswered.has(existing.id) ? {...answers, has_third_parties: null} : answers);
     else content = `${this.options('retention.statuses', [answers.retention.status], 'radio')}<div class="pd-fields" data-retention-fields ${answers.retention.status === 'defined' ? '' : 'inert style="display:none"'}><label>Valor<input type="number" min="1" name="retention-value" value="${answers.retention.value || ''}"></label><label>Unidad<select name="retention-unit"><option value="">Selecciona</option>${this.catalog.retention.units.map(x => `<option value="${x.code}" ${answers.retention.unit === x.code ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label><label>Nota opcional<input name="retention-note" value="${answers.retention.note || ''}"></label></div>`;
     this.shell(`${this.progress('Mapa')}${this.activityHeader(label, this.q + 1)}<h2>${title}</h2>${content}<div class="pd-actions"><button class="pd-back" data-go="question-back">Atrás</button><button class="btn btn--primary" data-go="question-save">Guardar y continuar</button></div>`);
+  }
+  completedActivities() {
+    const completedTypes = new Set(this.selected.slice(0, this.activityIndex + 1));
+    return canonicalActivities(this.activities).filter(activity => completedTypes.has(activity.activity_type));
+  }
+  activityComplete() {
+    const current = this.label('activity_types', this.selected[this.activityIndex]);
+    const next = this.label('activity_types', this.selected[this.activityIndex + 1]);
+    this.shell(`${this.progress('Mapa')}<p class="eyebrow">Actividad ${this.activityIndex + 1} de ${this.selected.length} lista</p><h1>${escapeHtml(current)} lista ✓</h1><p class="pd-lead">Ya agregamos esta actividad a tu mapa. Puedes verla ahora o seguir con la siguiente.</p><p><strong>${this.activityIndex + 1} de ${this.selected.length}</strong> actividades listas.</p><div class="pd-actions"><button class="pd-back" data-go="view-progress-map">Ver mi mapa</button><button class="btn btn--primary" data-go="continue-next-activity">Continuar con ${escapeHtml(next)}</button></div>`);
+  }
+  progressMap() {
+    const next = this.label('activity_types', this.selected[this.activityIndex + 1]);
+    this.shell(`${this.progress('Mapa')}<p class="eyebrow">Mapa en progreso</p><h1>Tu mapa va tomando forma</h1><p class="pd-lead">Ya puedes ver las actividades que terminaste. Seguiremos agregando información a medida que avances.</p>${mapFlowMarkup(this.catalog, this.completedActivities())}<div class="pd-actions"><button class="pd-back" data-go="back-to-activity-complete">Volver</button><button class="btn btn--primary" data-go="continue-next-activity">Continuar con ${escapeHtml(next)}</button></div>`);
   }
   checked(section, name = 'choice') { return [...(this.root.querySelector(`[data-section="${section}"]`)?.querySelectorAll(`input[name="${name}"]:checked`) || [])].map(input => input.value); }
   async saveQuestion() {
@@ -432,13 +447,15 @@ class Wizard {
   async advanceQuestion() {
     if (++this.q === questions.length) {
       this.q = 0;
-      if (++this.activityIndex === this.selected.length) {
+      if (this.activityIndex === this.selected.length - 1) {
         this.screen = 'finish';
         this.resultView = 'summary';
         this.reviewObservations = null;
         this.reviewLoading = true;
         this.reviewError = false;
         await Promise.allSettled([this.loadReview(), this.generateRecoveryLink()]);
+      } else {
+        this.screen = 'activity-complete';
       }
     }
   }
@@ -518,8 +535,16 @@ class Wizard {
     }
     if (go === 'cancel-removal') { this.selected = [...new Set([...this.pendingSelection, ...this.pendingRemoval.map(a => a.activity_type)])]; this.pendingRemoval = []; return this.render(); }
     if (go === 'confirm-removal') return this.run(async () => { for (const activity of this.pendingRemoval) await request(`/maps/${this.token}/activities/${activity.id}`, {method: 'DELETE'}); const removed = new Set(this.pendingRemoval.map(a => a.id)); this.activities = this.activities.filter(a => !removed.has(a.id)); this.selected = this.pendingSelection; this.pendingRemoval = []; for (const [position, activityType] of this.selected.entries()) { if (this.activities.some(activity => activity.activity_type === activityType)) continue; const activity = await request(`/maps/${this.token}/activities`, {method: 'POST', body: JSON.stringify({activity_type: activityType, data_context: 'unconfirmed', position, answers: emptyAnswers()})}); this.activities.push(activity); this.minorsUnanswered.add(activity.id); this.thirdPartiesUnanswered.add(activity.id); } this.activityIndex = 0; this.q = 0; this.screen = 'map'; });
-    if (go === 'question-back') { if (this.q > 0) this.q -= 1; else this.screen = 'activities'; return this.render(); }
+    if (go === 'question-back') {
+      if (this.q > 0) this.q -= 1;
+      else if (this.activityIndex > 0) { this.activityIndex -= 1; this.screen = 'activity-complete'; }
+      else this.screen = 'activities';
+      return this.render();
+    }
     if (go === 'question-save') return this.run(() => this.saveQuestion());
+    if (go === 'continue-next-activity') { this.activityIndex += 1; this.q = 0; this.screen = 'map'; return this.render(); }
+    if (go === 'view-progress-map') { this.screen = 'progress-map'; return this.render(); }
+    if (go === 'back-to-activity-complete') { this.screen = 'activity-complete'; return this.render(); }
     if (go === 'map-back') { this.screen = 'map'; this.activityIndex = this.selected.length - 1; this.q = questions.length - 1; return this.render(); }
     if (go === 'result-summary' || go === 'result-map') { this.resultView = go === 'result-map' ? 'map' : 'summary'; return this.render(); }
     if (go === 'generate-recovery-link') {
