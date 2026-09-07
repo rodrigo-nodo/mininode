@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=193g" in HTML
-    assert "wizard.js?v=193g" in HTML
+    assert "wizard.css?v=194a" in HTML
+    assert "wizard.js?v=194a" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -73,12 +73,39 @@ def test_phase_one_result_only_uses_findings_from_phase_one_answers():
     assert "D03" not in finish
 
 
-def test_empty_phase_one_review_uses_stage_specific_copy():
-    assert "No encontramos temas adicionales que revisar en esta primera etapa." in JS
-    assert "No encontramos aspectos pendientes dentro de esta primera revisión." not in JS
-
-
-def test_future_result_views_are_not_presented_as_active_navigation():
-    assert "Mapa - Próximamente" in JS
+def test_summary_and_map_are_real_result_views_but_actions_remain_future():
+    assert 'data-go="result-summary"' in JS
+    assert 'data-go="result-map"' in JS
+    assert "this.resultView === 'map'" in JS
+    assert "mapFlowMarkup(this.catalog, this.activities)" in JS
+    assert "Mapa - Próximamente" not in JS
     assert "Acciones - Próximamente" in JS
-    assert '<nav class="pd-result-nav"' not in JS
+    assert '<nav class="pd-result-nav"' in JS
+    assert ".pd-result-nav button.active" in CSS
+
+
+def test_map_flow_uses_phase_one_data_without_new_backend_reads():
+    assert "export function mapFlowMarkup" in JS
+    assert "De dónde viene" in JS
+    assert "Personas y datos" in JS
+    assert "Para qué" in JS
+    assert "Dónde está" in JS
+    assert "Con quién" in JS
+    assert "data_origins" in JS
+    assert "people_categories" in JS
+    assert "personal_data_types" in JS
+    assert "purposes" in JS
+    assert "storage_locations" in JS
+    assert "third_party_types" in JS
+    assert "Esta vista es solo de lectura por ahora." in JS
+    assert ".pd-map-activities" in CSS
+    assert ".pd-map-stage" in CSS
+    assert ".pd-map-readonly" in CSS
+    assert "request(`/maps/${this.token}/map`)" not in JS
+
+
+def test_map_flow_is_responsive_and_shows_missing_values_without_inference():
+    assert ".pd-grid,.pd-cards,.pd-map-activities{grid-template-columns:1fr}" in CSS
+    assert "No indicado" in JS
+    assert "No participan terceros" in JS
+    assert "No estoy seguro" in JS
