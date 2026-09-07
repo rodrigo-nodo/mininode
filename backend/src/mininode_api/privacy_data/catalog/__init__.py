@@ -20,10 +20,18 @@ SECURITY_MEASURES = [
     {"code": "unknown", "label": "No estoy seguro"},
 ]
 
+RIGHTS_HANDLING = [
+    {"code": "defined", "label": "Sí, tengo una forma definida"},
+    {"code": "case_by_case", "label": "Lo resolvemos caso a caso"},
+    {"code": "none", "label": "No tenemos una forma definida"},
+    {"code": "unknown", "label": "No estoy seguro"},
+]
+
 
 @lru_cache(maxsize=1)
 def get_catalog() -> dict:
     path = Path(__file__).with_name("v1.json")
     catalog = json.loads(path.read_text(encoding="utf-8"))
     catalog["security_measures"] = SECURITY_MEASURES
+    catalog["rights_handling"] = RIGHTS_HANDLING
     return catalog
