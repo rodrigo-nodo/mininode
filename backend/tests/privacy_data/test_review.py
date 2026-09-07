@@ -25,7 +25,8 @@ def stored_map(*, expired=False):
 
 def activity(data_map, activity_type="sales", **changes):
     answers = {
-        "retention": {"status": "defined"}, "access_roles": ["owner_only"],
+        "retention": {"status": "defined", "reviewed": True},
+        "access_roles": ["owner_only"],
         "has_third_parties": False, "third_parties": [], "may_include_minors": False,
     }
     answers.update(changes)
@@ -40,12 +41,17 @@ def codes(*activities):
 
 @pytest.mark.parametrize(("changes", "code", "topic", "action"), [
     (
-        {"retention": {"status": "unknown"}},
+        {"retention": {"status": "unknown", "reviewed": True}},
         "D01", "Conservación",
         "Define cuánto tiempo necesitas conservar estos datos.",
     ),
     (
-        {"retention": {"status": "variable"}},
+        {"retention": {"status": "not_defined", "reviewed": True}},
+        "D01", "Conservación",
+        "Define cuánto tiempo necesitas conservar estos datos.",
+    ),
+    (
+        {"retention": {"status": "variable", "reviewed": True}},
         "D02", "Conservación",
         "Define criterios para decidir cuánto tiempo conservarlos según cada caso.",
     ),
@@ -91,11 +97,30 @@ def test_observations_include_topic_and_action(changes, code, topic, action):
 
 
 @pytest.mark.parametrize(("status", "expected"), [
-    ("unknown", ["D01"]), ("variable", ["D02"]), ("defined", []),
+    ("unknown", ["D01"]),
+    ("not_defined", ["D01"]),
+    ("variable", ["D02"]),
+    ("defined", []),
 ])
-def test_retention_rules_activate_only_for_their_status(status, expected):
+def test_retention_rules_activate_only_for_reviewed_status(status, expected):
     data_map = stored_map()
-    assert codes(activity(data_map, retention={"status": status})) == expected
+    assert codes(activity(data_map, retention={"status": status, "reviewed": True})) == expected
+
+
+def test_unasked_retention_does_not_generate_phase_two_findings():
+    data_map = stored_map()
+    assert codes(activity(data_map, retention={"status": "unknown", "reviewed": False})) == []
+    assert codes(activity(data_map, retention={"status": "variable"})) == []
+
+
+def test_not_defined_retention_has_specific_description():
+    data_map = stored_map()
+    result = review_data_map(data_map, [activity(
+        data_map, retention={"status": "not_defined", "reviewed": True},
+    )])
+    assert result[0].code == "D01"
+    assert result[0].title == "No tienes un plazo de conservación definido"
+    assert "no tienes un período de conservación definido" in result[0].description
 
 
 def test_access_unknown_activates_d03():
@@ -153,8 +178,8 @@ def test_d08_activates_only_when_third_parties_are_unknown():
 def test_one_activity_can_generate_multiple_observations():
     data_map = stored_map()
     result = review_data_map(data_map, [activity(
-        data_map, retention={"status": "unknown"}, access_roles=["unknown"],
-        may_include_minors=True,
+        data_map, retention={"status": "unknown", "reviewed": True},
+        access_roles=["unknown"], may_include_minors=True,
     )])
     assert [item.code for item in result] == ["D01", "D03", "D06"]
 
