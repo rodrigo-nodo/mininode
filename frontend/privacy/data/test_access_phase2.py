@@ -6,7 +6,7 @@ ACCESS = (HERE / "access-phase2.js").read_text()
 
 
 def test_access_controller_loads_before_wizard_and_after_retention_compat():
-    assert "access-phase2.js?v=199a" in HTML
+    assert "access-phase2.js?v=199b" in HTML
     assert HTML.index("retention-compat.js") < HTML.index("access-phase2.js") < HTML.index("wizard.js")
 
 
