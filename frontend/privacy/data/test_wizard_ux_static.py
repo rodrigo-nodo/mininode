@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=193f" in HTML
-    assert "wizard.js?v=193f" in HTML
+    assert "wizard.css?v=193g" in HTML
+    assert "wizard.js?v=193g" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -71,6 +71,11 @@ def test_phase_one_result_only_uses_findings_from_phase_one_answers():
     assert "D01" not in finish
     assert "D02" not in finish
     assert "D03" not in finish
+
+
+def test_empty_phase_one_review_uses_stage_specific_copy():
+    assert "No encontramos temas adicionales que revisar en esta primera etapa." in JS
+    assert "No encontramos aspectos pendientes dentro de esta primera revisión." not in JS
 
 
 def test_future_result_views_are_not_presented_as_active_navigation():
