@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=194c" in HTML
-    assert "wizard.js?v=194c" in HTML
+    assert "wizard.css?v=197a" in HTML
+    assert "wizard.js?v=197a" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -73,15 +73,53 @@ def test_phase_one_result_only_uses_findings_from_phase_one_answers():
     assert "D03" not in finish
 
 
-def test_summary_and_map_are_real_result_views_but_actions_remain_future():
+def test_summary_map_and_actions_are_real_result_views():
     assert 'data-go="result-summary"' in JS
     assert 'data-go="result-map"' in JS
+    assert 'data-go="result-actions"' in JS
     assert "this.resultView === 'map'" in JS
+    assert "this.resultView === 'actions'" in JS
     assert "mapFlowMarkup(this.catalog, this.activities)" in JS
-    assert "Mapa - Próximamente" not in JS
-    assert "Acciones - Próximamente" in JS
+    assert "actionsMarkup(phaseOneObservations, this.catalog, this.activities" in JS
+    assert "Acciones - Próximamente" not in JS
     assert '<nav class="pd-result-nav"' in JS
     assert ".pd-result-nav button.active" in CSS
+
+
+def test_actions_view_maps_phase_one_findings_to_direct_questions():
+    assert "export function actionsMarkup" in JS
+    assert "D04: {label: 'Revisar terceros', question: 'third_parties'}" in JS
+    assert "D06: {label: 'Revisar datos de menores', question: 'personal_data_types'}" in JS
+    assert "D07: {label: 'Aclarar menores', question: 'personal_data_types'}" in JS
+    assert "D08: {label: 'Aclarar terceros', question: 'third_parties'}" in JS
+    assert 'data-go="review-action"' in JS
+    assert "data-action-activity-id" in JS
+    assert "data-action-question" in JS
+    assert "Por revisar" in JS
+    assert "Ten presente" in JS
+    assert "Todo ordenado en esta primera etapa ✓" in JS
+    assert ".pd-action-item" in CSS
+    assert ".pd-action-cta" in CSS
+
+
+def test_action_edit_returns_to_actions_and_refreshes_review():
+    assert "returnToActions: false" in JS
+    assert "this.returnToActions = true" in JS
+    assert "if (this.returnToActions)" in JS
+    assert "this.resultView = 'actions'" in JS
+    assert "this.reviewObservations = null" in JS
+    assert "await this.loadReview()" in JS
+    assert "questions.findIndex(([key]) => key === event.target.dataset.actionQuestion)" in JS
+
+
+def test_conservation_is_next_stage_but_not_active_yet():
+    assert "Siguiente etapa" in JS
+    assert "Conservación" in JS
+    assert "Revisa cuánto tiempo necesitas mantener esta información." in JS
+    assert "Comenzar - Próximamente" in JS
+    assert "disabled" in JS
+    assert ".pd-next-stage" in CSS
+    assert "result-conservation" not in JS
 
 
 def test_map_flow_uses_phase_one_data_without_new_backend_reads():
