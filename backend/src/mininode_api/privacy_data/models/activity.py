@@ -58,6 +58,7 @@ class ActivityAnswers(BaseModel):
     data_channels: list[str] = Field(default_factory=list)
     purposes: list[str] = Field(default_factory=list)
     access_roles: list[str] = Field(default_factory=list)
+    security_measures: list[str] = Field(default_factory=list)
     has_third_parties: bool | Literal["unknown"] | None = None
     third_parties: list[ThirdParty] = Field(default_factory=list)
     retention: Retention = Field(default_factory=Retention)
@@ -66,7 +67,7 @@ class ActivityAnswers(BaseModel):
     def validate_answers(self):
         sections = (
             "people_categories", "personal_data_types", "storage_locations", "data_origins",
-            "data_channels", "purposes", "access_roles",
+            "data_channels", "purposes", "access_roles", "security_measures",
         )
         for section in sections:
             invalid = set(getattr(self, section)) - _codes(section)
@@ -75,6 +76,9 @@ class ActivityAnswers(BaseModel):
         for exclusive in ("owner_only", "unknown"):
             if exclusive in self.access_roles and len(self.access_roles) > 1:
                 raise ValueError(f"{exclusive} must be the only access role")
+        for exclusive in ("none", "unknown"):
+            if exclusive in self.security_measures and len(self.security_measures) > 1:
+                raise ValueError(f"{exclusive} must be the only security measure")
         if self.has_third_parties is not True and self.third_parties:
             raise ValueError("third_parties require has_third_parties=true")
         return self
