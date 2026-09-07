@@ -170,6 +170,33 @@ export function reviewMarkup(observations, catalog, activities = [], state = {})
   return `<section class="pd-review"><p class="pd-review__summary">${summary}</p>${shown.map(activityBlock).join('')}</section>`;
 }
 
+export function mapFlowMarkup(catalog, activities = []) {
+  const label = (section, code) => catalog?.[section]?.find(item => item.code === code)?.label || '';
+  const labels = (section, codes = []) => codes.map(code => label(section, code)).filter(Boolean);
+  const valueLine = values => values.length ? values.map(escapeHtml).join(' · ') : '<span class="pd-map-empty">No indicado</span>';
+  const stage = (title, body) => `<div class="pd-map-stage"><h3>${title}</h3>${body}</div>`;
+  const canonical = canonicalActivities(activities);
+  if (!canonical.length) return '<section class="pd-map-view"><p>No hay actividades disponibles para mostrar todavía.</p></section>';
+
+  const activityMarkup = activity => {
+    const answers = activity.answers || {};
+    const origins = labels('data_origins', answers.data_origins);
+    const people = labels('people_categories', answers.people_categories);
+    const data = labels('personal_data_types', answers.personal_data_types);
+    const purposes = labels('purposes', answers.purposes);
+    const locations = labels('storage_locations', answers.storage_locations);
+    let thirdParties = [];
+    if (answers.has_third_parties === true) thirdParties = (answers.third_parties || []).map(item => label('third_party_types', item.type)).filter(Boolean);
+    else if (answers.has_third_parties === false) thirdParties = ['No participan terceros'];
+    else if (answers.has_third_parties === 'unknown') thirdParties = ['No estoy seguro'];
+
+    const peopleAndData = `<p><strong>Personas:</strong> ${valueLine(people)}</p><p><strong>Datos:</strong> ${valueLine(data)}</p>`;
+    return `<article class="pd-map-activity"><h2>${escapeHtml(label('activity_types', activity.activity_type) || activity.activity_type)}</h2><div class="pd-map-flow">${stage('De dónde viene', `<p>${valueLine(origins)}</p>`)}${stage('Personas y datos', peopleAndData)}${stage('Para qué', `<p>${valueLine(purposes)}</p>`)}${stage('Dónde está', `<p>${valueLine(locations)}</p>`)}${stage('Con quién', `<p>${valueLine(thirdParties)}</p>`)}</div></article>`;
+  };
+
+  return `<section class="pd-map-view"><p class="pd-map-view__lead">Así circula la información en las actividades que identificaste.</p><div class="pd-map-activities">${canonical.map(activityMarkup).join('')}</div><p class="pd-map-readonly">Esta vista es solo de lectura por ahora.</p></section>`;
+}
+
 class FriendlyError extends Error {
   constructor(status, message) {
     super(message || (status === 503 ? 'Privacy Data no está disponible temporalmente.'
@@ -218,7 +245,7 @@ export const phaseOneQuestions = [
 const questions = phaseOneQuestions;
 
 class Wizard {
-  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', initialLoadError: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: '', reviewObservations: null, reviewLoading: false, reviewError: false}); }
+  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', initialLoadError: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: '', reviewObservations: null, reviewLoading: false, reviewError: false, resultView: 'summary'}); }
   loading(title, detail) { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><section class="pd-loading" role="status"><strong>${title}</strong><p>${detail}</p></section>`); }
   async init() {
     this.initialLoadError = '';
@@ -407,6 +434,7 @@ class Wizard {
       this.q = 0;
       if (++this.activityIndex === this.selected.length) {
         this.screen = 'finish';
+        this.resultView = 'summary';
         this.reviewObservations = null;
         this.reviewLoading = true;
         this.reviewError = false;
@@ -422,7 +450,11 @@ class Wizard {
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
     const phaseOneObservations = this.reviewObservations?.filter(observation => ['D04', 'D05', 'D06', 'D07', 'D08'].includes(observation.code)) ?? this.reviewObservations;
     const review = reviewMarkup(phaseOneObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
-    this.shell(`${this.progress('Final')}<p class="eyebrow">Fase 1 terminada</p><h1>Este es tu primer mapa</h1><p class="pd-lead">Ya organizamos las personas, los datos, sus usos, su origen, los lugares y los terceros de tu negocio. Puedes revisar este resultado antes de profundizar.</p><p><strong>Resumen</strong> · Mapa - Próximamente · Acciones - Próximamente</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+    const nav = `<nav class="pd-result-nav" aria-label="Vistas del resultado"><button type="button" class="${this.resultView === 'summary' ? 'active' : ''}" data-go="result-summary" aria-pressed="${this.resultView === 'summary'}">Resumen</button><button type="button" class="${this.resultView === 'map' ? 'active' : ''}" data-go="result-map" aria-pressed="${this.resultView === 'map'}">Mapa</button><span>Acciones - Próximamente</span></nav>`;
+    const content = this.resultView === 'map'
+      ? mapFlowMarkup(this.catalog, this.activities)
+      : `${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section>`;
+    this.shell(`${this.progress('Final')}<p class="eyebrow">Fase 1 terminada</p><h1>Este es tu primer mapa</h1><p class="pd-lead">Ya organizamos las personas, los datos, sus usos, su origen, los lugares y los terceros de tu negocio. Puedes revisar este resultado antes de profundizar.</p>${nav}${content}<div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   async loadReview() {
     this.reviewLoading = true;
@@ -489,6 +521,7 @@ class Wizard {
     if (go === 'question-back') { if (this.q > 0) this.q -= 1; else this.screen = 'activities'; return this.render(); }
     if (go === 'question-save') return this.run(() => this.saveQuestion());
     if (go === 'map-back') { this.screen = 'map'; this.activityIndex = this.selected.length - 1; this.q = questions.length - 1; return this.render(); }
+    if (go === 'result-summary' || go === 'result-map') { this.resultView = go === 'result-map' ? 'map' : 'summary'; return this.render(); }
     if (go === 'generate-recovery-link') {
       this.copyStatus = 'Preparando tu enlace…';
       this.render();
@@ -509,6 +542,7 @@ class Wizard {
       const value = go === 'skip-size' ? null : this.checked('business_size')[0];
       this.map = await request(`/maps/${this.token}`, {method: 'PATCH', body: JSON.stringify({business_size: value || null})});
       this.screen = 'finish';
+      this.resultView = 'summary';
       this.reviewObservations = null;
       this.reviewLoading = true;
       this.reviewError = false;
