@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, canonicalActivities, contextualSuggestions, emptyAnswers, exclusive, peopleSuggestions, phaseOneQuestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction, withOneInitialRetry} from './wizard.js';
+import {buildThirdParties, canonicalActivities, contextualSuggestions, emptyAnswers, exclusive, mapFlowMarkup, peopleSuggestions, phaseOneQuestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction, withOneInitialRetry} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -58,6 +58,9 @@ const catalog = {
   activity_types: [{code: 'sales', label: 'Ventas'}, {code: 'collaborators', label: 'RRHH'}],
   people_categories: [{code: 'customers', label: 'Clientes'}, {code: 'contacts', label: 'Contactos'}],
   personal_data_types: [{code: 'contact', label: 'Contacto'}, {code: 'tax', label: 'Tributarios'}],
+  data_origins: [{code: 'direct', label: 'Directamente de la persona'}, {code: 'public', label: 'De fuentes públicas'}],
+  purposes: [{code: 'quotation', label: 'Cotizar'}, {code: 'commercial_follow_up', label: 'Seguimiento comercial'}],
+  storage_locations: [{code: 'spreadsheets', label: 'Planillas'}, {code: 'messaging_apps', label: 'WhatsApp'}],
   third_party_types: [
     {code: 'technology_provider', label: 'Proveedor de tecnología'},
     {code: 'hr_labor_provider', label: 'Proveedor de RRHH o remuneraciones'},
@@ -132,10 +135,43 @@ const multiple = reviewMarkup([
   {code: 'D03', type: 'review', topic: 'Accesos', action: 'Identifica.', activity_id: 'rrhh', activity_type: 'collaborators'},
 ], catalog, [...activities, {id: 'rrhh', activity_type: 'collaborators', answers: {}}]);
 assert.match(multiple, /Encontramos temas para ordenar en 2 actividades\./);
-assert.match(reviewMarkup([], catalog, activities), /No encontramos aspectos pendientes dentro de esta primera revisión\./);
+assert.match(reviewMarkup([], catalog, activities), /No encontramos temas adicionales que revisar en esta primera etapa\./);
 assert.match(reviewMarkup([], catalog, activities), /Esto no significa que exista cumplimiento completo\./);
 assert.match(reviewMarkup(null, catalog, activities, {loading: true}), /Revisando tu mapa…/);
 const reviewError = reviewMarkup(null, catalog, activities, {error: true});
 assert.match(reviewError, /No pudimos completar la revisión del mapa en este momento\./);
 assert.match(reviewError, /Reintentar revisión/);
 assert.match(reviewMarkup([{type: 'review', topic: '<script>', action: 'A&B', activity_id: 'sales-new', activity_type: 'sales'}], catalog, activities), /&lt;script&gt;.*A&amp;B/);
+
+const flow = mapFlowMarkup(catalog, [{
+  id: 'sales-flow', activity_type: 'sales', position: 0,
+  answers: {
+    data_origins: ['direct', 'public'],
+    people_categories: ['customers'],
+    personal_data_types: ['contact'],
+    purposes: ['quotation', 'commercial_follow_up'],
+    storage_locations: ['spreadsheets', 'messaging_apps'],
+    has_third_parties: true,
+    third_parties: [{type: 'technology_provider'}],
+  },
+}]);
+assert.match(flow, /Así circula la información en las actividades que identificaste\./);
+assert.match(flow, /Ventas/);
+assert.match(flow, /De dónde viene.*Directamente de la persona · De fuentes públicas/s);
+assert.match(flow, /Personas y datos.*Clientes.*Contacto/s);
+assert.match(flow, /Para qué.*Cotizar · Seguimiento comercial/s);
+assert.match(flow, /Dónde está.*Planillas · WhatsApp/s);
+assert.match(flow, /Con quién.*Proveedor de tecnología/s);
+assert.ok(flow.indexOf('De dónde viene') < flow.indexOf('Personas y datos'));
+assert.ok(flow.indexOf('Personas y datos') < flow.indexOf('Para qué'));
+assert.ok(flow.indexOf('Para qué') < flow.indexOf('Dónde está'));
+assert.ok(flow.indexOf('Dónde está') < flow.indexOf('Con quién'));
+assert.match(flow, /Esta vista es solo de lectura por ahora\./);
+assert.doesNotMatch(flow, /direct|public|quotation|commercial_follow_up|spreadsheets|messaging_apps/);
+
+const noThirdParties = mapFlowMarkup(catalog, [{id: 'no-third', activity_type: 'sales', answers: {has_third_parties: false}}]);
+assert.match(noThirdParties, /No participan terceros/);
+assert.match(noThirdParties, /No indicado/);
+const uncertainThirdParties = mapFlowMarkup(catalog, [{id: 'unknown-third', activity_type: 'sales', answers: {has_third_parties: 'unknown'}}]);
+assert.match(uncertainThirdParties, /No estoy seguro/);
+assert.match(mapFlowMarkup(catalog, []), /No hay actividades disponibles para mostrar todavía\./);
