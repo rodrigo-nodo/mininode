@@ -79,8 +79,12 @@
     }
   }
 
-  function scheduleCompletedRetentionCopy() {
-    setTimeout(normalizeCompletedRetentionCopy, 0);
+  function watchCompletedRetentionCopy() {
+    const root = document.querySelector('#privacy-data');
+    if (!root) return;
+    normalizeCompletedRetentionCopy();
+    const observer = new MutationObserver(normalizeCompletedRetentionCopy);
+    observer.observe(root, {childList: true, subtree: true});
   }
 
   function jsonResponse(response, data) {
@@ -88,7 +92,6 @@
     headers.delete('content-length');
     headers.delete('content-encoding');
     headers.set('content-type', 'application/json');
-    scheduleCompletedRetentionCopy();
     return new Response(JSON.stringify(data), {
       status: response.status,
       statusText: response.statusText,
@@ -96,7 +99,11 @@
     });
   }
 
-  document.addEventListener('click', scheduleCompletedRetentionCopy, true);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', watchCompletedRetentionCopy, {once: true});
+  } else {
+    watchCompletedRetentionCopy();
+  }
 
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input?.url || '';
