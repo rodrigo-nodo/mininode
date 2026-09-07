@@ -11,7 +11,7 @@ from mininode_api.privacy_data.services.data_maps import StoredActivity, StoredD
 
 @dataclass(frozen=True)
 class MapObservation:
-    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08"]
+    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10"]
     type: Literal["review", "notice"]
     topic: str
     action: str
@@ -33,7 +33,7 @@ def _observation(activity: StoredActivity, **values) -> MapObservation:
 def review_data_map(
     data_map: StoredDataMap, activities: list[StoredActivity]
 ) -> list[MapObservation]:
-    """Return objective D01-D08 observations without persisting a result."""
+    """Return objective D01-D10 observations without persisting a result."""
     del data_map  # Part of the stable engine boundary; the first rules are activity-only.
     observations: list[MapObservation] = []
     for activity in activities:
@@ -68,6 +68,27 @@ def review_data_map(
                 action="Identifica quién necesita acceder a ellos.",
                 title="No está claro quién puede acceder a esta información",
                 description="Indicaste que no estás seguro de quién puede acceder. Conviene identificar qué personas o áreas realmente necesitan acceso.",
+            ))
+        security_measures = answers.get("security_measures") or []
+        if "unknown" in security_measures:
+            observations.append(_observation(
+                activity,
+                code="D09",
+                type="review",
+                topic="Seguridad",
+                action="Aclara qué medidas protegen esta información.",
+                title="No está claro cómo proteges esta información",
+                description="Indicaste que no estás seguro de las medidas de seguridad actuales. Conviene identificar qué protecciones existen hoy.",
+            ))
+        elif "none" in security_measures:
+            observations.append(_observation(
+                activity,
+                code="D10",
+                type="review",
+                topic="Seguridad",
+                action="Define medidas básicas para proteger esta información.",
+                title="No hay medidas de seguridad definidas",
+                description="Indicaste que no tienes medidas definidas para esta información. Conviene establecer protecciones básicas acordes a cómo la manejas.",
             ))
         if answers.get("has_third_parties") is True:
             observations.append(_observation(
