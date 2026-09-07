@@ -186,3 +186,14 @@ def test_finish_generates_and_can_copy_recovery_link():
     assert "Copiar enlace" in JS
     assert "Quien tenga este enlace podrá acceder al mapa." in JS
     assert "navigator.clipboard.writeText" in JS
+
+
+def test_multiple_activities_deliver_progressive_value_instead_of_one_long_question_run():
+    assert "activityComplete()" in JS
+    assert "progressMap()" in JS
+    assert "Ya agregamos esta actividad a tu mapa." in JS
+    assert "Ver mi mapa" in JS
+    assert "Continuar con ${escapeHtml(next)}" in JS
+    assert "this.screen = 'activity-complete'" in JS
+    assert "this.screen = 'progress-map'" in JS
+    assert "this.activityIndex += 1" in JS
