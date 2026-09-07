@@ -30,7 +30,7 @@ def test_token_is_local_only_and_not_rendered():
 
 def test_out_of_scope_features_absent():
     lowered = (HTML + JS).lower()
-    for word in ("scoring", "recommendations", "r01", "billing"):
+    for word in ("scoring", "recommendations", "r01"):
         assert word not in lowered
 
 
@@ -41,20 +41,37 @@ def test_errors_are_friendly_and_expired_tokens_removed():
     assert "response.json()" in JS
 
 
-def test_minors_and_third_parties_are_explicit_steps():
-    assert "¿Podría haber información de menores de edad?" in JS
-    assert "Responde si podría haber información de menores de edad." in JS
-    assert "¿Alguna persona o empresa externa participa" in JS
+def test_initial_loading_error_has_one_retry_and_its_own_message():
+    assert "withOneInitialRetry" in JS
+    retry_body = JS.split("export async function withOneInitialRetry", 1)[1].split("const questions", 1)[0]
+    assert retry_body.count("return operation()") == 1
+    assert "No pudimos cargar Privacy Data. Intenta nuevamente." in JS
+    assert "No pudimos recuperar tu mapa. Intenta nuevamente." in JS
+    assert 'data-go="retry-initial"' in JS
+    assert "if (go === 'retry-initial') return this.init()" in JS
+    initial_catch = JS.split("async init()", 1)[1].split("async run(action)", 1)[0]
+    assert "No pudimos guardar los cambios" not in initial_catch
+
+
+def test_save_errors_keep_their_specific_message():
+    assert "No pudimos guardar los cambios. Intenta nuevamente." in JS
+
+
+def test_minors_and_third_parties_support_uncertainty_in_phase_one():
+    assert "¿Podría haber menores de edad entre estas personas?" in JS
+    assert "Responde si podría haber menores de edad entre estas personas." in JS
+    assert "¿Alguna persona o empresa fuera de tu negocio" in JS
+    assert "No estoy seguro" in JS
     assert "has-third-parties" in JS
     assert "answers.third_parties = []" in JS
 
 
-def test_removal_confirmation_and_purposes_filter_exist():
+def test_removal_confirmation_and_contextual_purposes_exist():
     assert "Quitaste una actividad que ya tenía información guardada." in JS
     assert "method: 'DELETE'" in JS
     assert "cancel-removal" in JS
-    assert "Buscar una finalidad" in JS
-    assert "data-purpose-filter" in JS
+    assert "PURPOSES_BY_ACTIVITY" in JS
+    assert "Ver otras opciones" in JS
 
 
 def test_boolean_recovery_preserves_false_and_pending():
@@ -90,9 +107,32 @@ def test_existing_map_is_resumed_from_landing_instead_of_recreated():
     assert "this.activities = []; this.selected = []" in JS
 
 
-def test_data_context_copy_is_plain_language():
-    assert "¿De dónde vienen principalmente los datos que manejas en esta actividad?" in JS
-    assert "Selecciona de dónde vienen los datos." in JS
+def test_data_context_copy_is_plain_business_language():
+    assert "¿Para quién manejas esta información?" in JS
+    assert "Esto nos ayuda a distinguir los datos que usas para tu negocio de los que manejas al prestar un servicio a un cliente." in JS
+    assert "Para mi negocio" in JS
+    assert "Para prestar un servicio a un cliente" in JS
+    assert "En ambos casos" in JS
+    assert "Selecciona para quién manejas esta información." in JS
+
+
+def test_phase_one_is_separate_and_preserves_legacy_channels():
+    phase_one = JS.split("export const phaseOneQuestions", 1)[1].split("];", 1)[0]
+    assert "data_origins" in phase_one
+    assert "storage_locations" in phase_one
+    assert "data_channels" not in phase_one
+    assert "access_roles" not in phase_one
+    assert "retention" not in phase_one
+    assert "data_channels: []" in JS
+    assert "Fase 1 terminada" in JS
+    assert "Resumen" in JS and "Mapa" in JS and "Acciones" in JS
+
+
+def test_new_activities_do_not_silently_confirm_data_context():
+    assert "data_context: 'own_operations'" not in JS
+    assert "data_context: 'unconfirmed'" in JS
+    assert "¿Para quién manejas esta información?" in JS
+    assert "{data_context: dataContext}" in JS
 
 
 def test_loading_keeps_hero_visible_and_supports_debug_timing():
@@ -115,7 +155,7 @@ def test_third_parties_and_retention_are_conditionally_interactive():
 
 
 def test_finish_shows_automatic_review_and_keeps_editing_available():
-    assert "Ahora revisemos tu mapa" in JS
+    assert "Este es tu primer mapa" in JS
     assert "Revisión del mapa - Próximamente" not in JS
     assert "request(`/maps/${this.token}/review`)" in JS
     assert "reviewMarkup(this.reviewObservations, this.catalog, this.activities" in JS

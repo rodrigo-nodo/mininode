@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, canonicalActivities, emptyAnswers, exclusive, peopleSuggestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction} from './wizard.js';
+import {buildThirdParties, canonicalActivities, contextualSuggestions, emptyAnswers, exclusive, peopleSuggestions, phaseOneQuestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction, withOneInitialRetry} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
 assert.deepEqual(emptyAnswers().data_channels,[]);
+assert.deepEqual(emptyAnswers().data_origins,[]);
 assert.deepEqual(emptyAnswers().third_parties,[]);
 assert.equal(emptyAnswers().may_include_minors,null);
 assert.equal(emptyAnswers().has_third_parties,null);
@@ -24,11 +25,29 @@ assert.deepEqual([...recovered.thirdParties],['pending']);
 assert.deepEqual(peopleSuggestions('sales','commerce_ecommerce'),['customers','prospects','contacts','company_representatives','users']);
 assert.ok(peopleSuggestions('service_delivery','health').includes('patients'));
 assert.ok(peopleSuggestions('service_delivery','education_training').includes('students_participants'));
+assert.deepEqual(contextualSuggestions('personal_data_types','sales'), ['identification','contact','financial','commercial_behavior','documents']);
+assert.deepEqual(contextualSuggestions('purposes','finance_accounting'), ['billing','collections','payments','accounting','tax_compliance','reporting']);
+assert.ok(contextualSuggestions('storage_locations','sales').length <= 6);
+assert.deepEqual(phaseOneQuestions.map(question => question[0]), ['people_categories','personal_data_types','purposes','data_origins','storage_locations','third_parties']);
+assert.ok(!phaseOneQuestions.some(question => ['data_channels','access_roles','retention'].includes(question[0])));
 const summary=totals([
   {answers:{people_categories:['customers'],personal_data_types:['contact'],storage_locations:['cloud'],data_channels:[],third_parties:[]}},
   {answers:{people_categories:['customers'],personal_data_types:['contact','identity'],storage_locations:['cloud'],data_channels:['email'],third_parties:[{type:'accountant'}]}}
 ]);
 assert.deepEqual(summary,{activities:2,people_categories:1,personal_data_types:2,storage_locations:1,data_channels:1,third_party_types:1});
+let initialAttempts = 0;
+assert.equal(await withOneInitialRetry(async () => {
+  initialAttempts += 1;
+  if (initialAttempts === 1) throw Object.assign(new Error('temporary'), {status: 503});
+  return 'loaded';
+}, 0), 'loaded');
+assert.equal(initialAttempts, 2);
+let permanentAttempts = 0;
+await assert.rejects(withOneInitialRetry(async () => {
+  permanentAttempts += 1;
+  throw Object.assign(new Error('expired'), {status: 410});
+}, 0));
+assert.equal(permanentAttempts, 1);
 console.log('Privacy Data wizard unit checks passed');
 
 assert.equal(recoveryTokenFromHash('#recover=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'), 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-');
@@ -87,7 +106,7 @@ const d04Review = reviewMarkup([
   {code: 'D05', type: 'notice', topic: 'Terceros', action: 'General.', activity_id: 'sales-new', activity_type: 'sales'},
   {code: 'D04', type: 'review', topic: 'Terceros', action: 'Aclara qué información recibe o puede consultar este tercero.', activity_id: 'sales-new', activity_type: 'sales', third_party_type: 'technology_provider'},
 ], catalog, activities);
-assert.match(d04Review, /<strong>Terceros<\/strong> - Aclara qué información recibe o puede consultar el proveedor de tecnología\./);
+assert.match(d04Review, /pd-review-item__topic">Terceros<\/strong><span class="pd-review-item__action">Aclara qué información recibe o puede consultar el proveedor de tecnología\./);
 assert.doesNotMatch(d04Review, /Terceros · Proveedor de tecnología/);
 assert.doesNotMatch(d04Review, /General\.|Ten presente/);
 const d04 = third_party_type => visibleReviewAction({
@@ -102,7 +121,7 @@ assert.equal(d04('missing'), 'Aclara qué información recibe o puede consultar 
 const d05Only = reviewMarkup([
   {code: 'D05', type: 'notice', topic: 'Terceros', action: 'Mantén identificados los terceros que participan.', activity_id: 'sales-new', activity_type: 'sales'},
 ], catalog, activities);
-assert.match(d05Only, /Ten presente.*<strong>Terceros<\/strong> - Mantén identificados los terceros que participan\./);
+assert.match(d05Only, /Ten presente.*pd-review-item__topic">Terceros<\/strong><span class="pd-review-item__action">Mantén identificados los terceros que participan\./);
 assert.doesNotMatch(d05Only, /Conviene revisar/);
 const rrhh = reviewMarkup([{code: 'D03', type: 'review', topic: 'Accesos', action: 'Identifica.', activity_id: 'rrhh', activity_type: 'collaborators'}], catalog, [{id: 'rrhh', activity_type: 'collaborators', answers: {}}]);
 assert.match(rrhh, /RRHH/);

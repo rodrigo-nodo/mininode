@@ -1,7 +1,7 @@
 .pd{max-width:920px;min-height:68vh;padding-block:clamp(40px,7vw,80px)}
 .pd h1{font-size:clamp(2rem,6vw,3rem);letter-spacing:-.04em;line-height:1.12;max-width:18ch}.pd h2{font-size:clamp(1.55rem,4vw,2.15rem);line-height:1.2}.pd-lead{color:var(--muted);font-size:1.12rem;max-width:62ch}.pd-benefits{display:flex;flex-wrap:wrap;gap:10px 24px;list-style:none;padding:20px 0}.pd-benefits li::before{content:'✓ ';color:var(--primary);font-weight:700}
 .pd button{font:inherit}.pd-actions{display:flex;align-items:center;gap:12px;margin-top:28px}.pd-actions .btn{min-height:48px}.pd-back{background:none;border:0;color:var(--fg);text-decoration:underline;padding:12px}.pd-grid{border:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0;padding:0}.pd-option{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;cursor:pointer;background:var(--bg-elev)}.pd-option:has(input:checked){border:2px solid var(--primary);padding:15px;background:var(--primary-light)}.pd-option input{margin-top:5px;accent-color:var(--primary)}
-.pd-progress{display:flex;gap:8px;margin-bottom:36px}.pd-progress span{flex:1;border-top:3px solid var(--border);padding-top:7px;color:var(--muted);font-size:.78rem}.pd-progress .active{border-color:var(--primary);color:var(--fg);font-weight:700}.pd-note,.pd-error{border-left:3px solid var(--primary);background:var(--primary-light);padding:12px 16px;margin:20px 0}.pd-error{border-color:var(--color-danger,#b42318)}.pd-save{color:var(--muted);font-size:.88rem;min-height:1.4em}.pd-subprogress{color:var(--muted);font-weight:600}.pd-fields{display:flex;gap:12px}.pd-fields input,.pd-fields select,.pd-search{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);min-height:46px}.pd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.pd-stat,.pd-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px}.pd-stat strong{display:block;font-size:1.8rem}.pd-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.pd-card h3{margin-top:0}.pd-card p{color:var(--muted)}
+.pd-progress{display:flex;gap:8px;margin-bottom:36px}.pd-progress span{flex:1;border-top:3px solid var(--border);padding-top:7px;color:var(--muted);font-size:.78rem}.pd-progress .active{border-color:var(--primary);color:var(--fg);font-weight:700}.pd-note,.pd-error{border-left:3px solid var(--primary);background:var(--primary-light);padding:12px 16px;margin:20px 0}.pd-error{border-color:var(--color-danger,#b42318)}.pd-fields{display:flex;gap:12px}.pd-fields input,.pd-fields select,.pd-search{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);min-height:46px}.pd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.pd-stat,.pd-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px}.pd-stat strong{display:block;font-size:1.8rem}.pd-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.pd-card h3{margin-top:0}.pd-card p{color:var(--muted)}
 .pd-filter{display:grid;gap:6px;max-width:420px}.pd-third-list{display:grid;gap:12px}.pd-third{border:1px solid var(--border);border-radius:var(--radius-md);padding:12px}.pd-third>.pd-option{border:0;background:transparent}.pd-third__relationships{display:none;padding-inline:10px}.pd-third.is-selected .pd-third__relationships{display:block}.pd-third__relationships .pd-grid{margin-block:12px}.pd-confirm{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--primary-light)}
 @media(max-width:640px){.pd-grid,.pd-cards{grid-template-columns:1fr}.pd-summary{grid-template-columns:repeat(2,1fr)}.pd-actions{position:sticky;bottom:0;background:var(--bg);padding:12px 0}.pd-actions .btn{flex:1}.pd-fields{flex-direction:column}}
 
@@ -20,5 +20,22 @@
 .pd-review__summary{font-size:1.05rem}
 .pd-review-activity{border-top:1px solid var(--border);margin-top:28px;padding-top:20px}.pd-review-activity h2{font-size:1.35rem;margin:0 0 12px}
 .pd-review-activity__context{color:var(--muted);margin:4px 0}
-.pd-review-group{margin-top:22px}.pd-review-group h3{font-size:1.05rem;margin:0 0 10px}
-.pd-review-item{margin:8px 0;color:var(--muted)}.pd-review-item strong{color:var(--fg)}
+.pd-review-group{margin-top:26px}.pd-review-group h3{font-size:1.22rem;font-weight:700;margin:0 0 14px}
+.pd-review-item{display:grid;gap:3px;border-left:2px solid var(--border);margin:10px 0 10px 18px;padding:2px 0 2px 14px;color:var(--muted)}
+.pd-review-item__topic{display:block;color:var(--fg);font-weight:700}
+.pd-review-item__action{display:block;color:var(--muted);line-height:1.45}
+.pd-result-nav{display:flex;gap:24px;border-bottom:1px solid var(--border);padding:12px 0}.pd-result-nav strong{color:var(--primary)}.pd-result-nav span{color:var(--muted)}
+
+/* Fase 1 UX: contexto de actividad, revelado progresivo y micro-preguntas. */
+.pd .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.pd-activity-context{display:grid;gap:3px;margin:0 0 28px;line-height:1.3}
+.pd-activity-context__count,.pd-activity-context__question{color:var(--muted);font-size:.82rem;font-weight:600}
+.pd-activity-context__name{color:var(--fg);font-size:1.3rem;font-weight:750;letter-spacing:-.01em}
+.pd-micro-question{border-top:1px solid var(--border);margin-top:28px;padding-top:20px}
+.pd-micro-question h3{font-size:1.05rem}
+.pd-micro-question--secondary{margin-top:20px;padding-top:16px}
+.pd-micro-question--secondary .pd-micro-question__eyebrow{margin:0 0 4px;color:var(--muted);font-size:.78rem;font-weight:600}
+.pd-micro-question--secondary h3{margin:0 0 8px;font-size:.98rem;line-height:1.35}
+.pd-micro-question--secondary .pd-grid{margin-top:14px}
+.pd-people[data-section="personal_data_types"]:not(:has(input:checked)) + .pd-micro-question,
+.pd-grid[data-section="data_origins"]:not(:has(input:checked)) + .pd-micro-question{display:none}
