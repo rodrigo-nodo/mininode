@@ -11,7 +11,7 @@ from mininode_api.privacy_data.services.data_maps import StoredActivity, StoredD
 
 @dataclass(frozen=True)
 class MapObservation:
-    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10"]
+    code: Literal["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "D11", "D12", "D13"]
     type: Literal["review", "notice"]
     topic: str
     action: str
@@ -33,7 +33,7 @@ def _observation(activity: StoredActivity, **values) -> MapObservation:
 def review_data_map(
     data_map: StoredDataMap, activities: list[StoredActivity]
 ) -> list[MapObservation]:
-    """Return objective D01-D10 observations without persisting a result."""
+    """Return objective D01-D13 observations without persisting a result."""
     del data_map  # Part of the stable engine boundary; the first rules are activity-only.
     observations: list[MapObservation] = []
     for activity in activities:
@@ -89,6 +89,37 @@ def review_data_map(
                 action="Define medidas básicas para proteger esta información.",
                 title="No hay medidas de seguridad definidas",
                 description="Indicaste que no tienes medidas definidas para esta información. Conviene establecer protecciones básicas acordes a cómo la manejas.",
+            ))
+        rights_handling = answers.get("rights_handling")
+        if rights_handling == "case_by_case":
+            observations.append(_observation(
+                activity,
+                code="D11",
+                type="review",
+                topic="Derechos",
+                action="Define una forma simple y repetible para responder estas solicitudes.",
+                title="Las solicitudes se resuelven caso a caso",
+                description="Indicaste que las solicitudes sobre datos personales se resuelven caso a caso. Conviene definir pasos simples para responder de forma consistente.",
+            ))
+        elif rights_handling == "none":
+            observations.append(_observation(
+                activity,
+                code="D12",
+                type="review",
+                topic="Derechos",
+                action="Define cómo recibir y responder solicitudes sobre datos personales.",
+                title="No hay una forma definida para responder solicitudes",
+                description="Indicaste que no existe una forma definida para atender solicitudes de acceso, corrección o eliminación de datos. Conviene establecer un proceso básico.",
+            ))
+        elif rights_handling == "unknown":
+            observations.append(_observation(
+                activity,
+                code="D13",
+                type="review",
+                topic="Derechos",
+                action="Aclara quién respondería y qué pasos seguiría ante una solicitud.",
+                title="No está claro cómo responderías una solicitud",
+                description="Indicaste que no estás seguro de cómo responder una solicitud relacionada con datos personales. Conviene aclarar quién la recibiría y cómo se gestionaría.",
             ))
         if answers.get("has_third_parties") is True:
             observations.append(_observation(
