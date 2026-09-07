@@ -107,7 +107,7 @@ def test_existing_map_is_resumed_from_landing_instead_of_recreated():
     assert "this.activities = []; this.selected = []" in JS
 
 
-def test_data_context_copy_is_plain_business_language():
+def test_data_context_copy_is_plain_language():
     assert "¿Para quién manejas esta información?" in JS
     assert "Esto nos ayuda a distinguir los datos que usas para tu negocio de los que manejas al prestar un servicio a un cliente." in JS
     assert "Para mi negocio" in JS
@@ -158,7 +158,7 @@ def test_finish_shows_automatic_review_and_keeps_editing_available():
     assert "Este es tu primer mapa" in JS
     assert "Revisión del mapa - Próximamente" not in JS
     assert "request(`/maps/${this.token}/review`)" in JS
-    assert "reviewMarkup(this.reviewObservations, this.catalog, this.activities" in JS
+    assert "reviewMarkup(phaseOneObservations, this.catalog, this.activities" in JS
     assert "Volver y editar mi mapa" in JS
     assert "data-go=\"edit-map\"" in JS
 
