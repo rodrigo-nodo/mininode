@@ -147,7 +147,7 @@ export function reviewMarkup(observations, catalog, activities = [], state = {})
   const canonical = canonicalActivities(activities);
   const canonicalIds = new Set(canonical.map(activity => String(activity.id)));
   const visible = (observations || []).filter(observation => canonicalIds.has(String(observation.activity_id)));
-  if (!visible.length) return '<section class="pd-review"><strong>No encontramos aspectos pendientes dentro de esta primera revisión.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
+  if (!visible.length) return '<section class="pd-review"><strong>No encontramos temas adicionales que revisar en esta primera etapa.</strong><p>Esto no significa que exista cumplimiento completo. La revisión considera únicamente la información incluida en este mapa.</p></section>';
 
   const activityBlock = activity => {
     let items = visible.filter(observation => String(observation.activity_id) === String(activity.id));
