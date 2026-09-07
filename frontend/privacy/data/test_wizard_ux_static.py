@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=194a" in HTML
-    assert "wizard.js?v=194a" in HTML
+    assert "wizard.css?v=194b" in HTML
+    assert "wizard.js?v=194b" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -109,3 +109,9 @@ def test_map_flow_is_responsive_and_shows_missing_values_without_inference():
     assert "No indicado" in JS
     assert "No participan terceros" in JS
     assert "No estoy seguro" in JS
+
+
+def test_map_activity_container_is_visually_lightweight():
+    assert ".pd-map-activity{border:0;" in CSS
+    assert "background:transparent" in CSS
+    assert ".pd-map-stage{border:1px solid var(--border)" in CSS
