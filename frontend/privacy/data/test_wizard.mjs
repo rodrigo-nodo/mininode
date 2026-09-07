@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {buildThirdParties, canonicalActivities, contextualSuggestions, emptyAnswers, exclusive, mapFlowMarkup, peopleSuggestions, phaseOneQuestions, recoveryTokenFromHash, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction, withOneInitialRetry} from './wizard.js';
+import {actionsMarkup, buildThirdParties, canonicalActivities, contextualSuggestions, emptyAnswers, exclusive, mapFlowMarkup, peopleSuggestions, phaseOneQuestions, recoveryTokenFromHash, retentionProgress, reviewMarkup, totals, unansweredBooleanActivities, visibleReviewAction, withOneInitialRetry} from './wizard.js';
 
 assert.deepEqual(exclusive(['staff','owner_only'],'owner_only'),['owner_only']);
 assert.deepEqual(exclusive(['unknown','staff'],'staff'),['staff']);
@@ -8,6 +8,7 @@ assert.deepEqual(emptyAnswers().data_origins,[]);
 assert.deepEqual(emptyAnswers().third_parties,[]);
 assert.equal(emptyAnswers().may_include_minors,null);
 assert.equal(emptyAnswers().has_third_parties,null);
+assert.equal(emptyAnswers().retention.reviewed,false);
 const existing=[{id:'kept-id',type:'accountant',relationships:['shared']},{id:'removed-id',type:'legal',relationships:['access']}];
 const thirdParties=buildThirdParties(['accountant','technology'],{accountant:['shared'],technology:['access','processed']},existing);
 assert.deepEqual(thirdParties,[
@@ -80,6 +81,28 @@ assert.equal(canonicalActivities([
   {id: 'older', activity_type: 'sales', updated_at: null, created_at: '2025-01-01T00:00:00Z'},
   {id: 'newer', activity_type: 'sales', updated_at: null, created_at: '2025-02-01T00:00:00Z'},
 ])[0].id, 'newer');
+
+const retentionActivities = [
+  {id:'ret-sales', activity_type:'sales', position:0, answers:{retention:{status:'unknown', reviewed:false}}},
+  {id:'ret-rrhh', activity_type:'collaborators', position:1, answers:{retention:{status:'defined', reviewed:true}}},
+];
+assert.deepEqual(retentionProgress(retentionActivities), {total:2, reviewed:1, complete:false});
+assert.deepEqual(retentionProgress(retentionActivities.map(activity => ({...activity, answers:{retention:{status:'defined', reviewed:true}}}))), {total:2, reviewed:2, complete:true});
+assert.deepEqual(retentionProgress([]), {total:0, reviewed:0, complete:false});
+const retentionInProgress = actionsMarkup([], catalog, retentionActivities);
+assert.match(retentionInProgress, /Conservación/);
+assert.match(retentionInProgress, /1 de 2 actividades revisadas/);
+assert.match(retentionInProgress, /data-go="start-retention">Continuar conservación/);
+const retentionDone = actionsMarkup([], catalog, retentionActivities.map(activity => ({...activity, answers:{retention:{status:'defined', reviewed:true}}})));
+assert.match(retentionDone, /Conservación ✓/);
+assert.match(retentionDone, /Accesos/);
+assert.match(retentionDone, /Comenzar - Próximamente/);
+const retentionFinding = actionsMarkup([
+  {code:'D01', type:'review', topic:'Conservación', action:'Define cuánto tiempo necesitas conservar estos datos.', activity_id:'ret-sales', activity_type:'sales'},
+], catalog, retentionActivities);
+assert.match(retentionFinding, /data-go="review-retention"/);
+assert.match(retentionFinding, /Revisar conservación/);
+
 const review = reviewMarkup([
   {code: 'D01', type: 'review', topic: 'Conservación histórica', action: 'Descartar.', activity_id: 'sales-old', activity_type: 'sales'},
   {code: 'D06', type: 'review', topic: 'Menores', action: 'Revisa qué datos de menores manejas y para qué.', activity_id: 'sales-new', activity_type: 'sales'},
