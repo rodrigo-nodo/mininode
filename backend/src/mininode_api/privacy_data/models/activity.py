@@ -33,10 +33,11 @@ class ThirdParty(BaseModel):
 class Retention(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["defined", "variable", "unknown"] = "unknown"
+    status: Literal["defined", "variable", "not_defined", "unknown"] = "unknown"
     value: float | None = None
     unit: Literal["days", "months", "years"] | None = None
     note: str | None = None
+    reviewed: bool = False
 
     @model_validator(mode="after")
     def validate_defined(self):
