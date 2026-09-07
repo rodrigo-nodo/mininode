@@ -101,6 +101,10 @@ def test_catalog_v1_contains_product_and_transversal_sections(client):
     assert catalog["catalog_version"] == "1"
     assert {item["code"] for item in catalog["industry_profiles"]} >= {"commerce_ecommerce", "health"}
     assert {item["code"] for item in catalog["activity_types"]} >= {"sales", "digital_users"}
+    assert [item["code"] for item in catalog["retention"]["statuses"]] == [
+        "defined", "variable", "not_defined", "unknown",
+    ]
+    assert catalog["retention"]["statuses"][0]["label"] == "Sí, tengo un plazo definido"
     assert [item["code"] for item in catalog["retention"]["units"]] == ["days", "months", "years"]
     assert "customers" in {item["code"] for item in catalog["people_categories"]}
     assert "identification" in {item["code"] for item in catalog["personal_data_types"]}
