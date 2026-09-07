@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=193e" in HTML
-    assert "wizard.js?v=193e" in HTML
+    assert "wizard.css?v=193f" in HTML
+    assert "wizard.js?v=193f" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -57,3 +57,23 @@ def test_review_topics_are_rendered_with_final_hierarchy_directly():
 def test_cleanup_does_not_repeat_catalog_or_activity_reads_for_header():
     assert "loadActivityContext" not in JS
     assert "activityContextPromise" not in JS
+
+
+def test_correcting_a_selection_clears_the_visible_validation_error():
+    assert "this.error = '';" in JS
+    assert "this.root.querySelector('.pd-error')?.remove();" in JS
+
+
+def test_phase_one_result_only_uses_findings_from_phase_one_answers():
+    assert "phaseOneObservations" in JS
+    assert "['D04', 'D05', 'D06', 'D07', 'D08']" in JS
+    finish = JS.split("finish() {", 1)[1].split("async loadReview()", 1)[0]
+    assert "D01" not in finish
+    assert "D02" not in finish
+    assert "D03" not in finish
+
+
+def test_future_result_views_are_not_presented_as_active_navigation():
+    assert "Mapa - Próximamente" in JS
+    assert "Acciones - Próximamente" in JS
+    assert '<nav class="pd-result-nav"' not in JS
