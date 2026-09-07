@@ -42,8 +42,10 @@ def test_access_keeps_large_catalog_out_of_the_main_screen():
 
 def test_owner_only_and_unknown_are_exclusive_access_choices():
     assert "['owner_only', 'unknown'].includes(input.value)" in ACCESS
-    assert "value=\"owner_only\"" in ACCESS
-    assert "value=\"unknown\"" in ACCESS
+    assert "selected.includes('owner_only')" in ACCESS
+    assert "selected.includes('unknown')" in ACCESS
+    assert "input[name=\"access-role\"][value=\"owner_only\"]" in ACCESS
+    assert "input[name=\"access-role\"][value=\"unknown\"]" in ACCESS
 
 
 def test_d03_becomes_a_direct_access_action():
