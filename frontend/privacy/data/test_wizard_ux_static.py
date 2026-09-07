@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=194b" in HTML
-    assert "wizard.js?v=194b" in HTML
+    assert "wizard.css?v=194c" in HTML
+    assert "wizard.js?v=194c" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -115,3 +115,23 @@ def test_map_activity_container_is_visually_lightweight():
     assert ".pd-map-activity{border:0;" in CSS
     assert "background:transparent" in CSS
     assert ".pd-map-stage{border:1px solid var(--border)" in CSS
+
+
+def test_phase_one_delivers_value_after_each_completed_activity():
+    assert "activity-complete" in JS
+    assert "progress-map" in JS
+    assert "lista ✓" in JS
+    assert "Ya agregamos esta actividad a tu mapa." in JS
+    assert 'data-go="view-progress-map"' in JS
+    assert 'data-go="continue-next-activity"' in JS
+    assert "completedActivities()" in JS
+    assert "mapFlowMarkup(this.catalog, this.completedActivities())" in JS
+    assert "this.activityIndex === this.selected.length - 1" in JS
+    assert "this.screen = 'activity-complete'" in JS
+    assert "this.activityIndex += 1" in JS
+
+
+def test_progressive_map_does_not_add_fake_resume_or_backend_completion_state():
+    assert "Terminar por ahora" not in JS
+    assert "phase_one_completed" not in JS
+    assert "completed_activity" not in JS
