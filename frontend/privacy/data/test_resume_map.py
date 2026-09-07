@@ -6,7 +6,7 @@ RESUME = (HERE / "resume-map.js").read_text()
 
 
 def test_completed_map_reentry_controller_is_loaded_before_wizard():
-    assert "resume-map.js?v=199e" in HTML
+    assert "resume-map.js?v=199f" in HTML
     assert HTML.index("resume-map.js") < HTML.index("wizard.js")
 
 
