@@ -38,18 +38,28 @@ def review_data_map(
     observations: list[MapObservation] = []
     for activity in activities:
         answers = activity.answers
-        retention_status = (answers.get("retention") or {}).get("status")
-        if retention_status == "unknown":
+        retention = answers.get("retention") or {}
+        retention_status = retention.get("status")
+        if retention.get("reviewed") is True and retention_status in {"unknown", "not_defined"}:
+            not_defined = retention_status == "not_defined"
             observations.append(_observation(
                 activity,
                 code="D01",
                 type="review",
                 topic="Conservación",
                 action="Define cuánto tiempo necesitas conservar estos datos.",
-                title="No está claro cuánto tiempo guardas esta información",
-                description="Indicaste que no estás seguro del período de conservación. Conviene definir cuánto tiempo necesitas mantener esta información.",
+                title=(
+                    "No tienes un plazo de conservación definido"
+                    if not_defined
+                    else "No está claro cuánto tiempo guardas esta información"
+                ),
+                description=(
+                    "Indicaste que no tienes un período de conservación definido. Conviene decidir cuánto tiempo necesitas mantener esta información."
+                    if not_defined
+                    else "Indicaste que no estás seguro del período de conservación. Conviene definir cuánto tiempo necesitas mantener esta información."
+                ),
             ))
-        if retention_status == "variable":
+        if retention.get("reviewed") is True and retention_status == "variable":
             observations.append(_observation(
                 activity,
                 code="D02",
