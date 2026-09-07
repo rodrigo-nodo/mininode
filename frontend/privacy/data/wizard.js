@@ -6,7 +6,7 @@ export const emptyAnswers = () => ({
   people_categories: [], may_include_minors: null, personal_data_types: [],
   data_origins: [], storage_locations: [], data_channels: [], purposes: [], access_roles: [],
   has_third_parties: null, third_parties: [],
-  retention: {status: 'unknown', value: null, unit: null, note: null},
+  retention: {status: 'unknown', value: null, unit: null, note: null, reviewed: false},
 });
 
 export function exclusive(values, code) {
@@ -129,6 +129,12 @@ export function canonicalActivities(activities = []) {
     || String(left.id ?? '').localeCompare(String(right.id ?? '')));
 }
 
+export function retentionProgress(activities = []) {
+  const canonical = canonicalActivities(activities);
+  const reviewed = canonical.filter(activity => activity.answers?.retention?.reviewed === true).length;
+  return {total: canonical.length, reviewed, complete: canonical.length > 0 && reviewed === canonical.length};
+}
+
 export function visibleReviewAction(observation, catalog) {
   const action = observation.action || '';
   if (observation.code !== 'D04' || observation.third_party_type === 'unknown') return action;
@@ -171,6 +177,8 @@ export function reviewMarkup(observations, catalog, activities = [], state = {})
 }
 
 const ACTION_TARGETS = {
+  D01: {label: 'Revisar conservación', phase2: 'retention'},
+  D02: {label: 'Revisar conservación', phase2: 'retention'},
   D04: {label: 'Revisar terceros', question: 'third_parties'},
   D06: {label: 'Revisar datos de menores', question: 'personal_data_types'},
   D07: {label: 'Aclarar menores', question: 'personal_data_types'},
@@ -178,7 +186,14 @@ const ACTION_TARGETS = {
 };
 
 export function actionsMarkup(observations, catalog, activities = [], state = {}) {
-  const nextStage = '<section class="pd-next-stage"><p class="eyebrow">Siguiente etapa</p><h2>Conservación</h2><p>Revisa cuánto tiempo necesitas mantener esta información.</p><button class="btn btn--primary" type="button" disabled>Comenzar - Próximamente</button></section>';
+  const progress = retentionProgress(activities);
+  const conservationStage = progress.complete
+    ? '<section class="pd-next-stage pd-next-stage--done"><p class="eyebrow">Fase 2</p><h2>Conservación ✓</h2><p>Revisaste la conservación en todas las actividades de tu mapa.</p></section>'
+    : `<section class="pd-next-stage"><p class="eyebrow">Siguiente etapa</p><h2>Conservación</h2><p>Revisa cuánto tiempo necesitas mantener esta información.</p>${progress.reviewed ? `<p class="pd-stage-progress">${progress.reviewed} de ${progress.total} actividades revisadas.</p>` : ''}<button class="btn btn--primary" type="button" data-go="start-retention">${progress.reviewed ? 'Continuar conservación' : 'Comenzar'}</button></section>`;
+  const accessStage = progress.complete
+    ? '<section class="pd-next-stage"><p class="eyebrow">Siguiente etapa</p><h2>Accesos</h2><p>Revisa quién necesita acceder a esta información.</p><button class="btn btn--primary" type="button" disabled>Comenzar - Próximamente</button></section>'
+    : '';
+  const nextStage = `${conservationStage}${accessStage}`;
   if (state.loading) return `<section class="pd-actions-view" aria-live="polite"><h2>Tus próximos pasos</h2><p role="status">Preparando tus acciones…</p></section>${nextStage}`;
   if (state.error) return `<section class="pd-actions-view" aria-live="polite"><h2>Tus próximos pasos</h2><p>No pudimos preparar las acciones en este momento.</p><button class="btn btn--primary" data-go="retry-review">Reintentar</button></section>${nextStage}`;
 
@@ -196,9 +211,12 @@ export function actionsMarkup(observations, catalog, activities = [], state = {}
       if (!grouped.length) return '';
       const rows = grouped.map(observation => {
         const target = ACTION_TARGETS[observation.code];
-        const button = type === 'review' && target
-          ? `<button type="button" class="btn btn--secondary pd-action-cta" data-go="review-action" data-action-activity-id="${escapeHtml(activity.id)}" data-action-question="${target.question}">${target.label}</button>`
-          : '';
+        let button = '';
+        if (type === 'review' && target?.phase2 === 'retention') {
+          button = `<button type="button" class="btn pd-action-cta" data-go="review-retention" data-action-activity-id="${escapeHtml(activity.id)}">${target.label}</button>`;
+        } else if (type === 'review' && target?.question) {
+          button = `<button type="button" class="btn pd-action-cta" data-go="review-action" data-action-activity-id="${escapeHtml(activity.id)}" data-action-question="${target.question}">${target.label}</button>`;
+        }
         return `<div class="pd-action-item"><strong class="pd-action-item__topic">${escapeHtml(observation.topic)}</strong><p>${escapeHtml(visibleReviewAction(observation, catalog))}</p>${button}</div>`;
       }).join('');
       return `<section class="pd-action-group"><h3>${heading}</h3>${rows}</section>`;
@@ -208,8 +226,8 @@ export function actionsMarkup(observations, catalog, activities = [], state = {}
 
   const blocks = canonical.map(activityBlock).filter(Boolean).join('');
   const intro = blocks
-    ? '<p class="pd-actions-view__lead">Estas acciones nacen de lo que identificaste en tu primera etapa.</p>'
-    : '<p><strong>Todo ordenado en esta primera etapa ✓</strong></p><p class="pd-actions-view__lead">No encontramos acciones pendientes en la información que ya revisaste.</p>';
+    ? '<p class="pd-actions-view__lead">Estas acciones nacen de lo que identificaste en tu mapa.</p>'
+    : '<p><strong>Todo ordenado en lo que ya revisaste ✓</strong></p><p class="pd-actions-view__lead">No encontramos acciones pendientes en la información que ya revisaste.</p>';
   return `<section class="pd-actions-view"><h2>Tus próximos pasos</h2>${intro}${blocks}</section>${nextStage}`;
 }
 
@@ -288,7 +306,7 @@ export const phaseOneQuestions = [
 const questions = phaseOneQuestions;
 
 class Wizard {
-  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, error: '', initialLoadError: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: '', reviewObservations: null, reviewLoading: false, reviewError: false, resultView: 'summary', returnToActions: false}); }
+  constructor(root) { Object.assign(this, {root, catalog: null, map: null, activities: [], selected: [], screen: 'landing', activityIndex: 0, q: -1, retentionIndex: 0, error: '', initialLoadError: '', pendingRemoval: [], minorsUnanswered: new Set(), thirdPartiesUnanswered: new Set(), recoveryUrl: '', copyStatus: '', reviewObservations: null, reviewLoading: false, reviewError: false, resultView: 'summary', returnToActions: false}); }
   loading(title, detail) { this.shell(`<p class="eyebrow">Privacy Data</p><h1>Ordena cómo tu negocio maneja los datos personales por dentro.</h1><p class="pd-lead">Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.</p><ul class="pd-benefits"><li>Gratis</li><li>Sin registro</li><li>No pedimos datos personales reales</li><li>Tu mapa estará disponible temporalmente</li></ul><section class="pd-loading" role="status"><strong>${title}</strong><p>${detail}</p></section>`); }
   async init() {
     this.initialLoadError = '';
@@ -388,6 +406,7 @@ class Wizard {
     if (this.screen === 'map') return this.activity();
     if (this.screen === 'activity-complete') return this.activityComplete();
     if (this.screen === 'progress-map') return this.progressMap();
+    if (this.screen === 'retention') return this.retention();
     if (this.screen === 'size') return this.size();
     return this.finish();
   }
@@ -427,7 +446,7 @@ class Wizard {
     else if (key === 'storage_locations') content = this.contextualOptions(section, answers[key] || [], type, 'Ver otros lugares');
     else if (section) content = this.options(section, answers[key] || []);
     else if (key === 'third_parties') content = this.thirdParties(this.thirdPartiesUnanswered.has(existing.id) ? {...answers, has_third_parties: null} : answers);
-    else content = `${this.options('retention.statuses', [answers.retention.status], 'radio')}<div class="pd-fields" data-retention-fields ${answers.retention.status === 'defined' ? '' : 'inert style="display:none"'}><label>Valor<input type="number" min="1" name="retention-value" value="${answers.retention.value || ''}"></label><label>Unidad<select name="retention-unit"><option value="">Selecciona</option>${this.catalog.retention.units.map(x => `<option value="${x.code}" ${answers.retention.unit === x.code ? 'selected' : ''}>${x.label}</option>`).join('')}</select></label><label>Nota opcional<input name="retention-note" value="${answers.retention.note || ''}"></label></div>`;
+    else content = '';
     this.shell(`${this.progress('Mapa')}${this.activityHeader(label, this.q + 1)}<h2>${title}</h2>${content}<div class="pd-actions"><button class="pd-back" data-go="question-back">Atrás</button><button class="btn btn--primary" data-go="question-save">Guardar y continuar</button></div>`);
   }
   completedActivities() {
@@ -442,6 +461,26 @@ class Wizard {
   progressMap() {
     const next = this.label('activity_types', this.selected[this.activityIndex + 1]);
     this.shell(`${this.progress('Mapa')}<p class="eyebrow">Mapa en progreso</p><h1>Tu mapa va tomando forma</h1><p class="pd-lead">Ya puedes ver las actividades que terminaste. Seguiremos agregando información a medida que avances.</p>${mapFlowMarkup(this.catalog, this.completedActivities())}<div class="pd-actions"><button class="pd-back" data-go="back-to-activity-complete">Volver</button><button class="btn btn--primary" data-go="continue-next-activity">Continuar con ${escapeHtml(next)}</button></div>`);
+  }
+  retentionActivities() {
+    const selected = new Set(this.selected);
+    return canonicalActivities(this.activities).filter(activity => selected.has(activity.activity_type));
+  }
+  retention() {
+    const activities = this.retentionActivities();
+    const activity = activities[this.retentionIndex];
+    if (!activity) {
+      this.screen = 'finish';
+      this.resultView = 'actions';
+      return this.finish();
+    }
+    const retention = activity.answers?.retention || {status: 'unknown', value: null, unit: null, reviewed: false};
+    const selected = retention.reviewed ? [retention.status] : [];
+    const label = this.label('activity_types', activity.activity_type);
+    const showFields = retention.reviewed && retention.status === 'defined';
+    const units = this.catalog.retention.units.map(unit => `<option value="${unit.code}" ${retention.unit === unit.code ? 'selected' : ''}>${unit.label}</option>`).join('');
+    const saveLabel = this.returnToActions || this.retentionIndex === activities.length - 1 ? 'Guardar y volver a Acciones' : 'Guardar y continuar';
+    this.shell(`<p class="eyebrow">Fase 2 · Conservación</p><div class="pd-activity-context"><span class="pd-activity-context__count">Actividad ${this.retentionIndex + 1} de ${activities.length}</span><strong class="pd-activity-context__name">${escapeHtml(label)}</strong><span class="pd-activity-context__question">Conservación</span></div><h2>¿Tienes definido cuánto tiempo necesitas conservar esta información?</h2>${this.options('retention.statuses', selected, 'radio', 'retention-status')}<div class="pd-fields pd-retention-fields" data-retention-fields ${showFields ? '' : 'inert style="display:none"'}><label>Plazo<input type="number" min="1" name="retention-value" value="${retention.value || ''}"></label><label>Unidad<select name="retention-unit"><option value="">Selecciona</option>${units}</select></label></div><div class="pd-actions"><button class="pd-back" data-go="retention-back">Volver a Acciones</button><button class="btn btn--primary" data-go="retention-save">${saveLabel}</button></div>`);
   }
   checked(section, name = 'choice') { return [...(this.root.querySelector(`[data-section="${section}"]`)?.querySelectorAll(`input[name="${name}"]:checked`) || [])].map(input => input.value); }
   async saveQuestion() {
@@ -473,12 +512,6 @@ class Wizard {
         if (Object.values(relationships).some(values => !values.length)) throw new FriendlyError(422, 'Selecciona qué ocurre con la información para cada tercero.');
         answers.third_parties = buildThirdParties(types, relationships, answers.third_parties);
       }
-    } else if (key === 'retention') {
-      const status = this.checked('retention.statuses')[0];
-      const value = Number(this.root.querySelector('[name=retention-value]').value) || null;
-      const unit = this.root.querySelector('[name=retention-unit]').value || null;
-      if (status === 'defined' && (!value || !unit)) throw new FriendlyError(422);
-      answers.retention = {status, value: status === 'defined' ? value : null, unit: status === 'defined' ? unit : null, note: this.root.querySelector('[name=retention-note]').value || null};
     } else {
       let values = this.checked(section);
       if (key === 'access_roles' && values.some(value => ['owner_only', 'unknown'].includes(value))) values = exclusive(values, values.find(value => ['owner_only', 'unknown'].includes(value)));
@@ -486,6 +519,49 @@ class Wizard {
     }
     await this.patchActivity(activity, answers);
     await this.advanceQuestion();
+  }
+  async saveRetention() {
+    const activities = this.retentionActivities();
+    const activity = activities[this.retentionIndex];
+    if (!activity) return;
+    const status = this.checked('retention.statuses', 'retention-status')[0];
+    if (!status) throw new FriendlyError(422, 'Selecciona una opción de conservación.');
+    const answers = structuredClone(activity.answers);
+    let value = null;
+    let unit = null;
+    if (status === 'defined') {
+      value = Number(this.root.querySelector('[name=retention-value]')?.value) || null;
+      unit = this.root.querySelector('[name=retention-unit]')?.value || null;
+      if (!value || !unit) throw new FriendlyError(422, 'Indica el plazo y la unidad de conservación.');
+    }
+    answers.retention = {
+      status,
+      value,
+      unit,
+      note: answers.retention?.note || null,
+      reviewed: true,
+    };
+    await this.patchActivity(activity, answers);
+    if (this.returnToActions) {
+      this.returnToActions = false;
+      this.screen = 'finish';
+      this.resultView = 'actions';
+      this.reviewObservations = null;
+      this.reviewLoading = true;
+      this.reviewError = false;
+      await this.loadReview();
+      return;
+    }
+    if (this.retentionIndex < activities.length - 1) {
+      this.retentionIndex += 1;
+      return;
+    }
+    this.screen = 'finish';
+    this.resultView = 'actions';
+    this.reviewObservations = null;
+    this.reviewLoading = true;
+    this.reviewError = false;
+    await this.loadReview();
   }
   async advanceQuestion() {
     if (this.returnToActions) {
@@ -519,8 +595,9 @@ class Wizard {
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
     const phaseOneObservations = this.reviewObservations?.filter(observation => ['D04', 'D05', 'D06', 'D07', 'D08'].includes(observation.code)) ?? this.reviewObservations;
+    const actionObservations = this.reviewObservations?.filter(observation => ['D01', 'D02', 'D04', 'D05', 'D06', 'D07', 'D08'].includes(observation.code)) ?? this.reviewObservations;
     const review = reviewMarkup(phaseOneObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
-    const actions = actionsMarkup(phaseOneObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
+    const actions = actionsMarkup(actionObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
     const nav = `<nav class="pd-result-nav" aria-label="Vistas del resultado"><button type="button" class="${this.resultView === 'summary' ? 'active' : ''}" data-go="result-summary" aria-pressed="${this.resultView === 'summary'}">Resumen</button><button type="button" class="${this.resultView === 'map' ? 'active' : ''}" data-go="result-map" aria-pressed="${this.resultView === 'map'}">Mapa</button><button type="button" class="${this.resultView === 'actions' ? 'active' : ''}" data-go="result-actions" aria-pressed="${this.resultView === 'actions'}">Acciones</button></nav>`;
     const content = this.resultView === 'map'
       ? mapFlowMarkup(this.catalog, this.activities)
@@ -615,6 +692,25 @@ class Wizard {
       this.returnToActions = true;
       return this.render();
     }
+    if (go === 'start-retention') {
+      const activities = this.retentionActivities();
+      const pending = activities.findIndex(activity => activity.answers?.retention?.reviewed !== true);
+      this.retentionIndex = pending >= 0 ? pending : 0;
+      this.returnToActions = false;
+      this.screen = 'retention';
+      return this.render();
+    }
+    if (go === 'review-retention') {
+      const activities = this.retentionActivities();
+      const index = activities.findIndex(activity => String(activity.id) === String(event.target.dataset.actionActivityId));
+      if (index < 0) return;
+      this.retentionIndex = index;
+      this.returnToActions = true;
+      this.screen = 'retention';
+      return this.render();
+    }
+    if (go === 'retention-back') { this.returnToActions = false; this.screen = 'finish'; this.resultView = 'actions'; return this.render(); }
+    if (go === 'retention-save') return this.run(() => this.saveRetention());
     if (go === 'generate-recovery-link') {
       this.copyStatus = 'Preparando tu enlace…';
       this.render();
