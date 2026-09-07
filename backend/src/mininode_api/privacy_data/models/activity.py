@@ -59,6 +59,7 @@ class ActivityAnswers(BaseModel):
     purposes: list[str] = Field(default_factory=list)
     access_roles: list[str] = Field(default_factory=list)
     security_measures: list[str] = Field(default_factory=list)
+    rights_handling: Literal["defined", "case_by_case", "none", "unknown"] | None = None
     has_third_parties: bool | Literal["unknown"] | None = None
     third_parties: list[ThirdParty] = Field(default_factory=list)
     retention: Retention = Field(default_factory=Retention)
