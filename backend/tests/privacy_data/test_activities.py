@@ -29,7 +29,10 @@ def answers(**changes):
         "personal_data_types": [], "storage_locations": [], "data_channels": [],
         "purposes": [], "access_roles": [], "has_third_parties": False,
         "third_parties": [],
-        "retention": {"status": "unknown", "value": None, "unit": None, "note": None},
+        "retention": {
+            "status": "unknown", "value": None, "unit": None, "note": None,
+            "reviewed": False,
+        },
     }
     value.update(changes)
     return value
@@ -87,7 +90,7 @@ def test_create_activity_is_associated_with_token_map_and_never_exposes_internal
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(
         third_parties=[{"type": "technology_provider", "relationships": ["access"]}])},
     {"activity_type": "sales", "data_context": "own_operations", "answers": answers(
-        retention={"status": "defined", "value": None, "unit": None})},
+        retention={"status": "defined", "value": None, "unit": None, "reviewed": True})},
 ])
 def test_invalid_activity_payloads_return_422(client, payload):
     assert client.post("/privacy/data/maps/token/activities", json=payload).status_code == 422
@@ -135,6 +138,36 @@ def test_data_origins_round_trip_and_legacy_answers_default(client, monkeypatch)
     response = client.get("/privacy/data/maps/token/activities")
     assert response.status_code == 200
     assert response.json()[0]["answers"]["data_origins"] == []
+
+
+def test_retention_phase_two_round_trip_and_legacy_review_default(client, monkeypatch):
+    data_map = stored_map()
+    monkeypatch.setattr(data_maps, "get_data_map", lambda token: data_map)
+    monkeypatch.setattr(
+        data_maps,
+        "create_activity",
+        lambda dm, payload: activity(dm, activity_answers=payload["answers"]),
+    )
+    response = client.post("/privacy/data/maps/token/activities", json={
+        "activity_type": "sales",
+        "data_context": "own_operations",
+        "answers": answers(retention={
+            "status": "not_defined", "value": None, "unit": None, "note": None,
+            "reviewed": True,
+        }),
+    })
+    assert response.status_code == 201
+    assert response.json()["answers"]["retention"] == {
+        "status": "not_defined", "value": None, "unit": None, "note": None,
+        "reviewed": True,
+    }
+
+    legacy = activity(data_map)
+    legacy.answers["retention"].pop("reviewed", None)
+    monkeypatch.setattr(data_maps, "list_activities", lambda dm: [legacy])
+    response = client.get("/privacy/data/maps/token/activities")
+    assert response.status_code == 200
+    assert response.json()[0]["answers"]["retention"]["reviewed"] is False
 
 
 @pytest.mark.parametrize("field", ["may_include_minors", "has_third_parties"])
