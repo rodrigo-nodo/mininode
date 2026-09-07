@@ -7,8 +7,8 @@ JS = (HERE / "wizard.js").read_text()
 
 
 def test_phase_one_assets_are_cache_busted_without_auxiliary_ux_assets():
-    assert "wizard.css?v=197a" in HTML
-    assert "wizard.js?v=197a" in HTML
+    assert "wizard.css?v=198a" in HTML
+    assert "wizard.js?v=198a" in HTML
     assert "wizard-ux.js" not in HTML
     assert "wizard-tune.css" not in HTML
 
@@ -64,13 +64,13 @@ def test_correcting_a_selection_clears_the_visible_validation_error():
     assert "this.root.querySelector('.pd-error')?.remove();" in JS
 
 
-def test_phase_one_result_only_uses_findings_from_phase_one_answers():
+def test_summary_remains_phase_one_while_actions_can_include_conservation():
     assert "phaseOneObservations" in JS
     assert "['D04', 'D05', 'D06', 'D07', 'D08']" in JS
-    finish = JS.split("finish() {", 1)[1].split("async loadReview()", 1)[0]
-    assert "D01" not in finish
-    assert "D02" not in finish
-    assert "D03" not in finish
+    assert "actionObservations" in JS
+    assert "['D01', 'D02', 'D04', 'D05', 'D06', 'D07', 'D08']" in JS
+    action_filter = JS.split("const actionObservations", 1)[1].split(";", 1)[0]
+    assert "D03" not in action_filter
 
 
 def test_summary_map_and_actions_are_real_result_views():
@@ -80,24 +80,27 @@ def test_summary_map_and_actions_are_real_result_views():
     assert "this.resultView === 'map'" in JS
     assert "this.resultView === 'actions'" in JS
     assert "mapFlowMarkup(this.catalog, this.activities)" in JS
-    assert "actionsMarkup(phaseOneObservations, this.catalog, this.activities" in JS
+    assert "actionsMarkup(actionObservations, this.catalog, this.activities" in JS
     assert "Acciones - Próximamente" not in JS
     assert '<nav class="pd-result-nav"' in JS
     assert ".pd-result-nav button.active" in CSS
 
 
-def test_actions_view_maps_phase_one_findings_to_direct_questions():
+def test_actions_view_maps_findings_to_direct_questions_and_phase_two():
     assert "export function actionsMarkup" in JS
+    assert "D01: {label: 'Revisar conservación', phase2: 'retention'}" in JS
+    assert "D02: {label: 'Revisar conservación', phase2: 'retention'}" in JS
     assert "D04: {label: 'Revisar terceros', question: 'third_parties'}" in JS
     assert "D06: {label: 'Revisar datos de menores', question: 'personal_data_types'}" in JS
     assert "D07: {label: 'Aclarar menores', question: 'personal_data_types'}" in JS
     assert "D08: {label: 'Aclarar terceros', question: 'third_parties'}" in JS
     assert 'data-go="review-action"' in JS
+    assert 'data-go="review-retention"' in JS
     assert "data-action-activity-id" in JS
     assert "data-action-question" in JS
     assert "Por revisar" in JS
     assert "Ten presente" in JS
-    assert "Todo ordenado en esta primera etapa ✓" in JS
+    assert "Todo ordenado en lo que ya revisaste ✓" in JS
     assert ".pd-action-item" in CSS
     assert ".pd-action-cta" in CSS
 
@@ -112,14 +115,33 @@ def test_action_edit_returns_to_actions_and_refreshes_review():
     assert "questions.findIndex(([key]) => key === event.target.dataset.actionQuestion)" in JS
 
 
-def test_conservation_is_next_stage_but_not_active_yet():
-    assert "Siguiente etapa" in JS
-    assert "Conservación" in JS
-    assert "Revisa cuánto tiempo necesitas mantener esta información." in JS
+def test_conservation_is_real_progressive_phase_two_flow():
+    assert "export function retentionProgress" in JS
+    assert "reviewed: false" in JS
+    assert "if (this.screen === 'retention') return this.retention();" in JS
+    assert "retentionActivities()" in JS
+    assert "Fase 2 · Conservación" in JS
+    assert "¿Tienes definido cuánto tiempo necesitas conservar esta información?" in JS
+    assert "this.options('retention.statuses', selected, 'radio', 'retention-status')" in JS
+    assert 'data-retention-fields' in JS
+    assert 'name="retention-value"' in JS
+    assert 'name="retention-unit"' in JS
+    assert 'data-go="start-retention"' in JS
+    assert 'data-go="retention-save"' in JS
+    assert 'data-go="retention-back"' in JS
+    assert "reviewed: true" in JS
+    assert "this.retentionIndex += 1" in JS
+    assert ".pd-retention-fields" in CSS
+
+
+def test_conservation_completion_unlocks_access_as_next_placeholder():
+    assert "Conservación ✓" in JS
+    assert "Revisaste la conservación en todas las actividades de tu mapa." in JS
+    assert "Accesos" in JS
+    assert "Revisa quién necesita acceder a esta información." in JS
     assert "Comenzar - Próximamente" in JS
     assert "disabled" in JS
     assert ".pd-next-stage" in CSS
-    assert "result-conservation" not in JS
 
 
 def test_map_flow_uses_phase_one_data_without_new_backend_reads():
