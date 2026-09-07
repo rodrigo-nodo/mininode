@@ -38,8 +38,8 @@ def test_security_question_and_plain_language_options_are_catalog_driven():
 def test_none_and_unknown_are_exclusive():
     assert "EXCLUSIVE_SECURITY = ['none', 'unknown']" in SECURITY
     assert "option.checked = option === input" in SECURITY
-    assert "value=\"none\"" in SECURITY
-    assert "value=\"unknown\"" in SECURITY
+    assert "selected.includes('none')" in SECURITY
+    assert "selected.includes('unknown')" in SECURITY
 
 
 def test_security_review_actions_use_d09_and_d10():
