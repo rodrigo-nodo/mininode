@@ -67,17 +67,36 @@
     return catalog;
   }
 
+  function normalizeCompletedRetentionCopy() {
+    const section = document.querySelector('#privacy-data .pd-next-stage--done');
+    if (!section) return;
+    const heading = section.querySelector('h2');
+    if (heading?.textContent.trim() === 'Conservación ✓') heading.textContent = 'Conservación';
+    const detail = [...section.querySelectorAll(':scope > p')]
+      .find(item => !item.classList.contains('eyebrow'));
+    if (detail?.textContent.trim() === 'Revisaste la conservación en todas las actividades de tu mapa.') {
+      detail.textContent = 'Revisada en todas las actividades de tu mapa.';
+    }
+  }
+
+  function scheduleCompletedRetentionCopy() {
+    setTimeout(normalizeCompletedRetentionCopy, 0);
+  }
+
   function jsonResponse(response, data) {
     const headers = new Headers(response.headers);
     headers.delete('content-length');
     headers.delete('content-encoding');
     headers.set('content-type', 'application/json');
+    scheduleCompletedRetentionCopy();
     return new Response(JSON.stringify(data), {
       status: response.status,
       statusText: response.statusText,
       headers,
     });
   }
+
+  document.addEventListener('click', scheduleCompletedRetentionCopy, true);
 
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input?.url || '';
