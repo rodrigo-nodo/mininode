@@ -420,8 +420,9 @@ class Wizard {
     const recovery = this.recoveryUrl
       ? `<label class="pd-recovery__label">Tu enlace<input class="pd-recovery__input" value="${this.recoveryUrl}" readonly></label><div class="pd-actions"><button class="btn btn--primary" data-go="copy-recovery-link">Copiar enlace</button></div><p class="pd-copy-status" role="status">${this.copyStatus}</p><p class="pd-warning">Quien tenga este enlace podrá acceder al mapa. Guárdalo de forma segura.</p>`
       : `<p class="pd-copy-status" role="status">${this.copyStatus || 'Preparando tu enlace…'}</p><div class="pd-actions"><button class="btn btn--primary" data-go="generate-recovery-link">Reintentar</button></div>`;
-    const review = reviewMarkup(this.reviewObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
-    this.shell(`${this.progress('Final')}<p class="eyebrow">Fase 1 terminada</p><h1>Este es tu primer mapa</h1><p class="pd-lead">Ya organizamos las personas, los datos, sus usos, su origen, los lugares y los terceros de tu negocio. Puedes revisar este resultado antes de profundizar.</p><nav class="pd-result-nav" aria-label="Vistas del resultado"><strong>Resumen</strong><span>Mapa</span><span>Acciones</span></nav>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
+    const phaseOneObservations = this.reviewObservations?.filter(observation => ['D04', 'D05', 'D06', 'D07', 'D08'].includes(observation.code)) ?? this.reviewObservations;
+    const review = reviewMarkup(phaseOneObservations, this.catalog, this.activities, {loading: this.reviewLoading, error: this.reviewError});
+    this.shell(`${this.progress('Final')}<p class="eyebrow">Fase 1 terminada</p><h1>Este es tu primer mapa</h1><p class="pd-lead">Ya organizamos las personas, los datos, sus usos, su origen, los lugares y los terceros de tu negocio. Puedes revisar este resultado antes de profundizar.</p><p><strong>Resumen</strong> · Mapa - Próximamente · Acciones - Próximamente</p>${review}<section class="pd-recovery"><h2>Guarda tu mapa para continuar después</h2><p>Tu mapa está guardado temporalmente en este navegador. También puedes guardar este enlace para abrirlo desde otro dispositivo.</p>${recovery}</section><div class="pd-actions"><button class="pd-back" data-go="edit-map">Volver y editar mi mapa</button></div>`);
   }
   async loadReview() {
     this.reviewLoading = true;
@@ -443,6 +444,10 @@ class Wizard {
   bind() {
     this.root.addEventListener('click', event => this.action(event));
     this.root.addEventListener('change', event => {
+      if (this.error) {
+        this.error = '';
+        this.root.querySelector('.pd-error')?.remove();
+      }
       if (event.target.name?.startsWith('relationship-') && event.target.checked) { const group = event.target.closest('fieldset'); if (event.target.value === 'unknown') group.querySelectorAll('input').forEach(input => { input.checked = input === event.target; }); else group.querySelector('input[value="unknown"]').checked = false; }
       if (event.target.name === 'choice' && event.target.type === 'checkbox' && event.target.checked) { const group = event.target.closest('fieldset'); if (['owner_only', 'unknown'].includes(event.target.value)) group.querySelectorAll('input').forEach(input => { input.checked = input === event.target; }); else group.querySelectorAll('input[value="owner_only"],input[value="unknown"]').forEach(input => { input.checked = false; }); }
       if (event.target.name === 'has-third-parties') {
