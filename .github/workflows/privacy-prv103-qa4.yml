@@ -1,9 +1,6 @@
 name: Temporary PRV-103 QA4 Extension
 
 on:
-  push:
-    branches:
-      - qa/privacy-prv103-qa4
   workflow_dispatch:
 
 permissions:
