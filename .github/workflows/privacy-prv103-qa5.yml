@@ -1,0 +1,58 @@
+name: Privacy PRV-103 QA5
+
+on:
+  push:
+    branches:
+      - fix/privacy-prv103-v07
+    paths:
+      - '.github/scripts/privacy_prv103_qa5.py'
+      - '.github/workflows/privacy-prv103-qa5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify frozen v0.7 product tree
+        run: |
+          git diff --exit-code 85cf402ca54efa8f727a172ab19e12c4ba1f0cb8 -- \
+            backend/src/mininode_api/domain_packs/privacy \
+            frontend/privacy/data/privacy-framework-v0.7.json
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+
+      - name: Run QA5 public passive holdout
+        env:
+          PYTHONPATH: backend/src:.github/scripts
+        run: python .github/scripts/privacy_prv103_qa5.py
+
+      - name: Upload blind packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa5-blind
+          path: |
+            artifacts/privacy-prv103-qa5-blind.json
+            artifacts/privacy-prv103-qa5-blind.md
+            artifacts/privacy-prv103-qa5-summary.json
+          retention-days: 7
+
+      - name: Upload internal product output
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa5-internal
+          path: artifacts/privacy-prv103-qa5-internal.json
+          retention-days: 7
