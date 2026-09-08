@@ -1,0 +1,26 @@
+{
+  "taxonomy_version": "prv103-intents-v1",
+  "intents": [
+    {"id":"account_login","class":"concrete","prototypes":["Iniciar sesión, ingresar o acceder a una cuenta existente.","Sign in, log in or access an existing account.","Entrar na conta ou fazer login."]},
+    {"id":"password_recovery","class":"concrete","prototypes":["Recuperar, restablecer o crear una nueva contraseña para una cuenta.","Recover or reset a password for an account.","Recuperar ou redefinir a senha."]},
+    {"id":"order_tracking","class":"concrete","prototypes":["Consultar el estado, ubicación o seguimiento de un pedido, orden o despacho.","Track an order, shipment or delivery status."]},
+    {"id":"payment","class":"concrete","prototypes":["Pagar una cuenta, boleta o factura, o consultar un pago.","Pay a bill, invoice or account."]},
+    {"id":"availability_delivery","class":"concrete","prototypes":["Consultar stock, disponibilidad, zona, dirección o modalidad de entrega o retiro.","Check stock, availability, delivery address, delivery area or pickup option."]},
+    {"id":"quote_request","class":"concrete","prototypes":["Solicitar una cotización, presupuesto o precio.","Request a quote, estimate or pricing.","Solicitar cotação ou orçamento."]},
+    {"id":"appointment_booking","class":"concrete","prototypes":["Reservar o agendar una hora, cita, reunión o llamada.","Book or schedule an appointment, meeting or call."]},
+    {"id":"trial_or_creation","class":"concrete","prototypes":["Crear una cuenta, tienda o negocio, o iniciar una prueba gratis con ese resultado explícito.","Create an account, store or workspace, or start a free trial with an explicit creation outcome."]},
+    {"id":"job_application","class":"concrete","prototypes":["Postular a un trabajo, empleo o proceso de selección.","Apply for a job or join the team."]},
+    {"id":"specific_subscription_content","class":"concrete","prototypes":["Suscribirse para recibir noticias, ofertas, promociones, recursos, temas o comunicaciones explícitamente descritas.","Subscribe to receive explicitly described news, offers, updates, resources or communications."]},
+    {"id":"feedback","class":"concrete","prototypes":["Evaluar la experiencia, responder una encuesta o decir si encontró lo que buscaba.","Give feedback, rate an experience or answer whether you found what you were looking for."]},
+    {"id":"specific_service_request","class":"concrete","prototypes":["Solicitar soporte, demo, llamada, respuesta, modalidad o servicio específico con un resultado reconocible.","Request support, a demo, a call, a response or another specific service outcome."]},
+    {"id":"contact_generic","class":"generic","prototypes":["Contacto general, escríbenos, hablemos, envía un mensaje o comunícate con el equipo sin un resultado específico.","General contact, get in touch, talk to us or send a message without a specific outcome."]},
+    {"id":"registration_generic","class":"generic","prototypes":["Registrarse, registrarme o sign up sin explicar un resultado o finalidad adicional.","Register or sign up without a more specific stated outcome."]},
+    {"id":"subscription_generic","class":"generic","prototypes":["Suscribirse, newsletter o subscribe sin explicar qué contenido se recibirá.","Subscribe or newsletter signup without describing the content to be received."]},
+    {"id":"submit_generic","class":"generic","prototypes":["Enviar, submit, confirmar o completar un formulario sin una finalidad más específica.","Submit, send or confirm a form without a more specific purpose."]},
+    {"id":"progression_generic","class":"generic","prototypes":["Continuar un flujo o pasar al siguiente paso sin un resultado específico.","Continue a flow without a specific outcome."]},
+    {"id":"technical_placeholder","class":"none","prototypes":["Placeholder técnico, token de plantilla o texto de interfaz sin significado para una persona, por ejemplo una variable entre llaves.","Technical template placeholder or unresolved UI token with no human-readable meaning."]},
+    {"id":"consent_or_field_label","class":"unknown","prototypes":["Etiqueta de consentimiento, nombre de campo o dato solicitado que no expresa para qué se usarán los datos.","Consent label or field label that does not state the purpose."]},
+    {"id":"ambiguous_action","class":"unknown","prototypes":["Acción ambigua aislada como buscar, empezar, siguiente, conocer o start now sin objeto ni resultado identificable.","Ambiguous isolated action such as search, next, start now or learn more with no identifiable object or outcome."]},
+    {"id":"informational_not_purpose","class":"unknown","prototypes":["Texto informativo o promocional que no explica qué hará el formulario con los datos.","Informational statement that does not explain the form's purpose."]}
+  ]
+}
