@@ -2,9 +2,9 @@
 
 ## Estado
 
-**PENDIENTE DE ADJUDICACIÓN CIEGA**
+**NEEDS FIX**
 
-Este QA valida PRV-103 sobre framework `0.6` sin modificar producción ni ajustar reglas durante la medición.
+QA4 valida PRV-103 sobre framework `0.6` con un holdout nuevo, sin modificar producción ni ajustar reglas durante la medición.
 
 ## Línea base congelada
 
@@ -17,33 +17,16 @@ Este QA valida PRV-103 sobre framework `0.6` sin modificar producción ni ajusta
 | Producción modificada durante QA4 | No |
 | Tuning durante QA4 | Prohibido |
 
-La rama de QA parte exactamente desde ese SHA de `main`. Los únicos cambios permitidos durante QA4 son infraestructura temporal de medición y este registro documental.
+## Holdout y cobertura
 
-## Holdout inicial congelado
+La muestra se seleccionó antes de observar las clasificaciones productivas.
 
-Se definieron 100 organizaciones nuevas antes de observar resultados:
-
-- Chile: 60;
+Primera muestra congelada:
+- Chile: 60 organizaciones;
 - Latinoamérica: 20;
 - internacional: 20.
 
-La lista exacta quedó congelada en `.github/scripts/privacy_prv103_qa4.py` antes de la primera ejecución.
-
-Se excluyeron organizaciones utilizadas en:
-
-- W2.2b.2-QA;
-- PRV-103 QA1;
-- PRV-103 QA2;
-- PRV-103 QA3;
-- regression/tuning derivados de esos ciclos.
-
-No se reemplaza una organización por entregar un resultado inconveniente. Los fallos de acceso, bloqueos o ausencia de formularios se registran como parte natural del holdout.
-
-## Primera ejecución - cobertura
-
-Run: `34239972865` - **SUCCESS**.
-
-En esta etapa solo se revisaron métricas de cobertura; no se abrió ni examinó la clasificación productiva de PRV-103.
+Run `34239972865`: **SUCCESS**.
 
 | Lote | Sitios intentados | Sitios con páginas | HIGH raw | MEDIUM raw | HIGH deduplicados |
 |---|---:|---:|---:|---:|---:|
@@ -52,21 +35,12 @@ En esta etapa solo se revisaron métricas de cobertura; no se abrió ni examinó
 | Internacional | 20 | 16 | 3 | 0 | 1 |
 | **Total** | **100** | **71** | **23** | **4** | **20** |
 
-El objetivo predefinido era al menos 30 formularios HIGH deduplicados. Como los 100 sitios produjeron 20, la muestra no se cerró en ese punto.
+Como el objetivo predefinido era al menos 30 formularios HIGH deduplicados, antes de abrir los artifacts internos se congeló una extensión de 50 organizaciones nuevas:
+- Chile: 30;
+- Latinoamérica: 10;
+- internacional: 10.
 
-## Extensión congelada antes de revisar clasificaciones
-
-Antes de abrir los artifacts internos o revisar cualquier `product_purpose`, se congeló una extensión de **50 organizaciones nuevas**:
-
-- 30 Chile;
-- 10 Latinoamérica;
-- 10 internacionales.
-
-La extensión priorizó sectores con interacción pública frecuente - inmobiliario, automotriz, seguros, educación y software/servicios - para aumentar la probabilidad de observar formularios. Las organizaciones se fijaron antes de ejecutar y no se sustituyeron según el resultado.
-
-La lista exacta quedó congelada en `.github/scripts/privacy_prv103_qa4_extension.py`.
-
-Run de extensión: `34240888724` - **SUCCESS**.
+Run `34240888724`: **SUCCESS**.
 
 | Métrica extensión | Resultado |
 |---|---:|
@@ -77,22 +51,21 @@ Run de extensión: `34240888724` - **SUCCESS**.
 | MEDIUM raw | 2 |
 | HIGH deduplicados | 17 |
 
-## Cobertura final antes de adjudicación
+Muestra final:
 
 | Métrica | Resultado |
 |---|---:|
 | Sitios intentados | **150** |
 | Sitios con páginas | **109** |
-| HIGH deduplicados | **37** |
+| HIGH deduplicados adjudicados | **37** |
 
-El objetivo práctico congelado de al menos 30 HIGH deduplicados quedó superado. La búsqueda de casos se detiene aquí.
+La búsqueda de casos se detuvo al superar el objetivo práctico de 30 HIGH deduplicados.
 
-Hasta este punto no se inspeccionaron las clases productivas contenidas en los artifacts internos.
+Las listas exactas de organizaciones usadas quedan registradas en los scripts QA4 de este PR para impedir su reutilización como futuro holdout independiente.
 
 ## Ejecución
 
-Se usa el pipeline productivo real:
-
+Se utilizó el pipeline productivo real:
 - `WebFetcher`;
 - extracción productiva;
 - `build_evidence`;
@@ -100,62 +73,41 @@ Se usa el pipeline productivo real:
 - `_personal_form`;
 - `_form_purpose_signal`.
 
-Solo se permite inspección pública y pasiva mediante GET.
+Solo se realizó inspección pública y pasiva mediante GET.
 
-No se:
-
-- envían formularios;
-- introducen datos;
-- ejecutan POST;
-- autentican sesiones;
-- crean cuentas;
-- eluden protecciones.
+No se enviaron formularios, introdujeron datos, ejecutaron POST, autenticaron sesiones, crearon cuentas ni eludieron protecciones.
 
 ## Deduplicación
 
-Para la muestra principal se consideran formularios personales `HIGH`.
+La muestra principal considera formularios personales `HIGH`.
 
-Se deduplican únicamente formularios de la misma organización con evidencia estructurada idéntica en:
-
+Se deduplicaron únicamente formularios de la misma organización con evidencia estructurada idéntica en:
 - `heading`;
 - `legend`;
 - `introductory_text`;
 - `submit_text`.
-
-La muestra final para adjudicación contiene **37 formularios HIGH deduplicados**.
 
 ## Referencia independiente
 
-El Reviewer recibe un paquete ciego que contiene únicamente:
-
+El Reviewer recibió únicamente un paquete ciego con los 37 casos y estos cuatro campos:
 - `heading`;
 - `legend`;
 - `introductory_text`;
 - `submit_text`.
 
-No recibe:
+No recibió nombre del sitio, URL, campos del formulario, resultado de PRV-103 ni clasificación automática. No revisó el PR ni el repositorio antes de adjudicar.
 
-- nombre del sitio;
-- URL;
-- campos del formulario;
-- resultado de PRV-103;
-- clasificación automática.
-
-Debe clasificar cada caso como:
-
+Clases permitidas:
 - `concrete`;
 - `generic`;
 - `none`;
 - `unknown`.
 
-Después se compara esa referencia con la clasificación productiva.
+Solo después de recibir las 37 etiquetas del Reviewer se abrieron los artifacts internos y se compararon con PRV-103.
 
-## Criterios congelados
+## Criterios congelados antes del resultado
 
 ### PASS
-
-Requiere:
-
 - `exact_class_agreement >= 80%`;
 - `concrete_recall >= 60%`;
 - `false_concrete_promotions = 0`;
@@ -163,28 +115,85 @@ Requiere:
 - sin errores críticos de asociación o consolidación.
 
 ### PASS WITH OBSERVATIONS
-
-Requiere:
-
 - `exact_class_agreement >= 65%`;
 - `concrete_recall >= 45%`;
 - mantener las condiciones de seguridad;
 - errores restantes conservadores y no sistemáticos.
 
 ### NEEDS FIX
-
-Aplica si ocurre, entre otros:
-
+Aplica, entre otros, si:
 - `exact_class_agreement < 65%` con patrón sistemático;
 - `concrete_recall < 45%` con omisiones generalizables;
-- falsa promoción a `concrete`;
-- falsa conclusión adversa `none` relevante;
-- error crítico de asociación o consolidación.
+- existe falsa promoción a `concrete`;
+- existe falsa conclusión adversa `none` relevante;
+- existe error crítico de asociación o consolidación.
 
-## Regla de no tuning
+## Resultado de la adjudicación ciega
 
-Durante QA4 no se modifican:
+Distribución:
 
+| Clase | Reviewer | Producto |
+|---|---:|---:|
+| concrete | 15 | 2 |
+| generic | 14 | 14 |
+| none | 0 | 0 |
+| unknown | 8 | 21 |
+| **Total** | **37** | **37** |
+
+Matriz Reviewer vs producto:
+
+| Reviewer \\ Producto | concrete | generic | unknown | Total |
+|---|---:|---:|---:|---:|
+| concrete | 1 | 2 | 12 | 15 |
+| generic | 1 | 11 | 2 | 14 |
+| unknown | 0 | 1 | 7 | 8 |
+| **Total** | **2** | **14** | **21** | **37** |
+
+Métricas:
+
+| Métrica | Resultado |
+|---|---:|
+| Exact class agreement | **19/37 = 51,4%** |
+| Concrete recall | **1/15 = 6,7%** |
+| False concrete promotions | **1** |
+| False adverse none | **0** |
+| Missed concrete | **14** |
+| Producto `unknown` con Reviewer `concrete/generic` | **14** |
+
+Discrepancias principales:
+
+| Tipo | Casos |
+|---|---|
+| Producto `unknown`, Reviewer `concrete` | CHILE-002, CHILE-003, CHILE-007, CHILE-008, CHILE-009, CHILE-010, LATAM-003, LATAM-004, EXTENSION-004, EXTENSION-008, EXTENSION-009, EXTENSION-015 |
+| Producto `generic`, Reviewer `concrete` | CHILE-006, LATAM-005 |
+| Producto `concrete`, Reviewer `generic` | EXTENSION-002 |
+| Producto `unknown`, Reviewer `generic` | EXTENSION-006, EXTENSION-017 |
+| Producto `generic`, Reviewer `unknown` | INTL-001 |
+
+## Interpretación
+
+La versión 0.6 mejora una dimensión importante respecto de ciclos anteriores: en esta muestra no aparece ninguna falsa conclusión adversa `none`.
+
+Sin embargo, el comportamiento quedó excesivamente conservador hacia `unknown`:
+- 21 de 37 casos fueron clasificados por el producto como `unknown`;
+- 14 de esos 21 fueron considerados `concrete` o `generic` por el Reviewer;
+- 14 de los 15 casos `concrete` del Reviewer no fueron reconocidos como `concrete` por el producto.
+
+Además existe una falsa promoción a `concrete` en EXTENSION-002.
+
+Por tanto, QA4 falla simultáneamente los umbrales de acuerdo exacto, concrete recall y una condición de seguridad.
+
+## Decisión
+
+**NEEDS FIX**.
+
+PRV-103 no se considera cerrado en framework `0.6`.
+
+No corresponde cerrar todavía Formularios como V1 estable.
+
+## No tuning
+
+Durante QA4 no se modificaron:
 - `_FORM_PURPOSE_*`;
 - `_form_purpose_signal(...)`;
 - `_form_purpose_evidence(...)`;
@@ -197,4 +206,8 @@ Durante QA4 no se modifican:
 - catálogo;
 - scoring.
 
-Si QA4 termina `NEEDS FIX`, cualquier corrección se realizará después en un PR separado y requerirá un nuevo holdout si se vuelve a ejecutar QA independiente.
+## Siguiente paso
+
+Mergear este PR únicamente como registro de QA4 con resultado **NEEDS FIX**.
+
+La corrección debe realizarse después en un PR separado y pequeño, usando estas discrepancias para diagnóstico/tuning. Si se ejecuta nuevamente QA independiente después de la corrección, debe utilizarse un holdout nuevo que excluya todos los sitios de QA4.
