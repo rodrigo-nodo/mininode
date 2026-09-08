@@ -54,7 +54,7 @@ def _normalize(vector: Sequence[float]) -> list[float]:
 
 
 def _mean(vectors: Sequence[Sequence[float]]) -> list[float]:
-    if not vectors:
+    if len(vectors) == 0:
         raise ValueError("at least one vector is required")
     width = len(vectors[0])
     return _normalize([sum(v[i] for v in vectors) / len(vectors) for i in range(width)])
