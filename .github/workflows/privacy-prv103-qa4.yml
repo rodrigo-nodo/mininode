@@ -1,19 +1,18 @@
-name: Temporary PRV-103 QA4
+name: Temporary PRV-103 QA4 Extension
 
 on:
+  push:
+    branches:
+      - qa/privacy-prv103-qa4
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  qa4:
+  qa4-extension:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        region: [chile, latam, intl]
 
     steps:
       - uses: actions/checkout@v4
@@ -25,25 +24,25 @@ jobs:
       - name: Install backend dependencies
         run: pip install -r backend/requirements.txt
 
-      - name: Run PRV-103 QA4 holdout
+      - name: Run frozen PRV-103 QA4 extension
         env:
           PYTHONPATH: backend/src
-        run: python .github/scripts/privacy_prv103_qa4.py --region "${{ matrix.region }}"
+        run: python .github/scripts/privacy_prv103_qa4_extension.py
 
-      - name: Upload internal QA4 artifact
+      - name: Upload internal QA4 extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-qa4-${{ matrix.region }}-internal
-          path: artifacts/privacy-prv103-qa4-${{ matrix.region }}-internal.json
+          name: privacy-prv103-qa4-extension-internal
+          path: artifacts/privacy-prv103-qa4-extension-internal.json
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload blind Reviewer artifact
+      - name: Upload blind Reviewer extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-qa4-${{ matrix.region }}-blind
+          name: privacy-prv103-qa4-extension-blind
           path: |
-            artifacts/privacy-prv103-qa4-${{ matrix.region }}-blind.json
-            artifacts/privacy-prv103-qa4-${{ matrix.region }}-reviewer.md
+            artifacts/privacy-prv103-qa4-extension-blind.json
+            artifacts/privacy-prv103-qa4-extension-reviewer.md
           if-no-files-found: error
           retention-days: 7
