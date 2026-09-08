@@ -1,0 +1,43 @@
+name: Privacy PRV-103 Semantic V1
+
+on:
+  push:
+    branches:
+      - research/prv103-semantic-v1
+    paths:
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/**'
+      - '.github/workflows/privacy-prv103-semantic-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install experiment dependencies
+        run: |
+          pip install pytest sentence-transformers==6.0.1
+
+      - name: Run protocol tests
+        run: pytest -q backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_runner.py
+
+      - name: Run frozen semantic experiment
+        run: |
+          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/runner.py \
+            --output artifacts/prv103-semantic-v1.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: prv103-semantic-v1
+          path: artifacts/prv103-semantic-v1.json
+          retention-days: 7
