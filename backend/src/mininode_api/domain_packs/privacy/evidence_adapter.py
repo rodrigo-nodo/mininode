@@ -1171,10 +1171,11 @@ _FORM_PURPOSE_NOISE = {
 }
 _FORM_PURPOSE_GENERIC_EXACT = {
     "contacto", "formulario", "form", "enviar", "send", "submit", "continuar", "continue",
-    "siguiente", "next", "mensaje", "message", "newsletter", "subscribe",
+    "siguiente", "mensaje", "message", "newsletter", "subscribe",
     "conversemos", "empezar", "comenzar", "start", "get started", "contact",
     "i m interested", "i m interested in", "confirm", "confirmar", "suscribirme",
-    "subscribirme", "suscribirse", "contactanos", "contactenos", "contactar", "hablemos",
+    "subscribirme", "suscribirse", "suscribete", "sign up", "enviar mensaje",
+    "contactanos", "contactenos", "contactar", "hablemos",
 }
 _FORM_PURPOSE_GENERIC_PHRASES = {
     "contact us", "get in touch", "contact form", "formulario de contacto",
@@ -1183,7 +1184,8 @@ _FORM_PURPOSE_GENERIC_PHRASES = {
     "talk to our support team", "speak with our support team",
     "contacta a nuestro equipo", "contacta con nuestro equipo",
     "habla con nuestro equipo", "habla con ventas", "talk to us", "connect with us",
-    "send message", "send a message", "tell us a bit more", "enviar formulario",
+    "send message", "send a message", "enviar mensaje", "enviar un mensaje",
+    "tell us a bit more", "enviar formulario",
     "enviar el formulario",
 }
 _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
@@ -1193,16 +1195,17 @@ _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
     r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
-    r"\b(?:enviar|envia|envianos)\b.{0,30}\b(?:consulta|mensaje)\b",
+    r"\b(?:enviar|envia|envianos)\b.{0,30}\bconsulta\b",
     r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias|temas?|contenido|informacion|comunicaciones?|actualizaciones?|promociones?)\b",
     r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
-    r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
-    r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account)\b",
+    r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,80}\b(?:ya|newsletter|updates?|novedades|noticias|ofertas?|recursos?|promociones?|comunicaciones?)\b",
+    r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account|tienda|store)\b",
     r"\b(?:registrarse|register|postular|apply)\b",
-    r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
-    r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
-    r"\bsend\b.{0,20}\b(?:an inquiry|us a message)\b",
-    r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
+    r"\brequest\b.{0,30}\b(?:quote|demo|support|call)\b",
+    r"\bsolicit(?:a|ar|e)\b.{0,30}\b(?:llamada|cotizacion|presupuesto|demo|soporte)\b",
+    r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo|call)\b",
+    r"\bsend\b.{0,20}\ban inquiry\b",
+    r"\b(?:nos pondremos en contacto|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
     r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
     r"\b(?:create|open)\s+(?:a\s+)?(?:support\s+)?ticket\b",
     r"\bsubmit\s+(?:a\s+)?support\s+request\b",
@@ -1226,9 +1229,18 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
     r"(?!(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\b)\w+",
     r"\breceive\b.{0,20}\bupdates?\b",
-    r"^(?:iniciar|inicia) sesion$",
-    r"^acceder a (?:mi|tu) cuenta$",
-    r"^(?:sign in|log in|login|access my account)$",
+    r"\b(?:iniciar|inicia) sesion\b",
+    r"\bacceder a (?:mi|tu) cuenta\b",
+    r"\b(?:sign in|log in|login|access my account)\b",
+    r"\b(?:estado|seguimiento)\b.{0,45}\b(?:orden|pedido|despacho)\b",
+    r"\b(?:orden|pedido|despacho)\b.{0,45}\b(?:estado|seguimiento)\b",
+    r"\bdonde(?: esta)?\b.{0,35}\b(?:orden|pedido|despacho)\b",
+    r"\bbuscar\b.{0,40}\bdirecciones? de entrega\b",
+    r"\b(?:pago|paga|pagar)\b.{0,40}\b(?:boletas?|facturas?|cuenta)\b",
+    r"\b(?:boletas?|facturas?|cuenta)\b.{0,40}\b(?:pago|pagar)\b",
+    r"\b(?:trabaja con nosotros|work with us|join our team)\b",
+    r"\benviar\b.{0,25}\bcotizacion\b",
+    r"\bget in touch\b.{0,20}\bto\b.{0,100}\b(?:unlock|access|integrate|expand|grow|receive|get|schedule|book)\b",
 ))
 _FORM_PURPOSE_SUPPORT_SIGNAL = re.compile(
     r"\b(?:technical support|support|help|advis(?:or|er)|soporte|ayuda|asesoria)\b"

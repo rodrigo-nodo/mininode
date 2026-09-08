@@ -47,7 +47,7 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework es `0.6`; el scoring permanece en `0.1`.
+La versión vigente del framework es `0.7`; el scoring permanece en `0.1`.
 
 ## Foco técnico actual
 
@@ -78,10 +78,14 @@ reconocido se clasifica como `unknown`. El reconocimiento conservador cubre acci
 resultados explícitamente relacionados —como solicitudes con respuesta, acceso a
 contenido, recepción de comunicaciones y feedback—, mientras que el contacto con un
 equipo sin un resultado específico permanece como finalidad genérica. También trata
-como genéricas las invitaciones acotadas de contacto, envío, confirmación y suscripción,
-y reconoce conservadoramente como concretos el acceso explícito a una cuenta, la
-combinación de soporte con el envío de una pregunta y una prueba gratuita acompañada
-de una acción inequívoca para iniciarla.
+como genéricas las invitaciones acotadas de contacto, envío, confirmación y suscripción.
+La versión 0.7 amplía de forma acotada las finalidades concretas cuando el mismo
+formulario expresa un resultado reconocible, incluyendo acceso a cuenta, seguimiento
+de pedidos, pagos, búsqueda de direcciones de entrega, creación de tienda, postulación,
+solicitud de llamada o cotización y suscripciones con contenido declarado. El envío
+genérico de un mensaje permanece `generic` y acciones aisladas ambiguas como `Next`
+permanecen `unknown`. QA4 se considera desde este cambio un conjunto consumido para
+diagnóstico/tuning; cualquier nueva validación independiente debe usar un holdout nuevo.
 
 El diagnóstico Privacy Web es gratuito. Privacy Web activo cuesta CLP $9.900 por un
 mes, sin renovación automática por ahora, y mantiene internamente el código

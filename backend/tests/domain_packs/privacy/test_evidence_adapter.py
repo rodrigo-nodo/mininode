@@ -1611,3 +1611,38 @@ def test_prv102_technical_error_is_not_evaluable():
     evidence = {"form_transport": "insecure", "technical_error": True}
     result = evaluate_control("PRV-102", evidence, {"PRV-101": "detected"})
     assert result["result"] == "not_evaluable"
+
+
+
+@pytest.mark.parametrize(("kwargs", "expected"), [
+    ({"introductory_text": "Para iniciar sesión, por favor ingresa tu Email y contraseña:", "submit_text": "Iniciar sesión"}, "concrete"),
+    ({"introductory_text": "Verifica el estado de tu orden, ingresando el número de boleta incluso si compraste en alguna de nuestras tiendas.", "submit_text": "Buscar"}, "concrete"),
+    ({"heading": "¿Cuál es tu celular?", "introductory_text": "Para comenzar, ingresa un teléfono para buscar direcciones de entrega", "submit_text": "Continuar"}, "concrete"),
+    ({"heading": "Pago rápido de tus boletas de gas", "introductory_text": "Ingresa el RUT del cliente titular del tanque", "submit_text": "Consultar"}, "concrete"),
+    ({"heading": "Pago rápido de tus facturas de gas", "introductory_text": "Si eres cliente comercial, ingresa el Rut del cliente titular del tanque", "submit_text": "Consultar"}, "concrete"),
+    ({"heading": "Paga tu cuenta", "introductory_text": "Ingresa el RUT del cliente titular", "submit_text": "Ir a pagar"}, "concrete"),
+    ({"heading": "Seguimiento en línea", "introductory_text": "¿Quieres saber donde está tu pedido de cilindro?", "submit_text": "Buscar"}, "concrete"),
+    ({"submit_text": "Crear tienda"}, "concrete"),
+    ({"introductory_text": "Envía desde el punto de recolección de tu elección. Completa tus datos y nos pondremos en contacto si tu tienda es apta para esta modalidad.", "submit_text": "Solicitar modalidad de recolección"}, "concrete"),
+    ({"introductory_text": "Start your expansion journey. Get in touch to unlock seamless payment experiences through a single integration.", "submit_text": "Submit"}, "concrete"),
+    ({"submit_text": "Enviar cotización"}, "concrete"),
+    ({"heading": "Trabaja con nosotros", "submit_text": "Enviar Correo Procesando..."}, "concrete"),
+    ({"submit_text": "Solicitar llamada"}, "concrete"),
+    ({"introductory_text": "Suscríbete y mantente al día con las últimas noticias, ofertas exclusivas y recursos útiles directamente en tu correo.", "submit_text": "Suscribirme ahora"}, "concrete"),
+    ({"submit_text": "Enviar mensaje"}, "generic"),
+    ({"heading": "Suscríbete"}, "generic"),
+    ({"submit_text": "Sign Up"}, "generic"),
+    ({"submit_text": "Next"}, "unknown"),
+])
+def test_prv103_qa4_tuning_cases_are_classified_from_structured_text_only(kwargs, expected):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))["PRV-103"]
+    assert evidence["form_purpose"] == expected
+
+
+@pytest.mark.parametrize("text", [
+    "Buscar", "Pago", "Estado", "Seguimiento", "Trabaja", "Solicitar", "Call",
+    "Direcciones", "Tienda",
+])
+def test_prv103_qa4_generalizations_remain_bounded(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "unknown"
