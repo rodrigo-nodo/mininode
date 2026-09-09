@@ -1,0 +1,45 @@
+name: Privacy PRV-103 Intent QA6 Discovery
+
+on:
+  push:
+    branches:
+      - qa/privacy-prv103-intent-qa6
+    paths:
+      - '.github/scripts/privacy_prv103_intent_qa6_discovery.py'
+      - '.github/workflows/privacy-prv103-intent-qa6.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [qa6_chile, qa6_latam, qa6_intl]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Discover fresh HIGH forms
+        env:
+          PYTHONPATH: backend/src:.github/scripts
+        run: |
+          python .github/scripts/privacy_prv103_intent_qa6_discovery.py \
+            --region '${{ matrix.region }}'
+
+      - name: Upload discovery artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prv103-intent-qa6-${{ matrix.region }}
+          path: artifacts/privacy-prv103-intent-qa6-${{ matrix.region }}-*
+          retention-days: 7
