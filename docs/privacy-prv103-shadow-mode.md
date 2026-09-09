@@ -34,7 +34,7 @@ La clasificación pública continúa usando la lógica determinística vigente d
 
 ## Evidencia permitida
 
-Se envían al modelo exclusivamente los cuatro campos estructurados del mismo formulario ya aprobados y validados en QA6:
+Se envían al modelo exclusivamente los cuatro campos estructurados del mismo formulario aprobados y validados en QA6:
 
 - `heading`;
 - `legend`;
@@ -45,41 +45,44 @@ No se envían fields, `nearby_text`, action URL, page title, URL del sitio ni co
 
 El modelo identifica únicamente un `intent_id`. No recibe las clases de producto. Mininode mantiene el mapeo determinístico intención -> `concrete/generic/none/unknown`, y `uncertain=true` fuerza `unknown`.
 
-`store=False` no se considera por sí solo una garantía de Zero Data Retention. Antes de activar tráfico real se debe confirmar que los controles de retención del proveedor y del proyecto OpenAI son aceptables para Privacy Web.
+## Retención del proveedor
+
+Para este alcance se acepta la política estándar de retención del proveedor OpenAI para los cuatro textos públicos anteriores.
+
+La aceptación aplica únicamente a esta evidencia pública estructurada. No habilita el envío de datos ingresados por personas, nombres, emails, teléfonos, contenido de fields, URLs de formularios ni otros datos personales del visitante.
+
+`store=False` se mantiene. Esta decisión no se interpreta como Zero Data Retention y debe revisarse si cambia el payload o el proveedor.
 
 ## Ejecución y límites
 
 El observer:
 
-- está deshabilitado por defecto;
 - se ejecuta después de cerrar la inspección adaptativa, usando el `EvidenceContract` final;
 - solo considera formularios personales de confianza HIGH;
 - deduplica por los cuatro campos permitidos;
 - limita la observación a un máximo de 10 formularios deduplicados por diagnóstico;
 - rechaza un formulario si el payload de los cuatro campos supera 8.192 bytes;
-- fija `max_output_tokens = 256`, incluyendo el presupuesto de razonamiento y salida de la Responses API;
+- fija `max_output_tokens = 256`;
 - usa timeout de 12 segundos por llamada y cero retries;
-- mantiene un único worker y como máximo 2 trabajos outstanding por proceso, por lo que no puede crecer un backlog ilimitado;
-- limita por defecto a 250 llamadas LLM por vida del proceso y aplica un techo duro de 1.000 aunque la variable de entorno solicite más;
+- mantiene un único worker y como máximo 2 trabajos outstanding por proceso;
+- limita por defecto a 250 llamadas LLM por vida del proceso y aplica un techo duro de 1.000;
 - se ejecuta fuera del camino de respuesta pública;
 - es fail-open: un error del proveedor, una salida inválida, saturación de cola o falta de configuración nunca cambia ni bloquea el diagnóstico.
 
 El límite de llamadas por proceso es un circuit breaker de shadow mode, no un sistema de billing. No sustituye monitoreo de gasto del proveedor ni un límite financiero persistente entre reinicios o múltiples réplicas.
 
-## Activación
+## Primera activación controlada
 
-La integración queda disponible pero **no activada por este PR**.
+La primera activación productiva queda configurada en el manifiesto de Render con:
 
-Variables:
+- `PRIVACY_PRV103_SHADOW_ENABLED=true`;
+- `PRIVACY_PRV103_SHADOW_SAMPLE_RATE=0.05`;
+- `PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS=250`;
+- `OPENAI_API_KEY` continúa como secreto externo y no se almacena en el repositorio.
 
-- `PRIVACY_PRV103_SHADOW_ENABLED=true` habilita el observer;
-- `PRIVACY_PRV103_SHADOW_SAMPLE_RATE` define una fracción entre `0` y `1` y usa muestreo determinístico por hostname; si no se configura, el valor efectivo es **0**;
-- `PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS` define el presupuesto de llamadas del proceso; default 250 y techo duro 1.000;
-- `OPENAI_API_KEY` usa la credencial ya existente del backend.
+Esto significa que el shadow queda habilitado para una muestra determinística aproximada del **5% de los hostnames elegibles**. El muestreo es por hostname, no por diagnóstico, por lo que la proporción real de llamadas puede diferir del 5% si el tráfico está concentrado en pocos sitios.
 
-Por seguridad operacional, habilitar `PRIVACY_PRV103_SHADOW_ENABLED=true` sin definir un sample rate positivo no produce llamadas al LLM.
-
-Para una primera activación real se recomienda un sample rate pequeño, por ejemplo 5%-10%, y revisar volumen, errores y costo antes de ampliarlo.
+La activación solo tiene efecto cuando la configuración de despliegue correspondiente se sincroniza/aplica en Render. El merge del código no debe interpretarse por sí solo como evidencia de que las variables ya están efectivas en el proceso desplegado.
 
 ## Rollback
 
@@ -89,7 +92,7 @@ Además:
 
 - cada trabajo pendiente vuelve a comprobar la bandera antes de ejecutarse y se descarta con `disabled_before_execution` si ya está deshabilitado;
 - un trabajo activo vuelve a comprobar la bandera antes de cada formulario y deja de iniciar llamadas nuevas si el shadow fue deshabilitado;
-- una llamada al proveedor que ya está en vuelo no se puede cancelar de forma segura desde este observer y puede terminar dentro de su timeout de 12 segundos;
+- una llamada al proveedor que ya está en vuelo puede terminar dentro de su timeout de 12 segundos;
 - no requiere rollback de datos porque el shadow mode no persiste resultados.
 
 ## Telemetría y privacidad
@@ -110,18 +113,11 @@ No se registran textos de formularios, citas de evidencia, URLs de formularios, 
 
 ## Costo LLM
 
-QA6 observó aproximadamente 1.242 tokens de entrada y 80 tokens de salida por formulario. Con la tarifa de referencia de GPT-5.6 Sol usada durante la revisión de septiembre de 2026, el costo observado fue aproximadamente **US$0,0066 por formulario**.
+QA6 observó aproximadamente 1.242 tokens de entrada y 80 tokens de salida por formulario. Con la tarifa de referencia usada durante la revisión de septiembre de 2026, el costo observado fue aproximadamente **US$0,0066 por formulario**.
 
-Ese promedio sirve para planificación, no es un techo contractual. Los límites de este shadow reducen el riesgo de outliers mediante:
+Ese promedio sirve para planificación, no es un techo contractual. Los límites de este shadow reducen el riesgo de outliers mediante máximo 10 formularios por diagnóstico, payload máximo de 8.192 bytes, `max_output_tokens = 256`, cola acotada, sample rate de 5% y presupuesto de 250 llamadas por proceso.
 
-- máximo 10 formularios por diagnóstico;
-- payload máximo de 8.192 bytes por formulario;
-- `max_output_tokens = 256`;
-- cola acotada;
-- sample rate explícito con default 0;
-- 250 llamadas por proceso por defecto y máximo duro de 1.000.
-
-Al promedio observado, 250 llamadas representan cerca de US$1,64 y 1.000 llamadas cerca de US$6,57 por vida del proceso. El gasto real puede variar por tokenización, razonamiento, distribución de formularios, reinicios y cantidad de réplicas. Antes de activar o ampliar el sample rate se deben volver a verificar los precios vigentes del proveedor.
+Al promedio observado, 250 llamadas representan cerca de US$1,64 por vida del proceso. El gasto real puede variar por tokenización, razonamiento, reinicios, réplicas y distribución de tráfico.
 
 ## Base validada
 
@@ -136,6 +132,16 @@ QA6 terminó PASS sobre 46 formularios HIGH deduplicados de un holdout nuevo, co
 
 Ese resultado habilita observación en shadow mode, no reemplazo automático de la decisión productiva.
 
-## Paso posterior
+## Qué medir durante shadow
 
-Antes de promover la clasificación semántica desde shadow a autoridad productiva se debe revisar evidencia real del shadow mode, definir criterios de promoción y ejecutar una revisión independiente del cambio de decisión. Ese trabajo corresponde a un PR separado.
+Antes de ampliar el sample rate o promover la clasificación semántica a autoridad productiva se deben revisar, como mínimo:
+
+- volumen de diagnósticos muestreados;
+- formularios evaluados y omitidos;
+- acuerdo y desacuerdo con PRV-103 determinístico;
+- casos de promoción a `concrete`;
+- proporción de `unknown`;
+- errores, `queue_full` y agotamiento de presupuesto;
+- llamadas LLM y costo real observado.
+
+Cualquier promoción desde shadow a autoridad productiva requiere criterios explícitos y revisión independiente en un PR separado.
