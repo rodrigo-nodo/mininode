@@ -218,3 +218,28 @@ def test_url_diagnostic_queues_shadow_once_with_final_contract_without_public_sh
     assert captured[0].inspection.pages_analyzed == diagnostic["scope"]["pages_analyzed"]
     assert "prv103_shadow" not in diagnostic
     assert "shadow" not in diagnostic
+
+
+def test_url_diagnostic_is_fail_open_when_shadow_enqueue_raises(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "enqueue_prv103_shadow",
+        lambda _value: (_ for _ in ()).throw(RuntimeError("shadow unavailable")),
+    )
+    html = """
+    <html><body>
+      <form action="/send" method="post">
+        <h2>Contacto</h2>
+        <label>Email <input type="email" name="email"></label>
+        <button type="submit">Enviar mensaje</button>
+      </form>
+    </body></html>
+    """
+
+    diagnostic = service.diagnose_privacy_url(
+        HOME,
+        fetcher_factory=lambda **_: FakeFetcher(html),
+    )
+
+    assert isinstance(diagnostic["score"], int)
+    assert "shadow" not in diagnostic
