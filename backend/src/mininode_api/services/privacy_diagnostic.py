@@ -272,7 +272,16 @@ def diagnose_privacy_url(
             diagnostic = evaluate()
 
     if latest_contract is not None:
-        enqueue_prv103_shadow(latest_contract)
+        try:
+            enqueue_prv103_shadow(latest_contract)
+        except Exception:
+            logger.warning(
+                json.dumps(
+                    {"event": "privacy_prv103_shadow_failed", "reason": "enqueue_error"},
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
+            )
 
     diagnostic["scope"] = {
         "pages_requested": combined.pages_requested,
