@@ -14,6 +14,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from threading import BoundedSemaphore, Lock
 from typing import Any, Callable
 
 from mininode_api.web_inspector.models import EvidenceContract, FormEvidence
@@ -28,8 +29,16 @@ REASONING_EFFORT = "medium"
 EXPECTED_TAXONOMY_VERSION = "prv103-intents-v1"
 ALLOWED_FIELDS = ("heading", "legend", "introductory_text", "submit_text")
 MAX_SHADOW_FORMS = 10
+MAX_FORM_INPUT_BYTES = 8_192
+MAX_OUTPUT_TOKENS = 256
+MAX_OUTSTANDING_JOBS = 2
+DEFAULT_MAX_CALLS_PER_PROCESS = 250
+HARD_MAX_CALLS_PER_PROCESS = 1_000
 _TAXONOMY_PATH = Path(__file__).with_name("prv103_intent_taxonomy.json")
 _EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="privacy-prv103-shadow")
+_JOB_SLOTS = BoundedSemaphore(MAX_OUTSTANDING_JOBS)
+_CALL_BUDGET_LOCK = Lock()
+_CALLS_RESERVED = 0
 
 
 @dataclass(frozen=True)
@@ -41,6 +50,8 @@ class ShadowIntent:
 
 
 Classifier = Callable[[FormEvidence], ShadowIntent]
+ContinueCheck = Callable[[], bool]
+CallBudget = Callable[[], bool]
 
 
 def load_taxonomy() -> dict[str, Any]:
@@ -113,6 +124,14 @@ def _payload(form: FormEvidence) -> dict[str, str | None]:
     return {field: getattr(form, field, None) for field in ALLOWED_FIELDS}
 
 
+def _payload_json(form: FormEvidence) -> str:
+    return json.dumps(_payload(form), ensure_ascii=False, separators=(",", ":"))
+
+
+def _payload_size_bytes(form: FormEvidence) -> int:
+    return len(_payload_json(form).encode("utf-8"))
+
+
 def _normalize(value: str) -> str:
     return " ".join(value.split())
 
@@ -170,17 +189,16 @@ def validate_intent_output(
     )
 
 
-def classify_form_intent(form: FormEvidence) -> ShadowIntent:
-    from openai import OpenAI
-
-    taxonomy = load_taxonomy()
-    client = OpenAI(timeout=12.0, max_retries=0)
-    response = client.responses.create(
-        model=MODEL_ID,
-        reasoning={"effort": REASONING_EFFORT},
-        instructions=_instructions(taxonomy),
-        input=json.dumps(_payload(form), ensure_ascii=False),
-        text={
+def _request_kwargs(form: FormEvidence, taxonomy: dict[str, Any]) -> dict[str, Any]:
+    payload = _payload_json(form)
+    if len(payload.encode("utf-8")) > MAX_FORM_INPUT_BYTES:
+        raise ValueError("shadow form payload exceeds hard input limit")
+    return {
+        "model": MODEL_ID,
+        "reasoning": {"effort": REASONING_EFFORT},
+        "instructions": _instructions(taxonomy),
+        "input": payload,
+        "text": {
             "format": {
                 "type": "json_schema",
                 "name": "prv103_intent_shadow",
@@ -188,8 +206,17 @@ def classify_form_intent(form: FormEvidence) -> ShadowIntent:
                 "schema": _output_schema(taxonomy),
             }
         },
-        store=False,
-    )
+        "max_output_tokens": MAX_OUTPUT_TOKENS,
+        "store": False,
+    }
+
+
+def classify_form_intent(form: FormEvidence) -> ShadowIntent:
+    from openai import OpenAI
+
+    taxonomy = load_taxonomy()
+    client = OpenAI(timeout=12.0, max_retries=0)
+    response = client.responses.create(**_request_kwargs(form, taxonomy))
     return validate_intent_output(json.loads(response.output_text), form, taxonomy)
 
 
@@ -216,14 +243,31 @@ def build_shadow_observation(
     *,
     classifier: Classifier = classify_form_intent,
     max_forms: int = MAX_SHADOW_FORMS,
+    should_continue: ContinueCheck | None = None,
+    reserve_call: CallBudget | None = None,
 ) -> dict[str, Any]:
     eligible = _deduped_high_personal_forms(contract)
     selected = eligible[: max(0, max_forms)]
     rows: list[dict[str, Any]] = []
     invalid_outputs = 0
+    oversized = 0
+    stopped_disabled = 0
+    budget_exhausted = 0
+    llm_calls = 0
 
     for index, form in enumerate(selected):
+        if should_continue is not None and not should_continue():
+            stopped_disabled = len(selected) - index
+            break
+        if _payload_size_bytes(form) > MAX_FORM_INPUT_BYTES:
+            oversized += 1
+            continue
+        if reserve_call is not None and not reserve_call():
+            budget_exhausted = len(selected) - index
+            break
+
         baseline = _form_purpose_signal(form)
+        llm_calls += 1
         try:
             shadow = classifier(form)
             rows.append(
@@ -264,6 +308,12 @@ def build_shadow_observation(
         for row in valid_rows
         if row["baseline_class"] != row["shadow_class"]
     ]
+    skip_reasons = {
+        "oversized_input": oversized,
+        "disabled_during_execution": stopped_disabled,
+        "call_budget_exhausted": budget_exhausted,
+    }
+    forms_skipped = sum(skip_reasons.values())
     return {
         "event": "privacy_prv103_shadow_completed",
         "hostname": contract.target.domain,
@@ -271,8 +321,12 @@ def build_shadow_observation(
         "prompt_version": PROMPT_VERSION,
         "taxonomy_version": EXPECTED_TAXONOMY_VERSION,
         "forms_high_deduped": len(eligible),
-        "forms_evaluated": len(selected),
+        "forms_selected": len(selected),
+        "forms_evaluated": len(rows),
+        "forms_skipped": forms_skipped,
         "forms_truncated": max(0, len(eligible) - len(selected)),
+        "llm_calls": llm_calls,
+        "skip_reasons": skip_reasons,
         "baseline_distribution": dict(Counter(row["baseline_class"] for row in rows)),
         "shadow_distribution": dict(Counter(row["shadow_class"] for row in valid_rows)),
         "class_agreement": sum(
@@ -304,16 +358,56 @@ def _shadow_enabled() -> bool:
 
 
 def _shadow_sample_rate() -> float:
-    raw = os.getenv("PRIVACY_PRV103_SHADOW_SAMPLE_RATE", "1").strip()
+    raw = os.getenv("PRIVACY_PRV103_SHADOW_SAMPLE_RATE", "0").strip()
     try:
         return max(0.0, min(1.0, float(raw)))
     except ValueError:
         return 0.0
 
 
+def _max_calls_per_process() -> int:
+    raw = os.getenv(
+        "PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS",
+        str(DEFAULT_MAX_CALLS_PER_PROCESS),
+    ).strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 0
+    return max(0, min(HARD_MAX_CALLS_PER_PROCESS, value))
+
+
+def _try_reserve_llm_call() -> bool:
+    global _CALLS_RESERVED
+    with _CALL_BUDGET_LOCK:
+        limit = _max_calls_per_process()
+        if limit <= 0 or _CALLS_RESERVED >= limit:
+            return False
+        _CALLS_RESERVED += 1
+        return True
+
+
+def _log_skip(reason: str, hostname: str | None) -> None:
+    logger.info(
+        json.dumps(
+            {
+                "event": "privacy_prv103_shadow_skipped",
+                "hostname": hostname,
+                "reason": reason,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    )
+
+
 def _run_and_log(contract: EvidenceContract) -> None:
     try:
-        event = build_shadow_observation(contract)
+        event = build_shadow_observation(
+            contract,
+            should_continue=_shadow_enabled,
+            reserve_call=_try_reserve_llm_call,
+        )
         logger.info(json.dumps(event, separators=(",", ":"), sort_keys=True))
     except Exception:
         logger.warning(
@@ -325,21 +419,33 @@ def _run_and_log(contract: EvidenceContract) -> None:
         )
 
 
+def _run_reserved(contract: EvidenceContract) -> None:
+    try:
+        if not _shadow_enabled():
+            _log_skip("disabled_before_execution", contract.target.domain)
+            return
+        _run_and_log(contract)
+    finally:
+        _JOB_SLOTS.release()
+
+
 def enqueue_prv103_shadow(contract: EvidenceContract) -> bool:
-    """Queue shadow observation without delaying or changing the public result."""
+    """Queue bounded shadow observation without delaying or changing public results."""
 
     if not _shadow_enabled():
         return False
     if not os.getenv("OPENAI_API_KEY"):
-        logger.warning(
-            json.dumps(
-                {"event": "privacy_prv103_shadow_skipped", "reason": "missing_openai_key"},
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-        )
+        _log_skip("missing_openai_key", contract.target.domain)
         return False
     if not _sampled(contract.target.domain, _shadow_sample_rate()):
         return False
-    _EXECUTOR.submit(_run_and_log, contract)
+    if not _JOB_SLOTS.acquire(blocking=False):
+        _log_skip("queue_full", contract.target.domain)
+        return False
+    try:
+        _EXECUTOR.submit(_run_reserved, contract)
+    except Exception:
+        _JOB_SLOTS.release()
+        _log_skip("enqueue_failed", contract.target.domain)
+        return False
     return True
