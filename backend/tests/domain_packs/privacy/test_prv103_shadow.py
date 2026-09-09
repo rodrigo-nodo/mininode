@@ -98,6 +98,19 @@ def test_validate_output_uses_only_literal_allowed_evidence_and_uncertainty_abst
         validate_intent_output(raw, target)
 
 
+def test_request_contract_has_hard_output_and_input_limits():
+    taxonomy = load_taxonomy()
+    kwargs = prv103_shadow._request_kwargs(form(), taxonomy)
+
+    assert kwargs["max_output_tokens"] == prv103_shadow.MAX_OUTPUT_TOKENS == 256
+    assert kwargs["store"] is False
+    assert len(kwargs["input"].encode("utf-8")) <= prv103_shadow.MAX_FORM_INPUT_BYTES
+
+    oversized = form(heading="x" * (prv103_shadow.MAX_FORM_INPUT_BYTES + 1))
+    with pytest.raises(ValueError, match="hard input limit"):
+        prv103_shadow._request_kwargs(oversized, taxonomy)
+
+
 def test_shadow_observation_evaluates_only_high_personal_forms_and_logs_no_form_text():
     personal = form()
     technical = FormEvidence(
@@ -122,7 +135,9 @@ def test_shadow_observation_evaluates_only_high_personal_forms_and_logs_no_form_
     encoded = json.dumps(event, ensure_ascii=False)
 
     assert event["forms_high_deduped"] == 1
+    assert event["forms_selected"] == 1
     assert event["forms_evaluated"] == 1
+    assert event["llm_calls"] == 1
     assert event["invalid_outputs"] == 0
     assert event["hostname"] == "example.com"
     assert "Contacto" not in encoded
@@ -143,16 +158,147 @@ def test_shadow_observation_is_fail_open_per_form():
 
     assert event["invalid_outputs"] == 1
     assert event["forms_evaluated"] == 1
+    assert event["llm_calls"] == 1
     assert "sensitive detail" not in encoded
 
 
-def test_enqueue_is_disabled_by_default_and_requires_key(monkeypatch):
+def test_oversized_input_is_skipped_without_calling_llm():
+    calls = []
+    oversized = form(heading="x" * (prv103_shadow.MAX_FORM_INPUT_BYTES + 1))
+
+    event = build_shadow_observation(
+        contract([oversized]),
+        classifier=lambda value: calls.append(value),
+    )
+
+    assert calls == []
+    assert event["llm_calls"] == 0
+    assert event["forms_evaluated"] == 0
+    assert event["forms_skipped"] == 1
+    assert event["skip_reasons"]["oversized_input"] == 1
+
+
+def test_active_observer_stops_before_next_form_when_disabled():
+    calls = []
+    checks = iter([True, False])
+
+    def classifier(target):
+        calls.append(target.heading)
+        return ShadowIntent("contact_generic", "generic", False, ("heading",))
+
+    event = build_shadow_observation(
+        contract([form(heading="Contacto A"), form(heading="Contacto B")]),
+        classifier=classifier,
+        should_continue=lambda: next(checks),
+    )
+
+    assert calls == ["Contacto A"]
+    assert event["llm_calls"] == 1
+    assert event["forms_skipped"] == 1
+    assert event["skip_reasons"]["disabled_during_execution"] == 1
+
+
+def test_call_budget_stops_remaining_forms_before_provider_call():
+    calls = []
+    budget = iter([True, False])
+
+    def classifier(target):
+        calls.append(target.heading)
+        return ShadowIntent("contact_generic", "generic", False, ("heading",))
+
+    event = build_shadow_observation(
+        contract([form(heading="Contacto A"), form(heading="Contacto B")]),
+        classifier=classifier,
+        reserve_call=lambda: next(budget),
+    )
+
+    assert calls == ["Contacto A"]
+    assert event["llm_calls"] == 1
+    assert event["skip_reasons"]["call_budget_exhausted"] == 1
+
+
+def test_process_call_budget_is_hard_capped_and_invalid_config_disables(monkeypatch):
+    monkeypatch.setattr(prv103_shadow, "_CALLS_RESERVED", 0)
+    monkeypatch.setenv(
+        "PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS",
+        str(prv103_shadow.HARD_MAX_CALLS_PER_PROCESS + 999),
+    )
+    assert prv103_shadow._max_calls_per_process() == prv103_shadow.HARD_MAX_CALLS_PER_PROCESS
+
+    monkeypatch.setattr(
+        prv103_shadow,
+        "_CALLS_RESERVED",
+        prv103_shadow.HARD_MAX_CALLS_PER_PROCESS - 1,
+    )
+    assert prv103_shadow._try_reserve_llm_call() is True
+    assert prv103_shadow._try_reserve_llm_call() is False
+
+    monkeypatch.setenv("PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS", "invalid")
+    assert prv103_shadow._max_calls_per_process() == 0
+
+
+def test_enqueue_is_disabled_by_default_and_requires_explicit_sample_rate(monkeypatch):
     monkeypatch.delenv("PRIVACY_PRV103_SHADOW_ENABLED", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("PRIVACY_PRV103_SHADOW_SAMPLE_RATE", raising=False)
     assert enqueue_prv103_shadow(contract([form()])) is False
 
     monkeypatch.setenv("PRIVACY_PRV103_SHADOW_ENABLED", "true")
     assert enqueue_prv103_shadow(contract([form()])) is False
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    submitted = []
+    monkeypatch.setattr(
+        prv103_shadow._EXECUTOR,
+        "submit",
+        lambda *args: submitted.append(args),
+    )
+    assert enqueue_prv103_shadow(contract([form()])) is False
+    assert submitted == []
+
+
+def test_enqueue_rejects_when_bounded_queue_is_full(monkeypatch, caplog):
+    class FullSlots:
+        def acquire(self, *, blocking):
+            assert blocking is False
+            return False
+
+        def release(self):
+            raise AssertionError("full queue must not release an unreserved slot")
+
+    monkeypatch.setenv("PRIVACY_PRV103_SHADOW_ENABLED", "true")
+    monkeypatch.setenv("PRIVACY_PRV103_SHADOW_SAMPLE_RATE", "1")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(prv103_shadow, "_JOB_SLOTS", FullSlots())
+
+    with caplog.at_level("INFO", logger=prv103_shadow.__name__):
+        assert enqueue_prv103_shadow(contract([form()])) is False
+
+    event = json.loads(caplog.records[-1].message)
+    assert event["reason"] == "queue_full"
+    assert "Contacto" not in caplog.records[-1].message
+
+
+def test_queued_work_rechecks_disable_and_releases_slot(monkeypatch, caplog):
+    class Slots:
+        released = 0
+
+        def release(self):
+            self.released += 1
+
+    slots = Slots()
+    executed = []
+    monkeypatch.setattr(prv103_shadow, "_JOB_SLOTS", slots)
+    monkeypatch.setattr(prv103_shadow, "_shadow_enabled", lambda: False)
+    monkeypatch.setattr(prv103_shadow, "_run_and_log", lambda value: executed.append(value))
+
+    with caplog.at_level("INFO", logger=prv103_shadow.__name__):
+        prv103_shadow._run_reserved(contract([form()]))
+
+    assert executed == []
+    assert slots.released == 1
+    event = json.loads(caplog.records[-1].message)
+    assert event["reason"] == "disabled_before_execution"
 
 
 def test_sampling_is_deterministic_and_bounded():
