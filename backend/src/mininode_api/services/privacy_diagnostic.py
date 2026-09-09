@@ -9,6 +9,7 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
+from mininode_api.domain_packs.privacy.prv103_shadow import enqueue_prv103_shadow
 from mininode_api.web_inspector import (
     PageCandidate,
     WebFetcher,
@@ -18,7 +19,7 @@ from mininode_api.web_inspector import (
     extract_page,
 )
 from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
-from mininode_api.web_inspector.models import InspectionFetchResult
+from mininode_api.web_inspector.models import EvidenceContract, InspectionFetchResult
 
 logger = logging.getLogger(__name__)
 
@@ -233,11 +234,12 @@ def diagnose_privacy_url(
             pages=list(home_result.pages),
             errors=list(home_result.errors),
         )
+        latest_contract: EvidenceContract | None = None
 
         def evaluate() -> dict:
-            return run_privacy_diagnostic(
-                build_evidence(combined, additional_links=include_links)
-            )
+            nonlocal latest_contract
+            latest_contract = build_evidence(combined, additional_links=include_links)
+            return run_privacy_diagnostic(latest_contract)
 
         diagnostic = evaluate()
         while True:
@@ -268,6 +270,9 @@ def diagnose_privacy_url(
             combined.limited |= result.limited
             combined.limited |= combined.pages_requested >= MAX_PAGES_ATTEMPTED
             diagnostic = evaluate()
+
+    if latest_contract is not None:
+        enqueue_prv103_shadow(latest_contract)
 
     diagnostic["scope"] = {
         "pages_requested": combined.pages_requested,
