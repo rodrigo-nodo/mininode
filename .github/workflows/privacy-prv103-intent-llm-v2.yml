@@ -1,4 +1,4 @@
-name: Privacy PRV-103 Intent LLM V2
+name: Privacy PRV-103 Intent LLM V2 Tests
 
 on:
   push:
@@ -6,8 +6,6 @@ on:
       - research/prv103-intent-llm-v2
     paths:
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_llm_*'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_taxonomy.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/corpus.json'
       - '.github/workflows/privacy-prv103-intent-llm-v2.yml'
   workflow_dispatch:
 
@@ -15,11 +13,10 @@ permissions:
   contents: read
 
 jobs:
-  intent-llm-v2:
+  protocol-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
@@ -28,39 +25,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate OpenAI API secret
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${OPENAI_API_KEY:-}" ]; then
-            echo "OPENAI_API_KEY is not configured for this repository."
-            exit 1
-          fi
-
-      - name: Install experiment dependencies
-        run: pip install pytest 'openai>=1.45.0'
+      - name: Install test dependency
+        run: pip install pytest
 
       - name: Run protocol tests
         run: pytest -q backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_intent_llm_runner.py
-
-      - name: Run frozen quality pass
-        run: |
-          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_llm_runner.py run \
-            --run 1 --output-dir artifacts/prv103-intent-llm-v2
-
-      - name: Run identical stability pass
-        run: |
-          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_llm_runner.py run \
-            --run 2 --output-dir artifacts/prv103-intent-llm-v2
-
-      - name: Build frozen summary
-        run: |
-          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_llm_runner.py summary \
-            --output-dir artifacts/prv103-intent-llm-v2
-
-      - name: Upload experiment artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: prv103-intent-llm-v2
-          path: artifacts/prv103-intent-llm-v2
-          retention-days: 7
