@@ -1,0 +1,29 @@
+name: PRV-103 Shadow Tests Temp
+
+on:
+  push:
+    branches:
+      - feature/privacy-prv103-shadow
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run PRV-103 shadow tests
+        env:
+          PYTHONPATH: backend/src
+        run: pytest -q backend/tests/domain_packs/privacy/test_prv103_shadow.py
