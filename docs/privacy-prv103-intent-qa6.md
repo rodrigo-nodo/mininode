@@ -1,6 +1,6 @@
 # PRV-103 Intent QA6 - holdout nuevo
 
-**Estado inicial:** protocolo congelado antes de observar resultados del holdout.
+**Resultado final: PASS**
 
 ## Objetivo
 
@@ -28,21 +28,30 @@ heading + legend + introductory_text + submit_text
 
 ## Independencia del holdout
 
-Los candidatos de QA6 se fijan antes de inspeccionar sus formularios y se filtran contra evidencia histórica disponible de QA1-QA5, W2.2b.2, QA4/extension y tuning documentado. Además se excluyen explícitamente los 100 candidatos preseleccionados de QA5.
+Los candidatos de QA6 se fijaron antes de inspeccionar sus formularios y se filtraron contra evidencia histórica disponible de QA1-QA5, W2.2b.2, QA4/extension y tuning documentado. Además se excluyeron explícitamente los 100 candidatos preseleccionados de QA5.
 
-No se sustituirán sitios en función de la clase obtenida. Si la cobertura es insuficiente, cualquier extensión deberá congelarse antes de inspeccionar sus resultados.
+No se sustituyeron sitios en función de la clase obtenida.
 
-Solo se permiten inspecciones públicas y pasivas mediante GET. No formularios enviados, POST, login, creación de cuentas ni bypass.
+Solo se usó inspección pública y pasiva mediante GET. No se enviaron formularios, POST, login, creación de cuentas ni bypass.
 
-## Muestra
+## Muestra obtenida
 
-Objetivo mínimo para cerrar QA6: **30 formularios personales HIGH deduplicados**.
+| Métrica | Chile | LatAm | Internacional | Total |
+|---|---:|---:|---:|---:|
+| Candidatos congelados | 70 | 40 | 54 | 164 |
+| Excluidos por histórico | 0 | 0 | 1 | 1 |
+| Sitios intentados | 70 | 40 | 53 | 163 |
+| Sitios con páginas | 55 | 29 | 44 | 128 |
+| Formularios personales raw | 40 | 9 | 30 | 79 |
+| HIGH raw | 34 | 6 | 30 | 70 |
+| MEDIUM raw | 6 | 3 | 0 | 9 |
+| **HIGH deduplicados** | **20** | **5** | **21** | **46** |
 
-Se adjudican todos los HIGH deduplicados recuperados hasta cerrar la muestra; no hay subsampling por resultado.
+El objetivo mínimo era 30 HIGH deduplicados. Se recuperaron 46 y se adjudicaron los 46; no hubo subsampling.
 
 ## Referencia ciega
 
-Primero se genera un paquete ciego que contiene exclusivamente:
+El paquete de referencia contenía exclusivamente:
 
 - `blind_id`;
 - `heading`;
@@ -50,53 +59,25 @@ Primero se genera un paquete ciego que contiene exclusivamente:
 - `introductory_text`;
 - `submit_text`.
 
-La etiqueta de referencia se congela **antes de abrir cualquier salida del LLM evaluado**. Clases permitidas: `concrete`, `generic`, `none`, `unknown`.
+La etiqueta de referencia se congeló **antes de abrir cualquier salida del LLM evaluado**. No se usaron fields, action URL, page title, nearby_text ni conocimiento externo del sitio.
 
-Regla de adjudicación:
+Distribución congelada:
 
-- `concrete`: existe una finalidad/resultado específico y reconocible más allá de solo contactar, enviar o registrarse;
-- `generic`: existe intención general de contacto, envío, registro, suscripción o progresión sin resultado suficientemente específico;
-- `none`: existe texto estructurado pero es técnico/no humano y no expresa finalidad;
-- `unknown`: evidencia vacía, ambigua o insuficiente para determinar finalidad.
+| Clase | Casos |
+|---|---:|
+| concrete | 13 |
+| generic | 27 |
+| none | 1 |
+| unknown | 5 |
+| **Total** | **46** |
 
-No se usan fields, action URL, page title, nearby_text ni conocimiento externo del sitio.
+La referencia fue una adjudicación ciega manual realizada en el chat PO. No hubo Reviewer independiente en esta ejecución; esto queda registrado explícitamente en `qa6_gold.json` y debe distinguirse de un QA con segunda parte independiente.
 
-## Ejecución del modelo
-
-Una vez congeladas las etiquetas de referencia se ejecutan dos pasadas idénticas:
-
-- run 1: calidad oficial;
-- run 2: estabilidad.
-
-No existe tuning entre runs ni después de observar run 1.
-
-## Métricas
-
-Por cada run:
-
-- exact accuracy;
-- coverage (`prediction != unknown`);
-- emitted precision;
-- concrete precision;
-- concrete recall;
-- generic precision;
-- false concrete promotions;
-- false adverse `none`;
-- invalid outputs;
-- unknown rate.
-
-Entre runs:
-
-- class stability;
-- intent stability;
-- uncertain stability;
-- evidence stability.
-
-## Criterio congelado
+## Criterio congelado antes del modelo
 
 ### PASS
 
-Debe cumplir **en ambos runs**:
+Debía cumplir **en ambos runs**:
 
 - `false_concrete_promotions = 0`;
 - `false_adverse_none = 0`;
@@ -105,14 +86,11 @@ Debe cumplir **en ambos runs**:
 - `coverage >= 70%`;
 - `accuracy >= 80%`;
 - `concrete_recall >= 75%`;
-
-y además:
-
 - `class_stability >= 95%`.
 
 ### PASS WITH OBSERVATIONS
 
-Debe preservar en ambos runs:
+Debía preservar en ambos runs:
 
 - 0 false concrete promotions;
 - 0 false adverse none;
@@ -124,12 +102,11 @@ Y alcanzar en ambos runs al menos:
 - coverage >= 60%;
 - accuracy >= 70%;
 - concrete recall >= 65%;
-
-con class stability >= 90%.
+- class stability >= 90%.
 
 ### NEEDS FIX
 
-Cualquiera de estas condiciones basta:
+Cualquiera de estas condiciones bastaba:
 
 - alguna falsa promoción a `concrete` en cualquiera de los dos runs;
 - algún falso `none` adverso;
@@ -137,9 +114,70 @@ Cualquiera de estas condiciones basta:
 - métricas por debajo de PASS WITH OBSERVATIONS;
 - patrón sistemático generalizable de error aunque un promedio quede sobre umbral.
 
-## Regla posterior
+## Ejecución
 
-QA6 no autoriza por sí solo integrar el LLM en producción.
+- GitHub Actions run oficial: `34302297149`.
+- SHA de ejecución: `31036a73c7433486adf378e17163b42f35eb9e48`.
+- Run 1: calidad oficial.
+- Run 2: estabilidad.
+- Workflow: SUCCESS.
+- Tests del contrato y QA6: SUCCESS antes de inferencia.
+- No hubo tuning entre runs ni después de observar run 1.
 
-- Si termina PASS/PASS WITH OBSERVATIONS, el siguiente paso es diseñar integración/shadow mode en un PR productivo separado.
-- Si termina NEEDS FIX, no se ajusta el modelo sobre este holdout dentro del PR de QA; cualquier corrección es posterior y un nuevo QA requiere otro holdout.
+## Resultado
+
+| Métrica | Run 1 | Run 2 |
+|---|---:|---:|
+| Exact accuracy | **100% (46/46)** | **100% (46/46)** |
+| Coverage | **89,1%** | **89,1%** |
+| Emitted precision | **100%** | **100%** |
+| Concrete precision | **100%** | **100%** |
+| Concrete recall | **100%** | **100%** |
+| Generic precision | **100%** | **100%** |
+| False concrete promotions | **0** | **0** |
+| False adverse `none` | **0** | **0** |
+| Invalid outputs | **0** | **0** |
+| Unknown rate | 10,9% | 10,9% |
+
+## Estabilidad
+
+| Métrica | Resultado |
+|---|---:|
+| **Class stability** | **100%** |
+| Intent stability | 93,5% |
+| Uncertain stability | 97,8% |
+| Evidence stability | **100%** |
+
+No hubo ningún cambio de clase entre run 1 y run 2.
+
+Hubo cuatro variaciones internas sin impacto en la clase final:
+
+- `QA6_CHILE-019`: `specific_service_request` vs `appointment_booking`, ambos `concrete`;
+- `QA6_INTL-006`: misma intención ambigua y clase `unknown`, con cambio de `uncertain`;
+- `QA6_INTL-010`: dos intenciones de abstención distintas, clase `unknown` en ambos;
+- `QA6_INTL-020`: dos intenciones de abstención distintas, clase `unknown` en ambos.
+
+A diferencia del experimento del PR #209, no apareció el borde peligroso `generic -> concrete` al repetir la ejecución.
+
+## Decisión
+
+**PASS.**
+
+Se cumplen todos los criterios congelados en ambos runs, incluido el gate principal de seguridad:
+
+- 0 falsas promociones a `concrete`;
+- 0 falsos `none` adversos;
+- 0 salidas inválidas;
+- class stability 100%.
+
+Esto confirma una mejora material frente al enfoque de reglas y al nearest-intent por embeddings en un conjunto de sitios no utilizado en QA1-QA5 ni en los experimentos semánticos previos.
+
+## Alcance de la conclusión
+
+QA6 valida el enfoque bajo **validación ciega directa**, no bajo un Reviewer humano/ChatGPT independiente. Por tanto:
+
+- el resultado justifica avanzar al diseño de integración o shadow mode en un PR separado;
+- no modifica producción por sí mismo;
+- si se quiere elevar el estándar antes de activar decisiones productivas, el mismo paquete ciego puede recibir una adjudicación independiente sin mostrarle los outputs de QA6.
+
+No se realiza tuning sobre este holdout.
