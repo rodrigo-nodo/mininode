@@ -7,7 +7,10 @@ on:
       - '.github/scripts/privacy_prv103_qa7_capture.py'
       - '.github/workflows/privacy-prv103-qa7.yml'
       - 'backend/tests/domain_packs/privacy/test_prv103_qa7_capture.py'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa7_reference.json'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_qa7_result.py'
       - 'docs/privacy-prv103-qa7.md'
+      - 'docs/privacy-prv103-qa7-result.md'
   workflow_dispatch:
 
 permissions:
@@ -33,8 +36,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest
 
-      - name: Test QA7 contract
-        run: pytest -q backend/tests/domain_packs/privacy/test_prv103_qa7_capture.py
+      - name: Test QA7 contract and result
+        run: |
+          pytest -q \
+            backend/tests/domain_packs/privacy/test_prv103_qa7_capture.py \
+            backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_qa7_result.py
 
       - name: Capture QA7 blind reconstruction
         run: python .github/scripts/privacy_prv103_qa7_capture.py
