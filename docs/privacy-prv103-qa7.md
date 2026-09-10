@@ -67,8 +67,16 @@ Cualquiera de estos casos:
 - métricas inferiores a PASS WITH OBSERVATIONS;
 - patrón sistemático generalizable de error.
 
+## Resultado
+
+La adjudicación independiente se completó después de congelar el paquete ciego. Resultado formal: **NEEDS FIX** por un falso `concrete` (`QA7-019`).
+
+La comparación completa y reproducible queda en `docs/privacy-prv103-qa7-result.md` y `backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa7_reference.json`.
+
+Hallazgo principal: los 10 casos donde shadow discrepó del baseline fueron 10 mejoras confirmadas por la referencia independiente; el único error del shadow fue compartido con el baseline.
+
 ## Alcance
 
 QA7 no cambia producción, scoring, framework, Evidence Contract, extractor ni reglas PRV-103. Solo genera evidencia de QA.
 
-La salida se publica como artifact temporal de GitHub Actions. El paquete ciego debe adjudicarse antes de comparar con las clases baseline/shadow observadas en producción.
+La salida se publica como artifact temporal de GitHub Actions. El paquete ciego fue adjudicado antes de comparar con las clases baseline/shadow observadas en producción.
