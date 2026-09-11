@@ -1,0 +1,42 @@
+{
+  "qa_cycle": "PRV-103 QA7 production-shadow reconstruction",
+  "source": "Exact blind reconstruction artifact from GitHub Actions run 34542281119",
+  "allowed_fields": [
+    "heading",
+    "legend",
+    "introductory_text",
+    "submit_text"
+  ],
+  "cases": [
+    {"blind_id":"QA7-001","heading":null,"legend":null,"introductory_text":"¿Ya es cliente?","submit_text":"Pide una demo"},
+    {"blind_id":"QA7-002","heading":null,"legend":null,"introductory_text":null,"submit_text":"Subscribe Sending..."},
+    {"blind_id":"QA7-003","heading":"Let's get started","legend":null,"introductory_text":null,"submit_text":"Talk with our team"},
+    {"blind_id":"QA7-004","heading":null,"legend":null,"introductory_text":null,"submit_text":null},
+    {"blind_id":"QA7-005","heading":null,"legend":null,"introductory_text":null,"submit_text":null},
+    {"blind_id":"QA7-006","heading":null,"legend":null,"introductory_text":null,"submit_text":"Open account"},
+    {"blind_id":"QA7-007","heading":"How can we help?","legend":null,"introductory_text":"Average Response Time 40 Minutes","submit_text":"Post Question"},
+    {"blind_id":"QA7-008","heading":null,"legend":null,"introductory_text":null,"submit_text":"Subscribe"},
+    {"blind_id":"QA7-009","heading":null,"legend":null,"introductory_text":null,"submit_text":"Submit"},
+    {"blind_id":"QA7-010","heading":null,"legend":null,"introductory_text":null,"submit_text":"Subscribe"},
+    {"blind_id":"QA7-011","heading":null,"legend":null,"introductory_text":null,"submit_text":null},
+    {"blind_id":"QA7-012","heading":null,"legend":null,"introductory_text":null,"submit_text":"Submit"},
+    {"blind_id":"QA7-013","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-014","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-015","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-016","heading":"Selecciona versión","legend":null,"introductory_text":null,"submit_text":"ENVIAR COTIZACIÓN"},
+    {"blind_id":"QA7-017","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-018","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-019","heading":"¿Tienes dudas o necesitas ayuda?","legend":"Escríbenos y te ayudaremos lo antes posible. ¡Estamos para ti!","introductory_text":null,"submit_text":null},
+    {"blind_id":"QA7-020","heading":"Contrata un plan","legend":null,"introductory_text":"Ingresa tus datos y un ejecutivo se contactará contigo muy pronto.","submit_text":null},
+    {"blind_id":"QA7-021","heading":null,"legend":null,"introductory_text":null,"submit_text":"COTIZAR PLAN"},
+    {"blind_id":"QA7-022","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-023","heading":null,"legend":null,"introductory_text":null,"submit_text":"Suscríbete"},
+    {"blind_id":"QA7-024","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-025","heading":null,"legend":null,"introductory_text":null,"submit_text":"SUSCRIBIRSE"},
+    {"blind_id":"QA7-026","heading":null,"legend":null,"introductory_text":null,"submit_text":"Suscribirse"},
+    {"blind_id":"QA7-027","heading":null,"legend":null,"introductory_text":null,"submit_text":"Agenda una demo"},
+    {"blind_id":"QA7-028","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-029","heading":null,"legend":null,"introductory_text":null,"submit_text":"Enviar"},
+    {"blind_id":"QA7-030","heading":null,"legend":null,"introductory_text":null,"submit_text":"Regístrate"}
+  ]
+}
