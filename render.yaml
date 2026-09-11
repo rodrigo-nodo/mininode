@@ -10,9 +10,9 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: PRIVACY_PRV103_SHADOW_ENABLED
-        value: "true"
+        value: "false"
       - key: PRIVACY_PRV103_SHADOW_SAMPLE_RATE
-        value: "0.05"
+        value: "0"
       - key: PRIVACY_PRV103_SHADOW_MAX_CALLS_PER_PROCESS
         value: "250"
     healthCheckPath: /health
