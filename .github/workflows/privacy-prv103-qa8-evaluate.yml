@@ -1,0 +1,67 @@
+name: Privacy PRV-103 QA8 Evaluate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/privacy-prv103-qa8-evaluate.yml'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_cases.json'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_reference.json'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_evaluate.py'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_qa8_evaluate.py'
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend/src:backend/tests/domain_packs/privacy/prv103_semantic_benchmark
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen product SHA
+        run: |
+          git diff --exit-code 2fcf1c093023d6761cce5460a0a85779f5b0d180 -- \
+            backend/src/mininode_api/domain_packs/privacy \
+            backend/src/mininode_api/web_inspector \
+            backend/src/mininode_api/services/privacy_diagnostic.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest
+
+      - name: Test frozen QA8 evaluation protocol
+        run: pytest -q backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_qa8_evaluate.py
+
+      - name: Require OpenAI key
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: test -n "$OPENAI_API_KEY"
+
+      - name: Evaluate baseline 0.7 plus semantic fallback
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_evaluate.py \
+            --output artifacts/privacy-prv103-qa8-evaluation/result.json
+
+      - name: Upload QA8 evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa8-evaluation-${{ github.run_id }}
+          path: artifacts/privacy-prv103-qa8-evaluation/
+          if-no-files-found: error
+          retention-days: 14
