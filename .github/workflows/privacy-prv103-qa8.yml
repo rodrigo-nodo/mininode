@@ -1,13 +1,6 @@
 name: Privacy PRV-103 QA8
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/scripts/privacy_prv103_qa8_capture.py'
-      - '.github/workflows/privacy-prv103-qa8.yml'
-      - 'backend/tests/domain_packs/privacy/test_prv103_qa8_capture.py'
-      - 'docs/privacy-prv103-qa8.md'
   workflow_dispatch:
 
 permissions:

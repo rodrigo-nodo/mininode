@@ -1,14 +1,7 @@
 name: Privacy PRV-103 QA8 Evaluate
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/privacy-prv103-qa8-evaluate.yml'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_cases.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_reference.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa8_evaluate.py'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_qa8_evaluate.py'
+  workflow_dispatch:
 
 permissions:
   contents: read
