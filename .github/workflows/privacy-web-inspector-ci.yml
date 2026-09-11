@@ -1,0 +1,43 @@
+name: Privacy Web Inspector CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/privacy-web-inspector-ci.yml'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/src/mininode_api/domain_packs/privacy/evidence_adapter.py'
+      - 'backend/src/mininode_api/services/privacy_diagnostic.py'
+      - 'backend/tests/web_inspector/**'
+      - 'backend/tests/domain_packs/privacy/test_evidence_adapter.py'
+      - 'backend/tests/domain_packs/privacy/test_privacy_diagnostic.py'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest
+
+      - name: Run Web Inspector and Privacy evidence tests
+        run: |
+          pytest -q \
+            backend/tests/web_inspector \
+            backend/tests/domain_packs/privacy/test_evidence_adapter.py \
+            backend/tests/domain_packs/privacy/test_privacy_diagnostic.py
