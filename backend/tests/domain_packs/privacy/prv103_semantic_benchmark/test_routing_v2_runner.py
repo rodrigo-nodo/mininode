@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 import routing_v2_runner as runner
 
 
@@ -125,4 +127,4 @@ def test_selection_prefers_residual_when_quality_is_equivalent_and_calls_drop(mo
     monkeypatch.setattr(runner, "metrics", fake_metrics)
     selected = runner.select_architecture(run1, run2, contract)
     assert selected["selected"] == "semantic_residual_router"
-    assert selected["llm_call_reduction_vs_all"] == 0.45
+    assert selected["llm_call_reduction_vs_all"] == pytest.approx(0.45)
