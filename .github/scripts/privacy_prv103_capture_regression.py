@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 
+from bs4 import BeautifulSoup, Tag
+
+from mininode_api.web_inspector import WebFetcher
+from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 from privacy_prv103_qa4 import inspect_case
 
 BASE_MAIN_SHA = "723a20160d9b2bf39e5c7ef6ad3bf4878f45dd23"
@@ -17,6 +22,10 @@ CASES = [
     ("REG-LC", "capture_regression", "AI", "en", "https://www.langchain.com/"),
     ("REG-CB", "capture_regression", "AI", "en", "https://www.cerebras.ai/"),
 ]
+TRACE_URLS = [
+    "https://motherduck.com/contact-us/product-expert/",
+    "https://www.langchain.com/contact-sales",
+]
 
 
 def compact(form: dict) -> dict:
@@ -28,12 +37,73 @@ def compact(form: dict) -> dict:
     }
 
 
+def _text(tag: Tag, limit: int = 180) -> str | None:
+    value = " ".join(tag.get_text(" ", strip=True).split())
+    return value[:limit] or None
+
+
+def _classes(tag: Tag) -> list[str]:
+    values = tag.get("class") or []
+    return [str(value)[:80] for value in values[:4]]
+
+
+def structure_trace(url: str) -> dict:
+    trace = {"url": url, "forms": [], "error": None}
+    deadline = time.monotonic() + INSPECTION_BUDGET_SECONDS
+    try:
+        with WebFetcher(inspection_budget=INSPECTION_BUDGET_SECONDS) as fetcher:
+            result = fetcher.fetch(url, [url], deadline=deadline)
+        if not result.pages or result.pages[0].error or not result.pages[0].html:
+            trace["error"] = "fetch_failed"
+            return trace
+        soup = BeautifulSoup(result.pages[0].html, "lxml")
+        for form_index, form in enumerate(soup.find_all("form")):
+            form_trace = {
+                "form_index": form_index,
+                "inputs": len(form.find_all(["input", "select", "textarea"])),
+                "ancestors": [],
+            }
+            anchor: Tag = form
+            for depth in range(7):
+                parent = anchor.parent
+                if not isinstance(parent, Tag):
+                    break
+                previous = []
+                for sibling in anchor.previous_siblings:
+                    if not isinstance(sibling, Tag):
+                        continue
+                    previous.append({
+                        "tag": sibling.name,
+                        "classes": _classes(sibling),
+                        "text": _text(sibling),
+                        "has_form": bool(sibling.name == "form" or sibling.find("form")),
+                        "has_link": bool(sibling.find("a", href=True)),
+                    })
+                    if len(previous) >= 4:
+                        break
+                form_trace["ancestors"].append({
+                    "depth": depth,
+                    "parent_tag": parent.name,
+                    "parent_classes": _classes(parent),
+                    "parent_text": _text(parent, 240),
+                    "previous_siblings": previous,
+                })
+                if parent.name in {"body", "html"}:
+                    break
+                anchor = parent
+            trace["forms"].append(form_trace)
+    except Exception as exc:
+        trace["error"] = type(exc).__name__
+    return trace
+
+
 def main() -> None:
     output = {
         "baseline_main_sha": BASE_MAIN_SHA,
         "runner_sha": os.getenv("GITHUB_SHA"),
         "purpose": "consumed_cases_capture_regression_only",
         "cases": [],
+        "structure_traces": [],
     }
 
     for case in CASES:
@@ -48,6 +118,8 @@ def main() -> None:
                 if form.get("personal_confidence") == "high"
             ],
         })
+
+    output["structure_traces"] = [structure_trace(url) for url in TRACE_URLS]
 
     artifacts = Path("artifacts/privacy-prv103-capture-regression")
     artifacts.mkdir(parents=True, exist_ok=True)
