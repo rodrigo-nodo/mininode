@@ -1,0 +1,104 @@
+{
+  "contract_version": "prv103-semantic-v2.1",
+  "development_only": true,
+  "final_development_candidate": true,
+  "purpose": "Final consumed-data tuning candidate before the single fresh QA9 holdout. If this candidate misses the frozen gates, stop this line and do not create v2.2/QA9.",
+  "allowed_fields": ["heading", "legend", "introductory_text", "submit_text"],
+  "principles": [
+    "A named recipient, company, team or sales department does not by itself make a purpose concrete.",
+    "Concrete requires an explicit observable outcome, content, benefit, transaction or specifically named service in the same form text.",
+    "Generic contact/help/question wording remains generic when it does not name a specific service or task outcome.",
+    "Generic registration, subscription or submission remains generic when no additional outcome is visible.",
+    "Try for free without a visible object or creation outcome is ambiguous and remains unknown.",
+    "An explicit discount, coupon, benefit or offer is a concrete observable outcome.",
+    "Pure technical or structural UI text can be none; semantic text that cannot be resolved remains unknown.",
+    "The residual router never emits concrete deterministically. Non-trivial semantic cases are delegated to the intent LLM."
+  ],
+  "reference_overrides": [
+    {
+      "dataset": "QA6",
+      "blind_id": "QA6_CHILE-009",
+      "historical": "concrete",
+      "v21": "generic",
+      "reason": "General help/contact language without a specifically named service outcome; aligns with framework 0.7 and QA7-019."
+    },
+    {
+      "dataset": "QA6",
+      "blind_id": "QA6_INTL-014",
+      "historical": "concrete",
+      "v21": "generic",
+      "reason": "How can we help / Post Question is a general question/contact action when no topic or service outcome is named."
+    },
+    {
+      "dataset": "QA7",
+      "blind_id": "QA7-007",
+      "historical": "concrete",
+      "v21": "generic",
+      "reason": "Reconstructed equivalent of the general Post Question case; same semantic boundary as QA6_INTL-014."
+    },
+    {
+      "dataset": "QA8",
+      "blind_id": "QA8-007",
+      "historical": "concrete",
+      "v21": "unknown",
+      "reason": "Try for free is an isolated action when the object or creation outcome is not visible in the same form."
+    },
+    {
+      "dataset": "QA8",
+      "blind_id": "QA8-016",
+      "historical": "concrete",
+      "v21": "generic",
+      "reason": "Talk to a named company is still contact; the recipient is not the purpose outcome."
+    },
+    {
+      "dataset": "QA8",
+      "blind_id": "QA8-021",
+      "historical": "concrete",
+      "v21": "generic",
+      "reason": "Sales contact and a general sales question remain generic without a specific quote, demo, appointment or other named service outcome."
+    }
+  ],
+  "router": {
+    "empty_case": "unknown",
+    "technical_only": "none",
+    "trivial_generic": "generic",
+    "otherwise": "llm",
+    "trivial_generic_submit_text": [
+      "enviar",
+      "enviar enviar",
+      "enviar formulario",
+      "enviar mensaje",
+      "submit",
+      "subscribe",
+      "subscribe sending",
+      "suscribete",
+      "suscribirse",
+      "registrate",
+      "send message"
+    ],
+    "neutral_context_text": [
+      "form",
+      "indicates a required field"
+    ],
+    "technical_text": [
+      "or",
+      "o",
+      "loading",
+      "sending",
+      "studio homepage hero"
+    ],
+    "technical_context_text": [
+      "notice"
+    ]
+  },
+  "final_development_gates": {
+    "false_concrete_promotions": 0,
+    "false_adverse_none": 0,
+    "invalid_outputs": 0,
+    "minimum_accuracy": 0.9,
+    "minimum_emitted_precision": 0.9,
+    "minimum_concrete_recall": 0.8,
+    "minimum_class_stability": 0.95,
+    "minimum_llm_call_reduction_vs_all_cases": 0.35
+  }
+}
