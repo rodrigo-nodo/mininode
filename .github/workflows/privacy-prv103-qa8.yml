@@ -1,0 +1,67 @@
+name: Privacy PRV-103 QA8
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/scripts/privacy_prv103_qa8_capture.py'
+      - '.github/workflows/privacy-prv103-qa8.yml'
+      - 'backend/tests/domain_packs/privacy/test_prv103_qa8_capture.py'
+      - 'docs/privacy-prv103-qa8.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: backend/src:.github/scripts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen product SHA
+        run: |
+          git diff --exit-code 2fcf1c093023d6761cce5460a0a85779f5b0d180 -- \
+            backend/src/mininode_api/domain_packs/privacy \
+            backend/src/mininode_api/web_inspector \
+            backend/src/mininode_api/services/privacy_diagnostic.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest
+
+      - name: Test QA8 frozen contract
+        run: pytest -q backend/tests/domain_packs/privacy/test_prv103_qa8_capture.py
+
+      - name: Capture QA8 fresh blind holdout
+        run: python .github/scripts/privacy_prv103_qa8_capture.py
+
+      - name: Upload Reviewer package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa8-reviewer-${{ github.run_id }}
+          path: artifacts/privacy-prv103-qa8/reviewer/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload sealed internal trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa8-internal-${{ github.run_id }}
+          path: artifacts/privacy-prv103-qa8/internal/
+          if-no-files-found: error
+          retention-days: 14
