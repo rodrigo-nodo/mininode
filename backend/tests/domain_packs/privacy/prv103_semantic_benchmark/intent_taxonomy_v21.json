@@ -1,0 +1,28 @@
+{
+  "taxonomy_version": "prv103-intents-v2.1",
+  "contract_version": "prv103-semantic-v2.1",
+  "intents": [
+    {"id":"account_login","class":"concrete","prototypes":["Iniciar sesión, ingresar o acceder a una cuenta existente.","Sign in, log in or access an existing account.","Entrar na conta ou fazer login."]},
+    {"id":"password_recovery","class":"concrete","prototypes":["Recuperar, restablecer o crear una nueva contraseña para una cuenta.","Recover or reset a password for an account.","Recuperar ou redefinir a senha."]},
+    {"id":"order_tracking","class":"concrete","prototypes":["Consultar el estado, ubicación o seguimiento de un pedido, orden o despacho.","Track an order, shipment or delivery status."]},
+    {"id":"payment","class":"concrete","prototypes":["Pagar una cuenta, boleta o factura, o consultar un pago.","Pay a bill, invoice or account."]},
+    {"id":"availability_delivery","class":"concrete","prototypes":["Consultar stock, disponibilidad, zona, dirección o modalidad de entrega o retiro.","Check stock, availability, delivery address, delivery area or pickup option."]},
+    {"id":"quote_request","class":"concrete","prototypes":["Solicitar una cotización, presupuesto o precio.","Request a quote, estimate or pricing.","Solicitar cotação ou orçamento."]},
+    {"id":"appointment_booking","class":"concrete","prototypes":["Reservar o agendar una hora, cita, reunión o llamada.","Book or schedule an appointment, meeting or call."]},
+    {"id":"trial_or_creation","class":"concrete","prototypes":["Crear una cuenta, tienda, workspace u otro recurso explícitamente nombrado, o iniciar una prueba gratis cuando el objeto o resultado sea visible en el mismo formulario.","Create an explicitly named account, store, workspace or resource, or start a free trial when its object or outcome is visible in the same form."]},
+    {"id":"job_application","class":"concrete","prototypes":["Postular a un trabajo, empleo o proceso de selección.","Apply for a job or join the team."]},
+    {"id":"specific_subscription_content","class":"concrete","prototypes":["Suscribirse para recibir noticias, ofertas, promociones, recursos, alertas o comunicaciones explícitamente descritas.","Subscribe to receive explicitly described news, offers, updates, alerts, resources or communications."]},
+    {"id":"promotion_or_discount","class":"concrete","prototypes":["Obtener, reclamar o garantizar un descuento, cupón, beneficio u oferta explícita.","Get, claim or unlock an explicitly stated discount, coupon, benefit or offer.","Garantir, obter ou resgatar desconto, cupom, benefício ou oferta explícita."]},
+    {"id":"feedback","class":"concrete","prototypes":["Evaluar la experiencia, responder una encuesta o decir si encontró lo que buscaba.","Give feedback, rate an experience or answer whether you found what you were looking for."]},
+    {"id":"specific_service_request","class":"concrete","prototypes":["Solicitar soporte técnico o ayuda sobre una tarea, cuenta, pedido o servicio específicamente nombrado, o pedir otro servicio con resultado reconocible.","Request technical support or help for a specifically named task, account, order or service, or request another service with a recognizable outcome."]},
+    {"id":"contact_generic","class":"generic","prototypes":["Contacto general, escríbenos, hablemos, envía un mensaje, publica una pregunta general o pide ayuda sin nombrar un servicio o resultado específico.","General contact, talk to us, talk to a named company, send a message, post a general question, contact sales or ask for help without a specifically named service outcome."]},
+    {"id":"registration_generic","class":"generic","prototypes":["Registrarse, registrarme o sign up sin explicar un resultado o finalidad adicional.","Register or sign up without a more specific stated outcome."]},
+    {"id":"subscription_generic","class":"generic","prototypes":["Suscribirse, newsletter o subscribe sin explicar qué contenido se recibirá.","Subscribe or newsletter signup without describing the content to be received."]},
+    {"id":"submit_generic","class":"generic","prototypes":["Enviar, submit, confirmar o completar un formulario sin una finalidad más específica.","Submit, send or confirm a form without a more specific purpose."]},
+    {"id":"progression_generic","class":"generic","prototypes":["Continuar un flujo o pasar al siguiente paso sin un resultado específico.","Continue a flow without a specific outcome."]},
+    {"id":"technical_placeholder","class":"none","prototypes":["Placeholder técnico, separador estructural o estado de interfaz sin finalidad humana, como OR, Loading..., Sending... aislado o una variable de plantilla no resuelta.","Technical placeholder, structural separator or UI state with no human purpose, such as OR, Loading..., isolated Sending..., or an unresolved template token."]},
+    {"id":"consent_or_field_label","class":"unknown","prototypes":["Etiqueta de consentimiento, nombre de campo o dato solicitado que no expresa para qué se usarán los datos.","Consent label or field label that does not state the purpose."]},
+    {"id":"ambiguous_action","class":"unknown","prototypes":["Acción aislada como buscar, empezar, siguiente, conocer, ver, start now o try for free cuando no aparece un objeto o resultado identificable en el mismo formulario.","Isolated action such as search, next, start now, see, learn more or try for free when no identifiable object or outcome appears in the same form."]},
+    {"id":"informational_not_purpose","class":"unknown","prototypes":["Texto informativo o promocional que no explica qué hará el formulario con los datos.","Informational statement that does not explain the form's purpose."]}
+  ]
+}
