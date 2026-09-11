@@ -105,7 +105,9 @@ def _bounded_text(tag: Tag, limit: int) -> str | None:
     return value[:limit] if value else None
 
 
-def _context_block_values(tag: Tag) -> tuple[str | None, str | None, bool]:
+def _context_block_values(
+    tag: Tag, *, allow_nested_heading: bool = False
+) -> tuple[str | None, str | None, bool]:
     """Extract bounded text from a passive block or signal that it is ambiguous."""
 
     if tag.name not in _FORM_CONTEXT_TEXT_TAGS and tag.name not in _FORM_HEADING_TAGS:
@@ -120,6 +122,8 @@ def _context_block_values(tag: Tag) -> tuple[str | None, str | None, bool]:
         heading for heading in tag.find_all(_FORM_HEADING_TAGS)
         if _bounded_text(heading, FORM_HEADING_LIMIT)
     ]
+    if headings and not allow_nested_heading:
+        return None, None, True
     if len(headings) > 1:
         return None, None, True
     heading = _bounded_text(headings[0], FORM_HEADING_LIMIT) if headings else None
@@ -160,7 +164,9 @@ def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
             if inspected > _FORM_LOCAL_SIBLING_LIMIT:
                 break
 
-            sibling_heading, sibling_intro, ambiguous = _context_block_values(sibling)
+            sibling_heading, sibling_intro, ambiguous = _context_block_values(
+                sibling, allow_nested_heading=_depth > 0
+            )
             if ambiguous:
                 break
             if introduction is None and sibling_intro:
