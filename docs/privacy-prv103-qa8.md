@@ -30,6 +30,7 @@ Reglas:
 
 - los hostnames deben estar ausentes del corpus histórico registrado de QA1-QA7 y del desarrollo semántico;
 - el chequeo de frescura ocurre antes de la primera captura; un candidato detectado como histórico puede sustituirse solo en esta etapa previa, antes de observar cualquier resultado QA8;
+- la captura no comienza mientras el gate de frescura detecte algún candidato histórico;
 - una vez superado ese chequeo y comenzada la captura, la lista y el orden quedan congelados;
 - inspección pública y pasiva solamente;
 - máximo 100 sitios intentados;
