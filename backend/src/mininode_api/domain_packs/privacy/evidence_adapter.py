@@ -1175,6 +1175,7 @@ _FORM_PURPOSE_GENERIC_EXACT = {
     "conversemos", "empezar", "comenzar", "start", "get started", "contact",
     "i m interested", "i m interested in", "confirm", "confirmar", "suscribirme",
     "subscribirme", "suscribirse", "contactanos", "contactenos", "contactar", "hablemos",
+    "escribenos",
 }
 _FORM_PURPOSE_GENERIC_PHRASES = {
     "contact us", "get in touch", "contact form", "formulario de contacto",
@@ -1183,7 +1184,8 @@ _FORM_PURPOSE_GENERIC_PHRASES = {
     "talk to our support team", "speak with our support team",
     "contacta a nuestro equipo", "contacta con nuestro equipo",
     "habla con nuestro equipo", "habla con ventas", "talk to us", "connect with us",
-    "send message", "send a message", "tell us a bit more", "enviar formulario",
+    "send message", "send a message", "send us a message", "tell us a bit more",
+    "enviar mensaje", "enviar un mensaje", "envia un mensaje", "enviar formulario",
     "enviar el formulario",
 }
 _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
@@ -1193,7 +1195,7 @@ _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
     r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
-    r"\b(?:enviar|envia|envianos)\b.{0,30}\b(?:consulta|mensaje)\b",
+    r"\b(?:enviar|envia|envianos)\b.{0,30}\bconsulta\b",
     r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias|temas?|contenido|informacion|comunicaciones?|actualizaciones?|promociones?)\b",
     r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
     r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
@@ -1201,7 +1203,7 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\b(?:registrarse|register|postular|apply)\b",
     r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
     r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
-    r"\bsend\b.{0,20}\b(?:an inquiry|us a message)\b",
+    r"\bsend\b.{0,20}\ban inquiry\b",
     r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
     r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
     r"\b(?:create|open)\s+(?:a\s+)?(?:support\s+)?ticket\b",
@@ -1221,7 +1223,6 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\b(?:comparte|compartir)\s+(?:tu|su)\s+opinion\b",
     r"\btell us what you think\b",
     r"\b(?:encontraste|encontro|did you find)\b.{0,50}\b(?:buscabas|buscaba|what you (?:were )?looking for)\b",
-    r"\b(?:escribenos)\b",
     r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+"
     r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
     r"(?!(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\b)\w+",
