@@ -4,10 +4,10 @@
 
 Validar en un holdout fresco e independiente la arquitectura candidata de PRV-103 después de corregir QA7-019 en framework `0.7`.
 
-La arquitectura que se evaluará después de la adjudicación ciega es:
+La arquitectura evaluada fue:
 
 1. baseline determinístico de framework `0.7`;
-2. solo cuando baseline entregue `unknown`, consultar el clasificador semántico LLM de intentos ya congelado;
+2. solo cuando baseline entrega `unknown`, consultar el clasificador semántico LLM de intentos ya congelado;
 3. mapear el intento a `concrete`, `generic`, `none` o `unknown` de forma determinística;
 4. cualquier salida incierta o inválida permanece `unknown`.
 
@@ -18,32 +18,29 @@ QA8 no activa esta arquitectura en producción.
 - `main`: `2fcf1c093023d6761cce5460a0a85779f5b0d180`;
 - framework: `0.7`;
 - scoring: `0.1`;
-- modelo/prompt/taxonomía LLM: los ya congelados para PRV-103 (`gpt-5.6-sol`, `prv103-intent-v2-01`, `prv103-intents-v1`, reasoning `medium`).
+- modelo/prompt/taxonomía LLM: `gpt-5.6-sol`, `prv103-intent-v2-01`, `prv103-intents-v1`, reasoning `medium`.
 
-No se ajustarán reglas, prompt, taxonomía, modelo ni criterios durante QA8.
+No se ajustaron reglas, prompt, taxonomía, modelo ni criterios durante QA8.
 
 ## Holdout fresco
 
-Se congelan 100 sitios candidatos antes de inspeccionar sus resultados.
+Se congelaron 100 sitios candidatos antes de inspeccionar sus resultados.
 
 Reglas:
 
-- los hostnames deben estar ausentes del corpus histórico registrado de QA1-QA7 y del desarrollo semántico;
-- el chequeo de frescura ocurre antes de la primera captura; un candidato detectado como histórico puede sustituirse solo en esta etapa previa, antes de observar cualquier resultado QA8;
-- la captura no comienza mientras el gate de frescura detecte algún candidato histórico;
-- una vez superado ese chequeo y comenzada la captura, la lista y el orden quedan congelados;
+- los hostnames debían estar ausentes del corpus histórico registrado de QA1-QA7 y del desarrollo semántico;
+- el chequeo de frescura ocurrió antes de la primera captura;
 - inspección pública y pasiva solamente;
 - máximo 100 sitios intentados;
-- objetivo de 30 sitios distintos con al menos un formulario personal `HIGH` deduplicado;
-- se detiene al alcanzar 30 sitios o al agotar los 100 candidatos;
-- para cada sitio elegible se selecciona determinísticamente el primer formulario `HIGH` deduplicado en el orden del inspector;
-- la deduplicación usa exclusivamente `heading`, `legend`, `introductory_text` y `submit_text`.
+- objetivo de hasta 30 sitios distintos con al menos un formulario personal `HIGH` deduplicado;
+- para cada sitio elegible se seleccionó determinísticamente el primer formulario `HIGH` deduplicado en el orden del inspector;
+- la deduplicación usó exclusivamente `heading`, `legend`, `introductory_text` y `submit_text`.
 
-Después de iniciada la captura, la lista y orden de candidatos no se reemplazan si algún sitio falla o no produce `HIGH`.
+La captura final obtuvo 28 sitios elegibles al agotar los 100 candidatos. No se agregaron ni reemplazaron sitios después de iniciada la captura.
 
-## Paquete ciego
+## Referencia independiente
 
-Antes de ejecutar baseline o LLM contra la referencia, el Reviewer recibe solamente:
+El Reviewer recibió únicamente:
 
 - `blind_id`;
 - `heading`;
@@ -51,11 +48,9 @@ Antes de ejecutar baseline o LLM contra la referencia, el Reviewer recibe solame
 - `introductory_text`;
 - `submit_text`.
 
-No recibe URL, hostname, sector, campos, action URL, resultado baseline ni resultado LLM.
+No recibió URL, hostname, sector, campos, action URL, resultado baseline ni resultado LLM.
 
-Clases permitidas: `concrete`, `generic`, `none`, `unknown`.
-
-El artifact interno con URLs y trazabilidad queda separado del artifact del Reviewer y no debe abrirse para adjudicar.
+La adjudicación independiente de los 28 casos se congeló en `qa8_reference.json` antes de ejecutar el baseline o el LLM.
 
 ## Gates congelados
 
@@ -89,13 +84,34 @@ Cualquiera de estos casos:
 - métricas inferiores a PASS WITH OBSERVATIONS;
 - patrón sistemático generalizable de error.
 
-## Orden de ejecución
+## Resultado
 
-1. congelar candidatos, versión, arquitectura y gates;
-2. capturar el holdout sin llamadas LLM;
-3. adjudicación ciega independiente;
-4. congelar la referencia;
-5. ejecutar baseline `0.7` y fallback LLM solo sobre `unknown`;
-6. comparar con la referencia y emitir PASS / PASS WITH OBSERVATIONS / NEEDS FIX.
+Run de evaluación: `34551227384`.
 
-Si QA8 termina NEEDS FIX, cualquier corrección ocurre después y una nueva validación deberá usar otro holdout fresco.
+Resultado formal: **NEEDS FIX**.
+
+Métricas:
+
+- exactitud: 22/28 = 78.57%;
+- cobertura: 85.71%;
+- precisión sobre emitidos: 83.33%;
+- concrete precision: 100%;
+- concrete recall: 44.44%;
+- false concrete promotions: 0;
+- false adverse `none`: 0;
+- invalid outputs: 0;
+- llamadas LLM: 8.
+
+La arquitectura no supera los gates de QA8 por precisión emitida y, principalmente, por `concrete recall`.
+
+Hallazgo estructural principal: tres casos de referencia `concrete` (`QA8-005`, `QA8-006`, `QA8-016`) fueron clasificados `generic` por el baseline `0.7`. Como el fallback LLM solo se ejecuta cuando el baseline devuelve `unknown`, esos casos nunca llegaron al clasificador semántico. Esto muestra que `unknown-only fallback` deja fuera falsos `generic` relevantes.
+
+Además, entre los casos que sí llegaron al LLM, `QA8-007` quedó `unknown` y `QA8-021` quedó `generic` pese a referencia `concrete`. `QA8-015` quedó `unknown` frente a referencia `none`, de forma conservadora.
+
+No hubo errores de seguridad en el sentido opuesto: no se observó ninguna falsa promoción a `concrete`, ningún `none` adverso ni salida inválida.
+
+## Conclusión
+
+QA8 se cierra como **NEEDS FIX**. No se ajusta esta arquitectura dentro del mismo QA.
+
+Cualquier corrección debe definirse después y validarse en un nuevo holdout fresco. QA8 no cambia producción, scoring, Evidence Contract, extractor, API, DB, Render ni shadow.
