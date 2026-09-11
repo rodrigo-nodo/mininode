@@ -35,9 +35,9 @@ FORM_LEGEND_LIMIT = 160
 FORM_INTRODUCTORY_TEXT_LIMIT = 300
 FORM_SUBMIT_TEXT_LIMIT = 120
 _FORM_LOCAL_SIBLING_LIMIT = 3
-_FORM_CONTEXT_ANCESTOR_LIMIT = 2
+_FORM_CONTEXT_ANCESTOR_LIMIT = 4
 _FORM_HEADING_TAGS = tuple(f"h{level}" for level in range(1, 7))
-_FORM_CONTEXT_CONTAINERS = {"div", "section", "article"}
+_FORM_CONTEXT_CONTAINERS = {"div", "section", "article", "main"}
 _FORM_CONTEXT_TEXT_TAGS = {"p", "small", "div", "section", "article"}
 _FORM_CONTEXT_FORBIDDEN = (
     "form", "input", "select", "textarea", "button", "label", "legend",
@@ -112,10 +112,12 @@ def _context_block_values(
 
     if tag.name not in _FORM_CONTEXT_TEXT_TAGS and tag.name not in _FORM_HEADING_TAGS:
         return None, None, True
-    if tag.find(_FORM_CONTEXT_FORBIDDEN) or tag.find("a", href=True):
+    if tag.find(_FORM_CONTEXT_FORBIDDEN):
         return None, None, True
 
     if tag.name in _FORM_HEADING_TAGS:
+        if tag.find("a", href=True):
+            return None, None, True
         return _bounded_text(tag, FORM_HEADING_LIMIT), None, False
 
     headings = [
@@ -126,27 +128,36 @@ def _context_block_values(
         return None, None, True
     if len(headings) > 1:
         return None, None, True
+    if headings and headings[0].find("a", href=True):
+        return None, None, True
     heading = _bounded_text(headings[0], FORM_HEADING_LIMIT) if headings else None
 
     introduction: str | None = None
     if tag.name in {"p", "small"}:
-        introduction = _bounded_text(tag, FORM_INTRODUCTORY_TEXT_LIMIT)
+        if not tag.find("a", href=True):
+            introduction = _bounded_text(tag, FORM_INTRODUCTORY_TEXT_LIMIT)
     else:
+        safe_candidates: list[Tag] = []
         for candidate in tag.find_all(["p", "small"]):
             if candidate.find(_FORM_CONTEXT_FORBIDDEN) or candidate.find("a", href=True):
                 continue
+            if _bounded_text(candidate, FORM_INTRODUCTORY_TEXT_LIMIT):
+                safe_candidates.append(candidate)
+        for candidate in reversed(safe_candidates):
             value = _bounded_text(candidate, FORM_INTRODUCTORY_TEXT_LIMIT)
             if value:
                 introduction = value
                 break
         if introduction is None and heading is None:
+            if tag.find("a", href=True):
+                return None, None, True
             introduction = _bounded_text(tag, FORM_INTRODUCTORY_TEXT_LIMIT)
 
     return heading, introduction, False
 
 
 def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
-    """Return local preceding context, including one bounded wrapper level."""
+    """Return local preceding context, including bounded wrapper levels."""
 
     anchor: Tag = form
     for _depth in range(_FORM_CONTEXT_ANCESTOR_LIMIT + 1):
