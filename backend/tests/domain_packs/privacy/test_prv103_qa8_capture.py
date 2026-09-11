@@ -65,4 +65,4 @@ def test_reviewer_markdown_contains_no_site_metadata():
     assert "QA8-001" in text
     assert "Contact us" in text
     assert "http" not in text
-    assert "hostname" not in text
+    assert "example.test" not in text
