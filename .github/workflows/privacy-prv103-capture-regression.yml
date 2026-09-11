@@ -1,0 +1,45 @@
+name: Privacy PRV-103 capture regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/scripts/privacy_prv103_capture_regression.py'
+      - '.github/workflows/privacy-prv103-capture-regression.yml'
+      - 'backend/src/mininode_api/web_inspector/extractor.py'
+      - 'backend/src/mininode_api/web_inspector/selector.py'
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: backend/src:.github/scripts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Recapture consumed QA cases
+        run: python .github/scripts/privacy_prv103_capture_regression.py
+
+      - name: Upload regression artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-capture-regression-${{ github.run_id }}
+          path: artifacts/privacy-prv103-capture-regression/
+          if-no-files-found: error
+          retention-days: 14
