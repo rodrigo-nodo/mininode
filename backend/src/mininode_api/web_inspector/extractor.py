@@ -164,6 +164,11 @@ def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
             if inspected > _FORM_LOCAL_SIBLING_LIMIT:
                 break
 
+            # A previous form (or wrapper containing one) is a hard boundary:
+            # text between forms must never be attributed to the later form.
+            if sibling.name == "form" or sibling.find("form"):
+                return None, None
+
             sibling_heading, sibling_intro, ambiguous = _context_block_values(
                 sibling, allow_nested_heading=_depth > 0
             )
