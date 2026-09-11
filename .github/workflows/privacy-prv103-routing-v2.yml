@@ -1,26 +1,13 @@
 name: Privacy PRV-103 Routing V2.1
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/privacy-prv103-routing-v2.yml'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_taxonomy_v2.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/semantic_contract_v2.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_taxonomy_v21.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/semantic_contract_v21.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa7_cases.json'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v2_runner.py'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v21_runner.py'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v2_runner.py'
-      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v21_runner.py'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   benchmark:
-    if: github.head_ref == 'research/privacy-prv103-semantic-router-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
