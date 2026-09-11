@@ -16,14 +16,14 @@ ALLOWED_FIELDS = ("heading", "legend", "introductory_text", "submit_text")
 # Frozen before inspecting QA8 outputs. These sites were selected to be outside
 # the QA1-QA7 / semantic-development corpus recorded in the repository.
 CANDIDATES = [
-    ("Q8I001", "SaaS", "en", "https://calendly.com/"),
+    ("Q8I001", "SaaS", "en", "https://www.front.com/"),
     ("Q8I002", "SaaS", "en", "https://doodle.com/"),
     ("Q8I003", "SaaS", "en", "https://linear.app/"),
     ("Q8I004", "SaaS", "en", "https://slack.com/"),
     ("Q8I005", "SaaS", "en", "https://zoom.us/"),
     ("Q8I006", "SaaS", "en", "https://lucid.co/"),
-    ("Q8I007", "SaaS", "en", "https://www.loom.com/"),
-    ("Q8I008", "Marketing", "en", "https://www.figma.com/"),
+    ("Q8I007", "SaaS", "en", "https://www.gainsight.com/"),
+    ("Q8I008", "Marketing", "en", "https://www.churnzero.com/"),
     ("Q8I009", "Marketing", "en", "https://www.activecampaign.com/"),
     ("Q8I010", "Marketing", "en", "https://maze.co/"),
     ("Q8I011", "Marketing", "en", "https://postmarkapp.com/"),
@@ -76,7 +76,7 @@ CANDIDATES = [
     ("Q8I058", "Cloud", "en", "https://www.scaleway.com/"),
     ("Q8I059", "Cloud", "en", "https://kinsta.com/"),
     ("Q8I060", "Cloud", "en", "https://wpengine.com/"),
-    ("Q8I061", "Data", "en", "https://www.algolia.com/"),
+    ("Q8I061", "Data", "en", "https://www.drift.com/"),
     ("Q8I062", "Data", "en", "https://www.cockroachlabs.com/"),
     ("Q8I063", "Data", "en", "https://neon.com/"),
     ("Q8I064", "Data", "en", "https://turso.tech/"),
