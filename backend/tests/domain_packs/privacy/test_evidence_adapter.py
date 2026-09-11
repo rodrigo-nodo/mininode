@@ -78,7 +78,9 @@ def test_internal_form_context_does_not_change_existing_privacy_controls():
     ({"submit_text": "Conversemos sobre el proyecto"}, "concrete", "detected"),
     ({"submit_text": "Conversemos"}, "generic", "partial"),
     ({"introductory_text": "Completa este formulario y nos pondremos en contacto contigo"}, "concrete", "detected"),
-    ({"submit_text": "Escríbenos"}, "concrete", "detected"),
+    ({"submit_text": "Escríbenos"}, "generic", "partial"),
+    ({"submit_text": "Enviar mensaje"}, "generic", "partial"),
+    ({"submit_text": "Send us a message"}, "generic", "partial"),
     ({"heading": "14-day free trial", "submit_text": "Try for free"}, "concrete", "detected"),
     ({"heading": "Prueba gratuita", "submit_text": "Empezar"}, "concrete", "detected"),
     ({"submit_text": "Empezar"}, "generic", "partial"),
@@ -102,6 +104,19 @@ def test_prv103_classifies_structured_same_form_purpose(kwargs, purpose, result)
     assert "source_urls" not in adapted["PRV-103"]
     prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
     assert evaluate_control("PRV-103", adapted["PRV-103"], {"PRV-101": prv101})["result"] == result
+
+
+def test_prv103_qa7_019_general_help_contact_is_generic():
+    adapted = adapt_evidence(contract(forms=[form(
+        field_type="email",
+        heading="¿Tienes dudas o necesitas ayuda?",
+        submit_text="Escríbenos",
+    )]))
+    assert adapted["PRV-103"]["form_purpose"] == "generic"
+    prv101 = evaluate_control("PRV-101", adapted["PRV-101"])
+    assert evaluate_control(
+        "PRV-103", adapted["PRV-103"], {"PRV-101": prv101}
+    )["result"] == "partial"
 
 
 def test_prv103_does_not_infer_from_nearby_fields_or_privacy_evidence():
