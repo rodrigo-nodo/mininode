@@ -35,6 +35,13 @@ FORM_LEGEND_LIMIT = 160
 FORM_INTRODUCTORY_TEXT_LIMIT = 300
 FORM_SUBMIT_TEXT_LIMIT = 120
 _FORM_LOCAL_SIBLING_LIMIT = 3
+_FORM_CONTEXT_ANCESTOR_LIMIT = 2
+_FORM_HEADING_TAGS = tuple(f"h{level}" for level in range(1, 7))
+_FORM_CONTEXT_CONTAINERS = {"div", "section", "article"}
+_FORM_CONTEXT_TEXT_TAGS = {"p", "small", "div", "section", "article"}
+_FORM_CONTEXT_FORBIDDEN = (
+    "form", "input", "select", "textarea", "button", "label", "legend",
+)
 _SUBSTANTIVE_TEXT_LENGTH = 40
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
 
@@ -98,47 +105,83 @@ def _bounded_text(tag: Tag, limit: int) -> str | None:
     return value[:limit] if value else None
 
 
-def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
-    """Return only context from a small, unambiguous preceding-sibling window."""
+def _context_block_values(tag: Tag) -> tuple[str | None, str | None, bool]:
+    """Extract bounded text from a passive block or signal that it is ambiguous."""
 
-    parent = form.parent
-    if not isinstance(parent, Tag) or parent.name in {"body", "html", "header", "nav", "footer"}:
-        return None, None
+    if tag.name not in _FORM_CONTEXT_TEXT_TAGS and tag.name not in _FORM_HEADING_TAGS:
+        return None, None, True
+    if tag.find(_FORM_CONTEXT_FORBIDDEN) or tag.find("a", href=True):
+        return None, None, True
 
-    heading: str | None = None
+    if tag.name in _FORM_HEADING_TAGS:
+        return _bounded_text(tag, FORM_HEADING_LIMIT), None, False
+
+    headings = [
+        heading for heading in tag.find_all(_FORM_HEADING_TAGS)
+        if _bounded_text(heading, FORM_HEADING_LIMIT)
+    ]
+    if len(headings) > 1:
+        return None, None, True
+    heading = _bounded_text(headings[0], FORM_HEADING_LIMIT) if headings else None
+
     introduction: str | None = None
-    inspected = 0
-    for sibling in form.previous_siblings:
-        if not isinstance(sibling, Tag):
-            continue
-        if sibling.name == "form":
-            # Text floating between two forms is not sufficiently associated.
-            return None, None
-        if sibling.name in {f"h{level}" for level in range(1, 7)}:
-            heading = _bounded_text(sibling, FORM_HEADING_LIMIT)
+    if tag.name in {"p", "small"}:
+        introduction = _bounded_text(tag, FORM_INTRODUCTORY_TEXT_LIMIT)
+    else:
+        for candidate in tag.find_all(["p", "small"]):
+            if candidate.find(_FORM_CONTEXT_FORBIDDEN) or candidate.find("a", href=True):
+                continue
+            value = _bounded_text(candidate, FORM_INTRODUCTORY_TEXT_LIMIT)
+            if value:
+                introduction = value
+                break
+        if introduction is None and heading is None:
+            introduction = _bounded_text(tag, FORM_INTRODUCTORY_TEXT_LIMIT)
+
+    return heading, introduction, False
+
+
+def _external_form_context(form: Tag) -> tuple[str | None, str | None]:
+    """Return local preceding context, including one bounded wrapper level."""
+
+    anchor: Tag = form
+    for _depth in range(_FORM_CONTEXT_ANCESTOR_LIMIT + 1):
+        parent = anchor.parent
+        if not isinstance(parent, Tag) or parent.name in {"body", "html", "header", "nav", "footer"}:
             break
-        if sibling.name not in {"p", "small", "div"}:
+
+        heading: str | None = None
+        introduction: str | None = None
+        inspected = 0
+        for sibling in anchor.previous_siblings:
+            if not isinstance(sibling, Tag):
+                continue
+            inspected += 1
+            if inspected > _FORM_LOCAL_SIBLING_LIMIT:
+                break
+
+            sibling_heading, sibling_intro, ambiguous = _context_block_values(sibling)
+            if ambiguous:
+                break
+            if introduction is None and sibling_intro:
+                introduction = sibling_intro
+            if heading is None and sibling_heading:
+                heading = sibling_heading
+                return heading, introduction
+            if heading and introduction:
+                return heading, introduction
+
+        if heading or introduction:
+            return heading, introduction
+        if parent.name not in _FORM_CONTEXT_CONTAINERS:
             break
-        inspected += 1
-        if inspected > _FORM_LOCAL_SIBLING_LIMIT:
-            break
-        if (
-            sibling.find(
-                [
-                    "form", "input", "select", "textarea", "button", "label", "legend",
-                    *[f"h{level}" for level in range(1, 7)],
-                ]
-            )
-            or sibling.find("a", href=True)
-        ):
-            break
-        if introduction is None:
-            introduction = _bounded_text(sibling, FORM_INTRODUCTORY_TEXT_LIMIT)
-    return heading, introduction
+        anchor = parent
+
+    return None, None
 
 
 def _form_heading(form: Tag) -> str | None:
-    internal = form.find([f"h{level}" for level in range(1, 7)])
+    internal = form.find(_FORM_HEADING_TAGS)
     if isinstance(internal, Tag):
         value = _bounded_text(internal, FORM_HEADING_LIMIT)
         if value:
@@ -154,7 +197,7 @@ def _form_introductory_text(form: Tag) -> str | None:
             continue
         if candidate.find(["form", "input", "select", "textarea", "button", "label", "legend"]):
             continue
-        if candidate.find([f"h{level}" for level in range(1, 7)]):
+        if candidate.find(_FORM_HEADING_TAGS):
             continue
         if candidate.find("a", href=True):
             continue
