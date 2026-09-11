@@ -1,4 +1,4 @@
-name: Privacy PRV-103 Routing V2
+name: Privacy PRV-103 Routing V2.1
 
 on:
   pull_request:
@@ -7,9 +7,13 @@ on:
       - '.github/workflows/privacy-prv103-routing-v2.yml'
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_taxonomy_v2.json'
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/semantic_contract_v2.json'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/intent_taxonomy_v21.json'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/semantic_contract_v21.json'
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/qa7_cases.json'
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v2_runner.py'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v21_runner.py'
       - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v2_runner.py'
+      - 'backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v21_runner.py'
 
 permissions:
   contents: read
@@ -44,26 +48,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest
 
-      - name: Test frozen semantic routing contract
-        run: pytest -q backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v2_runner.py
+      - name: Test frozen semantic routing contracts
+        run: |
+          pytest -q \
+            backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v2_runner.py \
+            backend/tests/domain_packs/privacy/prv103_semantic_benchmark/test_routing_v21_runner.py
 
       - name: Require OpenAI key
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: test -n "$OPENAI_API_KEY"
 
-      - name: Benchmark LLM-all and residual router over consumed QA6-QA8
+      - name: Benchmark final v2.1 residual candidate over consumed QA6-QA8
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v2_runner.py \
-            --output artifacts/privacy-prv103-routing-v2/result.json
+          python backend/tests/domain_packs/privacy/prv103_semantic_benchmark/routing_v21_runner.py \
+            --output artifacts/privacy-prv103-routing-v21/result.json
 
-      - name: Upload development benchmark
+      - name: Upload final development benchmark
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: privacy-prv103-routing-v2-${{ github.run_id }}
-          path: artifacts/privacy-prv103-routing-v2/
+          name: privacy-prv103-routing-v21-${{ github.run_id }}
+          path: artifacts/privacy-prv103-routing-v21/
           if-no-files-found: error
           retention-days: 14
