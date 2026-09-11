@@ -1,0 +1,53 @@
+name: Privacy framework version bump once
+
+on:
+  push:
+    branches:
+      - fix/privacy-form-context-capture
+    paths:
+      - '.github/workflows/privacy-framework-version-bump-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          ref: fix/privacy-form-context-capture
+          fetch-depth: 0
+
+      - name: Bump framework version and current docs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          controls = Path('backend/src/mininode_api/domain_packs/privacy/controls.json')
+          text = controls.read_text(encoding='utf-8')
+          old = '"version": "0.7"'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one controls version marker, found {text.count(old)}')
+          controls.write_text(text.replace(old, '"version": "0.8"', 1), encoding='utf-8')
+
+          docs = Path('docs/privacy.md')
+          text = docs.read_text(encoding='utf-8')
+          old_line = 'La versión vigente del framework es `0.7`; el scoring permanece en `0.1`.'
+          new_block = (
+              'La versión vigente del framework es `0.8`; el scoring permanece en `0.1`.\n'
+              'Framework `0.8` amplía de forma acotada la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción para PRV-103; mantiene el clasificador determinístico, sin LLM, y no ejecuta JavaScript del sitio.'
+          )
+          if text.count(old_line) != 1:
+              raise SystemExit(f'Expected exactly one current framework line, found {text.count(old_line)}')
+          docs.write_text(text.replace(old_line, new_block, 1), encoding='utf-8')
+          PY
+
+      - name: Commit version alignment
+        run: |
+          git config user.name 'Rodrigo Tech'
+          git config user.email 'rodrigo.node@gmail.com'
+          git add backend/src/mininode_api/domain_packs/privacy/controls.json docs/privacy.md
+          git commit -m 'chore(privacy): bump framework to 0.8'
+          git push origin HEAD:fix/privacy-form-context-capture
