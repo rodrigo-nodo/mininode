@@ -15,9 +15,16 @@ from .models import LinkEvidence
 PRIVACY = ("privacidad", "privacy", "politica de privacidad", "proteccion de datos", "datos personales")
 CONTACT = ("contacto", "contact", "contactanos")
 ADDITIONAL = (
-    "registro", "registrarse", "inscripcion", "suscripcion", "newsletter", "cotizar",
-    "cotizacion", "reserva", "reservar", "compra", "comprar", "checkout", "postulacion",
-    "trabaja con nosotros", "empleo",
+    "registro", "registrarse", "inscripcion", "signup", "sign up",
+    "start free", "free trial", "try free", "prueba gratis", "prueba gratuita",
+    "request demo", "get a demo", "book a demo", "schedule a demo", "solicita demo",
+    "solicitar demo", "agenda demo", "agendar demo",
+    "request a meeting", "book a meeting", "schedule a meeting",
+    "talk to sales", "talk to an expert",
+    "cotizar", "cotizacion", "quote", "reserva", "reservar",
+    "suscripcion", "suscribirse", "subscribe", "newsletter",
+    "compra", "comprar", "checkout", "postulacion", "apply",
+    "trabaja con nosotros", "empleo", "careers", "jobs",
 )
 EXCLUDED_WORDS = ("blog", "noticias", "news", "tags", "categorias", "paginacion", "archives")
 EXCLUDED_EXTENSIONS = (".pdf", ".zip", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg")
@@ -51,6 +58,10 @@ def candidate_identity(url: str) -> str:
     parsed = urlsplit(url)
     path = parsed.path.rstrip("/") or "/"
     return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
+
+
+def _signal_priority(signal: str, terms: tuple[str, ...]) -> int | None:
+    return next((index for index, term in enumerate(terms) if _has_signal(signal, term)), None)
 
 
 def classify_page_candidates(
@@ -95,8 +106,10 @@ def classify_page_candidates(
     categories = (("privacy", PRIVACY), ("contact", CONTACT), ("action", ADDITIONAL))
     for url, signal in sorted(by_identity.values()):
         for category, terms in categories:
-            if any(_has_signal(signal, term) for term in terms):
-                candidates.append(PageCandidate(url, category, (url,)))
+            priority = _signal_priority(signal, terms)
+            if priority is not None:
+                rank = (f"{priority:03d}", url) if category == "action" else (url,)
+                candidates.append(PageCandidate(url, category, rank))
                 break
     return candidates
 
@@ -116,6 +129,10 @@ def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | 
         if match and len(selected) < limit:
             selected.append(match)
             used.add(match)
-    additional = [item.url for item in candidates if item.category == "action" and item.url not in used]
-    selected.extend(additional[: min(2, max(0, limit - len(selected)))])
+    additional = [
+        item for item in candidates
+        if item.category == "action" and item.url not in used
+    ]
+    additional.sort(key=lambda item: item.rank)
+    selected.extend(item.url for item in additional[: min(2, max(0, limit - len(selected)))])
     return selected[:limit]
