@@ -47,7 +47,7 @@ jobs:
             backend/tests/domain_packs/privacy/test_evidence_adapter.py \
             backend/tests/web_inspector/test_form_context_capture.py \
             backend/tests/domain_packs/privacy/test_versioning.py \
-            backend/tests/domain_packs/privacy/test_privacy_diagnostic.py
+            backend/tests/domain_packs/privacy/test_privacy_diagnostic.py::test_full_contract_runs_complete_privacy_pipeline
 
       - name: Check diff
         run: git diff --check
