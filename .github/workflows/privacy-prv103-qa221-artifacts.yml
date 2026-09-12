@@ -1,4 +1,4 @@
-name: Privacy PRV-103 QA221 artifacts
+name: Privacy PRV-103 fresh holdout precheck
 
 on:
   pull_request:
@@ -11,13 +11,11 @@ permissions:
   contents: read
 
 jobs:
-  generate:
+  precheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     env:
       PYTHONPATH: backend/src:.github/scripts
-      PRIVACY_PRV103_SHADOW_ENABLED: 'false'
-      PRIVACY_PRV103_SHADOW_SAMPLE_RATE: '0'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -41,21 +39,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Generate sealed QA221 artifacts
-        run: python .github/scripts/privacy_prv103_qa221_blind_artifacts.py
-
-      - name: Upload Artifact A - blind evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: privacy-prv103-qa221-artifact-a-blind-${{ github.run_id }}
-          path: artifacts/privacy-prv103-qa221/artifact-a-blind/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload Artifact B - predictions
-        uses: actions/upload-artifact@v4
-        with:
-          name: privacy-prv103-qa221-artifact-b-predictions-${{ github.run_id }}
-          path: artifacts/privacy-prv103-qa221/artifact-b-predictions/
-          if-no-files-found: error
-          retention-days: 14
+      - name: Validate fresh pool only
+        run: python .github/scripts/privacy_prv103_qa221_blind_artifacts.py --validate-only
