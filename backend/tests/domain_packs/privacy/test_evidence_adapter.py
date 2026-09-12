@@ -180,6 +180,29 @@ def test_prv103_recognizes_generalized_concrete_purposes(text):
     assert evidence["form_purpose"] == "concrete"
 
 
+@pytest.mark.parametrize("kwargs", [
+    {"heading": "Cotización para tu proyecto", "submit_text": "Pedir ahora"},
+    {"legend": "Product demonstration", "submit_text": "Get yours"},
+    {"heading": "Noticias del producto", "submit_text": "Recibir"},
+    {"introductory_text": "Appointment with an advisor", "submit_text": "Book now"},
+    {"heading": "How can we help?", "submit_text": "Submit a question"},
+])
+def test_prv103_combines_bounded_actions_and_results_across_form_context(kwargs):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", **kwargs)]))["PRV-103"]
+    assert evidence["form_purpose"] == "concrete"
+
+
+@pytest.mark.parametrize("text", [
+    "Learn about pricing",
+    "Request a message",
+    "Schedule a call",
+    "Latest product news",
+])
+def test_prv103_does_not_promote_unpaired_or_ambiguous_concepts(text):
+    evidence = adapt_evidence(contract(forms=[form(field_type="email", heading=text)]))["PRV-103"]
+    assert evidence["form_purpose"] == "unknown"
+
+
 @pytest.mark.parametrize("text", [
     "Contact our team",
     "Contact the team",
