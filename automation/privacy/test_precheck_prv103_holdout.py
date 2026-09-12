@@ -23,3 +23,12 @@ def test_load_domains_requires_exactly_100_unique_normalized_hosts(tmp_path):
     duplicate.write_text("\n".join(["example.com", "www.example.com", *[f"site-{number}.example" for number in range(98)]]))
     with pytest.raises(ValueError, match="unique"):
         holdout_precheck.load_domains(duplicate)
+
+
+def test_proposed_pool_has_100_unique_hosts_and_excludes_issue_223():
+    candidates = MODULE_PATH.parents[2] / "docs/evidence/prv103-holdout-0.9-candidates.txt"
+    domains = holdout_precheck.load_domains(candidates)
+
+    assert len(domains) == 100
+    assert len(set(domains)) == 100
+    assert set(domains).isdisjoint(holdout_precheck.ISSUE_223_EXCLUSIONS)

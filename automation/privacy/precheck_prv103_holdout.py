@@ -15,6 +15,40 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 USER_AGENT = "Mininode-PRV103-holdout-precheck/1.0"
+ISSUE_223_EXCLUSIONS = frozenset(
+    """
+bill.com
+breezy.hr
+bugsnag.com
+crisp.chat
+dixa.com
+factorialhr.com
+getresponse.com
+gladly.com
+hibob.com
+justworks.com
+klarna.com
+kustomer.com
+logrocket.com
+mollie.com
+nordpass.com
+paycor.com
+payoneer.com
+plausible.io
+raygun.com
+recruitee.com
+rollbar.com
+sophos.com
+spendesk.com
+tawk.to
+teamwork.com
+todoist.com
+travis-ci.com
+workable.com
+wufoo.com
+zenefits.com
+""".split()
+)
 
 
 def normalize_hostname(value: str) -> str:
@@ -30,6 +64,11 @@ def load_domains(path: Path) -> list[str]:
         raise ValueError(f"expected exactly 100 domains, got {len(domains)}")
     if "" in domains or len(set(domains)) != len(domains):
         raise ValueError("domains must be non-empty and unique after normalization")
+    contaminated = sorted(set(domains) & ISSUE_223_EXCLUSIONS)
+    if contaminated:
+        raise ValueError(
+            "domains overlap Issue #223 exclusions: " + ", ".join(contaminated)
+        )
     return domains
 
 
