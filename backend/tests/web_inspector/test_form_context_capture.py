@@ -1,3 +1,5 @@
+import pytest
+
 from mininode_api.web_inspector.extractor import extract_page
 from mininode_api.web_inspector.models import LinkEvidence
 from mininode_api.web_inspector.selector import classify_page_candidates
@@ -115,3 +117,18 @@ def test_selector_recognizes_common_form_action_ctas():
         ("https://example.com/free-trial/", "action"),
         ("https://example.com/meeting", "action"),
     ]
+
+
+@pytest.mark.parametrize("transient", ["Loading...", "Close", "Cargando..."])
+def test_form_context_ignores_exact_transient_ui_text(transient):
+    html = f"""
+    <form>
+      <div>{transient}</div>
+      <input type="email" name="email">
+      <button type="submit">Get Started</button>
+    </form>
+    """
+
+    form = extract_page(html, "https://example.com/signup").forms[0]
+
+    assert form.introductory_text is None

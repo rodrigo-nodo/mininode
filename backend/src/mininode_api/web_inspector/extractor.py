@@ -103,6 +103,9 @@ def _label(control: Tag, soup: BeautifulSoup) -> str:
 
 def _bounded_text(tag: Tag, limit: int) -> str | None:
     value = _text(tag)
+    operational = " ".join(re.sub(r"[^a-z0-9]+", " ", value.lower()).split())
+    if operational in {"close", "loading", "cargando"}:
+        return None
     return value[:limit] if value else None
 
 

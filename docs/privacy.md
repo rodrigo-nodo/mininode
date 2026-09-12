@@ -47,8 +47,9 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework es `0.8`; el scoring permanece en `0.1`.
-Framework `0.8` amplía de forma acotada la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción para PRV-103; mantiene el clasificador determinístico, sin LLM, y no ejecuta JavaScript del sitio.
+La versión vigente del framework es `0.9`; el scoring permanece en `0.1`.
+Framework `0.9` mantiene la captura estática introducida en `0.8` y ajusta el clasificador determinístico de PRV-103: reconoce familias observables adicionales de finalidad concreta (por ejemplo demo, soporte/ticket, recursos, privacidad/opt-out, prensa, actualizaciones y llamadas agendadas) y trata la creación de cuenta o el alta genérica como contexto genérico salvo que el mismo formulario exprese una finalidad específica. Mantiene LLM/shadow apagado y no ejecuta JavaScript del sitio.
+PRV-103 `0.9` debe superar un nuevo holdout independiente antes de considerarse validado y antes de cerrar Formularios V1.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
 ## Foco técnico actual

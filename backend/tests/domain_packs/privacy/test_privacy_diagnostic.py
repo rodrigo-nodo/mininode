@@ -44,7 +44,7 @@ def failed_contract():
 
 def test_full_contract_runs_complete_privacy_pipeline():
     result = run_privacy_diagnostic(complete_contract())
-    assert result["framework_version"] == "0.8"
+    assert result["framework_version"] == "0.9"
     assert result["scoring_version"] == "0.1"
     assert [control["control_code"] for control in result["controls"]] == CODES
     assert len(result["controls"]) == 21

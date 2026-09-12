@@ -1192,6 +1192,33 @@ _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
     # Bounded form-oriented invitation; the target may be any organization name.
     r"^talk to (?:us|[a-z0-9][a-z0-9&.'-]*(?: [a-z0-9][a-z0-9&.'-]*){0,3})$",
 ))
+_FORM_PURPOSE_STRONG_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
+    r"\bget\b.{0,30}\bupdates?\b",
+    r"\bjoin\b.{0,40}\bnewsletter\b",
+    r"\bsee\b.{0,50}\bin action\b",
+    r"\b(?:get|watch|request|book|schedule)\b.{0,30}\b(?:a |an |the |your )?(?:free )?demo\b",
+    r"\bpersonalized demo\b",
+    r"\b(?:reserva|reservar|solicita|solicitar|agenda|agendar)\b.{0,30}\b(?:tu |una |un )?demo\b",
+    r"\bpreview\b.{0,80}\b(?:home page|website|site)\b",
+    r"\bsubmit\b.{0,20}\b(?:your |a |the )?ticket\b",
+    r"\btry free for \d+\s+(?:day|days|week|weeks|month|months)\b",
+    r"\babsolutely free\b",
+    r"\bjoin\b.{0,80}\bfor free\b",
+    r"\b(?:get|download|access|view|receive)\b.{0,30}\b(?:guide|report|ebook|e book|whitepaper|white paper|checklist|webinar|resource)\b",
+    r"\b(?:press|media|abuse|partnership)\b.{0,140}\b(?:requests?|questions?|inquiries|inbox)\b",
+    r"\b(?:ccpa|california consumer privacy act|privacy)\b.{0,100}\b(?:opt out|delete|deletion|access|request)\b",
+    r"\bopt out form\b",
+    r"\b(?:schedule|book)\b.{0,25}\b(?:a |the )?(?:call|meeting)\b",
+))
+_FORM_PURPOSE_ACCOUNT_SIGNAL = re.compile(
+    r"\b(?:create|open)\s+(?:a\s+)?(?:free\s+)?account\b|"
+    r"\b(?:crear|abre|abrir)\s+(?:una\s+)?cuenta\b|"
+    r"\bsign up(?:\s+free|\s+now)?\b|"
+    r"\b(?:register|registrarse|registrate)\b|"
+    r"\bget started\b.{0,40}\baccount\b"
+)
+
+
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
     r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
@@ -1199,8 +1226,7 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias|temas?|contenido|informacion|comunicaciones?|actualizaciones?|promociones?)\b",
     r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
     r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
-    r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account)\b",
-    r"\b(?:registrarse|register|postular|apply)\b",
+    r"\b(?:postular|apply)\b",
     r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
     r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
     r"\bsend\b.{0,20}\ban inquiry\b",
@@ -1264,7 +1290,10 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     if not values:
         return "unknown"
     combined = " ".join(values)
-    if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
+    # High-precision families observed in the consumed QA holdout take precedence
+    # over generic contact/account language when the same form states a specific
+    # result or action.
+    if any(pattern.search(combined) for pattern in _FORM_PURPOSE_STRONG_CONCRETE_PATTERNS):
         return "concrete"
     if (
         _FORM_PURPOSE_SUPPORT_SIGNAL.search(combined)
@@ -1275,6 +1304,13 @@ def _form_purpose_signal(form: FormEvidence) -> str:
         _FORM_PURPOSE_FREE_TRIAL.search(combined)
         and _FORM_PURPOSE_TRIAL_ACTION.search(combined)
     ):
+        return "concrete"
+    # Creating an account or signing up describes the mechanics of entry, not by
+    # itself the purpose for which the personal data is requested. A stronger
+    # observable purpose above (for example a free trial) may still be concrete.
+    if _FORM_PURPOSE_ACCOUNT_SIGNAL.search(combined):
+        return "generic"
+    if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
         return "concrete"
     # A generic topic plus a matching action is meaningful only within this form.
     if "newsletter" in values and any(
