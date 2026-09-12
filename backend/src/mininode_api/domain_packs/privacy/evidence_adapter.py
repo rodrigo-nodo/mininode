@@ -1192,29 +1192,44 @@ _FORM_PURPOSE_GENERIC_PATTERNS = tuple(re.compile(pattern) for pattern in (
     # Bounded form-oriented invitation; the target may be any organization name.
     r"^talk to (?:us|[a-z0-9][a-z0-9&.'-]*(?: [a-z0-9][a-z0-9&.'-]*){0,3})$",
 ))
+# Concrete purposes are primarily recognized as composable concepts. Each pair
+# requires both an explicit action and its bounded object/result in the same form;
+# neither side is enough on its own.
+_FORM_PURPOSE_CONCEPT_PAIRS = tuple(
+    (re.compile(action), re.compile(result))
+    for action, result in (
+        (
+            r"\b(?:solicit(?:a|ar|e)|pedir|pide|request|get|obten(?:er|ga))\b",
+            r"\b(?:cotizacion|presupuesto|precio|quote|pricing|demo|demostracion|demonstration)\b",
+        ),
+        (
+            r"\b(?:reserva|reservar|agenda|agendar|book|schedule)\b",
+            r"\b(?:hora|cita|appointment|demo|demonstration)\b",
+        ),
+        (
+            r"\b(?:recib(?:e|ir|a)|receive|get|suscrib(?:irme|ete|irse)|subscribe)\b",
+            r"\b(?:newsletter|novedades|noticias|temas?|contenidos?|informacion|information|"
+            r"communications?|comunicaciones?|updates?|actualizaciones?|promociones?)\b",
+        ),
+        (
+            r"\b(?:ask|send|submit|create|open|request|envia|enviar|solicita|solicitar)\b",
+            r"\b(?:support (?:ticket|request)|question|inquiry|support|ticket|case|"
+            r"pregunta|consulta|soporte)\b",
+        ),
+    )
+)
 _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
-    r"\bsolicit(?:a|ar|e)\b.{0,40}\b(?:cotizacion|presupuesto|demo|soporte)\b",
-    r"\b(?:reserva|reservar|agenda|agendar)\b.{0,30}\b(?:hora|cita)\b",
-    r"\b(?:enviar|envia|envianos)\b.{0,30}\bconsulta\b",
-    r"\brecib(?:e|ir)\b.{0,40}\b(?:respuesta|novedades|noticias|temas?|contenido|informacion|comunicaciones?|actualizaciones?|promociones?)\b",
     r"\bdejanos\b.{0,30}\bdatos\b.{0,50}\bcontactaremos\b",
-    r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\b(?:ya|newsletter|updates?|novedades)\b",
+    r"\b(?:suscribirme|suscribete|suscribirse|subscribe)\b.{0,30}\bya\b",
     r"\b(?:crear|create)\b.{0,15}\b(?:cuenta|account)\b",
     r"\b(?:registrarse|register|postular|apply)\b",
-    r"\brequest\b.{0,30}\b(?:quote|demo|support)\b",
-    r"\b(?:book|schedule)\b.{0,30}\b(?:appointment|demo)\b",
-    r"\bsend\b.{0,20}\ban inquiry\b",
     r"\b(?:nos pondremos en contacto contigo|te contactaremos|nos comunicaremos contigo|te responderemos)\b",
     r"\b(?:we will contact you|we ll contact you|we ll get back to you)\b",
-    r"\b(?:create|open)\s+(?:a\s+)?(?:support\s+)?ticket\b",
-    r"\bsubmit\s+(?:a\s+)?support\s+request\b",
-    r"\bcreate\s+(?:a\s+)?case\b",
     r"\b(?:our team|we)\s+(?:(?:will|ll)\s+)?(?:reply|respond|follow up)\b",
     r"\b(?:try|start)\s+(?!to\s+learn\b)(?:[a-z0-9]+[ -]?){1,6}for free\b",
     r"\b(?:complete|fill out)\s+(?:(?:this|the(?: following)?)\s+)?form\s+to\s+(?:access|view|download|receive|get)\s+\S+",
     r"\bpara\s+(?:acceder(?: a)?|ver|descargar|recibir|obtener)\s+\S+.{0,80}\bcomplet(?:a|ar|e)\s+(?:(?:este|el(?: siguiente)?)\s+)?formulario\b",
     r"\bcomplet(?:a|ar|e)\s+(?:(?:este|el(?: siguiente)?)\s+)?formulario.{0,80}\bpara\s+(?:acceder(?: a)?|ver|descargar|recibir|obtener)\s+\S+",
-    r"\breceive\b.{0,40}\b(?:topics?|content|information|communications?|updates?|promotions?)\b",
     r"\b(?:selecciona|seleccionar|seleccione|elige|elegir|elija)\b.{0,30}\b(?:temas?|contenidos?|comunicaciones?|actualizaciones?|promociones?)\b.{0,30}\b(?:(?:que\s+)?(?:quieres?|deseas?|te interesaria|le interesaria)\s+)?recibir\b",
     r"\b(?:select|choose)\b.{0,30}\b(?:topics?|content|communications?|updates?|promotions?)\b.{0,30}\b(?:you\s+)?(?:want to|would like to)\s+receive\b",
     r"\b(?:evalua|evaluar|califica|calificar)\b.{0,30}\b(?:tu |su |la )?experiencia\b",
@@ -1226,7 +1241,6 @@ _FORM_PURPOSE_CONCRETE_PATTERNS = tuple(re.compile(pattern) for pattern in (
     r"\b(?:hablemos|conversemos)\s+(?:de|sobre)\s+"
     r"(?:(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\s+)?"
     r"(?!(?:tu|tus|su|sus|el|la|los|las|un|una|mi|mis|your|the|a|an)\b)\w+",
-    r"\breceive\b.{0,20}\bupdates?\b",
     r"^(?:iniciar|inicia) sesion$",
     r"^acceder a (?:mi|tu) cuenta$",
     r"^(?:sign in|log in|login|access my account)$",
@@ -1264,6 +1278,11 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     if not values:
         return "unknown"
     combined = " ".join(values)
+    if any(
+        action.search(combined) and result.search(combined)
+        for action, result in _FORM_PURPOSE_CONCEPT_PAIRS
+    ):
+        return "concrete"
     if any(pattern.search(combined) for pattern in _FORM_PURPOSE_CONCRETE_PATTERNS):
         return "concrete"
     if (
@@ -1274,12 +1293,6 @@ def _form_purpose_signal(form: FormEvidence) -> str:
     if (
         _FORM_PURPOSE_FREE_TRIAL.search(combined)
         and _FORM_PURPOSE_TRIAL_ACTION.search(combined)
-    ):
-        return "concrete"
-    # A generic topic plus a matching action is meaningful only within this form.
-    if "newsletter" in values and any(
-        re.search(r"\b(?:subscribe|suscribirme|suscribete|suscribirse)\b", value)
-        for value in values
     ):
         return "concrete"
     if (
