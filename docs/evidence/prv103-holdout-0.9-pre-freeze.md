@@ -4,7 +4,7 @@
 
 **Control histórico: PASS. Precheck público: PENDIENTE. Pool no congelado.**
 
-La revisión externa del Artifact B congelado de Issue #223 confirmó que 30 dominios del pool propuesto en PR #226 ya habían sido consumidos. Los 30 fueron retirados y sustituidos antes del freeze. El pool corregido permanece en `pre-freeze` porque este runner no dispone de salida HTTPS pública.
+La lista completa recuperada del Artifact B congelado de Issue #223 contiene 100 hostnames. La primera comparación confirmó 30 cruces en el pool propuesto del PR #226; una comparación posterior contra el artifact completo detectó otros cuatro reemplazos indirectos. Los 34 cruces fueron retirados antes del freeze. El pool corregido permanece en `pre-freeze` porque este runner no dispone de salida HTTPS pública.
 
 ## Producto mantenido
 
@@ -55,20 +55,32 @@ Los hostnames se compararon en minúsculas y sin esquema, `www.`, ruta ni barra 
 | `wufoo.com` | Issue #223 | `replace` | `formester.com` | formularios online |
 | `zenefits.com` | Issue #223 | `replace` | `paycom.com` | nómina y RR.HH. |
 
-Resultado: **30/30 cruces de Issue #223 eliminados**.
+Resultado de la primera corrección: **30/30 cruces de Issue #223 eliminados**.
+
+### Cuatro cruces adicionales contra el Artifact B completo
+
+| dominio histórico | origen | acción | reemplazo final | equivalencia funcional |
+|---|---|---|---|---|
+| `affirm.com` | Issue #223 | `replace` | `sezzle.com` | pagos y financiación |
+| `buildkite.com` | Issue #223 | `replace` | `woodpecker-ci.org` | integración continua |
+| `freedcamp.com` | Issue #223 | `replace` | `awork.com` | gestión de proyectos |
+| `livechat.com` | Issue #223 | `replace` | `delightchat.io` | soporte y chat |
+
+Resultado de la corrección final: **4/4 cruces adicionales eliminados**.
 
 ## Control contra el histórico restante
 
-El pool completo corregido se volvió a comparar contra los blobs alcanzables del SHA base para QA1-QA8, scripts, workflows, fixtures, documentación y calibraciones/investigaciones PRV-103 con sitios reales. Los 30 reemplazos fueron comprobados del mismo modo.
+Los cuatro reemplazos finales se contrastaron primero contra los 100 hostnames de Issue #223, el propio pool y los blobs alcanzables del SHA base. Después, el pool completo corregido se volvió a comparar contra los blobs alcanzables del SHA base para QA1-QA8, scripts, workflows, fixtures, documentación y calibraciones/investigaciones PRV-103 con sitios reales. Las sustituciones acumuladas quedaron cubiertas por la comparación final.
 
 | Control | Resultado |
 |---|---|
-| Exclusiones confirmadas de Issue #223 | 0 solapamientos después de reemplazar 30 |
+| Lista de exclusión de Issue #223 | 100 hostnames únicos |
+| Comparación final contra Issue #223 | 0/100 solapamientos después de eliminar 34 cruces acumulados |
 | Histórico local QA1-QA8 y calibraciones PRV-103 | 0 solapamientos adicionales |
 | Hostnames vacíos o duplicados tras normalización | 0 |
 | Total del pool corregido | 100 |
 
-No aparecieron cruces históricos adicionales a los 30 informados por la revisión externa.
+No aparecieron cruces adicionales contra QA1-QA8 o las calibraciones/investigaciones locales. Los únicos cruces nuevos fueron los cuatro identificados al completar la lista de exclusión de Issue #223.
 
 ## Pool final propuesto (orden pre-freeze)
 
@@ -92,20 +104,20 @@ Este es el orden exacto preservado también en `prv103-holdout-0.9-candidates.tx
 | 14 | `jobvite.com` |
 | 15 | `talentlms.com` |
 | 16 | `trello.com` |
-| 17 | `freedcamp.com` |
+| 17 | `awork.com` |
 | 18 | `whimsical.com` |
 | 19 | `framery.com` |
 | 20 | `airbrake.io` |
 | 21 | `honeybadger.io` |
 | 22 | `openreplay.com` |
-| 23 | `buildkite.com` |
+| 23 | `woodpecker-ci.org` |
 | 24 | `pingidentity.com` |
 | 25 | `onelogin.com` |
 | 26 | `roboform.com` |
 | 27 | `paloaltonetworks.com` |
 | 28 | `braintreepayments.com` |
 | 29 | `payplug.com` |
-| 30 | `affirm.com` |
+| 30 | `sezzle.com` |
 | 31 | `worldremit.com` |
 | 32 | `n26.com` |
 | 33 | `pleo.io` |
@@ -122,7 +134,7 @@ Este es el orden exacto preservado también en `prv103-holdout-0.9-candidates.tx
 | 44 | `buffer.com` |
 | 45 | `kayako.com` |
 | 46 | `liveagent.com` |
-| 47 | `livechat.com` |
+| 47 | `delightchat.io` |
 | 48 | `chatwoot.com` |
 | 49 | `missiveapp.com` |
 | 50 | `hiverhq.com` |

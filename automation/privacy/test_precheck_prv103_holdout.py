@@ -31,4 +31,5 @@ def test_proposed_pool_has_100_unique_hosts_and_excludes_issue_223():
 
     assert len(domains) == 100
     assert len(set(domains)) == 100
+    assert len(holdout_precheck.ISSUE_223_EXCLUSIONS) == 100
     assert set(domains).isdisjoint(holdout_precheck.ISSUE_223_EXCLUSIONS)
