@@ -130,8 +130,8 @@ def normalize_hostname(value: str) -> str:
 
 def load_domains(path: Path) -> list[str]:
     domains = [normalize_hostname(line) for line in path.read_text().splitlines() if line.strip()]
-    if len(domains) != 100:
-        raise ValueError(f"expected exactly 100 domains, got {len(domains)}")
+    if len(domains) != 99:
+        raise ValueError(f"expected exactly 99 domains, got {len(domains)}")
     if "" in domains or len(set(domains)) != len(domains):
         raise ValueError("domains must be non-empty and unique after normalization")
     contaminated = sorted(set(domains) & ISSUE_223_EXCLUSIONS)
@@ -162,7 +162,7 @@ def precheck(domain: str, timeout: float) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("domains", type=Path, help="text file containing exactly 100 domains")
+    parser.add_argument("domains", type=Path, help="text file containing exactly 99 domains")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timeout", type=float, default=20)
     args = parser.parse_args()

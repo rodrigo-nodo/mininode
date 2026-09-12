@@ -88,7 +88,6 @@ lattice.com
 cultureamp.com
 jazzhr.com
 jira.com
-height.app
 craft.do
 notion.so
 betterstack.com

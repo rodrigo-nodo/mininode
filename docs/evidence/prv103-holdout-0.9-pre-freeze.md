@@ -2,9 +2,9 @@
 
 ## Estado
 
-**Control histórico: PASS. Precheck público: PENDIENTE. Pool no congelado.**
+**Control histórico: PASS. Precheck público: PASS. Pool CONGELADO.**
 
-La lista completa recuperada del Artifact B congelado de Issue #223 contiene 100 hostnames. La primera comparación confirmó 30 cruces en el pool propuesto del PR #226; una comparación posterior contra el artifact completo detectó otros cuatro reemplazos indirectos. Los 34 cruces fueron retirados antes del freeze. El pool corregido permanece en `pre-freeze` porque este runner no dispone de salida HTTPS pública.
+La lista completa recuperada del Artifact B congelado de Issue #223 contiene 100 hostnames. La primera comparación confirmó 30 cruces en el pool propuesto del PR #226; una comparación posterior contra el artifact completo detectó otros cuatro reemplazos indirectos. Los 34 cruces fueron retirados antes del freeze. Durante el precheck público se confirmó además que `height.app` corresponde a un producto discontinuado; se retiró sin reemplazo por decisión explícita de producto. Los 99 candidatos retenidos superaron el precheck y quedaron congelados en el orden documentado.
 
 ## Producto mantenido
 
@@ -15,6 +15,7 @@ La lista completa recuperada del Artifact B congelado de Issue #223 contiene 100
 | `scoring_version` | `0.1` |
 | PRV-103 | determinístico; no ejecutado |
 | LLM/shadow | desactivado |
+| Freeze UTC | `2026-09-12T21:45:23Z` |
 
 No se modificaron el producto, sus reglas, el extractor, el scoring ni las versiones.
 
@@ -78,13 +79,13 @@ Los cuatro reemplazos finales se contrastaron primero contra los 100 hostnames d
 | Comparación final contra Issue #223 | 0/100 solapamientos después de eliminar 34 cruces acumulados |
 | Histórico local QA1-QA8 y calibraciones PRV-103 | 0 solapamientos adicionales |
 | Hostnames vacíos o duplicados tras normalización | 0 |
-| Total del pool corregido | 100 |
+| Total del pool congelado | 99 |
 
 No aparecieron cruces adicionales contra QA1-QA8 o las calibraciones/investigaciones locales. Los únicos cruces nuevos fueron los cuatro identificados al completar la lista de exclusión de Issue #223.
 
-## Pool final propuesto (orden pre-freeze)
+## Pool final congelado
 
-Este es el orden exacto preservado también en `prv103-holdout-0.9-candidates.txt`:
+Este es el orden exacto e inmutable preservado también en `prv103-holdout-0.9-candidates.txt`. Después del freeze no se agregan, quitan, reemplazan ni reordenan candidatos en función de resultados:
 
 | # | hostname |
 |---:|---|
@@ -178,25 +179,25 @@ Este es el orden exacto preservado también en `prv103-holdout-0.9-candidates.tx
 | 88 | `cultureamp.com` |
 | 89 | `jazzhr.com` |
 | 90 | `jira.com` |
-| 91 | `height.app` |
-| 92 | `craft.do` |
-| 93 | `notion.so` |
-| 94 | `betterstack.com` |
-| 95 | `convertkit.com` |
-| 96 | `mparticle.com` |
-| 97 | `census.com` |
-| 98 | `dbt.com` |
-| 99 | `cal.com` |
-| 100 | `acuityscheduling.com` |
+| 91 | `craft.do` |
+| 92 | `notion.so` |
+| 93 | `betterstack.com` |
+| 94 | `convertkit.com` |
+| 95 | `mparticle.com` |
+| 96 | `census.com` |
+| 97 | `dbt.com` |
+| 98 | `cal.com` |
+| 99 | `acuityscheduling.com` |
 
 ## Precheck público
 
-- Estado: **PENDIENTE de verificación pública externa**; no se declara PASS.
-- Ya se comprobó que el proxy de este entorno devuelve `CONNECT tunnel failed, response 403` para conexiones HTTPS públicas. Ese bloqueo es una limitación del runner y no se interpreta como caída de ningún sitio.
-- No se repitieron 100 solicitudes que no aportarían evidencia nueva.
-- Ningún candidato fue alterado por el error del proxy.
+- Resultado: **PASS** para los 99 candidatos retenidos.
+- `height.app`: producto discontinuado; retirado durante el precheck público.
+- Decisión de producto: no reemplazar `height.app`; el tamaño final deliberado es 99.
+- Solo se consideraron frescura, accesibilidad pública y correspondencia razonable con una organización o servicio real.
+- No se inspeccionaron formularios ni se ejecutó PRV-103 durante el precheck.
 
-El pool queda listo para que un runner externo ejecute una única pasada del precheck público pasivo. Solo después de comprobar accesibilidad y correspondencia organizacional de los 100 dominios podrá declararse congelado.
+Con el control histórico y el precheck público en PASS, el pool de 99 candidatos queda **CONGELADO**.
 
 ## Declaración de no ejecución
 
