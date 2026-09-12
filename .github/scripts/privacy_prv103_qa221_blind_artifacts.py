@@ -12,7 +12,7 @@ from privacy_prv103_qa4 import inspect_case
 FROZEN_SHA = "244671de83e5463d1f65a4bd7e2d561bc2f38fd5"
 EXPECTED_FRAMEWORK_VERSION = "0.8"
 EXPECTED_SCORING_VERSION = "0.1"
-ISSUE_NUMBER = 0  # Filled only after the pool passes static freshness validation and is frozen in GitHub.
+ISSUE_NUMBER = 223
 FIELDS = ("heading", "legend", "introductory_text", "submit_text")
 CURRENT_FILE = Path(__file__).resolve()
 
