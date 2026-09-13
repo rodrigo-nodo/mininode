@@ -1,0 +1,40 @@
+name: Privacy PRV-103 QA09 Final
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'automation/privacy/run_prv103_qa09_final_v2.py'
+      - 'docs/evidence/prv103-holdout-0.9-artifact-a.json'
+      - 'docs/evidence/prv103-holdout-0.9-gold.json'
+      - '.github/workflows/privacy-prv103-qa09-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify frozen product code is unchanged
+        run: |
+          git diff --exit-code 6fbe6f94887114f4a5459af861f1fcaa0c4b7bd7 -- backend/src/mininode_api/domain_packs/privacy/evidence_adapter.py backend/src/mininode_api/domain_packs/privacy/controls.json backend/src/mininode_api/web_inspector
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run frozen final comparison
+        env:
+          PYTHONPATH: backend/src
+        run: python automation/privacy/run_prv103_qa09_final_v2.py
+      - name: Upload final QA result
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv103-qa09-final-${{ github.run_id }}
+          path: artifacts/privacy-prv103-qa09-final/result.json
+          retention-days: 14
