@@ -38,3 +38,4 @@ jobs:
           name: privacy-prv103-qa09-final-${{ github.run_id }}
           path: artifacts/privacy-prv103-qa09-final/result.json
           retention-days: 14
+# Triggered only after Artifact A and Gold were frozen.
