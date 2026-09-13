@@ -7,11 +7,13 @@ on:
       - '.github/workflows/privacy-web-inspector-ci.yml'
       - 'backend/src/mininode_api/web_inspector/extractor.py'
       - 'backend/src/mininode_api/web_inspector/selector.py'
-      - 'backend/src/mininode_api/domain_packs/privacy/evidence_adapter.py'
+      - 'backend/src/mininode_api/domain_packs/privacy/**'
       - 'backend/tests/web_inspector/test_extractor.py'
       - 'backend/tests/web_inspector/test_selector.py'
       - 'backend/tests/web_inspector/test_form_context_capture.py'
-      - 'backend/tests/domain_packs/privacy/test_evidence_adapter.py'
+      - 'backend/tests/domain_packs/privacy/**'
+      - 'frontend/privacy/framework-v0.6.js'
+      - 'frontend/privacy/test_privacy_framework_sync.py'
 
 permissions:
   contents: read
@@ -36,10 +38,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest
 
-      - name: Run focused form evidence tests
+      - name: Run Privacy Web inspector and framework tests
         run: |
           pytest -q \
             backend/tests/web_inspector/test_extractor.py \
             backend/tests/web_inspector/test_selector.py \
             backend/tests/web_inspector/test_form_context_capture.py \
-            backend/tests/domain_packs/privacy/test_evidence_adapter.py
+            backend/tests/domain_packs/privacy \
+            frontend/privacy/test_privacy_framework_sync.py
