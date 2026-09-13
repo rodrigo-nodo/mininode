@@ -1,0 +1,34 @@
+name: Privacy PRV-104 QA V2 Artifact A
+
+on:
+  pull_request:
+    paths:
+      - 'automation/privacy/run_prv104_qa_v2_precheck.py'
+      - 'docs/evidence/prv104-focused-qa-v2-plan.md'
+      - '.github/workflows/privacy-prv104-qa-v2-artifact-a.yml'
+  workflow_dispatch:
+
+jobs:
+  artifact-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify frozen product
+        run: |
+          git diff --exit-code cb7c219f6b3e26bba4fd73a2905305a3a78003a1 -- backend/src frontend || {
+            echo 'Product code differs from frozen SHA'; exit 1;
+          }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend
+        run: pip install -e './backend[dev]'
+      - name: Generate blind Artifact A
+        run: python automation/privacy/run_prv104_qa_v2_precheck.py
+      - name: Upload frozen evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv104-qa-v2-artifact-a-${{ github.run_id }}
+          path: artifacts/privacy-prv104-qa-v2/
+          if-no-files-found: error
