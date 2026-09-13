@@ -15,7 +15,7 @@ CONTROLS = json.loads(
 
 
 class PrivacyFrameworkSyncTests(unittest.TestCase):
-    def test_runtime_matrix_matches_backend_framework_0_7(self):
+    def test_runtime_matrix_matches_backend_framework_0_9(self):
         backend_controls = CONTROLS["controls"]
         backend_codes = {control["code"] for control in backend_controls}
         form_codes = {
@@ -29,13 +29,13 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         sync_codes = set(re.findall(r"code: '(PRV-\d+)'", SYNC))
         runtime_codes = (app_codes - form_codes) | sync_codes
 
-        self.assertEqual(CONTROLS["version"], "0.7")
+        self.assertEqual(CONTROLS["version"], "0.9")
         self.assertEqual(len(backend_codes), 21)
         self.assertEqual(form_codes, {"PRV-101", "PRV-102", "PRV-103", "PRV-104"})
         self.assertEqual(sync_codes, form_codes)
         self.assertEqual(runtime_codes, backend_codes)
 
-    def test_form_context_controls_do_not_drive_area_status(self):
+    def test_v1_informational_form_controls_do_not_drive_area_status(self):
         backend_forms = {
             control["code"]: control
             for control in CONTROLS["controls"]
@@ -48,10 +48,9 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         }
 
         self.assertEqual(contextual, {"PRV-101", "PRV-103"})
-        for code in contextual:
+        for code in {"PRV-101", "PRV-103", "PRV-104"}:
             self.assertRegex(SYNC, rf"code: '{code}'.*informational: true")
         self.assertNotRegex(SYNC, r"code: 'PRV-102'.*informational: true")
-        self.assertNotRegex(SYNC, r"code: 'PRV-104'.*informational: true")
 
     def test_informational_controls_use_neutral_non_adverse_labels(self):
         self.assertIn("['Bien', 'Detectado']", SYNC)
