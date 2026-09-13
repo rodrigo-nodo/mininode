@@ -10,6 +10,7 @@ from .evaluator import load_controls
 
 
 _SCORING_PATH = Path(__file__).with_name("scoring.json")
+_V1_INFORMATIONAL_CONTROLS = {"PRV-104"}
 
 
 def load_scoring() -> dict:
@@ -20,7 +21,9 @@ def load_scoring() -> dict:
 def score_privacy(results: Iterable[Mapping]) -> dict:
     """Calculate visible preparation score and evidence coverage.
 
-    The returned score is not a percentage of legal compliance.
+    The returned score is not a percentage of legal compliance. PRV-104 is
+    explicitly informational for V1 after its focused independent QA and does
+    not contribute to score or coverage.
     """
     rules = load_scoring()
     controls = {control["code"]: control for control in load_controls()}
@@ -31,7 +34,12 @@ def score_privacy(results: Iterable[Mapping]) -> dict:
             raise ValueError(f"Unknown privacy control: {code}")
         normalized.append((controls[code], item.get("result", item.get("status"))))
 
-    scoring_results = [pair for pair in normalized if pair[0]["type"] != "context"]
+    scoring_results = [
+        pair
+        for pair in normalized
+        if pair[0]["type"] != "context"
+        and pair[0]["code"] not in _V1_INFORMATIONAL_CONTROLS
+    ]
     applicable = [pair for pair in scoring_results if pair[1] != "not_applicable"]
     evaluated = [pair for pair in applicable if pair[1] != "not_evaluable"]
 
