@@ -1,6 +1,15 @@
 name: Privacy PRV-103 QA09 Artifact A
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/scripts/privacy_prv103_qa09_artifact_a.py
+      - .github/workflows/privacy-prv103-qa09-artifact-a.yml
+      - backend/tests/domain_packs/privacy/test_prv103_qa09_artifact_a.py
+      - automation/privacy/test_precheck_prv103_holdout.py
+      - docs/evidence/prv103-holdout-0.9-candidates.txt
   workflow_dispatch:
 
 permissions:
