@@ -13,7 +13,6 @@ from .scoring import load_scoring
 
 _ELIGIBLE_TYPES = {"evaluation", "conditional_evaluation"}
 _ELIGIBLE_RESULTS = {"partial", "not_detected"}
-_V1_INFORMATIONAL_CONTROLS = {"PRV-104"}
 _CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
 _VISIBLE_PRIORITY = {
     "muy_alto": "Alta",
@@ -26,10 +25,9 @@ _VISIBLE_PRIORITY = {
 def ordered_actionable_findings(results: Iterable[Mapping]) -> list[tuple[dict, Mapping, str]]:
     """Return actionable findings in the stable Privacy priority order.
 
-    Context controls, controls with an explicit zero score weight and V1
-    informational controls are not actionable. Keeping this selection here
-    makes the free priorities and the full correction plan apply the same
-    rules without changing their contracts.
+    Context controls and controls with an explicit zero score weight are not
+    actionable. This keeps free priorities and the full correction plan driven
+    by the canonical control catalog without per-control runtime exceptions.
     """
     controls = {control["code"]: control for control in load_controls()}
     impact_weights = load_scoring()["impact_weights"]
@@ -40,7 +38,6 @@ def ordered_actionable_findings(results: Iterable[Mapping]) -> list[tuple[dict, 
         outcome = result.get("result", result.get("status"))
         if (
             control
-            and control["code"] not in _V1_INFORMATIONAL_CONTROLS
             and control["type"] in _ELIGIBLE_TYPES
             and control.get("score_weight", 1) > 0
             and outcome in _ELIGIBLE_RESULTS
