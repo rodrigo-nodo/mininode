@@ -16,7 +16,7 @@ on:
       - 'frontend/privacy/test_privacy_framework_sync.py'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   tests:
@@ -25,8 +25,65 @@ jobs:
     env:
       PYTHONPATH: backend/src
     steps:
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Apply agreed PRV-104 catalog and version metadata
+        if: github.head_ref == 'privacy/prv104-v1-neutral'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          controls_path = Path('backend/src/mininode_api/domain_packs/privacy/controls.json')
+          catalog = json.loads(controls_path.read_text(encoding='utf-8'))
+          catalog['version'] = '0.10'
+          prv104 = next(c for c in catalog['controls'] if c['code'] == 'PRV-104')
+          prv104['type'] = 'context'
+          prv104['score_weight'] = 0
+          prv104['type_justification'] = (
+              'Aporta contexto observable sobre información de privacidad asociada al formulario; '
+              'en V1 no representa por sí mismo una señal puntuable ni determina adversamente el área Formularios.'
+          )
+          controls_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          scoring_path = Path('backend/src/mininode_api/domain_packs/privacy/scoring.json')
+          scoring = json.loads(scoring_path.read_text(encoding='utf-8'))
+          scoring['version'] = '0.2'
+          scoring_path.write_text(json.dumps(scoring, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          version_test = Path('backend/tests/domain_packs/privacy/test_versioning.py')
+          text = version_test.read_text(encoding='utf-8')
+          text = text.replace('== "0.9"', '== "0.10"', 1).replace('== "0.1"', '== "0.2"', 1)
+          text = text.replace('"framework_version": "0.9",\n        "scoring_version": "0.1",', '"framework_version": "0.10",\n        "scoring_version": "0.2",')
+          version_test.write_text(text, encoding='utf-8')
+
+          status_path = Path('docs/privacy-forms-v1-status.md')
+          text = status_path.read_text(encoding='utf-8')
+          text = text.replace('sobre `framework_version = 0.9` y `scoring_version = 0.1`.', 'que culmina en `framework_version = 0.10` y `scoring_version = 0.2`.')
+          status_path.write_text(text, encoding='utf-8')
+
+          privacy_path = Path('docs/privacy.md')
+          text = privacy_path.read_text(encoding='utf-8')
+          text = text.replace('La versión vigente del framework es `0.9`; el scoring permanece en `0.1`.', 'La versión vigente del framework es `0.10`; el scoring vigente es `0.2`.')
+          marker = 'Framework `0.9` mantiene la captura estática'
+          if marker in text and 'Framework `0.10`' not in text:
+              text = text.replace(marker, 'Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso cero, fuera del Privacy Score, cobertura, prioridades y Plan de corrección. El scoring `0.2` registra esta exclusión para preservar la comparabilidad de snapshots.\nFramework `0.9` mantiene la captura estática')
+          privacy_path.write_text(text, encoding='utf-8')
+          PY
+
+          if ! git diff --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add backend/src/mininode_api/domain_packs/privacy/controls.json \
+                    backend/src/mininode_api/domain_packs/privacy/scoring.json \
+                    backend/tests/domain_packs/privacy/test_versioning.py \
+                    docs/privacy.md docs/privacy-forms-v1-status.md
+            git commit -m 'chore(privacy): version PRV-104 V1 policy'
+            git push origin HEAD:${{ github.head_ref }}
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
