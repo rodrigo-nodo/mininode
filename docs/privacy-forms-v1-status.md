@@ -2,7 +2,7 @@
 
 ## Estado
 
-Decisión de producto posterior al QA09 independiente de PRV-103 sobre `framework_version = 0.9` y `scoring_version = 0.1`.
+Decisión de producto posterior a los QA independientes de PRV-103 y PRV-104 sobre `framework_version = 0.9` y `scoring_version = 0.1`.
 
 ### PRV-101 - Formularios que recopilan datos personales
 
@@ -25,29 +25,34 @@ Referencia: `docs/privacy-prv102-real-calibration.md`.
 
 ### PRV-103 - Finalidad visible del formulario
 
-**Estado V1: experimental / no estable.**
+**Estado V1: experimental / informativo.**
 
 - Se mantiene únicamente como contexto (`type = context`, `score_weight = 0`).
 - No participa en Privacy Score, prioridades ni Plan de corrección.
 - La UI lo mantiene como control informativo y neutral; por tanto, su resultado no determina el estado del área Formularios.
 - El QA09 independiente de framework 0.9 terminó `NEEDS FIX`: 56 casos, 52 adjudicables, exact accuracy 42,31 %, coverage 65,38 %, emitted precision 64,71 %, concrete precision 100 %, concrete recall 44,44 %, 0 false concrete y 0 false adverse `none`.
 - El patrón principal fue subdetección sistemática de finalidades concretas, principalmente degradadas a `generic` o `unknown`.
-- Por la regla de cierre congelada antes del QA, no se crea framework 0.10 ni se continúa tuning en esta línea para V1.
+- No se continúa tuning en esta línea para V1.
 
-PRV-103 no bloquea el cierre funcional de Formularios V1, pero tampoco debe presentarse como una capacidad estable o validada.
+PRV-103 no debe presentarse como una capacidad estable o validada.
 
 ### PRV-104 - Información de privacidad asociada al formulario
 
-**Estado V1: implementado; validación independiente pendiente.**
+**Estado V1: limitado / informativo.**
 
-- Es un control condicional dependiente de PRV-101.
-- Sí puede determinar el estado del área Formularios.
-- La revisión de `main` confirma implementación, contrato y tests existentes, pero no se encontró una calibración independiente equivalente a la realizada para PRV-102 que permita declararlo validado para cierre V1.
+- El QA focalizado V2 independiente terminó `NEEDS FIX`: 10 casos comparables, exact accuracy 80 %, 2 discrepancias y 0 falsos `detected`.
+- Se detiene el tuning para V1.
+- PRV-104 continúa mostrando evidencia observable, pero su resultado es neutral en V1: no participa en Privacy Score ni cobertura, no determina adversamente el estado de Formularios y no genera prioridades ni acciones del Plan de corrección.
+- La UI lo presenta como informativo y neutral.
+- Se conserva la interpretación determinística conservadora: `detected` requiere información de privacidad reconocida asociada al formulario; una señal de consentimiento o aceptación por sí sola permanece como `partial` y no se interpreta como cumplimiento.
+- Ausencia o ambigüedad de la señal no se utiliza para penalizar al sitio en V1.
+
+Esta limitación es deliberada: conserva una señal útil para el usuario sin presentar como estable una capacidad que el QA independiente no validó.
 
 ## Decisión de cierre del área
 
-PRV-103 deja de bloquear Formularios porque es informativo, de peso cero y experimental para V1.
+**Formularios queda cerrado funcionalmente para V1 con limitaciones documentadas.**
 
-Sin embargo, **Formularios todavía no se declara cerrado para V1**: falta una validación focalizada de PRV-104. No se reabre PRV-103 para completar esa validación.
+PRV-102 es el control decisorio estable del área. PRV-101 aporta contexto de aplicabilidad; PRV-103 y PRV-104 permanecen informativos y neutrales para V1.
 
-El siguiente gate del área es exclusivamente PRV-104. Si su validación resulta aceptable, Formularios puede cerrarse para V1 manteniendo PRV-103 como limitación documentada.
+No se abre otro ciclo de tuning o QA para PRV-103/PRV-104 dentro de V1. Una futura mejora de estas capacidades debe tratarse como trabajo posterior, con su propia decisión de versión y validación independiente.
