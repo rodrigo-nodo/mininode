@@ -1,0 +1,24 @@
+{
+  "artifact_a_sha256": "11fe49cad563351d9873692891285d1ab1afb418d898e5ada04de2757435b00e",
+  "adjudicated_before_artifact_b": true,
+  "cases": [
+    {"blind_id":"PRV104-V2-A-01","gold":"not_detected","reason":"No visible privacy information, privacy link, consent or acceptance signal is associated with the personal email forms."},
+    {"blind_id":"PRV104-V2-A-02","gold":"partial","reason":"The contact form visibly states agreement to receive a call or text, but no recognized privacy information is visible in the captured context."},
+    {"blind_id":"PRV104-V2-A-03","gold":"detected","reason":"Personal demo/pricing forms contain a visible Privacy Policy link and explicit messaging/marketing consent context."},
+    {"blind_id":"PRV104-V2-A-04","gold":"unknown","reason":"Captured nearby text is truncated inside the country selector before the end of the form; the blind evidence is insufficient to rule privacy information in or out."},
+    {"blind_id":"PRV104-V2-A-05","gold":"not_detected","reason":"Personal demo form shows no visible privacy information, privacy link, consent or acceptance signal in the captured evidence."},
+    {"blind_id":"PRV104-V2-A-06","gold":"detected","reason":"At least one personal form visibly explains a concrete use limitation for the supplied email, and another form is embedded in explicit GDPR/sub-processor information."},
+    {"blind_id":"PRV104-V2-A-07","gold":"detected","reason":"Newsletter form visibly links to a Privacy Policy in the form context."},
+    {"blind_id":"PRV104-V2-A-08","gold":"detected","reason":"Account form visibly states agreement to Terms & Privacy and links that privacy reference in the form context."},
+    {"blind_id":"PRV104-V2-A-09","gold":"unknown","reason":"The relevant personal support form evidence truncates immediately after 'THE INFORMATION YOU SUBMIT THROUGH', so the blind capture is insufficient for a reliable adjudication."},
+    {"blind_id":"PRV104-V2-A-10","gold":"not_detected","reason":"Email signup form shows no visible privacy information, privacy link, consent or acceptance signal in the captured evidence."},
+    {"blind_id":"PRV104-V2-A-11","gold":"not_detected","reason":"Account signup form shows no visible privacy information, privacy link, consent or acceptance signal in the captured evidence."},
+    {"blind_id":"PRV104-V2-A-12","gold":"not_detected","reason":"Email signup form shows no visible privacy information, privacy link, consent or acceptance signal in the captured evidence."}
+  ],
+  "adjudicable_count": 10,
+  "unknown_count": 2,
+  "aggregation": "Site-level result: detected if any relevant personal form has associated visible privacy information; otherwise partial if any has a visible consent/acceptance signal; otherwise not_detected. Cases with materially truncated blind evidence are unknown and excluded from exact accuracy.",
+  "product_sha": "cb7c219f6b3e26bba4fd73a2905305a3a78003a1",
+  "framework_version": "0.9",
+  "scoring_version": "0.1"
+}
