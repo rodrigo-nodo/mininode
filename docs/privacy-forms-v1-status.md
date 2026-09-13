@@ -2,7 +2,7 @@
 
 ## Estado
 
-Decisión de producto posterior a los QA independientes de PRV-103 y PRV-104 sobre `framework_version = 0.9` y `scoring_version = 0.1`.
+Decisión de producto posterior a los QA independientes de PRV-103 y PRV-104 que culmina en `framework_version = 0.10` y `scoring_version = 0.2`.
 
 ### PRV-101 - Formularios que recopilan datos personales
 

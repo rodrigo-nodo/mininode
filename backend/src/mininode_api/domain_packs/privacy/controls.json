@@ -1,5 +1,5 @@
 {
-  "version": "0.9",
+  "version": "0.10",
   "controls": [
     {
       "code": "PRV-001",
@@ -405,8 +405,8 @@
       "name": "Información de privacidad asociada al formulario",
       "impact": "muy_alto",
       "automatable": "parcial",
-      "type": "conditional_evaluation",
-      "type_justification": "Solo se evalúa cuando existe un formulario que recopila datos personales; una vez aplicable, la información asociada sí es relevante.",
+      "type": "context",
+      "type_justification": "Aporta contexto observable sobre información de privacidad asociada al formulario; en V1 no representa por sí mismo una señal puntuable ni determina adversamente el área Formularios.",
       "dependency": "PRV-101",
       "applicability": "Solo aplica cuando PRV-101 = detected.",
       "expected_evidence": [
@@ -422,7 +422,8 @@
         "not_detected": "No se detectó información de privacidad ni una señal visible de consentimiento o aceptación asociada al formulario revisado.",
         "not_applicable": "No se detectó un formulario que solicite datos potencialmente personales dentro del alcance revisado.",
         "not_evaluable": "No fue posible obtener evidencia suficiente para evaluar este control."
-      }
+      },
+      "score_weight": 0
     },
     {
       "code": "PRV-201",
