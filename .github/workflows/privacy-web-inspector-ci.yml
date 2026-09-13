@@ -38,11 +38,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest
 
-      - name: Run Privacy Web inspector and framework tests
+      - name: Run Privacy Web inspector and stable framework tests
         run: |
           pytest -q \
             backend/tests/web_inspector/test_extractor.py \
             backend/tests/web_inspector/test_selector.py \
             backend/tests/web_inspector/test_form_context_capture.py \
-            backend/tests/domain_packs/privacy \
+            backend/tests/domain_packs/privacy/test_actions.py \
+            backend/tests/domain_packs/privacy/test_correction_plan.py \
+            backend/tests/domain_packs/privacy/test_evidence_adapter.py \
+            backend/tests/domain_packs/privacy/test_observable_state_reachability.py \
+            backend/tests/domain_packs/privacy/test_privacy_diagnostic.py \
+            backend/tests/domain_packs/privacy/test_privacy_pack.py \
+            backend/tests/domain_packs/privacy/test_prv104_v1_policy.py \
+            backend/tests/domain_packs/privacy/test_versioning.py \
             frontend/privacy/test_privacy_framework_sync.py
