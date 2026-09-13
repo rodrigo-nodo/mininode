@@ -1,5 +1,6 @@
 name: Privacy PRV-103 QA09 Artifact A
 
+# QA09 final: Artifact A is frozen; this workflow now runs only the frozen comparison.
 on:
   pull_request:
     branches:
