@@ -1,0 +1,40 @@
+name: Privacy PRV-104 QA V2 Reveal
+
+on:
+  pull_request:
+    paths:
+      - 'automation/privacy/run_prv104_qa_v2_reveal.py'
+      - 'docs/evidence/prv104-focused-qa-v2-gold.json'
+      - '.github/workflows/privacy-prv104-qa-v2-reveal.yml'
+  workflow_dispatch:
+
+jobs:
+  reveal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify frozen product
+        run: |
+          git diff --exit-code cb7c219f6b3e26bba4fd73a2905305a3a78003a1 -- backend/src frontend || {
+            echo 'Product code differs from frozen SHA'; exit 1;
+          }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Reveal PRV-104 and compare with frozen Gold
+        run: python automation/privacy/run_prv104_qa_v2_reveal.py
+      - name: Upload Artifact B and result
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv104-qa-v2-reveal-${{ github.run_id }}
+          path: artifacts/privacy-prv104-qa-v2-reveal/
+          if-no-files-found: error
