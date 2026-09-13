@@ -12,6 +12,8 @@ jobs:
   artifact-a:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      PYTHONPATH: backend/src
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,8 +26,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install backend
-        run: pip install -e './backend[dev]'
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
       - name: Generate blind Artifact A
         run: python automation/privacy/run_prv104_qa_v2_precheck.py
       - name: Upload frozen evidence
