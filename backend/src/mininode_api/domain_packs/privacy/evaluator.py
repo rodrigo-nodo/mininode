@@ -19,9 +19,24 @@ _VISIBLE_FIELD_ORDER = tuple(_VISIBLE_FIELD_LABELS)
 
 
 def load_control_catalog() -> dict[str, Any]:
-    """Load the complete control catalog, including its metadata."""
+    """Load the complete control catalog, including its V1 policy metadata."""
     with _CONTROLS_PATH.open(encoding="utf-8") as source:
-        return json.load(source)
+        catalog = json.load(source)
+
+    # PRV-104 remains observable, but its focused V1 QA did not support using
+    # the result as a scoring/adverse signal. Keep that policy in the canonical
+    # catalog consumed by scoring, prioritization and downstream clients.
+    for control in catalog["controls"]:
+        if control["code"] == "PRV-104":
+            control["type"] = "context"
+            control["score_weight"] = 0
+            control["type_justification"] = (
+                "Aporta contexto observable sobre información de privacidad asociada "
+                "al formulario. En V1 no representa por sí mismo una señal puntuable "
+                "ni debe generar un estado adverso, prioridad o corrección."
+            )
+            break
+    return catalog
 
 
 def load_controls() -> list[dict[str, Any]]:
