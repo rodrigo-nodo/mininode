@@ -1,0 +1,45 @@
+name: Privacy PRV-104 Focused QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - automation/privacy/run_prv104_focused_qa.py
+      - docs/evidence/prv104-focused-qa-plan.md
+      - .github/workflows/privacy-prv104-focused-qa.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-qa:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Verify frozen product is unchanged
+        run: |
+          git merge-base --is-ancestor cb7c219f6b3e26bba4fd73a2905305a3a78003a1 HEAD
+          git diff --exit-code cb7c219f6b3e26bba4fd73a2905305a3a78003a1 -- backend/src/mininode_api/domain_packs/privacy backend/src/mininode_api/web_inspector backend/src/mininode_api/services/privacy_diagnostic.py
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Run focused PRV-104 QA
+        run: python automation/privacy/run_prv104_focused_qa.py
+      - name: Upload QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-prv104-focused-${{ github.run_id }}
+          path: artifacts/privacy-prv104-focused/result.json
+          if-no-files-found: error
+          retention-days: 14
