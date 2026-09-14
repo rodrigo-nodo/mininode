@@ -15,7 +15,7 @@ CONTROLS = json.loads(
 
 
 class PrivacyFrameworkSyncTests(unittest.TestCase):
-    def test_runtime_matrix_matches_backend_framework_0_9(self):
+    def test_runtime_matrix_matches_backend_framework_0_10(self):
         backend_controls = CONTROLS["controls"]
         backend_codes = {control["code"] for control in backend_controls}
         form_codes = {
@@ -29,7 +29,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         sync_codes = set(re.findall(r"code: '(PRV-\d+)'", SYNC))
         runtime_codes = (app_codes - form_codes) | sync_codes
 
-        self.assertEqual(CONTROLS["version"], "0.9")
+        self.assertEqual(CONTROLS["version"], "0.10")
         self.assertEqual(len(backend_codes), 21)
         self.assertEqual(form_codes, {"PRV-101", "PRV-102", "PRV-103", "PRV-104"})
         self.assertEqual(sync_codes, form_codes)
@@ -47,7 +47,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
             if control.get("type") == "context" and control.get("score_weight") == 0
         }
 
-        self.assertEqual(contextual, {"PRV-101", "PRV-103"})
+        self.assertEqual(contextual, {"PRV-101", "PRV-103", "PRV-104"})
         for code in {"PRV-101", "PRV-103", "PRV-104"}:
             self.assertRegex(SYNC, rf"code: '{code}'.*informational: true")
         self.assertNotRegex(SYNC, r"code: 'PRV-102'.*informational: true")
