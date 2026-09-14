@@ -20,7 +20,8 @@ def load_scoring() -> dict:
 def score_privacy(results: Iterable[Mapping]) -> dict:
     """Calculate visible preparation score and evidence coverage.
 
-    The returned score is not a percentage of legal compliance.
+    The returned score is not a percentage of legal compliance. Controls
+    catalogued as context are excluded from score and coverage.
     """
     rules = load_scoring()
     controls = {control["code"]: control for control in load_controls()}
@@ -31,7 +32,11 @@ def score_privacy(results: Iterable[Mapping]) -> dict:
             raise ValueError(f"Unknown privacy control: {code}")
         normalized.append((controls[code], item.get("result", item.get("status"))))
 
-    scoring_results = [pair for pair in normalized if pair[0]["type"] != "context"]
+    scoring_results = [
+        pair
+        for pair in normalized
+        if pair[0]["type"] != "context"
+    ]
     applicable = [pair for pair in scoring_results if pair[1] != "not_applicable"]
     evaluated = [pair for pair in applicable if pair[1] != "not_evaluable"]
 

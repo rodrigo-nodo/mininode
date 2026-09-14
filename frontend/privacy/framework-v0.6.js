@@ -2,7 +2,7 @@ const FORM_CONTROLS_V06 = [
   { code: 'PRV-101', name: 'Formularios que recopilan datos personales', informational: true },
   { code: 'PRV-102', name: 'Envío seguro del formulario' },
   { code: 'PRV-103', name: 'Finalidad visible del formulario', informational: true },
-  { code: 'PRV-104', name: 'Información de privacidad asociada al formulario' },
+  { code: 'PRV-104', name: 'Información de privacidad asociada al formulario', informational: true },
 ];
 
 const formsAreaV06 = privacyAreas.find((area) => area.name === 'Formularios');

@@ -26,8 +26,8 @@ def ordered_actionable_findings(results: Iterable[Mapping]) -> list[tuple[dict, 
     """Return actionable findings in the stable Privacy priority order.
 
     Context controls and controls with an explicit zero score weight are not
-    actionable.  Keeping this selection here makes the free priorities and the
-    full correction plan apply the same rules without changing their contracts.
+    actionable. This keeps free priorities and the full correction plan driven
+    by the canonical control catalog without per-control runtime exceptions.
     """
     controls = {control["code"]: control for control in load_controls()}
     impact_weights = load_scoring()["impact_weights"]

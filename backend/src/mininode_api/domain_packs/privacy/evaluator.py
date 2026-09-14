@@ -19,7 +19,7 @@ _VISIBLE_FIELD_ORDER = tuple(_VISIBLE_FIELD_LABELS)
 
 
 def load_control_catalog() -> dict[str, Any]:
-    """Load the complete control catalog, including its metadata."""
+    """Load the complete control catalog, including its V1 policy metadata."""
     with _CONTROLS_PATH.open(encoding="utf-8") as source:
         return json.load(source)
 
