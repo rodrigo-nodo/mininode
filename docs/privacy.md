@@ -52,6 +52,30 @@ Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso 
 Framework `0.9` mantiene la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción de `0.8`, y hace que PRV-103 combine acciones explícitas con objetos o resultados acotados dentro del mismo formulario. El clasificador sigue siendo determinístico, sin LLM, y no ejecuta JavaScript del sitio.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
+## Arquitectura de interpretación semántica
+
+Privacy Web adopta como arquitectura objetivo el flujo:
+
+**Página → evidencia textual → extractor semántico común → hechos estructurados → controles deterministas.**
+
+La interpretación de lenguaje natural debe resolverse en una capa común y reutilizable.
+Los controles no deben implementar clasificadores semánticos propios cuando el mismo
+problema pueda resolverse mediante esta capa compartida.
+
+El extractor semántico produce hechos estructurados acompañados de la evidencia textual
+y su fuente. No determina directamente el resultado de un control. Los controles
+consumen esos hechos y aplican reglas deterministas, trazables y versionables.
+
+Mientras esta capa no esté disponible o suficientemente validada, los nuevos controles
+que dependan de interpretación semántica deben quedar pendientes, contextuales o
+limitados explícitamente. No se deben crear soluciones semánticas independientes por
+control para cerrar temporalmente esa dependencia.
+
+Esta restricción permite avanzar en paralelo con controles basados en evidencia pública
+observable y determinista, dejando la interpretación semántica como una pieza
+transversal que podrá reutilizarse en Transparencia, Formularios, Cookies y futuros
+controles.
+
 ## Foco técnico actual
 
 - Backend: Python/FastAPI en Render.
