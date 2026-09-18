@@ -5,6 +5,13 @@ const FORM_CONTROLS_V06 = [
   { code: 'PRV-104', name: 'Información de privacidad asociada al formulario', informational: true },
 ];
 
+const cookiesAreaV06 = privacyAreas.find((area) => area.name === 'Cookies');
+if (cookiesAreaV06) {
+  cookiesAreaV06.controls = [
+    { code: 'PRV-201', name: 'Cookies observadas', informational: true },
+  ];
+}
+
 const formsAreaV06 = privacyAreas.find((area) => area.name === 'Formularios');
 if (formsAreaV06) {
   formsAreaV06.controls = FORM_CONTROLS_V06;

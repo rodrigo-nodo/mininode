@@ -245,16 +245,6 @@
         "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad puede identificarse antes del envío y que cualquier señal adicional de consentimiento o aceptación se presenta de forma separada y visible."
       }
     },
-    "PRV-201": {
-      "not_detected": {
-        "action_steps": [
-          "Revisar qué cookies o tecnologías asociadas está utilizando el sitio dentro de su funcionamiento real.",
-          "Incorporar información visible sobre el uso de cookies cuando corresponda.",
-          "Verificar que esa información pueda encontrarse fácilmente durante una visita normal al sitio."
-        ],
-        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que, cuando se observan cookies, también puede identificarse información visible relacionada con su uso."
-      }
-    },
     "PRV-301": {
       "not_detected": {
         "action_steps": [
