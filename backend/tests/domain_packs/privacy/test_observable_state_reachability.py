@@ -112,23 +112,27 @@ def test_prv104_not_evaluable_when_inspection_is_insufficient():
     assert results["PRV-104"]["result"] == "not_evaluable"
 
 
-def test_prv201_detected_from_observed_cookie_and_banner():
+def test_prv201_detected_from_observed_cookie_regardless_of_banner():
     _, evidence, results = inspect(
         page(html="<p>Usamos cookies para recordar la sesión.</p>", cookies=["session"])
     )
 
-    assert evidence["PRV-201"]["relevant_cookies"] is True
+    assert evidence["PRV-201"]["cookies_observed"] is True
+    assert evidence["PRV-201"]["observed_cookie_names"] == ["session"]
+    assert evidence["PRV-201"]["observation_source"] == "http_set_cookie"
     assert results["PRV-201"]["result"] == "detected"
 
 
-def test_prv201_not_detected_from_observed_cookie_without_banner():
-    _, _, results = inspect(page(cookies=["session"]))
+def test_prv201_detected_from_observed_cookie_without_banner():
+    _, evidence, results = inspect(page(cookies=["session"]))
+    assert evidence["PRV-201"]["cookie_banner"] is False
+    assert results["PRV-201"]["result"] == "detected"
+
+
+def test_prv201_not_detected_without_observed_cookie():
+    _, evidence, results = inspect(page())
+    assert evidence["PRV-201"]["cookies_observed"] is False
     assert results["PRV-201"]["result"] == "not_detected"
-
-
-def test_prv201_not_applicable_without_observed_cookie():
-    _, _, results = inspect(page())
-    assert results["PRV-201"]["result"] == "not_applicable"
 
 
 def test_prv201_not_evaluable_when_inspection_is_insufficient():
@@ -143,7 +147,8 @@ def test_prv201_preferences_are_complementary_and_do_not_change_result():
 
     assert evidence["PRV-201"]["preference_mechanism"] is True
     assert evidence["PRV-201"]["cookie_banner"] is False
-    assert results["PRV-201"]["result"] == "not_detected"
+    assert evidence["PRV-201"]["cookies_observed"] is True
+    assert results["PRV-201"]["result"] == "detected"
 
 
 def policy_results(*secondary_pages, title="Política de privacidad"):
