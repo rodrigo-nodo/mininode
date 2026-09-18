@@ -1500,8 +1500,6 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         # imply legal or privacy relevance.
         prv201["cookies_observed"] = observed
         prv201["relevant_cookies"] = observed
-        prv201["observed_cookie_names"] = list(contract.cookies.set_cookie_names)
-        prv201["observation_source"] = "http_set_cookie"
     else:
         prv201["technical_error"] = True
 
