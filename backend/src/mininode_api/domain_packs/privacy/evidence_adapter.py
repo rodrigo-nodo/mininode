@@ -1494,11 +1494,14 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "confidence": "high" if sufficient else "low",
     }
     if sufficient:
-        # Keep the legacy key to preserve the API evidence shape. Its value means
-        # only that a cookie was observed in an inspected response.
-        prv201["relevant_cookies"] = bool(
-            contract.cookies.detected or contract.cookies.set_cookie_names
-        )
+        observed = bool(contract.cookies.detected or contract.cookies.set_cookie_names)
+        # cookies_observed is the canonical observational fact. Keep
+        # relevant_cookies temporarily as a compatibility alias; it does not
+        # imply legal or privacy relevance.
+        prv201["cookies_observed"] = observed
+        prv201["relevant_cookies"] = observed
+        prv201["observed_cookie_names"] = list(contract.cookies.set_cookie_names)
+        prv201["observation_source"] = "http_set_cookie"
     else:
         prv201["technical_error"] = True
 
