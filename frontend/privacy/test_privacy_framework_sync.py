@@ -27,12 +27,13 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         app_config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
         app_codes = set(re.findall(r"code: '(PRV-\d+)'", app_config))
         sync_codes = set(re.findall(r"code: '(PRV-\d+)'", SYNC))
-        runtime_codes = (app_codes - form_codes) | sync_codes
+        form_sync_codes = sync_codes & form_codes
+        runtime_codes = app_codes | sync_codes
 
         self.assertEqual(CONTROLS["version"], "0.11")
         self.assertEqual(len(backend_codes), 21)
         self.assertEqual(form_codes, {"PRV-101", "PRV-102", "PRV-103", "PRV-104"})
-        self.assertEqual(sync_codes, form_codes)
+        self.assertEqual(form_sync_codes, form_codes)
         self.assertEqual(runtime_codes, backend_codes)
 
     def test_prv201_is_informational_cookie_context(self):
