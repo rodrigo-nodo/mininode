@@ -287,12 +287,7 @@ def evaluate_control(
         cookies_observed = evidence.get(
             "cookies_observed", evidence.get("relevant_cookies")
         )
-        if cookies_observed is False:
-            result = "not_applicable"
-        elif evidence.get("cookie_banner", evidence.get("cookie_information", False)):
-            result = "detected"
-        else:
-            result = "not_detected"
+        result = "detected" if cookies_observed is True else "not_detected"
     elif control_code == "PRV-301":
         result = "detected" if evidence.get("contact_channel_visible") else "not_detected"
     else:  # PRV-501
