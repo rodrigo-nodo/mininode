@@ -1,5 +1,5 @@
 {
-  "version": "0.10",
+  "version": "0.11",
   "controls": [
     {
       "code": "PRV-001",
@@ -428,23 +428,22 @@
     {
       "code": "PRV-201",
       "domain": "Cookies",
-      "name": "Información visible sobre cookies",
-      "impact": "medio",
-      "automatable": "parcial",
-      "type": "conditional_evaluation",
-      "type_justification": "Solo tiene sentido evaluarlo cuando se detectan cookies o tecnologías relevantes dentro del alcance del diagnóstico.",
+      "name": "Cookies observadas",
+      "impact": "bajo",
+      "automatable": "si",
+      "type": "context",
+      "type_justification": "Registra de forma contextual cookies observadas en las respuestas HTTP inspeccionadas; no determina cumplimiento, no exige por sí mismo un banner y no participa en el Privacy Score.",
       "expected_evidence": [
-        "banner o aviso de cookies",
-        "texto informativo sobre cookies",
-        "panel o mecanismo de preferencias cuando corresponda"
+        "nombres de cookies observadas mediante encabezados Set-Cookie en las respuestas HTTP inspeccionadas",
+        "alcance técnico de la inspección"
       ],
-      "base_recommendation": "Incorporar información visible sobre el uso de cookies cuando corresponda al funcionamiento real del sitio.",
+      "base_recommendation": "Revisar las cookies observadas como contexto técnico y contrastarlas, cuando corresponda, con la información pública del sitio.",
       "criteria": {
-        "detected": "Se detectaron cookies en las respuestas inspeccionadas y una señal visible de información sobre cookies.",
-        "not_detected": "Se detectaron cookies en las respuestas inspeccionadas, pero no se detectó una señal visible de información sobre cookies.",
-        "not_applicable": "No se observaron cookies en las respuestas inspeccionadas dentro del alcance del diagnóstico.",
-        "not_evaluable": "No fue posible obtener evidencia suficiente para evaluar la información visible sobre cookies."
-      }
+        "detected": "Se observó al menos una cookie mediante encabezados Set-Cookie en las respuestas HTTP inspeccionadas.",
+        "not_detected": "No se observaron cookies mediante encabezados Set-Cookie dentro del alcance de las respuestas HTTP inspeccionadas.",
+        "not_evaluable": "No fue posible obtener evidencia técnica suficiente para determinar si se observaron cookies dentro del alcance de la inspección."
+      },
+      "score_weight": 0
     },
     {
       "code": "PRV-301",
