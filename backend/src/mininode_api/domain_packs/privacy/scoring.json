@@ -1,5 +1,5 @@
 {
-  "version": "0.2",
+  "version": "0.3",
   "impact_weights": {
     "bajo": 1,
     "medio": 2,
@@ -7,9 +7,9 @@
     "muy_alto": 4
   },
   "result_factors": {
-    "detected": 1.0,
+    "detected": 1,
     "partial": 0.5,
-    "not_detected": 0.0
+    "not_detected": 0
   },
   "excluded_results": [
     "not_applicable",
