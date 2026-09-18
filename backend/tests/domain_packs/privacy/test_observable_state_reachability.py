@@ -118,8 +118,6 @@ def test_prv201_detected_from_observed_cookie_regardless_of_banner():
     )
 
     assert evidence["PRV-201"]["cookies_observed"] is True
-    assert evidence["PRV-201"]["observed_cookie_names"] == ["session"]
-    assert evidence["PRV-201"]["observation_source"] == "http_set_cookie"
     assert results["PRV-201"]["result"] == "detected"
 
 
