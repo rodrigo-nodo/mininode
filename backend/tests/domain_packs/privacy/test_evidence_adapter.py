@@ -1204,10 +1204,11 @@ def test_prv201_maps_minimized_cookie_observations():
     assert "session" not in repr(evidence)
 
 
-def test_prv201_sufficient_inspection_without_cookies_is_not_applicable():
+def test_prv201_sufficient_inspection_without_cookies_is_not_detected():
     evidence = adapt_evidence(contract())["PRV-201"]
+    assert evidence["cookies_observed"] is False
     assert evidence["relevant_cookies"] is False
-    assert evaluate_control("PRV-201", evidence)["result"] == "not_applicable"
+    assert evaluate_control("PRV-201", evidence)["result"] == "not_detected"
 
 
 def test_prv201_insufficient_inspection_is_not_evaluable():
