@@ -79,7 +79,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertIn('<script src="framework-v0.6.js?v=3" defer></script>', HTML)
         self.assertLess(
             HTML.index('<script src="app.js?v=113" defer></script>'),
-            HTML.index('<script src="framework-v0.6.js?v=2" defer></script>'),
+            HTML.index('<script src="framework-v0.6.js?v=3" defer></script>'),
         )
         self.assertIn("formsAreaV06.controls = FORM_CONTROLS_V06;", SYNC)
         self.assertIn("Revisamos 21 puntos de tu sitio en 5 áreas.", SYNC)
