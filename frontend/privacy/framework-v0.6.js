@@ -37,6 +37,7 @@ const INFORMATIONAL_LABELS_V06 = new Map([
 
 const relabelInformationalControlsV06 = () => {
   const areaSections = diagnosticControls.querySelectorAll('.privacy-control-area');
+  const areaSummaries = diagnosticAreas.querySelectorAll('.privacy-area');
 
   privacyAreas.forEach((area, areaIndex) => {
     const section = areaSections[areaIndex];
@@ -55,6 +56,13 @@ const relabelInformationalControlsV06 = () => {
         return;
       }
 
+      // PRV-201 used to return not_applicable. Preserve compatibility with
+      // diagnostics produced by framework 0.10 while presenting the 0.11
+      // observational semantics.
+      if (control.code === 'PRV-201' && state.textContent === 'No aplica') {
+        state.textContent = 'No detectado';
+      }
+
       const informationalLabel = INFORMATIONAL_LABELS_V06.get(state.textContent);
       if (informationalLabel && state.textContent !== informationalLabel) {
         state.textContent = informationalLabel;
@@ -67,6 +75,19 @@ const relabelInformationalControlsV06 = () => {
       );
       state.classList.add('privacy-state--neutral');
     });
+
+    if (area.controls.length > 0 && area.controls.every((control) => control.informational)) {
+      const areaState = areaSummaries[areaIndex]?.querySelector('.privacy-state');
+      if (areaState) {
+        areaState.textContent = 'Informativo';
+        areaState.classList.remove(
+          'privacy-state--good',
+          'privacy-state--improve',
+          'privacy-state--attention',
+        );
+        areaState.classList.add('privacy-state--neutral');
+      }
+    }
   });
 };
 
