@@ -73,6 +73,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertIn("control.code === 'PRV-201' && state.textContent === 'No aplica'", SYNC)
         self.assertIn("state.textContent = 'No detectado';", SYNC)
         self.assertIn("area.controls.every((control) => control.informational)", SYNC)
+        self.assertIn("heading.textContent = area.name;", SYNC)
         self.assertIn("areaState.textContent = 'Informativo';", SYNC)
 
     def test_sync_runs_after_app_and_updates_visible_scope(self):
