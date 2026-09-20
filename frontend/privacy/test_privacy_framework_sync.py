@@ -67,7 +67,10 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertIn("['No aplica', 'No aplica']", SYNC)
         self.assertIn("if (!control.informational)", SYNC)
         self.assertIn("state.classList.add('privacy-state--neutral')", SYNC)
-        self.assertIn("new MutationObserver(relabelInformationalControlsV06)", SYNC)
+        self.assertIn("new MutationObserver((mutations) =>", SYNC)
+        self.assertIn("hasRenderedControls", SYNC)
+        self.assertIn("informationalObserverV06.observe(diagnosticControls, { childList: true });", SYNC)
+        self.assertNotIn("{ childList: true, subtree: true }", SYNC)
 
     def test_prv201_legacy_state_and_cookie_area_are_neutral(self):
         self.assertIn("control.code === 'PRV-201' && state.textContent === 'No aplica'", SYNC)
