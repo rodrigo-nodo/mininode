@@ -99,5 +99,16 @@ const relabelInformationalControlsV06 = () => {
   });
 };
 
-const informationalObserverV06 = new MutationObserver(relabelInformationalControlsV06);
-informationalObserverV06.observe(diagnosticControls, { childList: true, subtree: true });
+const informationalObserverV06 = new MutationObserver((mutations) => {
+  const hasRenderedControls = mutations.some((mutation) =>
+    Array.from(mutation.addedNodes).some((node) =>
+      node.nodeType === Node.ELEMENT_NODE
+      && (node.matches?.('.privacy-control-area') || node.querySelector?.('.privacy-control-area'))
+    )
+  );
+
+  if (hasRenderedControls) {
+    relabelInformationalControlsV06();
+  }
+});
+informationalObserverV06.observe(diagnosticControls, { childList: true });
