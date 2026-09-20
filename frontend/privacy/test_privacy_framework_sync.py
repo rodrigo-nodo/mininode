@@ -76,7 +76,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertIn("areaState.textContent = 'Informativo';", SYNC)
 
     def test_sync_runs_after_app_and_updates_visible_scope(self):
-        self.assertIn('<script src="framework-v0.6.js?v=2" defer></script>', HTML)
+        self.assertIn('<script src="framework-v0.6.js?v=3" defer></script>', HTML)
         self.assertLess(
             HTML.index('<script src="app.js?v=113" defer></script>'),
             HTML.index('<script src="framework-v0.6.js?v=2" defer></script>'),
