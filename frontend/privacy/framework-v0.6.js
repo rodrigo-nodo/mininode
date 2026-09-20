@@ -76,7 +76,15 @@ const relabelInformationalControlsV06 = () => {
       state.classList.add('privacy-state--neutral');
     });
 
-    if (area.controls.length > 0 && area.controls.every((control) => control.informational)) {
+    const informationalOnly = area.controls.length > 0
+      && area.controls.every((control) => control.informational);
+
+    if (informationalOnly) {
+      const heading = section.querySelector('h4');
+      if (heading) {
+        heading.textContent = area.name;
+      }
+
       const areaState = areaSummaries[areaIndex]?.querySelector('.privacy-state');
       if (areaState) {
         areaState.textContent = 'Informativo';
