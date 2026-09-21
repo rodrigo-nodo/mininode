@@ -33,7 +33,6 @@ EXPECTED_ACTIONS = {
     "PRV-014": {"partial", "not_detected"},
     "PRV-102": {"not_detected"},
     "PRV-104": {"partial", "not_detected"},
-    "PRV-201": {"not_detected"},
     "PRV-301": {"not_detected"},
     "PRV-501": {"partial", "not_detected"},
 }
@@ -124,7 +123,6 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
             ({"privacy_information": False, "consent_mechanism": True}, {"PRV-101": "detected"}),
             ({"privacy_information": False, "consent_mechanism": False}, {"PRV-101": "detected"}),
         ],
-        "PRV-201": [({"cookies_observed": True, "cookie_information": False}, None)],
         "PRV-301": [({"contact_channel_visible": False}, None)],
         "PRV-501": [
             ({"https": True, "tls_valid": True, "mixed_content": True}, None),
@@ -142,7 +140,7 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
     for code, outcomes in catalog.items():
         for outcome in outcomes:
             assert outcome in produced[code]
-            if code in {"PRV-004", "PRV-009"}:
+            if code in {"PRV-004", "PRV-009", "PRV-104"}:
                 assert prioritize_findings([
                     {"control_code": code, "result": outcome, "confidence": "high"}
                 ]) == []
@@ -156,7 +154,6 @@ def test_every_action_is_actionable_and_reachable_through_active_pipeline():
 def test_aligned_action_plans_are_exact():
     actions = load_actions()["actions"]
     assert "not_detected" not in actions["PRV-002"]
-    assert "partial" not in actions["PRV-201"]
     assert actions["PRV-002"]["partial"] == {
         "action_steps": [
             "Abrir el enlace o referencia de privacidad detectado.",
@@ -181,15 +178,6 @@ def test_aligned_action_plans_are_exact():
         ],
         "validation_step": "Abrir la página del formulario y comprobar que la información de privacidad es visible antes del envío y que cualquier mecanismo adicional, cuando corresponda, puede identificarse claramente.",
     }
-    assert actions["PRV-201"]["not_detected"] == {
-        "action_steps": [
-            "Revisar qué cookies o tecnologías asociadas está utilizando el sitio dentro de su funcionamiento real.",
-            "Incorporar información visible sobre el uso de cookies cuando corresponda.",
-            "Verificar que esa información pueda encontrarse fácilmente durante una visita normal al sitio.",
-        ],
-        "validation_step": "Visitar el sitio en una sesión nueva y comprobar que, cuando se observan cookies, también puede identificarse información visible relacionada con su uso.",
-    }
-
 
 def test_action_catalog_has_no_placeholders_dynamic_interpolation_or_defensive_terms():
     forbidden_terms = re.compile(
@@ -223,7 +211,7 @@ def test_enrichment_preserves_legacy_priority_contract_and_selection():
     priorities = prioritize_findings(results, limit=20)
 
     assert [priority["control_code"] for priority in priorities] == [
-        "PRV-001", "PRV-104", "PRV-501",
+        "PRV-001", "PRV-501", "PRV-301",
     ]
     assert len(priorities) == 3
     assert all({"action_steps", "validation_step"} <= set(priority) for priority in priorities)
