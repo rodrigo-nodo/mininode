@@ -39,8 +39,8 @@ EXPECTED = {
     "PRV-101": ("Formularios que recopilan datos personales", "alto", "context"),
     "PRV-102": ("Envío seguro del formulario", "medio", "conditional_evaluation"),
     "PRV-103": ("Finalidad visible del formulario", "bajo", "context"),
-    "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "conditional_evaluation"),
-    "PRV-201": ("Información visible sobre cookies", "medio", "conditional_evaluation"),
+    "PRV-104": ("Información de privacidad asociada al formulario", "muy_alto", "context"),
+    "PRV-201": ("Cookies observadas", "bajo", "context"),
     "PRV-301": ("Canal de contacto visible", "bajo", "evaluation"),
     "PRV-501": ("Uso de HTTPS", "muy_alto", "evaluation"),
 }
@@ -96,7 +96,7 @@ def test_catalog_matches_the_approved_controls_exactly():
     } == EXPECTED
 
 
-def test_documental_framework_matches_productive_catalog():
+def test_documental_framework_v07_remains_a_historical_snapshot():
     framework_path = (
         BACKEND_SRC.parents[1]
         / "frontend"
@@ -104,19 +104,12 @@ def test_documental_framework_matches_productive_catalog():
         / "data"
         / "privacy-framework-v0.7.json"
     )
-    framework_controls = json.loads(framework_path.read_text(encoding="utf-8"))[
-        "framework"
-    ]["controls"]
-    productive_controls = load_controls()
+    framework = json.loads(framework_path.read_text(encoding="utf-8"))["framework"]
 
-    assert {control["code"] for control in framework_controls} == {
-        control["code"] for control in productive_controls
+    assert framework["version"] == "0.7"
+    assert {control["code"] for control in framework["controls"]} == {
+        control["code"] for control in load_controls()
     }
-    productive_by_code = {control["code"]: control for control in productive_controls}
-    for documented in framework_controls:
-        productive = productive_by_code[documented["code"]]
-        for shared_field in ("name", "domain", "type", "score_weight", "dependency"):
-            assert documented.get(shared_field) == productive.get(shared_field)
 
 
 def test_documental_framework_keeps_history_and_publishes_v07():
@@ -240,7 +233,7 @@ def test_catalog_criteria_match_active_evaluator_results():
             "detected", "partial", "not_detected", "not_applicable",
             "not_evaluable",
         },
-        "PRV-201": {"detected", "not_detected", "not_applicable", "not_evaluable"},
+        "PRV-201": {"detected", "not_detected", "not_evaluable"},
         "PRV-301": {"detected", "not_detected", "not_evaluable"},
         "PRV-501": {"detected", "partial", "not_detected", "not_evaluable"},
     }
@@ -266,8 +259,8 @@ def test_observable_findings_avoid_unmeasured_claims():
         "preferencias", "completa",
     ))
     assert "no existe mecanismo" not in prv201["not_detected"].lower()
-    assert "no se observaron" in prv201["not_applicable"].lower()
-    assert "no usa cookies" not in prv201["not_applicable"].lower()
+    assert "no se observaron" in prv201["not_detected"].lower()
+    assert "no usa cookies" not in prv201["not_detected"].lower()
     assert "not_detected" not in controls["PRV-002"]["criteria"]
     assert "partial" not in prv201
 
@@ -304,10 +297,10 @@ def test_dependencies_produce_not_applicable():
     )["result"] == "not_applicable"
 
 
-def test_cookies_can_be_not_applicable():
+def test_cookies_not_observed_stays_contextual_not_detected():
     assert evaluate_control(
         "PRV-201", {"relevant_cookies": False}
-    )["result"] == "not_applicable"
+    )["result"] == "not_detected"
 
 
 @pytest.mark.parametrize(
@@ -320,33 +313,18 @@ def test_result_factors_are_applied(result, expected_score):
     ] == expected_score
 
 
-def test_prv104_observable_detection_changes_only_its_score_contribution():
-    unchanged = [
+def test_prv104_and_prv201_context_never_change_score_or_denominators():
+    baseline = [
         {"control_code": "PRV-001", "result": "detected"},
-        {"control_code": "PRV-201", "result": "not_detected"},
         {"control_code": "PRV-501", "result": "detected"},
     ]
-    before = score_privacy([
-        *unchanged, {"control_code": "PRV-104", "result": "partial"}
-    ])
-    after = score_privacy([
-        *unchanged, {"control_code": "PRV-104", "result": "detected"}
-    ])
+    with_context = [
+        *baseline,
+        {"control_code": "PRV-104", "result": "not_detected"},
+        {"control_code": "PRV-201", "result": "not_detected"},
+    ]
 
-    assert before == {
-        "score": 71,
-        "status": "Preparación avanzada",
-        "coverage": 100,
-        "evaluated_controls": 4,
-        "applicable_controls": 4,
-    }
-    assert after == {
-        "score": 86,
-        "status": "Alta preparación visible",
-        "coverage": 100,
-        "evaluated_controls": 4,
-        "applicable_controls": 4,
-    }
+    assert score_privacy(with_context) == score_privacy(baseline)
 
 
 def test_not_applicable_does_not_affect_score():
@@ -360,9 +338,9 @@ def test_not_evaluable_is_unscored_and_reduces_coverage():
     results = list(evaluated_scenario().values())
     results[-1] = {"control_code": "PRV-501", "result": "not_evaluable"}
     scored = score_privacy(results)
-    assert scored["evaluated_controls"] == 9
-    assert scored["applicable_controls"] == 10
-    assert scored["coverage"] == 90
+    assert scored["evaluated_controls"] == 8
+    assert scored["applicable_controls"] == 9
+    assert scored["coverage"] == 89
 
 
 @pytest.mark.parametrize(
@@ -428,11 +406,11 @@ def test_prv009_never_changes_score_or_denominators(result):
 
 def test_integral_scenario_returns_the_approved_result():
     assert score_privacy(evaluated_scenario().values()) == {
-        "score": 84,
-        "status": "Preparación avanzada",
+        "score": 96,
+        "status": "Alta preparación visible",
         "coverage": 100,
-        "evaluated_controls": 10,
-        "applicable_controls": 10,
+        "evaluated_controls": 9,
+        "applicable_controls": 9,
     }
 
 
@@ -462,7 +440,6 @@ def test_priority_order_is_impact_result_confidence_then_code():
     ]
     assert [item["control_code"] for item in prioritize_findings(results)] == [
         "PRV-001",
-        "PRV-104",
         "PRV-501",
     ]
 
@@ -474,8 +451,7 @@ def test_optional_source_trace_preserves_priority_shape_order_and_count():
             "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
             "source_url": "https://example.com/contact",
         },
-        {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
-    ]
+        ]
     without_trace = [{key: value for key, value in result.items() if key != "source_url"} for result in results]
 
     priorities = prioritize_findings(results)
@@ -483,7 +459,7 @@ def test_optional_source_trace_preserves_priority_shape_order_and_count():
 
     assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
     assert len(priorities) == len(baseline)
-    assert priorities[1]["source_url"] == "https://example.com/contact"
+    assert priorities[1]["source_url"] == "https://example.com/"
     assert set(priorities[1]) == {
         "control_code", "name", "priority", "finding", "recommendation", "source_url",
         "action_steps", "validation_step",
@@ -502,8 +478,7 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
             "source_url": "https://example.com/contact",
             "evidence_summary": "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación.",
         },
-        {"control_code": "PRV-501", "result": "partial", "confidence": "high"},
-    ]
+        ]
     baseline = prioritize_findings([
         {key: value for key, value in result.items() if key != "evidence_summary"}
         for result in results
@@ -513,7 +488,7 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
     assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
     assert len(priorities) == len(baseline)
     assert priorities[1]["evidence_summary"] == (
-        "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
+        "Se observaron señales técnicas parciales de transporte seguro."
     )
 
 
