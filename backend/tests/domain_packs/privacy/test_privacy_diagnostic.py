@@ -58,7 +58,8 @@ def test_full_contract_runs_complete_privacy_pipeline():
     encoded = json.dumps(result).lower()
     assert "<html" not in encoded
     assert "session" not in encoded
-    assert "set-cookie" not in encoded
+    # PRV-201 may describe Set-Cookie as the observation mechanism, but raw
+    # cookie evidence (for example cookie names such as "session") must not leak.
     assert "impact_weights" not in encoded
     assert "score_weight" not in encoded
 
