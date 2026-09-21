@@ -1,21 +1,21 @@
 name: Privacy declared processing QA
 on:
-  workflow_dispatch:
-    inputs:
-      qa_ref:
-        description: "Branch or commit containing the frozen QA"
-        required: true
-        type: string
+  pull_request_target:
+    types: [labeled]
 permissions:
   contents: write
+  pull-requests: read
 jobs:
   qa:
+    if: >-
+      github.event.label.name == 'run-declared-processing-qa' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.qa_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -28,11 +28,14 @@ jobs:
           PYTHONPATH=backend/src python backend/tests/domain_packs/privacy/declared_processing_qa1/run.py
       - name: Commit QA outputs
         if: always()
+        env:
+          QA_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/tests/domain_packs/privacy/declared_processing_qa1/outputs backend/tests/domain_packs/privacy/declared_processing_qa1/run_summary.json
           git diff --cached --quiet && exit 0
           git commit -m "test(privacy): record QA inference outputs"
-          git pull --rebase origin "${{ inputs.qa_ref }}"
-          git push origin HEAD:"${{ inputs.qa_ref }}"
+          git fetch origin "$QA_BRANCH"
+          git rebase "origin/$QA_BRANCH"
+          git push origin HEAD:"$QA_BRANCH"
