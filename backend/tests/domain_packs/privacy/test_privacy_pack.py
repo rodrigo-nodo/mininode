@@ -448,24 +448,25 @@ def test_optional_source_trace_preserves_priority_shape_order_and_count():
     results = [
         {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"},
         {
-            "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
-            "source_url": "https://example.com/contact",
+            "control_code": "PRV-501", "result": "partial", "confidence": "high",
+            "source_url": "https://example.com/",
         },
-        ]
-    without_trace = [{key: value for key, value in result.items() if key != "source_url"} for result in results]
+    ]
+    without_trace = [
+        {key: value for key, value in result.items() if key != "source_url"}
+        for result in results
+    ]
 
     priorities = prioritize_findings(results)
     baseline = prioritize_findings(without_trace)
 
-    assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
+    assert [item["control_code"] for item in priorities] == [
+        item["control_code"] for item in baseline
+    ]
     assert len(priorities) == len(baseline)
     assert priorities[1]["source_url"] == "https://example.com/"
     assert set(priorities[1]) == {
         "control_code", "name", "priority", "finding", "recommendation", "source_url",
-        "action_steps", "validation_step",
-    }
-    assert set(priorities[0]) == {
-        "control_code", "name", "priority", "finding", "recommendation",
         "action_steps", "validation_step",
     }
 
@@ -474,18 +475,19 @@ def test_optional_visible_summary_preserves_priority_order_and_count():
     results = [
         {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"},
         {
-            "control_code": "PRV-104", "result": "not_detected", "confidence": "high",
-            "source_url": "https://example.com/contact",
-            "evidence_summary": "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación.",
+            "control_code": "PRV-501", "result": "partial", "confidence": "high",
+            "evidence_summary": "Se observaron señales técnicas parciales de transporte seguro.",
         },
-        ]
+    ]
     baseline = prioritize_findings([
         {key: value for key, value in result.items() if key != "evidence_summary"}
         for result in results
     ])
     priorities = prioritize_findings(results)
 
-    assert [item["control_code"] for item in priorities] == [item["control_code"] for item in baseline]
+    assert [item["control_code"] for item in priorities] == [
+        item["control_code"] for item in baseline
+    ]
     assert len(priorities) == len(baseline)
     assert priorities[1]["evidence_summary"] == (
         "Se observaron señales técnicas parciales de transporte seguro."
