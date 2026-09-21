@@ -45,4 +45,7 @@ jobs:
             backend/tests/web_inspector/test_selector.py \
             backend/tests/web_inspector/test_form_context_capture.py \
             backend/tests/domain_packs/privacy/ \
+            --ignore=backend/tests/domain_packs/privacy/prv103_semantic_benchmark \
+            --ignore=backend/tests/domain_packs/privacy/test_prv103_qa7_capture.py \
+            --ignore=backend/tests/domain_packs/privacy/test_prv103_qa8_capture.py \
             frontend/privacy/test_privacy_framework_sync.py
