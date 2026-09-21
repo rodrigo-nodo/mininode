@@ -44,8 +44,8 @@ def failed_contract():
 
 def test_full_contract_runs_complete_privacy_pipeline():
     result = run_privacy_diagnostic(complete_contract())
-    assert result["framework_version"] == "0.9"
-    assert result["scoring_version"] == "0.1"
+    assert result["framework_version"] == "0.11"
+    assert result["scoring_version"] == "0.3"
     assert [control["control_code"] for control in result["controls"]] == CODES
     assert len(result["controls"]) == 21
     assert result["controls"][1]["result"] == "detected"
@@ -70,7 +70,7 @@ def test_technical_failure_is_unscored_not_artificially_penalized():
     assert "not_detected" not in outcomes.values()
     assert result["coverage"] == 0
     assert result["evaluated_controls"] == 0
-    assert result["applicable_controls"] == 17
+    assert result["applicable_controls"] == 15
     assert result["score"] == 0
     assert result["priorities"] == []
     assert result["scope"] == {"pages_requested": 3, "pages_analyzed": 0, "limited": True}
@@ -110,11 +110,10 @@ def test_visible_evidence_does_not_change_diagnostic_or_priority_order():
     assert control["evidence_summary"] == "Se detectó un formulario con un enlace visible relacionado con privacidad."
 
 
-def test_frontend_conditionally_renders_safe_source_path_and_home_label():
+def test_frontend_does_not_render_evidence_trace_in_priority_cards():
     app = (Path(__file__).resolve().parents[4] / "frontend" / "privacy" / "app.js").read_text()
 
-    assert "if (priority.source_url)" in app
-    assert "Detectado en: ${page}" in app
-    assert "source.pathname === '/' ? 'página principal' : source.pathname" in app
-    assert "if (priority.evidence_summary)" in app
-    assert "Evidencia: ${priority.evidence_summary}" in app
+    assert "if (priority.source_url)" not in app
+    assert "Detectado en: ${page}" not in app
+    assert "if (priority.evidence_summary)" not in app
+    assert "Evidencia: ${priority.evidence_summary}" not in app
