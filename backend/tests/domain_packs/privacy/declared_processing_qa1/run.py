@@ -24,6 +24,7 @@ manifest=json.loads((ROOT/"capture_manifest.json").read_text(encoding="utf-8"))
 out=ROOT/"outputs"; out.mkdir(exist_ok=True)
 summary=[]
 estimated_cost_usd=0.0
+actual_cost_usd=0.0
 execution_sha=os.environ.get("QA_EXECUTION_SHA")
 if not execution_sha:
     raise SystemExit("QA_EXECUTION_SHA is required")
@@ -48,13 +49,18 @@ for row in manifest:
             raise SystemExit(f"QA budget exhausted before next call: ${estimated_cost_usd:.4f} / ${QA_BUDGET_USD:.2f}")
         target=out/f"{cid}-run{run}.json"
         try:
+            usage={}
+            def capture_usage(value):
+                usage.update(value)
             signal.alarm(CALL_TIMEOUT_SECONDS)
-            result=extract_declared_processing(doc)
+            result=extract_declared_processing(doc, usage_sink=capture_usage)
             # Successful extraction currently returns validated facts only. Until token usage is
             # surfaced by the extractor, reserve the worst-case output allowance before each call.
             estimated_cost_usd += next_call_ceiling
             target.write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-            summary.append({"case_id":cid,"run":run,"status":"valid","records":len(result["records"])})
+            call_actual_cost=(usage.get("input_tokens",0)/1_000_000)*INPUT_USD_PER_MILLION + (usage.get("output_tokens",0)/1_000_000)*OUTPUT_USD_PER_MILLION
+            actual_cost_usd += call_actual_cost
+            summary.append({"case_id":cid,"run":run,"status":"valid","records":len(result["records"]),"usage":usage,"actual_cost_usd":round(call_actual_cost,6)})
             print(cid,run,"VALID",len(result["records"]))
         except Exception as e:
             error_type=type(e).__name__
@@ -67,7 +73,7 @@ for row in manifest:
                 raise SystemExit(f"fail-fast after infrastructure error: {error_type}")
         finally:
             signal.alarm(0)
-(ROOT/"run_summary.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+(ROOT/"run_summary.json").write_text(json.dumps({"budget_usd":QA_BUDGET_USD,"estimated_cost_usd":round(estimated_cost_usd,6),"actual_cost_usd":round(actual_cost_usd,6),"calls":summary},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 marker.write_text(execution_sha+"\n",encoding="utf-8")
 
 # QA1 execution trigger: stable runner from main.
