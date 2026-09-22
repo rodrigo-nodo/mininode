@@ -98,10 +98,16 @@ def run() -> None:
             try:
                 signal.alarm(CALL_TIMEOUT_SECONDS)
                 result = extract_declared_processing(doc, usage_sink=usage.update)
-                call_cost = (
-                    usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
-                    + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
-                )
+                if usage:
+                    call_cost = (
+                        usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
+                        + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
+                    )
+                else:
+                    # A successful semantic result without provider usage is
+                    # still a billable/unknown attempt. Charge the conservative
+                    # ceiling rather than treating it as free.
+                    call_cost = call_ceiling
                 actual_cost_usd += call_cost
                 call_accounted = True
                 (out / f"{cid}-run{run_number}.json").write_text(
