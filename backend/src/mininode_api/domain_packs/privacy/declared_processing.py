@@ -231,6 +231,7 @@ def extract_declared_processing(
     document: PublicDocument,
     *,
     client: Client | None = None,
+    usage_sink: Callable[[dict[str, int]], None] | None = None,
 ) -> dict[str, Any]:
     """Extract and validate declared_processing/v1 from one public document."""
 
@@ -240,6 +241,12 @@ def extract_declared_processing(
 
         sdk = OpenAI(timeout=API_TIMEOUT_SECONDS, max_retries=API_MAX_RETRIES)
         response = sdk.responses.create(**kwargs)
+        if usage_sink is not None and response.usage is not None:
+            usage_sink({
+                "input_tokens": int(response.usage.input_tokens),
+                "output_tokens": int(response.usage.output_tokens),
+                "total_tokens": int(response.usage.total_tokens),
+            })
         raw = json.loads(response.output_text)
     else:
         raw = client(kwargs)
