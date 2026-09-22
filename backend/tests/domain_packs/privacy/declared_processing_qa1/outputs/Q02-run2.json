@@ -1,0 +1,4 @@
+{
+  "error_type": "ValueError",
+  "error": "evidence text is not present in input document"
+}

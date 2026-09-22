@@ -1,0 +1,125 @@
+{
+  "schema_version": "declared_processing/v1",
+  "records": [
+    {
+      "record_id": "local-storage-cart",
+      "technology": [
+        {
+          "value": "almacenamiento local esencial",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Usamos almacenamiento local esencial para que el carrito funcione",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "el carrito y los productos que agregas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "El carrito se guarda localmente en tu navegador para conservar los productos que agregas.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "hacer funcionar el carrito y conservar los productos agregados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "El carrito se guarda localmente en tu navegador para conservar los productos que agregas.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        },
+        {
+          "value": "operar la tienda",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Esta función es necesaria para operar la tienda y no se usa para publicidad.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://elizatelier.cl/cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Política de cookies | ELIZ Atelier"
+      }
+    },
+    {
+      "record_id": "google-tag-manager-analytics",
+      "technology": [
+        {
+          "value": "Google Tag Manager",
+          "normalized_value": "Google Tag Manager",
+          "status": "supported",
+          "evidence": {
+            "text": "Cuando aceptas, cargamos Google Tag Manager",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "eventos de navegación y compra configurados en Google Tag Manager",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "los eventos de navegación y compra configurados en él.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "medir el funcionamiento de la tienda",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Estos datos se usan para medir el funcionamiento de la tienda.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        },
+        {
+          "value": "entender cómo navegas y mejorar la tienda",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Usamos medición analítica para entender cómo navegas y mejorar la tienda.",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "aceptación de la medición analítica por el usuario",
+          "normalized_value": null,
+          "status": "ambiguous",
+          "evidence": {
+            "text": "Cuando aceptas, cargamos Google Tag Manager",
+            "source_url": "https://elizatelier.cl/cookies"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://elizatelier.cl/cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Política de cookies | ELIZ Atelier"
+      }
+    }
+  ]
+}

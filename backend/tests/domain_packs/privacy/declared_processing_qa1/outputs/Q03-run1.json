@@ -1,0 +1,419 @@
+{
+  "schema_version": "declared_processing/v1",
+  "records": [
+    {
+      "record_id": "cookie-functionality",
+      "technology": [
+        {
+          "value": "cookie",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Una cookie es un pequeño archivo de texto que un sitio web guarda en tu ordenador o dispositivo móvil cuando lo visitas.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "acciones y preferencias, como el inicio de sesión, idioma y opciones de visualización",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Permiten que el portal recuerde tus acciones y preferencias (como el inicio de sesión, idioma y opciones de visualización)",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "recordar las acciones y preferencias del usuario y evitar que tenga que volver a introducirlas al navegar entre páginas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "evitando que tengas que volver a introducirlos cada vez que navegas de una página a otra.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [
+        {
+          "value": "durante un período determinado",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "durante un período determinado",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    },
+    {
+      "record_id": "technical-essential-cookies",
+      "technology": [
+        {
+          "value": "Cookies Técnicas y Esenciales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "1. Cookies Técnicas y Esenciales",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "Tokens de sesión segura",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Ejemplos:\nTokens de sesión segura, balanceador de carga, registro de tus preferencias de consentimiento de cookies.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "balanceador de carga",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Ejemplos:\nTokens de sesión segura, balanceador de carga, registro de tus preferencias de consentimiento de cookies.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "registro de tus preferencias de consentimiento de cookies",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Ejemplos:\nTokens de sesión segura, balanceador de carga, registro de tus preferencias de consentimiento de cookies.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "preferencias de consentimiento de cookies",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "registro de tus preferencias de consentimiento de cookies.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "permitir la navegación básica y la seguridad del sitio",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Permiten la navegación básica, la seguridad del sitio",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "permitir el inicio de sesión en el Portal del Paciente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el inicio de sesión en el Portal del Paciente",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "permitir la conexión con los motores de reserva clínica Dentalink y Medilink",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "la conexión con los motores de reserva clínica (\nDentalink y Medilink\n)",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "permitir el procesamiento seguro de pagos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "y el procesamiento seguro de pagos.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    },
+    {
+      "record_id": "analytics-cookies",
+      "technology": [
+        {
+          "value": "Cookies Estadísticas y Analíticas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "2. Cookies Estadísticas y Analíticas",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "Google Analytics 4 (GA4)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores:\nGoogle Analytics 4 (GA4), Microsoft Clarity.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "Microsoft Clarity",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores:\nGoogle Analytics 4 (GA4), Microsoft Clarity.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "visitas y fuentes de tráfico",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Nos permiten contar las visitas y fuentes de tráfico",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "información sobre qué páginas son las más o menos populares y qué páginas tienen enlaces rotos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Nos ayudan a saber qué páginas son las más o menos populares, identificar páginas con enlaces rotos",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "información procesada de forma agregada y anónima",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "La información se procesa de forma agregada y anónima.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "evaluar y mejorar el rendimiento del portal",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para poder evaluar y mejorar el rendimiento de nuestro portal.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "mejorar la velocidad de carga para los pacientes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "y mejorar la velocidad de carga para los pacientes.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "Opt-In (Opcionales)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "2. Cookies Estadísticas y Analíticas\nOpt-In (Opcionales)",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    },
+    {
+      "record_id": "advertising-marketing-cookies",
+      "technology": [
+        {
+          "value": "Cookies de Publicidad y Marketing",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "3. Cookies de Publicidad y Marketing",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "socios publicitarios",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Pueden ser establecidas a través de nuestro sitio por nuestros socios publicitarios",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "Meta Pixel (Facebook / Instagram Ads)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores:\nMeta Pixel (Facebook / Instagram Ads).",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "perfil de tus intereses",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para crear un perfil de tus intereses",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "crear un perfil de los intereses del usuario",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para crear un perfil de tus intereses",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        },
+        {
+          "value": "mostrar anuncios pertinentes sobre campañas de salud preventiva",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "y mostrarte anuncios pertinentes sobre nuestras campañas de salud preventiva (ej. operativos dentales, bono PAD Fonasa o descuentos comunales Mi Vita).",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "Opt-In (Opcionales)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "3. Cookies de Publicidad y Marketing\nOpt-In (Opcionales)",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    },
+    {
+      "record_id": "non-essential-cookie-consent",
+      "technology": [
+        {
+          "value": "cookie no esencial",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Ninguna cookie no esencial se instala en tu navegador sin tu aprobación expresa y activa.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "aprobación expresa y activa previa a la instalación",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Consentimiento Previo (Opt-In):\nNinguna cookie no esencial se instala en tu navegador sin tu aprobación expresa y activa.",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    },
+    {
+      "record_id": "general-cookie-consent",
+      "technology": [
+        {
+          "value": "las cookies antes enunciadas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Ud. nos está consintiendo en el uso de las cookies antes enunciadas",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "consentimiento al navegar y continuar en el sitio web",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Al navegar y continuar en el sitio web de\nPoliclínico Tabancura\n, Ud. nos está consintiendo en el uso de las cookies antes enunciadas",
+            "source_url": "https://policlinicotabancura.cl/politica-de-cookies"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://policlinicotabancura.cl/politica-de-cookies",
+        "document_type": "cookie_policy",
+        "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura"
+      }
+    }
+  ]
+}

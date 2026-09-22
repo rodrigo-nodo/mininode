@@ -1,0 +1,122 @@
+[
+  {
+    "case_id": "Q01",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q01",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q02",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q02",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q03",
+    "run": 1,
+    "status": "valid",
+    "records": 6
+  },
+  {
+    "case_id": "Q03",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q04",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q04",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q05",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q05",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q06",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q06",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q07",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q07",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "JSONDecodeError"
+  },
+  {
+    "case_id": "Q08",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q08",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q09",
+    "run": 1,
+    "status": "valid",
+    "records": 2
+  },
+  {
+    "case_id": "Q09",
+    "run": 2,
+    "status": "valid",
+    "records": 2
+  },
+  {
+    "case_id": "Q10",
+    "run": 1,
+    "status": "invalid",
+    "error_type": "ValueError"
+  },
+  {
+    "case_id": "Q10",
+    "run": 2,
+    "status": "invalid",
+    "error_type": "ValueError"
+  }
+]
