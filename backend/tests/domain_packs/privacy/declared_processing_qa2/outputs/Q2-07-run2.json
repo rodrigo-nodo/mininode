@@ -1,0 +1,475 @@
+{
+  "schema_version": "declared_processing/v1",
+  "records": [
+    {
+      "record_id": "contact_forms",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos entregados voluntariamente en formularios de contacto, mensajes o comunicaciones con Inclu Work Consultores.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos entregados voluntariamente en formularios de contacto, mensajes o comunicaciones con Inclu Work Consultores.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Responder consultas enviadas a través del sitio web o canales de contacto.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Responder consultas enviadas a través del sitio web o canales de contacto.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Responder la solicitud, entregar información sobre servicios, coordinar comunicaciones o dar continuidad a la consulta realizada.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "los datos entregados serán utilizados exclusivamente para responder la solicitud, entregar información sobre servicios, coordinar comunicaciones o dar continuidad a la consulta realizada.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "job_applications",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos personales, antecedentes laborales y currículum vitae entregados mediante el formulario de postulación.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cuando una persona completa el formulario de postulación, entrega voluntariamente sus datos personales, antecedentes laborales y currículum vitae",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Datos de identificación, como nombre completo y RUT.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de identificación, como nombre completo y RUT.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Datos de contacto, como teléfono, WhatsApp u otros canales informados por la persona.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de contacto, como teléfono, WhatsApp u otros canales informados por la persona.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Datos laborales, como cargo al que postula, experiencia, antecedentes curriculares, ciudad, disponibilidad, referencias laborales y demás información contenida en el currículum vitae.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos laborales, como cargo al que postula, experiencia, antecedentes curriculares, ciudad, disponibilidad, referencias laborales y demás información contenida en el currículum vitae.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Participar en procesos de selección actuales o futuros.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "con la finalidad de participar en procesos de selección actuales o futuros.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Evaluar compatibilidad con cargos disponibles y contactar al postulante.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "podrá revisar esos antecedentes para evaluar compatibilidad con cargos disponibles, contactar al postulante",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Presentar los antecedentes del postulante a la empresa solicitante de una vacante determinada, cuando corresponda.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "cuando corresponda, presentar sus antecedentes a la empresa solicitante de una vacante determinada.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Empresas solicitantes de procesos de selección, cuando el postulante sea considerado compatible con una vacante determinada.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Empresas solicitantes de procesos de selección, cuando el postulante sea considerado compatible con una vacante determinada.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [
+        {
+          "value": "Plazo máximo de 2 años desde la recepción de la postulación.",
+          "normalized_value": "2 años desde la recepción de la postulación",
+          "status": "supported",
+          "evidence": {
+            "text": "podrán conservarse por un plazo máximo de 2 años contados desde la recepción de la postulación.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "El plazo podrá reiniciarse si la persona vuelve a postular, actualiza su currículum vitae o envía nuevos antecedentes.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el plazo de conservación podrá reiniciarse desde esa nueva gestión.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Vencido el plazo, los datos podrán eliminarse o bloquearse, salvo obligación legal de conservación, solicitud pendiente, relación contractual vigente o justificación legal para mantenerlos.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "los datos y antecedentes podrán ser eliminados o bloqueados, salvo que exista una obligación legal de conservación, una solicitud pendiente, una relación contractual vigente o una justificación legal para mantenerlos por más tiempo.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "selection_evaluations",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Entrevistas, test y evaluaciones laborales, técnicas, psicológicas o psicolaborales.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Algunos procesos de selección pueden incluir entrevistas, test, evaluaciones laborales, técnicas, psicológicas o psicolaborales.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Resultados, conclusiones y/o informes derivados de las evaluaciones.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Los resultados, conclusiones y/o informes derivados de dichas evaluaciones",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Selección laboral.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Estas evaluaciones se realizan únicamente cuando el proceso lo requiere y para fines de selección laboral.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Evaluación y selección de personal.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para fines de evaluación y selección de personal.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "La empresa solicitante del proceso.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "serán comunicados únicamente a la empresa solicitante del proceso",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Profesionales o evaluadores que participen en procesos de selección, entrevistas, test o evaluaciones, bajo deber de confidencialidad.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Profesionales o evaluadores que participen en procesos de selección, entrevistas, test o evaluaciones, bajo deber de confidencialidad.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "sensitive_data",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Antecedentes vinculados a evaluaciones psicológicas o psicolaborales, salud laboral, discapacidad u otros antecedentes especialmente protegidos.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "antecedentes vinculados a evaluaciones psicológicas o psicolaborales, salud laboral, discapacidad u otros antecedentes especialmente protegidos.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "La finalidad informada en el proceso correspondiente, únicamente cuando sea necesario.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En determinados procesos, y solo cuando sea necesario para la finalidad informada, podrían tratarse datos personales sensibles",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "Autorización expresa del titular, obligación legal o una base legítima aplicable conforme a la normativa vigente.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Su tratamiento se realizará únicamente cuando exista autorización expresa del titular, obligación legal o una base legítima aplicable conforme a la normativa vigente.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "website_technical_data",
+      "technology": [
+        {
+          "value": "Cookies técnicas o herramientas necesarias para el funcionamiento, seguridad, rendimiento, prevención de spam o correcta visualización de contenidos.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "El sitio web puede utilizar cookies técnicas o herramientas necesarias para su funcionamiento, seguridad, rendimiento, prevención de spam o correcta visualización de contenidos.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Registros de seguridad, validaciones antispam, fecha y hora de envío, navegador o información técnica necesaria para proteger el funcionamiento del sitio.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos técnicos básicos del sitio web, como registros de seguridad, validaciones antispam, fecha y hora de envío, navegador o información técnica necesaria para proteger el funcionamiento del sitio.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Proteger la seguridad del sitio web y prevenir spam, abusos, accesos indebidos o uso fraudulento de los formularios.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proteger la seguridad del sitio web, prevenir spam, abusos, accesos indebidos o uso fraudulento de los formularios.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        },
+        {
+          "value": "Funcionamiento, seguridad, rendimiento, prevención de spam o correcta visualización de contenidos.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para su funcionamiento, seguridad, rendimiento, prevención de spam o correcta visualización de contenidos.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "technology_service_providers",
+      "technology": [
+        {
+          "value": "Servicios de infraestructura o soporte para el sitio web, correo electrónico, almacenamiento, respaldo, seguridad o gestión de formularios.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para el funcionamiento del sitio web, correo electrónico, almacenamiento, respaldo, seguridad o gestión de formularios",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "Proveedores tecnológicos que presten servicios de infraestructura o soporte.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Inclu Work Consultores podrá utilizar proveedores tecnológicos que presten servicios de infraestructura o soporte.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "Información almacenada o procesada por proveedores tecnológicos.",
+          "normalized_value": null,
+          "status": "ambiguous",
+          "evidence": {
+            "text": "Cuando dichos proveedores almacenen o procesen información fuera de Chile",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Funcionamiento del sitio web, correo electrónico, almacenamiento, respaldo, seguridad o gestión de formularios.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para el funcionamiento del sitio web, correo electrónico, almacenamiento, respaldo, seguridad o gestión de formularios",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Proveedores tecnológicos, de hosting, correo electrónico, almacenamiento, seguridad o soporte del sitio web, cuando sea necesario para la operación del servicio.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores tecnológicos, de hosting, correo electrónico, almacenamiento, seguridad o soporte del sitio web, cuando sea necesario para la operación del servicio.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [
+        {
+          "value": "Los proveedores tecnológicos pueden almacenar o procesar información fuera de Chile.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cuando dichos proveedores almacenen o procesen información fuera de Chile",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "legal_and_authority_requirements",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos personales necesarios para cumplir obligaciones legales, contractuales, administrativas o requerimientos de autoridad competente.",
+          "normalized_value": null,
+          "status": "ambiguous",
+          "evidence": {
+            "text": "Cumplir obligaciones legales, contractuales, administrativas o requerimientos de autoridad competente.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Cumplir obligaciones legales, contractuales, administrativas o requerimientos de autoridad competente.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cumplir obligaciones legales, contractuales, administrativas o requerimientos de autoridad competente.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Autoridades públicas, tribunales u organismos competentes.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Autoridades públicas, tribunales u organismos competentes, cuando exista obligación legal o requerimiento válido.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "legal_basis": [
+        {
+          "value": "Obligación legal o requerimiento válido.",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "cuando exista obligación legal o requerimiento válido.",
+            "source_url": "https://incluworkconsultores.cl/politica-de-privacidad/"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    }
+  ]
+}
