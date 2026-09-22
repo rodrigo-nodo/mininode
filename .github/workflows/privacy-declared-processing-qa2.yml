@@ -1,0 +1,64 @@
+name: Privacy declared processing QA2
+on:
+  workflow_run:
+    workflows: ["Privacy Web CI"]
+    types: [completed]
+
+concurrency:
+  group: privacy-declared-processing-qa2
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_branch == 'privacy/declared-processing-qa2-safe-run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Refuse duplicate QA2 spend
+        env:
+          QA_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          marker="backend/tests/domain_packs/privacy/declared_processing_qa2/executed_sha.txt"
+          if test -f "$marker"; then
+            echo "QA2 already attempted; refusing any duplicate API spend."
+            cat "$marker"
+            exit 3
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install -r backend/requirements.txt
+
+      - name: Run frozen QA2 inference
+        id: qa2
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          test -n "$OPENAI_API_KEY" || { echo "OPENAI_API_KEY secret is unavailable"; exit 2; }
+          QA_EXECUTION_SHA="${{ github.event.workflow_run.head_sha }}" PYTHONPATH=backend/src python backend/tests/domain_packs/privacy/declared_processing_qa2/run.py
+
+      - name: Persist QA2 attempt and outputs
+        if: always() && steps.qa2.outcome != 'skipped'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/tests/domain_packs/privacy/declared_processing_qa2/executed_sha.txt
+          git add backend/tests/domain_packs/privacy/declared_processing_qa2/run_summary.json 2>/dev/null || true
+          git add backend/tests/domain_packs/privacy/declared_processing_qa2/outputs 2>/dev/null || true
+          git diff --cached --quiet && exit 0
+          git commit -m "test(privacy): record QA2 inference attempt"
+          git fetch origin privacy/declared-processing-qa2-safe-run
+          git rebase origin/privacy/declared-processing-qa2-safe-run
+          git push origin HEAD:privacy/declared-processing-qa2-safe-run
