@@ -1,0 +1,51 @@
+Política de cookies
+Qué guardamos en tu navegador, para qué, cuánto dura y cómo cambiar de opinión.
+Última actualización: 8 de agosto de 2026
+Lo esencial en tres frases
+Las cookies de medición y de marketing no se activan hasta que las autorizas: si no aceptas, ni Google Analytics ni la etiqueta de LinkedIn se descargan siquiera. Rechazar cuesta un clic, igual que aceptar, y puedes permitir una categoría y negar la otra. Puedes cambiar tu decisión cuando quieras desde el enlace Preferencias al pie de cualquier página.
+Qué es una cookie
+Un archivo pequeño que un sitio guarda en tu navegador para recordar algo entre una página y la siguiente. Junto a las cookies existen otros almacenamientos parecidos, como localStorage
+; aquí los tratamos igual, porque para tu privacidad dan lo mismo.
+Qué usamos en este sitio
+1. Estrictamente necesarias
+Hacen que el sitio funcione y que recordemos la decisión que tomaste en el aviso. Sin ellas tendríamos que preguntarte en cada página. No requieren autorización porque sin ellas el servicio que pediste no se puede prestar.
+Nombre | Origen | Para qué | Duración |
+---|---|---|---|
+gestdat_consentimiento
+|
+gestdat.cl | Guarda tu decisión sobre las cookies y la fecha en que la tomaste, para no volver a preguntarte en cada página. | 12 meses |
+Se guarda en localStorage
+, no viaja a ningún servidor y no permite identificarte.
+2. Medición de uso
+Solo se activan si las autorizas. Nos muestran qué páginas se visitan, cuánto tiempo se quedan y por dónde se abandona el sitio, para poder arreglar lo que no funciona. Miramos totales, no personas: no nos interesa quién eres, sino qué páginas cumplen su propósito.
+Herramienta | Responsable | Para qué | Duración |
+---|---|---|---|
+Google Analytics 4 | Distingue visitas y sesiones para contar cuánta gente llega, desde dónde y qué recorre. | Hasta 2 años (_ga
+) y 2 años (_ga_<id>
+) |
+Lo tenemos configurado sin señales publicitarias ni personalización de anuncios: la medición sirve para entender el sitio, no para perseguirte con avisos. Google puede transferir datos fuera de Chile. Si no aceptas esta categoría, la herramienta no se descarga.
+3. Marketing y publicidad
+Solo se activan si las autorizas. Nos permiten saber si llegaste al sitio desde un aviso que publicamos en LinkedIn, medir si esa campaña sirvió y mostrarte avisos nuestros en esa red.
+Herramienta | Responsable | Para qué | Duración |
+---|---|---|---|
+LinkedIn Insight Tag | LinkedIn Ireland Unlimited Company | Mide las visitas que provienen de avisos, permite armar audiencias para volver a mostrarte publicidad y registra conversiones. | Hasta 6 meses, según la cookie (li_sugr
+, bcookie
+, lidc
+, UserMatchHistory
+, entre otras) |
+LinkedIn actúa como responsable independiente del tratamiento y puede transferir datos fuera de Chile, incluida la Unión Europea y Estados Unidos. Puedes revisar su política de privacidad y gestionar tus preferencias publicitarias directamente en la configuración de tu cuenta de LinkedIn.
+Qué NO usamos
+Para que quede claro por omisión: este sitio no tiene pixel de Meta, ni mapas de calor, ni grabación de sesiones, ni Google Tag Manager, ni cookies de terceros más allá de las dos herramientas descritas arriba. Tampoco usamos remarketing de Google. Si eso cambia, se actualiza esta página y se te vuelve a preguntar.
+Cómo cambiar o retirar tu autorización
+Puedes revisar y modificar tus preferencias cuando quieras:
+También encontrarás el enlace Preferencias al pie de cualquier página del sitio.
+Retirar la autorización impide que la etiqueta vuelva a cargarse. Ten presente que lo ya recopilado antes de que cambiaras de opinión queda en poder de LinkedIn: para eliminarlo hay que gestionarlo con ellos, en el enlace de más arriba.
+También puedes bloquear o borrar cookies desde la configuración de tu navegador. Si lo haces, el sitio seguirá funcionando, pero volveremos a preguntarte tu preferencia.
+Marco legal
+Esta política se ajusta a la Ley 19.628 sobre protección de la vida privada y a la Ley 21.719, que crea la Agencia de Protección de Datos Personales. Para quienes nos visitan desde la Unión Europea, seguimos también los criterios del Reglamento General de Protección de Datos (RGPD) en materia de consentimiento: previo, informado, específico y tan fácil de retirar como de otorgar.
+El resto de tus datos
+Esta página cubre solo lo que se guarda en tu navegador. Lo que nos envías por el formulario de contacto —nombre, empresa, correo y lo que quieras contarnos— se explica en la política de privacidad: para qué lo usamos, quién más lo recibe, cuánto lo conservamos y cómo pedir que lo borremos.
+Quién responde por esto
+GESTDAT SpA, RUT 78.366.187-K, Santiago, Chile. «Gestdat» es el nombre comercial con el que operamos.
+Dudas
+Escríbenos a [email protected] y te respondemos.

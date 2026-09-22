@@ -1,0 +1,185 @@
+POLÍTICA DE PRIVACIDAD Y PROTECCIÓN DE DATOS PERSONALES
+INTRODUCCIÓN
+En Banco de Chile la privacidad y protección de los datos personales de nuestros clientes y potenciales clientes, son un foco prioritario. Estamos comprometidos con la observancia de la normativa vigente, entre ellas especialmente de la Ley N° 19.628 y de los artículos 14 y 154 de la Ley General de Bancos.
+La presente Política de Protección de Datos Personales se dicta en cumplimiento de la Ley N° 19.628 sobre Protección de la Vida Privada, la cual establece normas aplicables al tratamiento de datos personales de personas naturales.
+En este marco, la política tiene por objeto resguardar el respeto y la protección de los derechos fundamentales relacionados con la vida privada y el control de la información personal. Para tal efecto promovemos los siguientes principios fundamentales en el tratamiento de datos personales:
+Licitud y lealtad: Realizamos el tratamiento de datos conforme a lo que establece la ley y demás regulaciones vigentes, considerando los intereses de los titulares.
+-
+Finalidad: Recopilamos y utilizamos datos personales con la finalidad de garantizar la seguridad, eficiencia y cumplimiento normativo en la entrega y prestación de nuestros servicios bancarios, así como las demás acciones, prestaciones y ofertas que puedan ser realizadas conforme a la ley y la regulación vigente.
+-
+Calidad y proporcionalidad: Nuestros procesos internos buscan asegurar que los datos sean adecuados y necesarios, y, asimismo, que respondan a la situación real de los titulares.
+-
+Seguridad y Confidencialidad: Implementamos medidas técnicas y organizativas para proteger los datos contra accesos no autorizados y fuga de información.
+-
+Transparencia e información: Los titulares pueden solicitar información sobre el tratamiento de sus datos y pueden acceder a ellos a través de los canales establecidos para esos efectos.
+-
+Banco de Chile busca con una gestión adecuada de los datos personales reforzar la confianza de nuestros clientes, como también cimentar relaciones comerciales sólidas, duraderas y basadas en la ética y la legalidad.
+En este marco, se reafirma el compromiso del Banco en el uso responsable y seguro de la información personal de nuestros clientes y prospectos, para lo cual se establecen normativas y procedimientos internos donde se regulan estos tratamientos de datos personales y se establecen las sanciones y medidas disciplinarias para los casos de incumplimientos o vulneraciones a la presente política y su marco normativo.
+Mediante la presente Política de Protección de Datos, Banco de Chile informa cómo realiza el tratamiento de los datos personales de sus clientes:
+I. RESPONSABLE DEL TRATAMIENTO
+Banco de Chile, RUT: 97.004.000-5
+-
+Dirección: Paseo Ahumada 251, Santiago.
+-
+Delegado de Protección de Datos / Gerente de Protección de Datos: Roberto Tejos Contreras
+-
+Medio de contacto: protecciondatos@bancochile.cl
+-
+II. DEFINICIONES
+1. Datos de carácter personal o datos personales: Cualquier información vinculada o referida a una persona natural, identificada o identificable a través de medios que puedan ser razonablemente utilizados.
+-
+2. Datos personales sensibles: Aquellos datos personales que conciernen o se refieren a las características físicas o morales de una persona, tales como el origen racial, ideología, afiliación política, creencias o convicciones religiosas o filosóficas, estado de salud físico o psíquico, orientación sexual, identidad de género e identidad genética y biomédica.
+-
+3. Responsable del tratamiento: Persona natural o jurídica, pública o privada, a quien compete decidir acerca del tratamiento de datos personales, sus medios y fines, con independencia de si los datos son tratados directamente por él o a través de un tercero o encargado del tratamiento o procesador de datos.
+-
+4. Titular de los datos: Persona natural, identificada o identificable, a quien conciernen o se refieren los datos personales.
+-
+5. Representante: Persona natural que en virtud de un mandato o poder otorgado por un titular de datos personales, puede solicitar información, formular requerimientos y, en general, actuar por cuenta del titular de los datos ante un responsable.
+-
+6. Tratamiento de datos: Cualquier operación o conjunto de operaciones o procedimientos técnicos, de carácter automatizado o no, que permitan recolectar, procesar, almacenar, comunicar, transmitir o utilizar de cualquier forma los datos personales.
+-
+7. Consentimiento: Toda manifestación de voluntad libre e informada mediante la cual el titular de datos, su representante legal o mandatario, según corresponda, autoriza en forma expresa y por escrito el tratamiento de los datos personales que le conciernen.
+-
+8. Fuente accesible al público: Todas aquellas bases de datos personales, públicas cuyo acceso o consulta puede ser efectuado en forma lícita por cualquier persona, sin existir restricciones o impedimentos legales para su acceso o utilización.
+-
+9. Cliente: Para estos efectos, persona natural que ha contratado con el Banco de Chile la prestación de un servicio o producto financiero, dentro del marco propio del giro exclusivo del Banco, ya sea de carácter ocasional, único, reiterado o permanente.
+-
+10. Prospecto: Persona natural que solicita al Banco de Chile la contratación de un producto o servicio financiero, o respecto de quien el Banco ofrece dichos productos o servicios en el marco del giro exclusivo del Banco, ya sea de carácter ocasional, único, reiterado o permanente.
+-
+11. Beneficiario final: Persona natural que posea directa o indirectamente, a través de sociedades u otros mecanismos, una participación igual o mayor al 10% del capital o de los derechos a voto o que siendo menor esta participación, a través de sociedades u otros mecanismos, ejerza un Control Efectivo en la toma de decisiones de la persona y/o estructura jurídica.
+-
+III. DATOS QUE TRATAMOS:
+El Banco de Chile trata los siguientes datos personales de sus clientes o prospectos personas naturales y de las personas naturales vinculadas a la propiedad o administración de sus clientes personas jurídicas:
+Datos identificativos de personas naturales clientes, prospectos, representantes, mandatarios y además, de socios, directores, apoderados y beneficiarios finales de personas jurídicas, que nos permitan identificarlos, tales como nombre completo, nacionalidad, RUT, domicilios, teléfonos de contacto, correo electrónico, cargos o información relacionada al empleo o profesión.
+-
+Datos personales sobre obligaciones de carácter económico, financiero, bancario o comercial, entre ellos, aquellas que se refieren a créditos conferidos y otros relacionados a la situación patrimonial y de ingresos.
+-
+Información financiera relacionada a los servicios prestados, y en el caso de personas jurídicas, las de sus socios, directores, representantes, administradores o personas relacionadas, en caso de corresponder.
+-
+Información de sus transacciones, incluidos los números de tarjeta o cuenta, estados de cuenta, tipos de tarjeta, código del país, dirección postal, de facturación, historial crediticio y de consumo.
+-
+Datos recopilados a través de cookies, herramientas tecnológicas y aplicaciones utilizadas por el Banco.
+-
+Datos identificativos e información de clientes, prospectos, socios y directores de personas jurídicas que recogemos de fuentes públicas y privadas.
+-
+Otros datos personales que sean necesarios conforme a las leyes y regulaciones vigentes.
+-
+IV. LICITUD DEL TRATAMIENTO
+Banco de Chile realiza tratamiento de datos basado en la ejecución del contrato entre el cliente y el Banco o para medidas precontractuales o posteriores al contrato conforme a la regulación vigente. En ciertos casos el tratamiento se basa en el consentimiento libre e informado expresado por el titular y en otros casos se basa en disposiciones legales y regulatorias.
+V. FINALIDAD DEL TRATAMIENTO
+En Banco de Chile el tratamiento de datos personales tiene como finalidad principal la prestación y desarrollo de servicios bancarios propios de su giro y aquellos que lo complementen, garantizando seguridad, eficiencia y cumplimiento normativo en cada operación.
+Para ello, utilizamos la información personal de nuestros clientes personas naturales y de personas naturales vinculadas a la propiedad o administración de clientes personas jurídicas, con los siguientes propósitos:
+1. Prestación de los servicios bancarios
+Evaluación, gestión y ejecución de productos y servicios financieros (cuentas corrientes, tarjetas de crédito, créditos comerciales, de consumo e hipotecarios, entre otros).
+-
+Verificación y actualización de la información del cliente, incluyendo la autenticación de su identidad en transacciones que realice.
+-
+Gestión de cobranza, ya sea extrajudicial o judicial, realizada por Banco de Chile o a través de terceros contratados para tal efecto.
+-
+2. Cumplimiento legal y normativo
+Cumplimiento de obligaciones legales y normativas, como la prevención de fraudes, lavado de activos, financiamiento del terrorismo y proliferación de armas de destrucción masiva.
+-
+Comunicación de deudas vigentes y/o morosas a registros o bancos de datos personales.
+-
+Análisis del comportamiento financiero, comercial y crediticio del cliente, en cumplimiento de obligaciones legales y regulatorias.
+-
+3. Perfil de Cliente y Acciones Comerciales
+Mejora de la experiencia del cliente mediante asesoría, soporte y canales de comunicación efectivos.
+-
+Desarrollo de productos y análisis de riesgo para ofrecer soluciones personalizadas y asimismo, para dar cumplimiento a las políticas internas previstas al efecto y, además, a las regulaciones vigentes.
+-
+Envío de información sobre productos, beneficios de programas de fidelización, eventos, sorteos, descuentos y encuestas de satisfacción. Estas comunicaciones se podrán realizar a través de correo electrónico, mensajes de texto (SMS), notificaciones en aplicaciones móviles, redes sociales, llamadas telefónicas, entre otros medios.
+-
+Para enviar al titular información proveniente del Banco o de las empresas filiales o relacionadas al Banco, en especial, de campañas comerciales, promoción de productos y servicios relacionadas con productos bancarios y financieros, y beneficios en virtud de programas de fidelización;
+-
+Realizar encuestas de satisfacción.
+-
+VI. FUENTE U ORIGEN DE LOS DATOS:
+Banco de Chile obtiene y trata datos personales a partir de diversas fuentes, conforme a la normativa vigente y principios de protección de la privacidad.
+Los datos pueden provenir de:
+Relaciones contractuales: Información proporcionada directamente por el titular en el marco de la contratación y ejecución de productos y servicios bancarios.
+-
+Consentimiento del titular: Datos entregados voluntariamente por el titular de datos para finalidades específicas, como obtener información de la oferta de productos, participación en programas de fidelización o comunicaciones comerciales.
+-
+Fuentes de acceso público: Información obtenida de registros públicos, organismos reguladores, bases de datos oficiales y otras fuentes accesibles al público conforme a la ley, como por ejemplo el Diario Oficial, los Registros de Comercio y el Registro de Empresas y Sociedades de la Ley 20659.
+-
+Otras fuentes de acceso conforme a la regulación vigente: Información obtenida de registros de organismos reguladores, bases de datos oficiales y otras fuentes accesibles conforme a la ley, como por ejemplo el registro de deudores a que se refiere el artículo 14 de la Ley General de Bancos.
+-
+VII. PERIODO DE CONSERVACIÓN:
+Banco de Chile conservará los datos personales durante el tiempo necesario conforme a la normativa vigente, incluidas las obligaciones establecidas por la Ley General de Bancos y otras regulaciones aplicables.
+El período de conservación podrá extenderse en los siguientes casos:
+Cumplimiento contractual: Mientras se mantenga vigente la relación contractual con el titular de los datos.
+-
+Obligaciones legales y regulatorias: En cumplimiento a la ley y regulaciones vigentes, entre ellas, lo exigido por la Ley General de Bancos en su artículo 155 y normativa de la Comisión para el Mercado Financiero, que establecen plazos específicos de conservación para efectos de auditoría, supervisión y cumplimiento de obligaciones legales y normativas, inclusive habiendo finalizado la relación contractual.
+-
+Prevención de fraudes y actividades ilícitas: Para proteger la seguridad del sistema financiero y cumplir con regulaciones sobre prevención del lavado de activos y financiamiento del terrorismo, según mandata la Unidad de Análisis Financiero.
+-
+Defensa ante posibles responsabilidades legales: Cuando sea necesario conservar información para atender reclamos o ejercer derechos legales.
+-
+VIII. COMUNICACIÓN DE DATOS CON TERCEROS
+Banco de Chile aplica la presente política de privacidad a los terceros con quienes comunica o comparte los datos personales de sus clientes, en las circunstancias detalladas a continuación:
+1. Proveedores externos:
+Para el desarrollo de nuestros servicios contamos con el apoyo de proveedores especializados que colaboran en la gestión de distintos procesos. De acuerdo con el Capítulo 20-7 de la Recopilación Actualizada de Normas de la Comisión para el Mercado Financiero, estos proveedores ponen a disposición su infraestructura para la ejecución de dichos procesos, lo que puede incluir la transmisión de datos. Los proveedores son seleccionados conforme a las políticas y procedimientos establecidos en el Banco para tales efectos.
+2. Filiales y empresas relacionadas:
+Para complementar y optimizar los servicios que ofrecemos, Banco de Chile podrá compartir datos con sus filiales y empresas asociadas con fines comerciales e informativos, facilitando la contratación de productos y servicios e informando a las filiales del cumplimiento de obligaciones legales.
+3. Terceros con quienes celebre acuerdos comerciales
+Para complementar y optimizar los productos y servicios que ofrece, Banco de Chile puede compartir datos personales de sus clientes, tales como nombre, RUT, domicilio, actividad e información relacionada a la utilización de sus productos que no se encuentre sujeta a secreto y reserva bancaria, con terceros con quienes haya celebrado acuerdos comerciales para la entrega de beneficios asociados a un plan o programa de fidelización, todo ello dando cumplimiento a la regulación vigente y a los términos de la presente Política.
+4. Para prevención de delitos y prevención de fraude:
+Con el propósito de mitigar riesgos asociados al lavado de activos, financiamiento del terrorismo, proliferación de armas de destrucción masiva, prevención del fraude y otras actividades ilícitas, Banco de Chile podrá compartir datos con las entidades competentes en estas materias.
+5. Por requerimiento de autoridades competentes:
+En respuesta a solicitudes o requerimientos de información de entidades administrativas o judiciales, impartidas en el ejercicio de sus atribuciones.
+6. Para cumplimiento legal y normativo:
+En caso de ser requerido por leyes, regulaciones, citaciones u órdenes judiciales.
+IX. SEGURIDAD EN EL TRATAMIENTO
+Banco de Chile protege los activos de información de la Institución conforme a los principios de Confidencialidad, Integridad y Disponibilidad, conforme a las normativas, regulaciones y leyes vigentes, en especial, la ley 19.628 Sobre Protección de Datos de Carácter personal y la normativa sobre secreto y reserva bancarios contenida en el artículo 154 de la Ley General de Bancos.
+En Banco de Chile, la ciberseguridad es una prioridad para la protección de los datos personales y financieros de nuestros clientes. Así mismo, cuenta con una infraestructura adecuada y avanzada, sistemas de monitoreo y protocolos de seguridad. Para estos efectos, un equipo especializado en ciberseguridad trabaja en la identificación y mitigación de riesgos, fortaleciendo las defensas del Banco ante posibles ataques cibernéticos.
+X. DERECHOS DE LOS TITULARES.
+Todo cliente tiene derecho a obtener información sobre la existencia del tratamiento de sus datos y los derechos asociados. Estos derechos son acceso, rectificación, cancelación y oposición (“Derechos ARCO”).
+Los titulares de datos tienen derecho a modificar o revocar, en cualquier momento y sin expresión de causa, por los canales establecidos por el Banco, su consentimiento para cualquiera de los tratamientos para los que el mismo cliente de manera previa hubiese otorgado. La revocación del consentimiento no produce efectos retroactivos. En caso de retirar el consentimiento siendo cliente, en ciertos casos, el Banco no podrá proporcionarle los servicios pactados. No será así, en caso de que el interesado retire el consentimiento para el tratamiento de sus datos para fines comerciales o de marketing directo. Lo anterior es sin perjuicio del tratamiento de datos conforme a las regulaciones vigentes, especialmente aquellos de carácter económico, financiero, bancario o comercial en que dicho tratamiento esté expresamente regulado por ley o por disposiciones regulatorias emanadas de autoridad competente.
+El Banco dispone de un canal para el ejercicio de sus derechos en su sitio web, indicado en el numeral 5 de este capítulo. Es posible que para el ejercicio de sus derechos le solicitemos información adicional dado que estos derechos sólo pueden ser ejercidos personalmente por el titular o por un mandatario expresamente premunido de dicha facultad. El Banco realiza esfuerzos razonables por mantener su información actualizada y por responder en el más breve plazo a las solicitudes de derechos de parte de los titulares.
+1. Derecho de acceso
+Derecho de toda persona natural para solicitar y obtener confirmación acerca de si los datos personales que le conciernen están siendo tratados por Banco de Chile.
+2. Derecho de rectificación
+Derecho de toda persona natural para obtener que los datos tratados por Banco de Chile que sean inexactos desactualizados o incompletos, sean rectificados.
+3. Derecho de cancelación
+Derecho de toda persona natural a exigir la eliminación de los datos personales que en cada caso corresponda, en las circunstancias siguientes:
+Cuando los datos no resulten necesarios en relación con los fines del tratamiento para el cual fueron recogidos.
+-
+Cuando el titular haya revocado su consentimiento para el tratamiento y éste no tenga otro fundamento regulatorio.
+-
+Cuando los datos hayan sido obtenidos o tratados ilícitamente por el responsable.
+-
+Cuando se trate de datos caducos.
+-
+Cuando los datos deban suprimirse para el cumplimiento de una sentencia judicial, o de una obligación legal.
+-
+Cuando el titular haya ejercido su derecho de oposición de conformidad a la ley y no existan otro fundamento legal para su tratamiento.
+-
+4. Derecho de oposición
+Derecho de toda persona natural a oponerse al tratamiento de sus datos personales, solo en los siguientes casos.
+Si el tratamiento que realizamos solo tiene fines de mercadotecnia o marketing.
+-
+Si el tratamiento que realizamos es respecto de datos obtenidos de fuentes de acceso público y no existe otro fundamento legal o regulatorio para su tratamiento.
+-
+5. Solicitud para ejercicio de Derechos ARCO.
+Las solicitudes para el ejercicio de los “derechos ARCO” deberán efectuarse por el canal establecido en esta política y debe cumplir a lo menos con los siguientes requisitos:
+a) Individualización del titular y de su representante legal o mandatario, según corresponda.
+-
+b) Cumplimiento de un procedimiento idóneo de verificación de identidad, dado que los derechos vinculados a la protección de datos son personales.
+-
+c) Indicación de un domicilio o una dirección de correo electrónico o de otro medio equivalente para comunicar la respuesta.
+-
+d) Identificación de los datos personales o del tratamiento determinado, respecto de los cuales se ejerce el derecho correspondiente.
+-
+e) En las solicitudes de acceso, el titular deberá indicar que tipo de datos y tratamiento requiere que se le informe.
+-
+f) En las solicitudes de rectificación, el titular deberá indicar las modificaciones o actualizaciones precisas a realizar y acompañar, en su caso, los antecedentes que las sustenten.
+-
+g) En las solicitudes de supresión y oposición, el titular deberá indicar el motivo fundamentando brevemente su petición, puede igualmente acompañar los antecedentes que estime procedentes.
+-
+El canal formal para el ejercicio de los “derechos ARCO” por parte de los titulares y para comunicarse con el Banco en los casos donde se considere que existe alguna infracción de la normativa vigente, en la forma en la que se están tratando sus datos personales, es a través del canal “Derechos ARCO” de la página web del Banco.
+XI. AUDITORIAS A LA PRESENTE POLÍTICA DE PRIVACIDAD
+Banco de Chile realizará auditorías para verificar el cumplimiento de la presente Política de Privacidad en cualquier momento, que podrán ser internas o externas.
+XII. MODIFICACIONES DE LA PRESENTE POLÍTICA DE PRIVACIDAD
+Banco de Chile podrá modificar la presente Política de Privacidad en cualquier momento con arreglo a esta disposición o si cambios legales lo ameritan. La versión actualizada de ésta se publicará en el sitio web del Banco.
+El Gerente General queda autorizado para aprobar modificaciones menores de referencia y de texto, que no afecten lo esencial del documento.

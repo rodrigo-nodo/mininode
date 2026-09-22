@@ -1,0 +1,78 @@
+Política de Privacidad
+Última actualización: 2 de julio de 2026
+Esta Política de Privacidad describe cómo Connectus SpA trata los datos personales en el marco de la plataforma Connectus (la "Plataforma") y del sitio www.connectus.la. Su objetivo es transparentar qué datos recolectamos, con qué finalidad, con quién los compartimos y qué derechos asisten a los titulares.
+1. Responsable del tratamiento
+Connectus SpA, RUT 76.517.351-5, con domicilio en Puerta del Sol 80, Oficina 020, Las Condes, Santiago, Chile. Para cualquier asunto relacionado con datos personales y privacidad, puedes escribir a [email protected].
+2. Alcance
+Esta Política aplica a: (i) los Clientes que contratan y usan la Plataforma; (ii) los usuarios autorizados dentro de cada cuenta; y (iii) los destinatarios de los mensajes enviados por nuestros Clientes a través de la Plataforma ("Destinatarios"). Respecto de los datos de Destinatarios, Connectus actúa generalmente como encargado del tratamiento por cuenta del Cliente, quien es el responsable de dichos datos.
+3. Datos que recolectamos
+3.1 Datos de Clientes y usuarios
+Datos de identificación y contacto: nombre, razón social, RUT, correo electrónico, teléfono.
+-
+Datos de cuenta: credenciales de acceso, rol, preferencias y configuración.
+-
+Datos de facturación y pago.
+-
+Datos de uso: registros de actividad, campañas, reportes y métricas.
+-
+3.2 Datos de Destinatarios (provistos por el Cliente)
+Números de teléfono, direcciones de correo electrónico e identificadores de WhatsApp.
+-
+Contenido de los mensajes y archivos asociados que el Cliente decide enviar.
+-
+Estados de entrega, lectura, clics y eventos de interacción.
+-
+3.3 Datos técnicos
+Dirección IP, identificadores de dispositivo y navegador, registros de servidor (logs) y cookies.
+-
+4. Finalidades del tratamiento
+Prestar, operar y mantener la Plataforma y los Servicios contratados.
+-
+Procesar y enrutar mensajes por SMS, correo electrónico y WhatsApp, y entregar sus estados.
+-
+Generar reportes, estadísticas y facturación.
+-
+Garantizar la seguridad, prevenir fraude, abuso y envíos no autorizados.
+-
+Brindar soporte y comunicar información relevante del servicio.
+-
+Cumplir obligaciones legales y requerimientos de autoridad competente.
+-
+5. Base de licitud
+Tratamos los datos sobre la base de: la ejecución del contrato con el Cliente; el consentimiento del titular cuando corresponde; el interés legítimo en la seguridad y mejora del servicio; y el cumplimiento de obligaciones legales. El Cliente declara y garantiza haber obtenido de los Destinatarios el consentimiento previo, informado y verificable necesario para el envío de las comunicaciones.
+6. WhatsApp Business Platform y Meta
+Cuando el Cliente utiliza el canal de WhatsApp, la Plataforma se integra con la WhatsApp Business Platform, provista por Meta Platforms Ireland Limited y sus afiliadas ("Meta"). Para enrutar y entregar los mensajes, ciertos datos —como el número de teléfono del Destinatario y el contenido del mensaje— son transmitidos a y procesados por Meta.
+El tratamiento que Meta realiza de dichos datos se rige por las políticas y términos de Meta y de WhatsApp, disponibles en https://www.whatsapp.com/legal/. Connectus utiliza la WhatsApp Business Platform únicamente para prestar los Servicios solicitados por el Cliente y no emplea los datos de mensajería de WhatsApp para finalidades de publicidad propias ni los vende a terceros. El Cliente es responsable de cumplir las políticas de WhatsApp Business y de Meta aplicables a sus envíos.
+Asimismo, cuando el Cliente conecta sus activos de WhatsApp Business a la Plataforma mediante el registro integrado de Meta (Embedded Signup), Connectus recibe de Meta cierta información necesaria para operar el canal: identificadores de la cuenta de WhatsApp Business (WABA), identificadores y números de teléfono registrados, estado y calificación de calidad del número, plantillas de mensajes y credenciales de acceso (tokens) otorgadas por el Cliente. Estas credenciales se almacenan cifradas y se utilizan exclusivamente para prestar los Servicios al Cliente. El Cliente puede solicitar en cualquier momento la desconexión de sus activos de WhatsApp y la eliminación de dichas credenciales (ver sección 11).
+7. Con quién compartimos datos
+Compartimos datos personales únicamente con quienes resulta necesario para prestar los Servicios:
+Meta Platforms, para la entrega de mensajes a través de WhatsApp Business Platform.
+-
+Operadores de telecomunicaciones y agregadores de SMS, para la entrega de mensajes de texto.
+-
+Proveedores de envío de correo electrónico.
+-
+Proveedores de infraestructura tecnológica y alojamiento en la nube.
+-
+Pasarelas y procesadores de pago.
+-
+Autoridades competentes, cuando exista una obligación legal o requerimiento válido.
+-
+Estos terceros tratan los datos conforme a sus propias políticas y a los acuerdos suscritos con Connectus. No vendemos datos personales.
+8. Transferencias internacionales
+Algunos de nuestros proveedores se encuentran ubicados fuera de Chile. Cuando ello implique una transferencia internacional de datos, adoptamos resguardos razonables para que dicha transferencia se realice conforme a la normativa aplicable.
+9. Conservación de los datos
+Conservamos los datos personales mientras se mantenga la relación con el Cliente y durante los plazos adicionales que exija la ley o que resulten necesarios para atender reclamos, auditorías o requerimientos legales. Cumplidos dichos plazos, los datos son eliminados o anonimizados.
+10. Seguridad
+Aplicamos medidas técnicas y organizativas razonables para proteger los datos personales frente a accesos no autorizados, pérdida, alteración o divulgación indebida, incluyendo control de acceso, cifrado en tránsito y registros de auditoría. Ningún sistema es completamente infalible, por lo que no podemos garantizar una seguridad absoluta.
+11. Derechos de los titulares
+Los titulares pueden ejercer sus derechos de acceso, rectificación, cancelación (eliminación) y oposición respecto de sus datos personales, conforme a la Ley N° 19.628 sobre Protección de la Vida Privada y, en lo que resulte aplicable, a la Ley N° 21.719.
+Para ejercerlos, escribe a [email protected]. Si deseas eliminar tu cuenta y todos tus datos, puedes hacerlo directamente desde la Plataforma siguiendo las instrucciones de la página Cómo eliminar tu cuenta. Si la solicitud se refiere a datos de un Destinatario tratados por cuenta de un Cliente, podremos derivarla al Cliente responsable o atenderla coordinadamente con él.
+12. Cookies
+El sitio y la Plataforma utilizan cookies y tecnologías similares necesarias para el inicio de sesión, la seguridad y el funcionamiento del servicio, así como cookies para recordar preferencias. Puedes gestionar las cookies desde la configuración de tu navegador; deshabilitar algunas puede afectar el funcionamiento de la Plataforma.
+13. Menores de edad
+La Plataforma está dirigida a empresas y a personas mayores de edad. No recolectamos de manera consciente datos de menores de edad.
+14. Cambios a esta Política
+Podemos actualizar esta Política de Privacidad. La versión vigente estará siempre disponible en esta página, con su fecha de actualización. Los cambios sustanciales podrán comunicarse adicionalmente a través de la Plataforma.
+15. Contacto
+Para consultas sobre privacidad y datos personales, escríbenos a [email protected]. Consulta también nuestros Términos y Condiciones.

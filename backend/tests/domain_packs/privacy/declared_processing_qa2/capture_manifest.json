@@ -1,0 +1,116 @@
+[
+  {
+    "case_id": "Q2-01",
+    "requested_url": "https://www.empresachile.cl/Legal/politica_de_privacidad.php",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:15.450853+00:00",
+    "http_status": 200,
+    "final_url": "https://www.empresachile.cl/Legal/politica_de_privacidad.php",
+    "status": "captured",
+    "sha256": "8507f3c87ec60266c10cee3fd7159b9aa4072a4f015175f77e19523ced2d2526",
+    "bytes": 21316,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-02",
+    "requested_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:16.160566+00:00",
+    "http_status": 200,
+    "final_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+    "status": "captured",
+    "sha256": "bfe5cc8e943399882b677048dad9e39a149e5eba39a0d8f515740ec6fac6869a",
+    "bytes": 21655,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-03",
+    "requested_url": "https://www.gestdat.cl/cookies/",
+    "document_type": "cookie_policy",
+    "captured_at_utc": "2026-09-22T13:42:16.635107+00:00",
+    "http_status": 200,
+    "final_url": "https://www.gestdat.cl/cookies/",
+    "status": "captured",
+    "sha256": "a341c7b4d04f95fdd3251eaafa9d085da28d2812ad3bc085805f212f24da2c24",
+    "bytes": 4896,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-04",
+    "requested_url": "https://www.acdata.cl/politica-de-privacidad",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:16.955872+00:00",
+    "status": "capture_failed",
+    "error_type": "ConnectError",
+    "error": "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)"
+  },
+  {
+    "case_id": "Q2-05",
+    "requested_url": "https://grupoec.cl/privacidad",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:17.348896+00:00",
+    "http_status": 403,
+    "final_url": "https://grupoec.cl/privacidad",
+    "status": "capture_failed",
+    "error_type": "HTTPStatusError",
+    "error": "Client error '403 Forbidden' for url 'https://grupoec.cl/privacidad'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+  },
+  {
+    "case_id": "Q2-06",
+    "requested_url": "https://martech.cl/politica-de-privacidad/",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:17.540537+00:00",
+    "http_status": 403,
+    "final_url": "https://martech.cl/politica-de-privacidad/",
+    "status": "capture_failed",
+    "error_type": "HTTPStatusError",
+    "error": "Client error '403 Forbidden' for url 'https://martech.cl/politica-de-privacidad/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+  },
+  {
+    "case_id": "Q2-07",
+    "requested_url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:17.700577+00:00",
+    "http_status": 200,
+    "final_url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+    "status": "captured",
+    "sha256": "fb8d7c5eae1a0da807ed3d7024b1ecef4e30e9aabd9807f3dd1039df68068455",
+    "bytes": 12424,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-08",
+    "requested_url": "https://www.nexocap.cl/politica-de-privacidad/",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:18.282385+00:00",
+    "http_status": 200,
+    "final_url": "https://www.nexocap.cl/politica-de-privacidad/",
+    "status": "captured",
+    "sha256": "f407b0480dceecedf8f44efd6edea3391f433af1f01615ceaaccea84de2c3676",
+    "bytes": 20254,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-09",
+    "requested_url": "https://www.connectus.cl/politica-de-privacidad",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:20.579589+00:00",
+    "http_status": 200,
+    "final_url": "https://www.connectus.cl/politica-de-privacidad",
+    "status": "captured",
+    "sha256": "2862270adf143565784e7dc385cf09d1e46a93b4d2d9be13c599f4e64797a11b",
+    "bytes": 7527,
+    "page_title": null
+  },
+  {
+    "case_id": "Q2-10",
+    "requested_url": "https://urbanmarketing.cl/politica-de-privacidad/",
+    "document_type": "privacy_policy",
+    "captured_at_utc": "2026-09-22T13:42:20.813558+00:00",
+    "http_status": 403,
+    "final_url": "https://urbanmarketing.cl/politica-de-privacidad/",
+    "status": "capture_failed",
+    "error_type": "HTTPStatusError",
+    "error": "Client error '403 Forbidden' for url 'https://urbanmarketing.cl/politica-de-privacidad/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+  }
+]

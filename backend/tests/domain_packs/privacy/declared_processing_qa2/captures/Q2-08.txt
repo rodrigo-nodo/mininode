@@ -1,0 +1,152 @@
+Política de privacidad
+Versión 1.7 · 30 de agosto de 2026
+1. Quién trata sus datos
+Responsable | NEXOCAP SpA |
+RUT | 77.735.146-K |
+Domicilio | Av. Vitacura 2939, Oficina 1102, Las Condes, Región Metropolitana, Chile |
+Correo de contacto en materia de datos personales | datos@nexocap.cl |
+Teléfono | +56 9 8579 0742 |
+Representante legal | Paulina Molina — RUT 16.384.011-1 |
+Sitio web | https://www.nexocap.cl |
+Las disposiciones que se citan en esta política corresponden a la Ley N° 19.628, en el texto fijado por la Ley N° 21.719, cuya vigencia plena comienza el 1 de diciembre de 2026. Esta política se adelanta a ese régimen.
+NEXOCAP SpA es un Organismo Técnico de Capacitación que forma parte del Grupo Nexo, junto a Nexo Inclusivo, Fundación Neo Inclusión y Empleos Nexo. Cada una de esas entidades es un responsable de datos distinto: esta política cubre únicamente los tratamientos que realiza NEXOCAP SpA.
+Delegada de protección de datos. NEXOCAP SpA ha designado delegada de protección de datos a Paulina Molina, en su calidad de máxima autoridad de la sociedad. El artículo 50 permite expresamente que, en las micro, pequeñas y medianas empresas, el dueño o sus máximas autoridades asuman personalmente esas funciones.
+Puede dirigirse a la delegada por el mismo correo de contacto: datos@nexocap.cl, indicando en el asunto «Protección de datos».
+2. Alcance de esta política
+Esta política describe cómo NEXOCAP SpA trata los datos personales de:
+quienes visitan nexocap.cl;
+-
+quienes crean una cuenta y compran un curso en el sitio;
+-
+quienes cursan un programa en el aula virtual;
+-
+quienes escriben por el canal de WhatsApp publicado en el sitio;
+-
+las contrapartes de las empresas clientes que contratan capacitación.
+-
+Un caso queda fuera y conviene decirlo desde el principio. Cuando una empresa contrata a NEXOCAP para capacitar a sus trabajadores y le entrega la nómina de participantes, esa empresa es la responsable de esos datos y NEXOCAP actúa por cuenta de ella, en calidad de encargado, conforme al artículo 15 bis. En ese escenario, el trabajador debe dirigirse en primer lugar a su empleador, y la información sobre ese tratamiento se la debe entregar su empleador. NEXOCAP conserva, con todo, una finalidad propia acotada: la emisión de certificados a su nombre y la conservación de registros académicos para su auditoría de calidad. Respecto de esa finalidad propia, NEXOCAP sí es responsable y esta política le resulta aplicable.
+A quiénes conciernen los datos. Los tratamientos descritos aquí conciernen a cinco universos de personas: visitantes del sitio; compradores de cursos; participantes de las acciones de capacitación, todos mayores de dieciocho años; contrapartes de las empresas clientes; y relatores y personal de NEXOCAP.
+De dónde vienen sus datos. Salvo los casos que se indican expresamente en las secciones 3.6 y 3.8, los datos personales que tratamos nos los aporta usted mismo, o los genera su propio uso del sitio y del aula en forma de pedidos, avance, calificaciones y registros de conexión. NEXOCAP no obtiene datos personales de fuentes de acceso público ni los adquiere de terceros.
+3. Qué datos tratamos, para qué, y con qué fundamento
+3.1 Cuenta de usuario y compra de cursos
+Datos: nombre y apellidos, RUT, correo electrónico, teléfono, dirección de facturación, comuna y región; nombre y RUT de la empresa cuando la compra se hace a nombre de una; nombre de usuario y contraseña (almacenada cifrada, nunca en claro); historial de pedidos; notas del pedido que la persona escriba voluntariamente.
+Finalidades: crear y mantener la cuenta; procesar la compra; emitir el documento tributario correspondiente; matricular en el curso; entregar soporte.
+Base de licitud: celebración y ejecución del contrato con el titular, y medidas precontractuales, conforme al artículo 13 letra c). La emisión y conservación de documentos tributarios se apoya además en el cumplimiento de una obligación legal, artículo 13 letra b).
+3.2 Pago
+Datos: identificación del pagador, monto y datos de la transacción. NEXOCAP no recibe, no ve y no almacena los números de tarjeta: esos datos se ingresan directamente en el entorno de la pasarela.
+Cómo funciona la cadena: el pago se procesa a través de PAYKU SpA, que a su vez opera con Transbank S.A. (Webpay).
+Base de licitud: ejecución del contrato, artículo 13 letra c).
+3.3 Aula virtual y actividad académica
+Datos: credenciales de acceso, registros de conexión, avance en el curso, calificaciones, asistencia y certificados obtenidos.
+Finalidades: impartir el curso, evaluar, certificar y acreditar la actividad ante auditoría de calidad.
+Base de licitud: ejecución del contrato, artículo 13 letra c). Cuando el curso lo contrató un empleador, el tratamiento se realiza por cuenta de éste conforme al artículo 15 bis (ver sección 2).
+Grabación de clases sincrónicas. Algunas clases en vivo se graban. Cuando así sea, se avisa antes de comenzar la sesión y la grabación se conserva sólo por el plazo indicado en la sección 6. Quien no desee aparecer puede mantener su cámara y su micrófono apagados.
+3.4 Canal de WhatsApp
+Datos: número de teléfono, nombre de perfil y el contenido de los mensajes que la persona envíe.
+Finalidad: responder consultas comerciales y de soporte.
+Base de licitud: medidas precontractuales y ejecución del contrato, artículo 13 letra c).
+Advertencia relevante. El botón de WhatsApp del sitio es un enlace: no instala nada ni comunica su visita a nadie mientras usted no lo pulse. Si lo pulsa, la conversación ocurre en la plataforma de Meta Platforms, Inc., sujeta a sus propias condiciones, e implica una transferencia internacional (sección 7). Le pedimos no enviar por ese canal datos de salud ni antecedentes de discapacidad.
+3.5 Cookies y medición de audiencia
+El sitio utiliza cookies estrictamente necesarias para funcionar —mantener la sesión y el contenido del carrito de compra—, que no requieren consentimiento porque sin ellas el servicio no puede prestarse.
+Utiliza además cookies de medición de audiencia (Google Analytics 4), que sirven para saber qué canales traen alumnos. No se instalan ni miden nada hasta que usted lo consienta mediante el aviso de cookies. La base de licitud es su consentimiento, artículo 12, y puede retirarlo en cualquier momento desde el mismo aviso, sin que ello afecte la licitud del tratamiento anterior al retiro.
+El detalle de cada cookie —nombre, finalidad, duración y titular— está en la Política de cookies.
+3.6 Personas inscritas por Fundación Neo Inclusión
+Fundación Neo Inclusión inscribe de forma gratuita a personas con discapacidad en cursos de NEXOCAP y, para ello, le entrega su nombre, RUT, correo y el antecedente que acredita su condición.
+Esos antecedentes son datos sensibles conforme al artículo 2 letra g), que califica como tales los datos relativos a la salud. Su tratamiento exige consentimiento expreso del titular, otorgado por declaración escrita, verbal o por un medio tecnológico equivalente, conforme al artículo 16 inciso primero, y la entrega de la nómina constituye una cesión entre responsables distintos en los términos del artículo 15.
+Lo que esto significa para usted: el consentimiento que le corresponde otorgar se recaba en la Fundación, y es la Fundación quien debe informarle sobre esa cesión. NEXOCAP trata esos datos con la única finalidad de matricularle en el curso y de acreditar el cumplimiento de los requisitos de gratuidad, y no los utiliza para ninguna otra cosa.
+3.7 Certificación de competencias ante ChileValora
+Quienes cursan el programa de Gestor o Gestora de Inclusión Laboral y optan a la certificación ante ChileValora deben aportar antecedentes adicionales —cédula de identidad, contrato de trabajo y carta de la jefatura— que se utilizan exclusivamente para tramitar esa certificación.
+Base de licitud: ejecución del contrato, artículo 13 letra c).
+Destinatario. Esos antecedentes se remiten a Capitol Group, centro acreditado por ChileValora para la evaluación y certificación de competencias laborales.
+Capitol Group no actúa por instrucción de NEXOCAP: evalúa y certifica en ejercicio de su propia acreditación y conforme a la normativa del Sistema Nacional de Certificación de Competencias Laborales. Por eso es un responsable de datos independiente, con sus propios deberes de información y de seguridad frente a usted. La entrega de sus antecedentes se realiza únicamente cuando usted opta a la certificación, y sólo con los datos que ese trámite exige.
+3.8 Contrapartes de empresas clientes
+Datos: nombre, cargo, correo y teléfono de la persona de contacto en la empresa.
+Finalidad: gestionar la relación comercial y la ejecución del servicio.
+Base de licitud: interés legítimo de NEXOCAP en mantener la relación con su cliente, artículo 13 letra d), ponderado con la expectativa razonable de una persona que actúa en representación de una empresa. Puede oponerse a este tratamiento en cualquier momento por la vía de la sección 8.
+4. Lo que no hacemos
+Conviene decirlo con la misma claridad con que se dice lo demás:
+No vendemos ni cedemos sus datos a terceros con fines publicitarios.
+-
+No enviamos comunicaciones comerciales masivas. NEXOCAP no mantiene listas de difusión.
+-
+No adoptamos decisiones automatizadas que produzcan efectos jurídicos sobre usted ni le afecten significativamente. No elaboramos perfiles.
+-
+No clasificamos nuestro catálogo por condición de la persona. Los cursos se ofrecen por materia, no por características de quien se inscribe.
+-
+No solicitamos datos de salud en el sitio. Ningún formulario ni campo del sitio pide antecedentes de discapacidad, diagnóstico o condición.
+-
+Los cursos se ofrecen a personas mayores de 18 años. El sitio no pide fecha de nacimiento y no está dirigido a niños, niñas ni adolescentes.
+-
+5. Quién más ve sus datos
+Trabajamos con proveedores que tratan datos personales por cuenta de NEXOCAP y bajo sus instrucciones, en calidad de encargados conforme al artículo 15 bis, o que los reciben como responsables independientes para sus propios fines regulados.
+Destinatario | Qué recibe | En qué calidad |
+---|---|---|
+premiumhosting.cl (Chile; servidores en Estados Unidos) | Alojamiento del sitio, de la tienda y del aula virtual | Subencargado: presta el alojamiento por cuenta de nuestro proveedor de soporte informático, y no directamente por cuenta de NEXOCAP |
+PAYKU SpA (Chile) | Identificación del pagador, monto y transacción | Encargado del procesamiento; responsable independiente para sus propios fines regulados |
+Transbank S.A. (Chile) | Procesamiento del medio de pago | Responsable independiente |
+Google LLC | Archivos de trabajo, videoconferencia, grabaciones de clases y medición de audiencia | Encargado |
+Microsoft Corporation | Archivos de trabajo y respaldos | Encargado |
+Meta Platforms, Inc. | Contenido del canal de WhatsApp | Responsable independiente |
+Contadora externa | Datos de facturación de compradores, para la emisión y declaración de documentos tributarios | Encargada |
+Proveedor de soporte informático | Administración de los sistemas, acceso remoto para mantención y contratación del alojamiento por cuenta de NEXOCAP | Encargado |
+Organismo certificador de calidad | Expedientes académicos, en la auditoría anual | Responsable independiente |
+Capitol Group | Cédula de identidad, contrato de trabajo y carta de jefatura de quien opta a certificación ante ChileValora | Responsable independiente |
+Servicio de Impuestos Internos | Documentos tributarios | Destinatario en cumplimiento de una obligación legal |
+Tribunales y autoridades públicas | Lo que la ley les faculte requerir | Destinatarios en cumplimiento de una obligación legal |
+Los contratos de encargo del artículo 15 bis se encuentran en proceso de suscripción y estarán vigentes antes del 1 de diciembre de 2026, fecha de entrada en plena vigencia de la ley. Su contenido obligatorio es el siguiente: todo encargado queda obligado a tratar los datos únicamente conforme a nuestras instrucciones, a guardar secreto conforme al artículo 14 bis, a aplicar las medidas de seguridad del artículo 14 quinquies, a no subcontratar sin autorización específica y por escrito, y a devolver o suprimir los datos al término del servicio. Cuando un encargado contrata a su vez a un tercero para prestar parte del servicio —como ocurre con el alojamiento—, ese tercero actúa como subencargado: queda sujeto a las mismas obligaciones por la vía del contrato de quien lo contrata, y su incorporación requiere autorización específica y por escrito de NEXOCAP. Los destinatarios identificados como responsables independientes no actúan por instrucción de NEXOCAP: tratan los datos bajo sus propias condiciones y con sus propios deberes de información y de seguridad frente a usted.
+6. Cuánto tiempo conservamos sus datos
+El artículo 14 ter letra i) exige que cada plazo de conservación tenga un fundamento. Estos son los nuestros:
+Dato | Plazo | Fundamento |
+---|---|---|
+Datos de la cuenta de usuario | Mientras exista relación formativa o comercial vigente, y hasta 24 meses después del término del último curso o del cierre de la cuenta | Reemisión de constancias, y atención de consultas y reclamos posteriores |
+Pedidos y documentos tributarios | 6 años desde la emisión | Plazos de conservación y de fiscalización de la normativa tributaria |
+Expediente académico: calificaciones, entregas y estado de finalización | 5 años desde el término del curso | Acreditación de la acción de capacitación ante SENCE y ante la auditoría anual de la norma de calidad |
+Registro de certificados emitidos | 10 años | Permitir la reemisión del certificado a solicitud del egresado |
+Grabaciones de clases sincrónicas | 90 días desde el término del curso | Permitir el repaso durante el curso; vencido el plazo dejan de ser necesarias |
+Registros de conexión y actividad, con dirección IP | 1.000 días | Seguridad, soporte y resolución de incidencias |
+Conversaciones del canal de WhatsApp | 12 meses | Trazabilidad de la atención comercial y de soporte |
+Cookies | El indicado para cada una en la Política de cookies | — |
+Vencido el plazo, los datos se suprimen o se anonimizan de forma que dejen de permitir la identificación de la persona.
+7. Transferencias internacionales
+Parte de la infraestructura que utilizamos está alojada fuera de Chile, principalmente en Estados Unidos. Eso ocurre con los servicios de Google, Microsoft y Meta, y también con el alojamiento del sitio, de la tienda y del aula virtual: premiumhosting.cl es una empresa chilena, pero contrata en Estados Unidos los servidores en que residen los datos. Esta última alcanza a la totalidad de la información que usted nos entrega a través de este sitio.
+Estas transferencias se rigen por el Título V, artículos 27 a 29. A esta fecha la Agencia de Protección de Datos Personales no ha publicado el listado de países que ofrecen un nivel adecuado de protección, de modo que tratamos estas transferencias como dirigidas a países respecto de los cuales no existe una decisión de adecuación.
+En consecuencia, NEXOCAP las ampara en garantías adecuadas en los términos del artículo 27 letra b): las cláusulas contractuales modelo aprobadas por la Resolución Exenta RAEX202503748, de 11 de diciembre de 2025, de la Subsecretaría de Economía y Empresas de Menor Tamaño, que NEXOCAP está incorporando a los contratos de encargo en proceso de suscripción a que se refiere la sección 5, antes del 1 de diciembre de 2026. Corresponde a NEXOCAP acreditar ante la Agencia que la transferencia se practicó conforme a la ley, según el inciso final del artículo 28. Cuando la Agencia apruebe sus propios instrumentos, NEXOCAP los adoptará.
+Puede solicitarnos información sobre las garantías aplicables a una transferencia concreta escribiendo a datos@nexocap.cl.
+8. Sus derechos y cómo ejercerlos
+La ley le reconoce seis derechos sobre sus datos personales, en el artículo 4:
+Derecho | En qué consiste |
+---|---|
+Acceso | Saber qué datos suyos tratamos, de dónde salieron, para qué y a quién se comunican |
+Rectificación | Corregir datos inexactos, desactualizados o incompletos |
+Supresión | Pedir que sus datos se eliminen cuando concurra alguna de las causales legales |
+Oposición | Oponerse a un tratamiento determinado, en los tres casos del artículo 8: cuando le cause un perjuicio y el tratamiento se apoye en el interés legítimo del responsable; cuando tenga por objeto la mercadotecnia directa; y cuando los datos provengan de fuentes de acceso público |
+Portabilidad | Recibir los datos que usted facilitó, en formato electrónico estructurado y de uso común, o pedir que se comuniquen a otro responsable. El artículo 9 lo reconoce cuando el tratamiento es automatizado y se funda en su consentimiento, que en NEXOCAP es la base de las cookies de medición de la sección 3.5 y de los antecedentes de la sección 3.6 |
+Bloqueo | Pedir la suspensión temporal de un tratamiento mientras se resuelve una solicitud |
+Cómo se ejercen
+Escriba a datos@nexocap.cl indicando:
+su nombre completo y RUT, y un medio para acreditar su identidad;
+-
+qué derecho ejerce y sobre qué datos;
+-
+un domicilio o correo para la respuesta.
+-
+Si actúa en representación de otra persona, acompañe el documento que lo acredite.
+Plazos, conforme al artículo 11
+Respondemos su solicitud dentro de 30 días corridos, prorrogables por una sola vez y hasta por otros 30 días corridos, avisándole del motivo de la prórroga.
+-
+Una solicitud de bloqueo temporal se responde dentro de 2 días hábiles. Mientras no se resuelva, esos datos no se tratan.
+-
+Conservamos respaldo de la respuesta, su fecha y su contenido íntegro.
+-
+Gratuidad, conforme al artículo 10
+Rectificación, supresión y oposición son siempre gratuitas. El acceso y la portabilidad son gratuitos al menos una vez cada tres meses; sólo si se ejercen más de una vez dentro del mismo trimestre podemos cobrar los costos directos en que incurramos.
+Si no está conforme
+Puede reclamar ante la Agencia de Protección de Datos Personales dentro de los 30 días hábiles siguientes a nuestra respuesta, o al vencimiento del plazo para responder si no la hubo.
+9. Seguridad
+Aplicamos medidas técnicas y organizativas apropiadas al riesgo, conforme al artículo 14 quinquies: cifrado del sitio en tránsito, contraseñas almacenadas mediante funciones de resumen, control de accesos por rol, respaldos periódicos con prueba de restauración, y actualización de los componentes del sitio y del aula virtual.
+Si ocurre una vulneración de seguridad que afecte a sus datos, la reportaremos a la Agencia de Protección de Datos Personales por los medios más expeditos posibles y sin dilaciones indebidas, conforme al artículo 14 sexies, y se lo comunicaremos a usted cuando la ley lo exija —en particular si la vulneración afecta datos sensibles o antecedentes económicos, financieros, bancarios o comerciales—, describiendo la naturaleza del incidente, sus posibles efectos y las medidas adoptadas.
+10. Imágenes generadas con inteligencia artificial
+Parte de las fotografías e ilustraciones de este sitio fueron generadas con herramientas de inteligencia artificial. Las personas que aparecen en ellas no son personas reales: no representan a alumnos, relatores ni trabajadores de NEXOCAP, y no se han utilizado imágenes de personas identificables para producirlas.
+Lo decimos por dos razones. La primera es de transparencia sin más. La segunda es específica de lo que hacemos: en una web sobre inclusión laboral de personas con discapacidad, quien ve una fotografía puede razonablemente suponer que hay una persona real detrás. No la hay, y corresponde decirlo.
+11. Cambios en esta política
+Si modificamos esta política, publicaremos la nueva versión en esta misma dirección indicando su fecha. Cuando el cambio afecte de forma sustancial a las finalidades o a las bases de licitud, se lo comunicaremos por los medios de contacto que tengamos registrados.
