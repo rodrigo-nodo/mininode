@@ -1,0 +1,454 @@
+Configurar privacidad
+Seleccione el nivel de cookies que desea autorizar durante esta sesión. Las cookies técnicas permanecerán siempre activas para garantizar el funcionamiento esencial del sitio web.
+Cookies técnicas
+Cookies necesarias
+Todas las cookies
+Política de Cookies
+Cookies técnicas
+Siempre activas
+Son indispensables para iniciar y mantener la sesión, aplicar la selección de privacidad y ejecutar las funciones técnicas esenciales del sitio web. No se utilizan para elaborar perfiles, medir campañas ni mostrar publicidad personalizada.
+PHPSESSID
+Cookie temporal utilizada por PHP para identificar la sesión activa. Se elimina al finalizar la sesión del navegador.
+Cookies necesarias
+Además de las cookies técnicas, este nivel permite cargar servicios externos necesarios para utilizar correctamente algunas funciones habituales del sitio web.
+Google reCAPTCHA:
+protege el formulario de contacto frente al spam y los envíos automatizados.
+Google Maps:
+permite mostrar el mapa de ubicación de la empresa cuando se encuentre habilitado.
+YouTube:
+permite reproducir videos incorporados en las páginas del sitio.
+Importante:
+si decide utilizar únicamente las cookies técnicas, el formulario de contacto no estará disponible, ya que requiere la protección de Google reCAPTCHA para garantizar un uso seguro. Del mismo modo, los mapas de ubicación y los videos incorporados dejarán de mostrarse mientras esta opción permanezca deshabilitada.
+Todas las cookies
+Incluye las cookies técnicas, las necesarias y las tecnologías adicionales que el administrador del sitio web pueda incorporar para ampliar sus funcionalidades.
+Estas tecnologías pueden utilizarse para fines de analítica, estadísticas, publicidad, medición de campañas, seguimiento de conversiones u otras finalidades descritas en la Política de Cookies vigente.
+Política de Cookies
+En la Política de Cookies encontrará información detallada sobre las tecnologías utilizadas, sus finalidades, los proveedores externos involucrados y la forma en que puede administrar su consentimiento.
+Su selección se mantendrá solamente durante esta sesión. Al cerrar el navegador y comenzar una nueva sesión, volveremos a solicitar su decisión.
+Ver la Política de Cookies completa
+Solo técnicas
+Solo necesarias
+Aceptar todas
+Inicio
+Nosotros
+Protección
+Monitoreo
+Asesoría
+Trabajos
+Contacto
+Política de cookies
+Política de cookies
+Política de Cookies y Tecnologías Similares
+Conozca qué cookies y tecnologías utiliza alexbrun.cl, sus finalidades, los servicios externos incorporados y cómo se informarán futuras herramientas de analítica o publicidad.
+Versión:
+1.0
+                          |
+Publicada:
+22/07/2026
+La presente
+Política de Cookies y Tecnologías Similares
+explica qué identificadores técnicos, cookies y servicios externos pueden
+        utilizarse durante la navegación por el sitio web
+www.alexbrun.cl
+.
+Esta política describe la configuración tecnológica vigente al momento
+        de publicarse esta versión. Su contenido podrá actualizarse cuando se
+        incorporen, modifiquen o eliminen herramientas que utilicen cookies,
+        identificadores de sesión, almacenamiento local u otras tecnologías
+        similares.
+Actualmente, alexbrun.cl no utiliza deliberadamente herramientas propias
+        de analítica web, seguimiento publicitario, remarketing o elaboración de
+        perfiles, tales como Google Analytics, Google Tag Manager, Google Ads,
+        Meta Pixel u otras tecnologías equivalentes.
+1. Identificación del responsable
+El responsable de las tecnologías implementadas directamente en este
+        sitio web es:
+Razón social:
+Seguridad Felix Rivera SpA
+RUT:
+77.571.267-8
+Domicilio:
+Miraflores 249, Oficina 42B, Santiago, Chile
+Representante legal:
+Félix Eduardo Rivera Montoya
+RUT del representante legal:
+18.671.006-1
+Sitio web:
+www.alexbrun.cl
+Las solicitudes relacionadas con datos personales podrán presentarse
+        mediante el formulario disponible en:
+https://www.alexbrun.cl/arcop
+2. Objeto de esta política
+El objetivo de esta política es proporcionar información clara,
+        comprensible y accesible sobre:
+Qué son las cookies y las tecnologías similares.
+Qué identificadores técnicos utiliza alexbrun.cl.
+Para qué finalidades se emplean.
+Qué servicios externos están incorporados en el sitio.
+Qué proveedores pueden establecer sus propias tecnologías.
+Qué herramientas no se utilizan actualmente.
+Cómo puede el usuario administrar las cookies desde su navegador.
+Cómo se informarán futuras modificaciones.
+3. Qué son las cookies
+Las cookies son pequeños archivos o fragmentos de información que un
+        sitio web o un servicio externo puede almacenar en el navegador o
+        dispositivo del usuario.
+Dependiendo de su finalidad, pueden utilizarse para:
+Mantener una sesión activa.
+Recordar configuraciones o preferencias.
+Habilitar funciones necesarias del sitio.
+Proteger formularios y detectar actividades automatizadas.
+Medir visitas o interacciones.
+Reproducir contenidos externos.
+Analizar la navegación.
+Personalizar contenidos o publicidad.
+No todas las cookies tienen fines publicitarios ni permiten identificar
+        directamente a una persona. Algunas son estrictamente técnicas y
+        necesarias para el funcionamiento de una página web.
+4. Tecnologías similares
+Además de las cookies, un sitio puede utilizar tecnologías con funciones
+        semejantes, como:
+Identificadores de sesión.
+Almacenamiento local del navegador.
+Píxeles o etiquetas de seguimiento.
+Scripts incorporados desde servicios externos.
+Identificadores de dispositivos.
+Recursos incrustados mediante marcos o elementos iframe.
+Las referencias a cookies contenidas en esta política comprenden también
+        estas tecnologías cuando cumplan una función equivalente.
+5. Situación actual de alexbrun.cl
+Al momento de publicarse esta versión, alexbrun.cl no ha incorporado
+        deliberadamente tecnologías destinadas a observar detalladamente los
+        movimientos de sus usuarios, analizar su comportamiento comercial,
+        seguirlos entre diferentes páginas o mostrarles publicidad
+        personalizada.
+En particular, actualmente el sitio no utiliza:
+Google Analytics.
+Google Tag Manager.
+Google Ads.
+Meta Pixel o Pixel de Facebook.
+Microsoft Clarity.
+Hotjar.
+Herramientas propias de remarketing.
+Plataformas propias de elaboración de perfiles.
+Cookies propias destinadas a publicidad
+            comportamental.
+La ausencia actual de estas tecnologías no impide que alguna de ellas
+        pueda incorporarse en el futuro. En tal caso, esta política deberá
+        actualizarse antes de utilizar la nueva herramienta cuando la normativa
+        aplicable así lo requiera.
+6. Cookies propias y cookies de terceros
+Cookies propias
+Son aquellas establecidas o administradas directamente desde el dominio
+        alexbrun.cl para permitir funciones propias del sitio.
+Actualmente, el sitio utiliza como identificador técnico propio la cookie
+        de sesión denominada
+PHPSESSID
+.
+Cookies de terceros
+Son aquellas que pueden ser establecidas o administradas por proveedores
+        externos cuyos servicios se encuentran incorporados en el sitio.
+Alexbrun.cl incorpora servicios de Google reCAPTCHA, Google Maps y
+        YouTube. Estos proveedores pueden utilizar cookies, identificadores,
+        conexiones técnicas u otras tecnologías conforme a sus propias
+        configuraciones y políticas.
+7. Cookie técnica PHPSESSID
+El sitio utiliza una cookie técnica de sesión denominada
+PHPSESSID
+.
+Su finalidad es permitir que el servidor reconozca temporalmente una
+        misma sesión y mantenga la continuidad necesaria para ejecutar
+        correctamente determinadas funciones del sitio.
+Esta cookie:
+Es de naturaleza técnica.
+Se relaciona con la sesión de navegación.
+No contiene el mensaje ingresado en los formularios.
+No se utiliza para elaborar perfiles comerciales.
+No se utiliza para publicidad personalizada.
+No se utiliza para remarketing.
+No registra las páginas individuales visitadas.
+No se utiliza para seguir al usuario en otros sitios web.
+Su duración depende de la configuración técnica de la sesión, del
+        servidor y del navegador utilizado.
+8. Cookies estrictamente necesarias
+Las cookies estrictamente necesarias son aquellas indispensables para
+        proporcionar una función solicitada por el usuario, mantener la
+        continuidad técnica, proteger un formulario o permitir el funcionamiento
+        básico del sitio.
+La desactivación de este tipo de cookies puede provocar que determinadas
+        funciones no operen correctamente.
+El uso de
+PHPSESSID
+se limita a las necesidades técnicas
+        de la sesión y no se combina deliberadamente con herramientas propias de
+        publicidad o analítica comportamental.
+9. Contador agregado de visitas
+Alexbrun.cl mantiene un contador general de conexiones o visitas. Cada
+        acceso incrementa una cifra estadística acumulada.
+El contador no crea un perfil individual ni registra:
+La dirección IP del visitante.
+Su ubicación geográfica.
+El navegador utilizado.
+El sistema operativo.
+El dispositivo utilizado.
+Las páginas específicas visitadas.
+La duración de la navegación.
+El recorrido efectuado dentro del sitio.
+Identificadores publicitarios.
+Esta función solo incrementa un número agregado y no instala una cookie
+        analítica destinada a identificar o seguir individualmente al visitante.
+10. Google reCAPTCHA
+Los formularios del sitio pueden incorporar
+Google reCAPTCHA
+para protegerlos frente a spam,
+        actividades automatizadas, fraude, abuso y otros usos maliciosos.
+Para efectuar esta evaluación, reCAPTCHA puede utilizar cookies
+        necesarias, identificadores técnicos e información relacionada con la
+        interacción, el navegador, el dispositivo o la conexión.
+La finalidad perseguida por Seguridad Felix Rivera SpA al incorporar
+        reCAPTCHA es exclusivamente la protección de los formularios y del sitio.
+        Alexbrun.cl no utiliza deliberadamente esta herramienta para elaborar
+        perfiles comerciales propios.
+El tratamiento realizado directamente por Google se encuentra sujeto a
+        sus condiciones, configuraciones y políticas de privacidad.
+11. Google Maps
+El sitio puede incorporar un mapa proporcionado por
+Google Maps
+para mostrar la ubicación de la empresa o
+        facilitar la navegación hacia una dirección.
+Cuando el mapa se carga o el usuario interactúa con él, el navegador
+        puede establecer una conexión directa con los servicios de Google.
+Como consecuencia, Google podría utilizar cookies, identificadores u
+        otros datos técnicos de acuerdo con sus propias políticas y
+        configuraciones.
+El usuario que prefiera no interactuar con el mapa puede utilizar
+        directamente la dirección escrita y publicada en el sitio.
+12. Videos incorporados desde YouTube
+Algunas páginas pueden incorporar videos alojados en
+YouTube
+.
+Al cargar o reproducir un video, el navegador puede conectarse con los
+        servicios de YouTube o Google. Estos servicios podrían utilizar cookies,
+        identificadores técnicos, preferencias u otros antecedentes relacionados
+        con la interacción.
+Seguridad Felix Rivera SpA no utiliza los videos para elaborar perfiles
+        propios de los usuarios y no controla íntegramente las tecnologías
+        establecidas directamente por YouTube.
+Las condiciones del tratamiento realizado por YouTube dependen de las
+        configuraciones, políticas y condiciones determinadas por dicho
+        proveedor.
+13. Servicios externos y responsabilidad de terceros
+Los servicios externos incorporados en alexbrun.cl pueden establecer
+        conexiones con sus propios servidores y realizar tratamientos sujetos a
+        sus respectivas políticas.
+Seguridad Felix Rivera SpA determina la incorporación general de estos
+        servicios, pero no controla íntegramente:
+La infraestructura utilizada por cada proveedor.
+Los países desde los cuales se procesan los datos.
+La duración exacta de todas las cookies de terceros.
+Las modificaciones realizadas por dichos proveedores.
+La información asociada con cuentas personales del usuario.
+Las configuraciones aplicadas directamente por el navegador.
+El usuario puede consultar las políticas y herramientas de privacidad de
+        cada proveedor para obtener información adicional sobre sus
+        tratamientos.
+14. Finalidades actualmente excluidas
+Alexbrun.cl no utiliza deliberadamente sus cookies propias para:
+Realizar publicidad comportamental.
+Mostrar anuncios personalizados.
+Ejecutar campañas de remarketing.
+Seguir al usuario en sitios ajenos.
+Crear perfiles de intereses.
+Medir conversiones publicitarias.
+Analizar detalladamente el recorrido del visitante.
+Registrar mapas de calor.
+Grabar sesiones de navegación.
+Relacionar la navegación con redes sociales.
+Esta declaración corresponde a la configuración existente al momento de
+        publicarse la versión vigente de la presente política.
+15. Consentimiento y configuración de preferencias
+Mientras el sitio utilice solamente tecnologías propias estrictamente
+        necesarias, estas podrán ejecutarse para permitir el funcionamiento
+        técnico de la plataforma.
+Cuando un servicio de terceros pueda utilizar cookies o tecnologías que
+        no sean estrictamente necesarias, su activación, información y eventual
+        consentimiento deberán gestionarse conforme a la normativa aplicable y
+        a la configuración técnica disponible.
+La incorporación futura de herramientas de analítica, publicidad,
+        seguimiento o elaboración de perfiles podrá requerir:
+Un panel o mecanismo de preferencias.
+Una autorización previa y diferenciada.
+La posibilidad de rechazar las tecnologías no necesarias.
+La posibilidad de retirar posteriormente la autorización.
+La actualización de esta Política de Cookies.
+La publicación de una nueva versión del documento.
+16. Administración desde el navegador
+Los navegadores suelen permitir que el usuario consulte, bloquee o
+        elimine cookies mediante sus opciones de privacidad y seguridad.
+Dependiendo del navegador, el usuario puede:
+Eliminar las cookies almacenadas.
+Bloquear todas las cookies.
+Bloquear solamente cookies de terceros.
+Autorizar cookies para determinados sitios.
+Recibir una advertencia antes de almacenarlas.
+Eliminar datos al cerrar el navegador.
+Utilizar modos de navegación privada.
+Las opciones exactas dependen del navegador, su versión, el dispositivo
+        utilizado y las configuraciones seleccionadas por el usuario.
+17. Consecuencias de bloquear cookies
+El bloqueo general de cookies puede afectar la disponibilidad o el
+        funcionamiento de determinadas características.
+En particular, podrían presentarse dificultades para:
+Mantener la continuidad de una sesión.
+Utilizar correctamente determinados formularios.
+Superar controles de seguridad automatizados.
+Visualizar mapas incorporados.
+Reproducir videos externos.
+Recordar preferencias técnicas.
+El usuario puede configurar su navegador de acuerdo con sus preferencias,
+        teniendo presente que el rechazo de tecnologías necesarias podría limitar
+        algunas funciones del sitio.
+18. Incorporación futura de Google Analytics
+Actualmente, alexbrun.cl no utiliza
+Google Analytics
+.
+Si el administrador decide incorporar esta herramienta en el futuro,
+        Seguridad Felix Rivera SpA deberá revisar su configuración y actualizar
+        la información entregada a los usuarios.
+Dependiendo de la modalidad implementada y de la normativa aplicable, la
+        incorporación podrá requerir:
+Actualizar esta Política de Cookies.
+Identificar las nuevas cookies o tecnologías utilizadas.
+Explicar sus finalidades.
+Informar su duración aproximada.
+Identificar al proveedor correspondiente.
+Implementar un mecanismo de aceptación o rechazo.
+Evitar su activación previa cuando corresponda.
+Permitir que el usuario retire su autorización.
+La misma regla será aplicable a Meta Pixel, Google Tag Manager, Google
+        Ads, Microsoft Clarity, Hotjar o cualquier tecnología equivalente que se
+        incorpore posteriormente.
+19. Actualización del inventario de cookies
+La información contenida en esta política deberá revisarse cuando:
+Se incorpore una nueva herramienta.
+Se elimine un servicio existente.
+Cambie la finalidad de una tecnología.
+Se modifique la duración de una cookie.
+Cambie el proveedor de un servicio.
+Se implementen herramientas de analítica o publicidad.
+Se modifique el mecanismo de consentimiento.
+Existan cambios legales o regulatorios relevantes.
+La incorporación de una nueva tecnología no implica que las versiones
+        anteriores de esta política describan retroactivamente su utilización.
+        Cada versión reflejará la configuración existente durante su periodo de
+        vigencia.
+20. Modificaciones de esta Política de Cookies
+Seguridad Felix Rivera SpA podrá modificar esta política para mantenerla
+        actualizada respecto de las tecnologías efectivamente utilizadas por
+        alexbrun.cl.
+Una modificación podrá producirse para:
+Incorporar nuevas cookies o servicios.
+Eliminar tecnologías que hayan dejado de utilizarse.
+Modificar las finalidades declaradas.
+Actualizar información de proveedores.
+Adaptarse a cambios legales o regulatorios.
+Mejorar la claridad de la información.
+Corregir errores o imprecisiones.
+Cuando se incorporen tecnologías no necesarias que requieran
+        autorización, estas no deberán justificarse únicamente mediante una
+        aceptación obtenida bajo una versión anterior que no las informaba.
+21. Versiones y vigencia
+Esta política describe las cookies y tecnologías implementadas durante
+        la vigencia de la versión publicada.
+El número de versión, la fecha de publicación, el estado vigente y el
+        acceso a versiones anteriores podrán ser generados automáticamente por
+        el sistema de administración de documentos legales de alexbrun.cl.
+Una nueva versión reemplazará a la anterior desde la fecha de su
+        publicación, sin alterar la trazabilidad de las versiones históricas.
+22. Relación con la Política de Privacidad
+Esta Política de Cookies complementa la Política de Privacidad y
+        Tratamiento de Datos Personales de alexbrun.cl.
+La Política de Privacidad explica, entre otras materias:
+Qué datos personales se recopilan.
+Las finalidades del tratamiento.
+Los periodos de conservación.
+Los proveedores tecnológicos involucrados.
+Las medidas de seguridad.
+Los derechos de los titulares.
+El procedimiento para ejercer dichos derechos.
+Ambas políticas deberán interpretarse de manera complementaria.
+23. Ejercicio de derechos
+Cuando el uso de una cookie o tecnología similar involucre el tratamiento
+        de datos personales, el titular podrá ejercer los derechos reconocidos
+        por la legislación aplicable.
+Las solicitudes de acceso, rectificación, supresión, oposición,
+        portabilidad, bloqueo o revocación del consentimiento podrán presentarse
+        mediante:
+https://www.alexbrun.cl/arcop
+El formulario ARCOP no reemplaza las herramientas del navegador para
+        eliminar o bloquear directamente las cookies almacenadas en el
+        dispositivo.
+24. Canal de contacto
+Las consultas generales sobre el funcionamiento de esta política pueden
+        efectuarse mediante los canales de contacto publicados en alexbrun.cl.
+Las solicitudes relacionadas específicamente con derechos sobre datos
+        personales deberán ingresarse mediante el canal oficial disponible en:
+https://www.alexbrun.cl/arcop
+Seguridad AlexBrun SpA
+es una de las
+empresas de guardias de seguridad privada
+más confiables de Chile.
+Con base en la experiencia militar de su fundador y acreditación
+OS10 de Carabineros
+, ofrece soluciones integrales y personal altamente capacitado. Nos destacamos entre las
+empresas de vigilancia y seguridad privada
+por nuestra excelencia operativa, formación continua y compromiso con la protección de personas, instalaciones y activos. Ya sea para residencias, industrias o eventos, somos el aliado estratégico que garantiza tranquilidad y cumplimiento normativo. Confíe en
+AlexBrun Seguridad
+, líderes en seguridad con valores y experiencia táctica real.
+guardias de seguridad
+guardias de seguridad privada
+empresas de guardias de seguridad
+empresa de guardias
+empresas de guardas de seguridad
+empresas de guardias de seguridad para condominios
+empresas de guardias de seguridad privada
+empresas de vigilancia y seguridad privada
+servicio de guardias de seguridad
+servicio de vigilancia y seguridad privada
+guardias de seguridad para eventos
+guardias de seguridad para condominios
+guardia de seguridad para eventos
+guardias para eventos y fiestas
+monitoreo de alarmas
+servicio de alarmas y monitoreo
+empresas de monitoreo de alarmas
+empresa de alarmas y monitoreo
+monitoreo de alarmas de seguridad
+central de monitoreo de alarmas
+empresas de alarmas monitoreadas
+sistema de monitoreo de seguridad
+estudio de vulnerabilidad en seguridad privada
+asesoría en seguridad
+consultoría en seguridad
+analisis de riesgos de seguridad
+consultores seguridad privada
+asesoria de seguridad
+consultoria de seguridad
+analisis de riesgos en seguridad privada
+analisis de seguridad industrial
+asesoria en seguridad
+asesoria en seguridad privada
+asesorias de seguridad
+consultor de seguridad industrial
+consultor de seguridad privada
+© 2022
+Seguridad Alexbrun SpA
+Todos los derechos reservados
+Política de Privacidad
+·
+Política de Cookies
+·
+Configurar cookies
+Llamar por teléfono
+Enviar WhatsApp
+Enviar email

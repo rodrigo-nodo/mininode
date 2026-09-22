@@ -1,0 +1,106 @@
+Política de Cookies | Trip Global
+Servicios
+Agentes IA
+Meta Ads
+CRM Chatwoot
+Tienda online
+Implementación Odoo
+Sercotec
+Blog
+Sobre nosotros
+Hablar con Nora
+Volver al inicio
+—
+Cookies
+Política de Cookies
+Última actualización ·
+Julio 2026
+Esta política explica las cookies y tecnologías similares que usa el sitio
+tripglobal.cl
+y cómo puedes configurarlas. Aplicamos
+Google Consent Mode v2
+: por defecto, las cookies analíticas y publicitarias están
+denegadas
+hasta que aceptes en el banner.
+1. Qué es una cookie
+Una cookie es un pequeño archivo de texto que un sitio web guarda en tu dispositivo (computador, teléfono o tablet) cuando lo visitas. Sirven para recordar preferencias, medir audiencia y, en algunos casos, mostrarte publicidad relevante en otros sitios.
+2. Categorías de cookies que usamos
+Categoría
+Para qué sirven
+¿Pides consentimiento?
+Estrictamente necesarias
+Funciones básicas del sitio: navegación, formularios, banner de cookies.
+No (esenciales)
+Analíticas
+Google Analytics 4 (vía GTM), Microsoft Clarity. Medimos páginas vistas, tiempo, dispositivos y mapas de calor anónimos.
+Sí
+Publicitarias
+Meta Pixel y Conversions API. Permiten medir si una visita vino de un anuncio de Facebook/Instagram y mostrarte anuncios relevantes después.
+Sí
+3. Proveedores y duración
+Google Tag Manager
+(GTM-M36G24WJ) — orquesta los demás scripts.
+Google Analytics 4
+— cookies
+_ga
+,
+_ga_*
+con duración hasta 24 meses.
+Meta Pixel
+(ID 9315879625116111) — cookies
+_fbp
+con duración 90 días.
+Microsoft Clarity
+— cookies
+_clck
+,
+_clsk
+con duración hasta 12 meses.
+4. Cómo gestionar tu consentimiento
+Cuando entras al sitio por primera vez, aparece un banner. Puedes aceptar todo, aceptar sólo las necesarias, o configurar qué categorías permites.
+Para cambiar tu elección más tarde: borra las cookies de tripglobal.cl en tu navegador (Configuración → Privacidad → Cookies del sitio) y el banner volverá a aparecer.
+También puedes deshabilitar cookies de terceros directamente en tu navegador (Chrome, Firefox, Safari, Edge tienen opciones para esto).
+5. Qué pasa si rechazas las cookies opcionales
+El sitio funciona igual. No vas a poder ver anuncios personalizados nuestros en Facebook/Instagram y no medimos tu visita en nuestras herramientas analíticas. Tampoco perdés ninguna funcionalidad esencial.
+6. Cambios a esta política
+Si agregamos nuevos proveedores o cambiamos la forma de usar cookies, actualizamos esta política y la fecha de arriba. Los cambios significativos se notifican en el banner del sitio.
+¿Dudas?
+Escríbenos a
+privacidad@tripglobal.cl
+o por WhatsApp al
++56 9 6840 0995
+.
+Trip Global Consultorías Chile Limitada
+, Talca, Región del Maule, Chile.
+Transformación digital para pymes chilenas: agentes IA, marketing digital y postulación a fondos Sercotec.
+Talca, Maule
+Servicios
+Agentes IA
+Meta Ads
+Tienda online
+Implementación Odoo
+Sercotec
+Empresa
+Blog
+Sobre nosotros
+Contacto
+Contacto
+WhatsApp:
++56968400995
+servicios@tripglobal.cl
+Talca, Maule
+Otros sitios
+Portal cliente
+↗
+Promo Meta Ads
+↗
+©
+2026
+Trip Global Consultorías. Todos los derechos reservados.
+Privacidad
+Términos
+Cookies
+LinkedIn
+Instagram
+Facebook
+WhatsApp

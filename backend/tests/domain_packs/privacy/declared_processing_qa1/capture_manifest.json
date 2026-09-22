@@ -1,0 +1,122 @@
+[
+  {
+    "case_id": "Q01",
+    "requested_url": "https://superacionpobreza.cl/transparencia/politica-de-cookies-y-privacidad/",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://superacionpobreza.cl/transparencia/politica-de-cookies-y-privacidad/",
+    "captured_at_utc": "2026-09-21T20:08:24.834374+00:00",
+    "sha256": "fb591ed27a09c8665e75c8bce792aed2e4c99940432da069badc406b108a4ad3",
+    "page_title": "Política de Cookies y privacidad – Fundación Superación de la Pobreza – Servicio País",
+    "text_bytes": 11082,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q01.txt"
+  },
+  {
+    "case_id": "Q02",
+    "requested_url": "https://tripglobal.cl/cookies",
+    "document_type": "cookie_policy",
+    "status": "captured",
+    "final_url": "https://tripglobal.cl/cookies",
+    "captured_at_utc": "2026-09-21T20:08:25.580983+00:00",
+    "sha256": "6b2b6ac5f78b241aeda9f621eab2c8346199763e10e942d4c56b44e30b98752c",
+    "page_title": "Política de Cookies | Trip Global",
+    "text_bytes": 3214,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q02.txt"
+  },
+  {
+    "case_id": "Q03",
+    "requested_url": "https://policlinicotabancura.cl/politica-de-cookies",
+    "document_type": "cookie_policy",
+    "status": "captured",
+    "final_url": "https://policlinicotabancura.cl/politica-de-cookies",
+    "captured_at_utc": "2026-09-21T20:08:26.418160+00:00",
+    "sha256": "a3cd6f91efd5301b3026323aac29ac1c9af6c78a06a7f7f4f65c0bdf65d57ac4",
+    "page_title": "Centro Médico y Dental en Vitacura | Policlínico Tabancura",
+    "text_bytes": 5170,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q03.txt"
+  },
+  {
+    "case_id": "Q04",
+    "requested_url": "https://www.zurich.cl/conocenos/politicas-de-privacidad",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://www.zurich.cl/conocenos/politicas-de-privacidad",
+    "captured_at_utc": "2026-09-21T20:08:27.539648+00:00",
+    "sha256": "f646764fd1774c914f0518e582d04e3d548e2616df926aa960393ae906b3ef6e",
+    "page_title": "Políticas de privacidad | Zurich Chile",
+    "text_bytes": 38136,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q04.txt"
+  },
+  {
+    "case_id": "Q05",
+    "requested_url": "https://fch.cl/politicas-de-privacidad/",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://fch.cl/politicas-de-privacidad/",
+    "captured_at_utc": "2026-09-21T20:08:28.345558+00:00",
+    "sha256": "c3b259f13b81d025b78c65c5b44a7820bf6c184414e94d4a68655533366bc95c",
+    "page_title": "Políticas de privacidad - Fundación Chile",
+    "text_bytes": 12975,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q05.txt"
+  },
+  {
+    "case_id": "Q06",
+    "requested_url": "https://www.justasa.cl/privacidad",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://justasa.cl/privacidad",
+    "captured_at_utc": "2026-09-21T20:08:28.861142+00:00",
+    "sha256": "6c1c04048cb664a406aad46f5599c58320420ab424bb8d70bd781bd2fae9b31e",
+    "page_title": "Política de privacidad | Justasa",
+    "text_bytes": 16860,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q06.txt"
+  },
+  {
+    "case_id": "Q07",
+    "requested_url": "https://www.anelisa.cl/politica-de-privacidad",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://www.anelisa.cl/politica-de-privacidad",
+    "captured_at_utc": "2026-09-21T20:08:29.124503+00:00",
+    "sha256": "2ff8977e866139a2c7fd14b08925cd56ec0e5a4fc39bb696620d2341fdb9bd75",
+    "page_title": "Política de Privacidad · Anelisa",
+    "text_bytes": 11794,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q07.txt"
+  },
+  {
+    "case_id": "Q08",
+    "requested_url": "https://www.alexbrun.cl/politica-de-cookies",
+    "document_type": "cookie_policy",
+    "status": "captured",
+    "final_url": "https://www.alexbrun.cl/politica-de-cookies",
+    "captured_at_utc": "2026-09-21T20:08:31.096710+00:00",
+    "sha256": "f715879aeec05444923d1b9f566510c6a2e0303e775b468f30f10d349584ff3d",
+    "page_title": null,
+    "text_bytes": 21930,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q08.txt"
+  },
+  {
+    "case_id": "Q09",
+    "requested_url": "https://elizatelier.cl/cookies",
+    "document_type": "cookie_policy",
+    "status": "captured",
+    "final_url": "https://elizatelier.cl/cookies",
+    "captured_at_utc": "2026-09-21T20:08:31.308381+00:00",
+    "sha256": "38866451cf7f76c3d44231366c1e0e20cc4db9f802d97ce7e23681e4c89b32bb",
+    "page_title": "Política de cookies | ELIZ Atelier",
+    "text_bytes": 2205,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q09.txt"
+  },
+  {
+    "case_id": "Q10",
+    "requested_url": "https://www.ida.cl/politicas-de-privacidad",
+    "document_type": "privacy_policy",
+    "status": "captured",
+    "final_url": "https://www.ida.cl/politicas-de-privacidad",
+    "captured_at_utc": "2026-09-21T20:08:31.629164+00:00",
+    "sha256": "53fb5baf1a564437d1376dc48524a328948ade500f34b65d5577860335871616",
+    "page_title": "Política de Privacidad - IDA",
+    "text_bytes": 3685,
+    "text_path": "backend/tests/domain_packs/privacy/declared_processing_qa1/captures/Q10.txt"
+  }
+]

@@ -1,0 +1,214 @@
+Política de privacidad | Justasa
+JUSTASA
+Documentos legales
+Términos
+Privacidad
+Cookies
+Devolución
+Política de privacidad
+Versión 1.6 · Vigente desde 20/09/2026
+Última modificación: 20/09/2026
+Responsable:
+Gonzalo Andrés Riquelme Erices, persona natural.
+RUT:
+17.593.813-3
+Domicilio:
+en el Aviso Legal (Términos, Cláusula 2)
+.
+Email de contacto:
+contacto@justasa.cl
+Profesión:
+Arquitecto.
+1. Marco legal
+Esta política se rige por la
+Ley 19.628 sobre Protección de la Vida Privada
+de la República de Chile, junto con las normas complementarias y reglamentos aplicables. Justasa asume el rol de responsable del tratamiento respecto de los datos personales que recolecta y procesa para la prestación de sus servicios de tasación inmobiliaria.
+2. Responsable del tratamiento
+El responsable del tratamiento de tus datos personales es la persona natural identificada al inicio de este documento. Para cualquier consulta o solicitud relacionada con tus datos puedes escribir a
+contacto@justasa.cl
+.
+3. Datos personales recolectados
+Justasa recolecta y trata los siguientes datos personales en el curso normal de operación del servicio:
+a) Formularios del sitio
+Email
+ingresado en el formulario "Avísame" del modal de productos en desarrollo (almacenado en la base de datos productiva de Justasa alojada en Railway, asociado al producto consultado y al identificador anónimo de sesión de la tasación que originó el clic).
+Nombre, email, asunto y mensaje
+ingresados en el formulario de la página de contacto (almacenados en la base de datos productiva de Justasa alojada en Railway, junto con la fecha de envío y la dirección IP desde la que se envió, usada sólo para limitar envíos masivos). Al llegar un mensaje se envía un aviso interno con esos datos a la casilla del administrador a través de Resend.
+b) Cuenta de usuario por inicio de sesión con Google
+Cuando el titular inicia sesión con Google Sign-In, Justasa recibe desde Google y almacena en su base de datos los siguientes datos del id_token verificado:
+Email verificado.
+Nombre o nombre de pila declarado en la cuenta Google.
+Identificador estable de la cuenta Google (campo "sub").
+Indicador de proveedor ("google") y fecha del último inicio de sesión.
+No se almacena la fotografía de perfil ni otros campos del id_token.
+c) Datos de la propiedad consultada
+Para cada consulta de tasación, Justasa registra y almacena:
+Dirección normalizada de la propiedad consultada y, cuando el buscador lo entrega, las coordenadas geográficas (latitud/longitud) asociadas.
+Rol de avalúo, comuna, región y los parámetros declarados por el usuario en el formulario de tasación (superficies, año, número de pisos, características, etc.).
+Resultado del cálculo (valor en UF y CLP, método utilizado, confianza, debug interno) y un volcado JSON completo del formulario para reproducibilidad.
+Si la consulta se realiza sin sesión iniciada, este registro queda asociado únicamente a un identificador anónimo de sesión. Si el titular posteriormente inicia sesión o desbloquea la consulta, el registro queda vinculado a su cuenta de usuario y a su email.
+d) Datos técnicos del acceso
+Dirección IP
+del visitante, utilizada de forma transitoria para aplicar límites diarios al uso gratuito del servicio (rate-limiting). No se persiste en la base de datos.
+Logs de servidor
+generados por la infraestructura (FastAPI sobre Railway, Vercel). Estos logs pueden contener temporalmente dirección IP, agente de usuario, identificadores de sesión y, en casos de alertas operativas, valores parciales del formulario. Los logs no son consultados por Justasa en operación normal y se conservan según la política de retención del proveedor.
+e) Datos de pago
+El pago se procesa con
+Webpay Plus de Transbank
+. Los datos de tu tarjeta los recolecta y procesa Transbank en su propio sitio:
+Justasa no ve, no recibe ni almacena el número de tu tarjeta
+.
+De cada compra, Justasa sí guarda en su base de datos: el
+correo
+al que se entrega el informe, el
+RUT
+si decidiste darlo para la boleta (es opcional), el
+monto
+, la fecha, el identificador interno de la orden y, del comprobante que devuelve Transbank, el
+código de autorización
+y los
+cuatro últimos dígitos
+de la tarjeta. Sirven para emitir el documento tributario, responder por la compra y resolver un reclamo o una devolución.
+Mayoría de edad:
+Justasa no recolecta intencionalmente datos personales de menores de 18 años. Si descubrimos que hemos recibido datos de un menor sin autorización del representante legal, los eliminaremos a la brevedad.
+En línea con el principio de proporcionalidad de la Ley 19.628, Justasa
+no solicita
+cumpleaños, edad exacta, género u otros datos no estrictamente necesarios para el servicio.
+4. Tratamiento de la dirección de la propiedad
+La dirección de la propiedad que ingresas para tasar es un dato sensible por su capacidad de revelar información patrimonial. Justasa la trata con las siguientes garantías:
+Almacenamiento mínimo:
+solo lo necesario para generar el informe y permitir su reproducibilidad y auditoría.
+NO cesión a terceros:
+la dirección no se vende, cede ni comparte con terceros bajo ninguna circunstancia.
+Aviso al usuario:
+la combinación
+dirección + email
+puede revelar información patrimonial asociada a una persona identificable. Justasa adopta medidas razonables de seguridad (HTTPS, almacenamiento limitado, control de acceso), pero el usuario debe ser consciente del riesgo inherente al ingresar ambos datos.
+5. Datos del Servicio de Impuestos Internos (SII)
+Para generar tu tasación, Justasa consulta y almacena información pública de tu propiedad disponible en el Servicio de Impuestos Internos (avalúo fiscal, rol, destino, características de construcción), conforme a la Ley 21.180 sobre Transparencia y Acceso a la Información Pública. Estos datos:
+Son información pública por ley, no son datos personales tuyos.
+Se almacenan vinculados a tu tasación específica para sustentar el informe entregado y permitir su reproducibilidad y auditoría.
+NO se ceden ni comercializan a terceros bajo ninguna circunstancia.
+Se conservan por 6 años junto al registro de tu tasación, plazo coherente con obligaciones tributarias chilenas.
+6. Finalidad del tratamiento
+Tus datos personales son tratados con las siguientes finalidades:
+Prestación del servicio:
+generar y entregar el informe de tasación que solicitaste, gestionar la compra y mantener tu historial de tasaciones para re-acceso futuro.
+Comunicación comercial relacionada:
+enviarte por correo el resultado de la tasación que solicitaste y comunicaciones relacionadas con tus compras. Puedes pedir que dejemos de enviarte correos comerciales respondiendo cualquiera de ellos con la palabra Baja.
+Respuesta a tus reportes y mensajes:
+si nos escribes para reportar un problema con una tasación, usamos el correo que dejaste para acusar recibo y, si corresponde, responderte; si nos escribes por el formulario de contacto, usamos el correo que dejaste para responderte.
+Cumplimiento de obligaciones legales:
+tributarias, contables y de respuesta a requerimientos de autoridades competentes.
+7. Conservación
+Los datos personales asociados a una tasación realizada se conservan por
+6 años
+, plazo coherente con el Artículo 17 del Código Tributario chileno (conservación de documentos de operaciones gravables). Cumplido este plazo, los datos se eliminan o anonimizan, salvo obligación legal vigente que requiera conservación adicional.
+Los mensajes enviados por el formulario de contacto se conservan mientras sean necesarios para responderlos y mantener el registro de lo respondido, o hasta que el remitente solicite su eliminación (§8).
+8. Derechos ARCO del titular
+Conforme a la Ley 19.628, tienes los siguientes derechos sobre tus datos personales:
+Acceso:
+conocer qué datos personales tuyos tiene Justasa y cómo los trata.
+Rectificación:
+corregir datos inexactos o incompletos.
+Cancelación:
+solicitar la eliminación de tus datos cuando ya no sean necesarios o cuando hayas retirado tu consentimiento, salvo obligación legal vigente.
+Oposición:
+oponerte al tratamiento de tus datos para finalidades específicas (por ejemplo, comunicación comercial).
+Para ejercer cualquiera de estos derechos, escribe a
+contacto@justasa.cl
+desde la dirección registrada (o adjuntando comprobante de identidad si escribes desde otra dirección). Te responderemos en los plazos legales aplicables.
+8.1 Derechos ARCO sobre datos del SII
+Puedes solicitar acceso al registro de consultas SII realizadas por Justasa en tu nombre, vinculadas a tu tasación. Puedes solicitar la cancelación de ese vínculo, lo cual elimina la asociación entre tus datos personales y los datos SII consultados, pero no afecta los datos SII en sí (que son públicos por ley).
+9. Transferencia internacional
+Para prestar el servicio, Justasa utiliza proveedores que almacenan o procesan datos fuera de Chile. Al usar Justasa, consientes en la transferencia internacional de tus datos a los siguientes proveedores:
+Vercel Inc.
+(Estados Unidos): hosting del sitio web justasa.cl y de la aplicación frontend. Recibe metadata de las peticiones HTTP (incluida dirección IP y cabeceras) para enrutamiento y entrega de contenido.
+Railway Corp.
+(Estados Unidos): hosting del backend api.justasa.cl y de la base de datos MySQL productiva. En la base de datos alojada en Railway residen las tablas con cuentas de usuario, direcciones consultadas, resultados de tasación, leads de productos en desarrollo y el snapshot del catastro SII utilizado por el motor. Los logs del contenedor backend se conservan según la política de retención del proveedor.
+Cloudflare, Inc.
+(red global): proveedor de DNS y CDN delante de Vercel. Recibe metadata de las peticiones HTTP y dirección IP para enrutamiento y mitigación de abusos.
+Google LLC
+(Estados Unidos): Justasa utiliza varios servicios de Google distintos, cada uno con un alcance distinto de tratamiento:
+Google Analytics 4:
+analítica web. Datos transferidos: identificadores anonimizados de cookies, métricas agregadas de navegación y eventos del embudo de conversión. Solo se activa con consentimiento previo del usuario en el banner de cookies.
+Google Sign-In (OAuth 2.0):
+cuando el usuario elige iniciar sesión con Google, Justasa verifica el id_token contra los servidores de Google y recibe email, nombre e identificador estable de la cuenta Google.
+Google Places API:
+autocompletado del campo de dirección en el formulario de tasación. Los fragmentos de dirección tipeados por el usuario son enviados a Google para sugerir coincidencias.
+Google Geocoding API:
+conversión de la dirección elegida y de direcciones de comparables a coordenadas (latitud/longitud).
+Google Maps Static API y Street View Static API:
+generación de imágenes embebidas en los informes PDF a partir de las coordenadas obtenidas.
+Transferencia sujeta a las Standard Contractual Clauses y al Acuerdo de Tratamiento de Datos (DPA) de Google. Política de privacidad de Google:
+policies.google.com/privacy
+.
+Zoho Corporation
+(Estados Unidos / India / Unión Europea): servicio de correo electrónico de la casilla
+contacto@justasa.cl
+. Recibe los correos enviados a esa dirección, incluidas las respuestas de los usuarios a los correos que envía Justasa.
+Resend
+(Estados Unidos): envío de los correos transaccionales del servicio — entrega del informe comprado, el correo con el resultado de la tasación, el acuse de recibo y la respuesta a los reportes de problemas, y el aviso interno de que llegó un mensaje por el formulario de contacto (que incluye el nombre, el correo, el asunto y el texto del mensaje; no la dirección IP). Recibe la dirección de correo del destinatario y el contenido del mensaje.
+Estos proveedores cumplen estándares internacionales de seguridad y privacidad. Justasa selecciona proveedores con medidas razonables para proteger tus datos durante el flujo transfronterizo.
+El procesamiento del pago lo realiza
+Transbank S.A.
+(Webpay Plus)
+en Chile
+, de modo que no constituye una transferencia internacional: recibe los datos de tu tarjeta, el monto y el identificador de la orden, y devuelve el comprobante de la transacción.
+10. Seguridad
+Justasa adopta las siguientes medidas de seguridad razonables para proteger tus datos personales:
+HTTPS obligatorio:
+todo tráfico hacia y desde
+https://justasa.cl
+está cifrado con certificado SSL automático Let's Encrypt vía Vercel.
+Almacenamiento limitado:
+solo se conserva la información estrictamente necesaria para el servicio y por el plazo razonable definido en la sección 7.
+Minimización en logs:
+los registros operativos (logs de servidor) no están diseñados para almacenar datos personales, y Justasa no los consulta en operación normal. Pueden contener temporalmente metadata técnica (dirección IP, agente de usuario, identificadores de sesión) y, en casos de alertas operativas, fragmentos del formulario necesarios para diagnosticar el problema. Estos logs se conservan según la política de retención del proveedor de infraestructura (Railway, Vercel) y no se comparten con terceros.
+Control de acceso:
+los datos personales son accesibles solo al responsable del tratamiento y a los sistemas estrictamente necesarios para procesar el servicio.
+Ningún sistema es absolutamente invulnerable. Si detectamos un incidente de seguridad que afecte materialmente tus datos personales, te notificaremos por el medio que tengamos registrado y conforme a las obligaciones legales aplicables.
+11. Cambios a esta política
+Justasa notificará cualquier cambio sustancial a estos términos mediante (a) un aviso visible en https://justasa.cl con duración mínima de 30 días corridos desde la publicación del cambio, y (b) email a la dirección registrada por el usuario al tasar o al comprar un producto. Los cambios entrarán en vigencia 30 días después de la notificación, salvo cambios menores no sustantivos (correcciones tipográficas, actualizaciones de contacto) que entran en vigencia inmediata.
+Para consultas sobre esta política, escribe a
+contacto@justasa.cl
+.
+Changelog
+v1.6 — 20/09/2026:
+§3.e pasa a presente y declara lo que la compra guarda de verdad (correo de entrega, RUT opcional, monto, fecha, orden, código de autorización y los cuatro últimos dígitos de la tarjeta); antes decía «datos de pago (futuro)» y que Justasa no almacenaba nada de la transacción, cuando el cobro por Webpay ya estaba activo. §9 nombra a Transbank como el procesador del pago y deja de anunciar una pasarela futura («por ejemplo MercadoPago»).
+v1.5 — 20/09/2026:
+Se retiró del sitio la página de pre-lanzamiento y su formulario de aviso de lanzamiento, así que salen de esta política la recolección de ese email (§3.a), su conservación (§7) y el proveedor Formspree (§9). §6 describe el correo comercial que sí se envía —el resultado de la tasación y lo relacionado con tus compras— y cómo pedir que dejemos de enviarlos. §9 nombra ese correo en la lista de lo que envía Resend, donde antes figuraban recordatorios que no existen.
+v1.4 — 19/09/2026:
+Declaración de los datos que recibe el formulario de la página de contacto (§3.a), de la finalidad de responderlos (§6), de su conservación (§7) y del aviso interno que Resend envía al llegar uno (§9). Hasta esta versión el formulario no guardaba ni enviaba nada.
+v1.3 — 08/09/2026:
+Declaración de la finalidad de respuesta a los reportes de problemas en una tasación (§6) y del proveedor de envío de correo transaccional Resend (§9), que ya participaba en el tratamiento y no figuraba en la lista.
+v1.2 — 28/05/2026:
+Actualización del detalle de datos personales recolectados (inicio de sesión con Google, registro de las propiedades consultadas para tasación, datos técnicos de acceso) y de la lista de proveedores de servicios e infraestructura que participan en el tratamiento. Mayor precisión sobre el manejo de los registros operativos del servicio.
+v1.1 — 11/05/2026:
+Adición de Google LLC (Estados Unidos) como tercero receptor de datos analíticos (Google Analytics 4) en §9. Resto del documento sin cambios. Actualización coordinada con Política de Cookies v1.1.
+v1.0 — 08/05/2026:
+Versión inicial.
+Documento disponible online en https://justasa.cl
+Tasar mi propiedad
+Ver precios
+Preguntas frecuentes
+Contacto
+¿Cuánto vale mi casa?
+¿Cuánto cuesta tasar?
+Avalúo fiscal vs. valor comercial
+Términos
+Privacidad
+Cookies
+Devolución
+contacto@justasa.cl
+Los Ángeles, Región del Biobío, Chile
+©
+2026
+Justasa — Todos los derechos reservados.
+Valores referenciales. Ver
+Términos
+para detalle.
+Justasa usa Google Analytics 4 para entender cómo los visitantes usan el sitio. Solo se activa si tú lo aceptas.
+Más info
+Rechazar
+Aceptar
