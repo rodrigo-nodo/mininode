@@ -1,0 +1,66 @@
+{
+  "schema_version": "declared_processing_qa2/cases-v1",
+  "frozen_from_sha": "c13983df352772c38ceef18c93742f0b5c1407ef",
+  "cases": [
+    {
+      "case_id": "Q2-01",
+      "name": "EmpresaChile",
+      "url": "https://www.empresachile.cl/Legal/politica_de_privacidad.php",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-02",
+      "name": "Banco de Chile",
+      "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-03",
+      "name": "Gestdat",
+      "url": "https://www.gestdat.cl/cookies/",
+      "document_type": "cookie_policy"
+    },
+    {
+      "case_id": "Q2-04",
+      "name": "ACDATA",
+      "url": "https://www.acdata.cl/politica-de-privacidad",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-05",
+      "name": "Grupo EC",
+      "url": "https://grupoec.cl/privacidad",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-06",
+      "name": "MarTech",
+      "url": "https://martech.cl/politica-de-privacidad/",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-07",
+      "name": "Inclu Work Consultores",
+      "url": "https://incluworkconsultores.cl/politica-de-privacidad/",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-08",
+      "name": "NexoCap",
+      "url": "https://www.nexocap.cl/politica-de-privacidad/",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-09",
+      "name": "Connectus",
+      "url": "https://www.connectus.cl/politica-de-privacidad",
+      "document_type": "privacy_policy"
+    },
+    {
+      "case_id": "Q2-10",
+      "name": "Urban Marketing",
+      "url": "https://urbanmarketing.cl/politica-de-privacidad/",
+      "document_type": "privacy_policy"
+    }
+  ]
+}
