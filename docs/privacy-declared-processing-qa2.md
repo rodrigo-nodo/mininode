@@ -2,7 +2,7 @@
 
 ## Estado
 
-**Holdout y referencia congelados — inferencia no ejecutada.**
+**Holdout y referencia congelados — ejecución QA2 preparada, inferencia no ejecutada.**
 
 QA2 valida de forma independiente el extractor semántico común `declared_processing/v1` después de las correcciones derivadas de QA1. No evalúa cumplimiento legal, PRV-202, scoring ni el diagnóstico público.
 
@@ -106,7 +106,9 @@ Presupuesto máximo QA2: **USD 2**. Antes de cada llamada se exige que **costo c
 
 ## Disciplina
 
-- Este PR congela el plan; **no ejecuta inferencia**.
+- La inferencia solo se habilita en la rama dedicada `privacy/declared-processing-qa2-safe-run`, después de que su `Privacy Web CI` termine correctamente.
+- El workflow persiste el marcador de intento y cualquier output disponible incluso si el runner termina con error, para impedir reejecuciones silenciosas con gasto parcial.
+- El PR que habilita el workflow **no ejecuta inferencia antes de que CI esté verde**.
 - La captura y referencia deben quedar committeadas antes de habilitar el workflow de inferencia.
 - PRV-202 permanece desconectado.
 - No ajustar durante QA.
