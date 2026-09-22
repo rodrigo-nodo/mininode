@@ -35,6 +35,20 @@ def _timeout(_signum, _frame):
     raise QAInferenceTimeout(f"inference exceeded {CALL_TIMEOUT_SECONDS}s")
 
 
+def _accounted_call_cost(usage: dict[str, int], call_ceiling: float) -> float:
+    """Use provider usage when available; otherwise consume the conservative ceiling."""
+    if not usage:
+        return call_ceiling
+    return (
+        usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
+        + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
+    )
+
+
+def _may_start_call(accounted_cost_usd: float, call_ceiling: float) -> bool:
+    return accounted_cost_usd + call_ceiling <= QA_BUDGET_USD
+
+
 def run() -> None:
     reference = ROOT / "reference.json"
     manifest_path = ROOT / "capture_manifest.json"
@@ -90,7 +104,7 @@ def run() -> None:
             # Hard guard: a new call is allowed only when the cost already
             # consumed plus the maximum possible cost of this call remains
             # within the total QA2 budget.
-            if actual_cost_usd + call_ceiling > QA_BUDGET_USD:
+            if not _may_start_call(actual_cost_usd, call_ceiling):
                 raise SystemExit("QA2 hard budget guard stopped before next API call")
 
             usage = {}
@@ -98,16 +112,10 @@ def run() -> None:
             try:
                 signal.alarm(CALL_TIMEOUT_SECONDS)
                 result = extract_declared_processing(doc, usage_sink=usage.update)
-                if usage:
-                    call_cost = (
-                        usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
-                        + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
-                    )
-                else:
-                    # A successful semantic result without provider usage is
-                    # still a billable/unknown attempt. Charge the conservative
-                    # ceiling rather than treating it as free.
-                    call_cost = call_ceiling
+                # A successful semantic result without provider usage is
+                # still a billable/unknown attempt. Charge the conservative
+                # ceiling rather than treating it as free.
+                call_cost = _accounted_call_cost(usage, call_ceiling)
                 actual_cost_usd += call_cost
                 call_accounted = True
                 (out / f"{cid}-run{run_number}.json").write_text(
@@ -128,15 +136,8 @@ def run() -> None:
                 # the semantic output is invalid. If usage is unavailable after
                 # an attempted request, conservatively consume the full ceiling.
                 if not call_accounted:
-                    if usage:
-                        call_cost = (
-                            usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
-                            + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
-                        )
-                        actual_cost_usd += call_cost
-                    else:
-                        call_cost = call_ceiling
-                        actual_cost_usd += call_ceiling
+                    call_cost = _accounted_call_cost(usage, call_ceiling)
+                    actual_cost_usd += call_cost
                 calls.append({
                     "case_id": cid,
                     "run": run_number,
