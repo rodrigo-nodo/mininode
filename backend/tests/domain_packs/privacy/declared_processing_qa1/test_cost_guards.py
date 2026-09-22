@@ -7,6 +7,11 @@ def test_qa_runner_has_cost_guards():
     assert "executed_sha.txt" in text
     assert "INFRASTRUCTURE_ERRORS" in text
     assert "fail-fast after infrastructure error" in text
+    assert "QA_BUDGET_USD=5.00" in text
+    assert "INPUT_USD_PER_MILLION=4.00" in text
+    assert "OUTPUT_USD_PER_MILLION=20.00" in text
+    assert "budget_stopped" in text
+    assert "estimated_cost_usd" in text
 
 
 def test_stable_workflow_has_sha_concurrency_and_duplicate_guard():
