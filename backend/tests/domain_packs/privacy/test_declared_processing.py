@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 
 from mininode_api.domain_packs.privacy.declared_processing import (
+    API_MAX_RETRIES,
+    API_TIMEOUT_SECONDS,
     FACT_FIELDS,
     MODEL_ID,
     SCHEMA_VERSION,
@@ -179,3 +181,8 @@ def test_rejects_oversized_input_before_calling_model():
 
     with pytest.raises(ValueError, match="hard input limit"):
         extract_declared_processing(document, client=lambda _: pytest.fail("must not call"))
+
+
+def test_api_timeout_allows_slow_reasoning_without_hidden_retry():
+    assert API_TIMEOUT_SECONDS == 120.0
+    assert API_MAX_RETRIES == 0
