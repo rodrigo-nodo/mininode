@@ -2,7 +2,7 @@
 
 ## Estado
 
-**Plan congelado — no ejecutado.**
+**Holdout y referencia congelados — inferencia no ejecutada.**
 
 QA2 valida de forma independiente el extractor semántico común `declared_processing/v1` después de las correcciones derivadas de QA1. No evalúa cumplimiento legal, PRV-202, scoring ni el diagnóstico público.
 
@@ -45,7 +45,7 @@ No se envían formularios, no hay login, no se aceptan consentimientos, no se cr
 
 ## Referencia independiente
 
-La referencia se construirá y congelará **antes de habilitar cualquier inferencia** usando exclusivamente el texto capturado.
+La referencia quedó construida y congelada **antes de habilitar cualquier inferencia** en `declared_processing_qa2/reference.json`, usando exclusivamente los seis textos capturados. Q2-04, Q2-05, Q2-06 y Q2-10 permanecen `capture_failed` y no tienen hechos esperados.
 
 Se anotarán únicamente hechos representables por las ocho familias V1:
 - technology;
@@ -57,7 +57,7 @@ Se anotarán únicamente hechos representables por las ocho familias V1:
 - retention;
 - international_transfers.
 
-Cada hecho esperado tendrá evidencia textual atribuible al documento. La referencia no usará salidas del modelo ni reglas PRV.
+Cada hecho esperado tiene evidencia textual literal atribuible al documento. Un test verifica que las 51 evidencias anotadas estén presentes en sus capturas. La referencia no usa salidas del modelo ni reglas PRV.
 
 ## Configuración congelada
 
