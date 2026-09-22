@@ -1,10 +1,18 @@
+import importlib.util
 from pathlib import Path
 
 from mininode_api.domain_packs.privacy.declared_processing import MAX_OUTPUT_TOKENS
-from .run import QA_BUDGET_USD, _accounted_call_cost, _may_start_call
 
 
 RUNNER = Path(__file__).with_name("run.py")
+_SPEC = importlib.util.spec_from_file_location("declared_processing_qa2_run", RUNNER)
+assert _SPEC is not None and _SPEC.loader is not None
+_RUN = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_RUN)
+QA_BUDGET_USD = _RUN.QA_BUDGET_USD
+_accounted_call_cost = _RUN._accounted_call_cost
+_may_start_call = _RUN._may_start_call
+
 
 
 def _source() -> str:
