@@ -100,9 +100,9 @@ Los cuatro primeros son gates duros. Cualquier valor mayor que cero produce `NEE
 
 ## Protección de costo
 
-El runner reservará un techo conservador usando **8192 output tokens**, consistente con la implementación vigente, y además registrará tokens/costo reales mediante `usage`.
+El runner usa las tarifas vigentes congeladas para QA2 de **USD 4/M tokens de entrada** y **USD 20/M tokens de salida**, junto con un techo conservador de **8192 output tokens**. Para la entrada, el techo considera el request serializado completo (documento + instrucciones + schema), no una estimación basada solo en el texto.
 
-Presupuesto máximo QA2: **USD 2**. Antes de cada llamada se exige que **costo real acumulado + techo máximo de la siguiente llamada <= USD 2**. Si no se cumple, la llamada no comienza. Así, incluso si la siguiente respuesta consume su máximo permitido, el gasto total de QA2 no puede superar el presupuesto por diseño. Errores de infraestructura producen fail-fast.
+Presupuesto máximo QA2: **USD 2**. Antes de cada llamada se exige que **costo contabilizado acumulado + techo conservador de la siguiente llamada <= USD 2**. Si no se cumple, la llamada no comienza. Si la API devuelve uso pero el resultado falla después en JSON o validación, ese uso igualmente se carga al acumulado. Si una llamada fue intentada y no existe usage confiable, se contabiliza conservadoramente su techo completo. El intento queda marcado antes de la primera llamada para impedir reejecuciones silenciosas después de gasto parcial. Errores de infraestructura producen fail-fast.
 
 ## Disciplina
 
