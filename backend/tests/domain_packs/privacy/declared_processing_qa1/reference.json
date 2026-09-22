@@ -1,0 +1,381 @@
+{
+  "frozen_before_inference": true,
+  "adjudication_note": "Expected recall units. Precision also accepts semantically equivalent emitted facts when directly supported by captured text; absence from this list alone is not a false positive.",
+  "cases": {
+    "Q01": [
+      [
+        "technology",
+        "Google Analytics",
+        "Usamos Google Analytics para entender de forma agregada y anónima cómo se visita el sitio"
+      ],
+      [
+        "technology",
+        "Google Tag Manager",
+        "Usamos Google Tag Manager como gestor de las etiquetas de medición del sitio."
+      ],
+      [
+        "provider",
+        "Google LLC",
+        "Ambas son servicios de Google LLC."
+      ],
+      [
+        "data_categories",
+        "Datos de navegación",
+        "Datos de navegación"
+      ],
+      [
+        "purposes",
+        "Responder consultas",
+        "Responder tus consultas enviadas por el formulario de contacto."
+      ],
+      [
+        "recipients",
+        "Brevo",
+        "Brevo (envío de newsletter)"
+      ],
+      [
+        "retention",
+        "Mientras sean necesarios para la finalidad",
+        "Conservamos tus datos mientras sean necesarios para la finalidad por la que fueron entregados"
+      ],
+      [
+        "international_transfers",
+        "Servicios fuera de Chile",
+        "Brevo y los servicios de Google (Analytics, Tag Manager, reCAPTCHA, YouTube) pueden procesar datos en servidores fuera de Chile."
+      ]
+    ],
+    "Q02": [
+      [
+        "technology",
+        "Google Consent Mode v2",
+        "Aplicamos\nGoogle Consent Mode v2"
+      ],
+      [
+        "technology",
+        "Google Analytics 4",
+        "Google Analytics 4\n— cookies"
+      ],
+      [
+        "technology",
+        "Meta Pixel",
+        "Meta Pixel\n(ID 9315879625116111)"
+      ],
+      [
+        "technology",
+        "Microsoft Clarity",
+        "Microsoft Clarity\n— cookies"
+      ],
+      [
+        "purposes",
+        "Medición analítica",
+        "Medimos páginas vistas, tiempo, dispositivos y mapas de calor anónimos."
+      ],
+      [
+        "purposes",
+        "Publicidad",
+        "mostrarte anuncios relevantes después."
+      ],
+      [
+        "retention",
+        "GA4 hasta 24 meses",
+        "con duración hasta 24 meses."
+      ],
+      [
+        "retention",
+        "Meta Pixel 90 días",
+        "con duración 90 días."
+      ]
+    ],
+    "Q03": [
+      [
+        "technology",
+        "Google Analytics 4",
+        "Google Analytics 4 (GA4), Microsoft Clarity."
+      ],
+      [
+        "technology",
+        "Microsoft Clarity",
+        "Google Analytics 4 (GA4), Microsoft Clarity."
+      ],
+      [
+        "technology",
+        "Meta Pixel",
+        "Meta Pixel (Facebook / Instagram Ads)."
+      ],
+      [
+        "purposes",
+        "Analítica",
+        "Nos permiten contar las visitas y fuentes de tráfico para poder evaluar y mejorar el rendimiento de nuestro portal."
+      ],
+      [
+        "purposes",
+        "Publicidad",
+        "crear un perfil de tus intereses y mostrarte anuncios pertinentes"
+      ],
+      [
+        "legal_basis",
+        "Consentimiento",
+        "Ninguna cookie no esencial se instala en tu navegador sin tu aprobación expresa y activa."
+      ]
+    ],
+    "Q04": [
+      [
+        "data_categories",
+        "Identificación y contacto",
+        "Datos de identificación y contacto:"
+      ],
+      [
+        "data_categories",
+        "Económicos y financieros",
+        "Datos económicos y financieros:"
+      ],
+      [
+        "data_categories",
+        "Datos sensibles",
+        "Datos sensibles:"
+      ],
+      [
+        "data_categories",
+        "Navegación digital",
+        "Datos de navegación digital:"
+      ],
+      [
+        "legal_basis",
+        "Contrato, obligación legal, interés legítimo o consentimiento",
+        "ya sea por la necesidad de ejecutar un contrato, dar cumplimiento a una obligación legal, por interés legítimo o mediante el consentimiento del titular"
+      ],
+      [
+        "retention",
+        "Necesario para finalidades y plazos legales",
+        "ZURICH conservará los datos personales únicamente durante el tiempo que sea necesario para cumplir con las finalidades para las cuales fueron recopilados"
+      ],
+      [
+        "international_transfers",
+        "Transferencias internacionales posibles",
+        "es posible que algunos datos personales deban ser transferidos"
+      ]
+    ],
+    "Q05": [
+      [
+        "data_categories",
+        "Datos de identificación",
+        "5.1.Datos de identificación"
+      ],
+      [
+        "data_categories",
+        "Datos de contacto",
+        "5.2.Datos de contacto"
+      ],
+      [
+        "data_categories",
+        "Datos profesionales y académicos",
+        "5.3.Datos Profesionales y Académicos"
+      ],
+      [
+        "purposes",
+        "Gestión del sitio web",
+        "Gestión del sitio web corporativo:"
+      ],
+      [
+        "legal_basis",
+        "Consentimiento",
+        "Consentimiento:"
+      ],
+      [
+        "recipients",
+        "Socios y colaboradores",
+        "Socios y colaboradores:"
+      ],
+      [
+        "international_transfers",
+        "Transferencia a otros países",
+        "En algunos casos, sus datos personales pueden ser transferidos a\notros\npaíses."
+      ]
+    ],
+    "Q06": [
+      [
+        "technology",
+        "Google Analytics 4",
+        "Google Analytics 4:"
+      ],
+      [
+        "technology",
+        "Google Sign-In",
+        "Google Sign-In (OAuth 2.0):"
+      ],
+      [
+        "provider",
+        "Vercel Inc.",
+        "Vercel Inc."
+      ],
+      [
+        "provider",
+        "Railway Corp.",
+        "Railway Corp."
+      ],
+      [
+        "data_categories",
+        "Datos de pago conservados",
+        "correo\nal que se entrega el informe"
+      ],
+      [
+        "purposes",
+        "Prestación del servicio",
+        "Prestación del servicio:"
+      ],
+      [
+        "retention",
+        "6 años",
+        "se conservan por\n6 años"
+      ],
+      [
+        "international_transfers",
+        "Proveedores fuera de Chile",
+        "Justasa utiliza proveedores que almacenan o procesan datos fuera de Chile."
+      ]
+    ],
+    "Q07": [
+      [
+        "technology",
+        "Google Analytics 4",
+        "cookies de analítica (Google Analytics 4)"
+      ],
+      [
+        "technology",
+        "Meta Pixel",
+        "cookies de publicidad (Meta Pixel, Google Ads)"
+      ],
+      [
+        "technology",
+        "Google Ads",
+        "cookies de publicidad (Meta Pixel, Google Ads)"
+      ],
+      [
+        "data_categories",
+        "Identificación y contacto",
+        "Identificación y contacto:"
+      ],
+      [
+        "purposes",
+        "Procesar compras y despacho",
+        "Procesar tus compras, tu pago y tu despacho o retiro."
+      ],
+      [
+        "legal_basis",
+        "Contrato, obligación legal, interés legítimo o consentimiento",
+        "porque es necesario para vender y despachar el producto que compraste, para\ncumplir obligaciones legales y tributarias, porque tienes un interés legítimo evidente en\nrecibir respuesta cuando nos contactas, o porque nos diste tu consentimiento"
+      ],
+      [
+        "retention",
+        "Relación comercial y obligaciones posteriores",
+        "Conservamos tus datos mientras mantengas una relación comercial con nosotros"
+      ],
+      [
+        "international_transfers",
+        "Infraestructura fuera de Chile",
+        "Algunos de nuestros proveedores operan infraestructura fuera de Chile"
+      ]
+    ],
+    "Q08": [
+      [
+        "technology",
+        "PHPSESSID",
+        "cookie de sesión denominada\nPHPSESSID"
+      ],
+      [
+        "technology",
+        "Google reCAPTCHA",
+        "Google reCAPTCHA"
+      ],
+      [
+        "technology",
+        "Google Maps",
+        "Google Maps"
+      ],
+      [
+        "technology",
+        "YouTube",
+        "YouTube"
+      ],
+      [
+        "provider",
+        "Google",
+        "servicios de Google reCAPTCHA, Google Maps y\nYouTube."
+      ],
+      [
+        "purposes",
+        "Continuidad de sesión",
+        "mantenga la continuidad necesaria para ejecutar\n        correctamente determinadas funciones del sitio."
+      ],
+      [
+        "purposes",
+        "Protección de formularios",
+        "protección de los formularios y del sitio."
+      ],
+      [
+        "retention",
+        "Duración de sesión configurable",
+        "Su duración depende de la configuración técnica de la sesión"
+      ]
+    ],
+    "Q09": [
+      [
+        "technology",
+        "almacenamiento local",
+        "Usamos almacenamiento local esencial para que el carrito funcione"
+      ],
+      [
+        "technology",
+        "Google Tag Manager",
+        "cargamos Google Tag Manager"
+      ],
+      [
+        "purposes",
+        "Conservar carrito",
+        "para conservar los productos que agregas."
+      ],
+      [
+        "purposes",
+        "Medir funcionamiento de tienda",
+        "Estos datos se usan para medir el funcionamiento de la tienda."
+      ]
+    ],
+    "Q10": [
+      [
+        "technology",
+        "Google Analytics (GA4)",
+        "Nuestro sitio utiliza Google Analytics (GA4)"
+      ],
+      [
+        "technology",
+        "Meta Pixel",
+        "cargaremos Google Analytics y Meta Pixel"
+      ],
+      [
+        "data_categories",
+        "Datos de contacto y formulario",
+        "Nombre y apellido"
+      ],
+      [
+        "purposes",
+        "Responder consultas",
+        "Responder a tu consulta o solicitud de contacto"
+      ],
+      [
+        "legal_basis",
+        "Consentimiento expreso",
+        "consentimiento expreso"
+      ],
+      [
+        "recipients",
+        "Proveedores de gestión internos",
+        "proveedores que tratan datos en nuestro nombre"
+      ],
+      [
+        "retention",
+        "Solo tiempo necesario",
+        "Conservamos tus datos personales solo durante el tiempo necesario para cumplir con la finalidad para la cual fueron recopilados."
+      ]
+    ]
+  }
+}
