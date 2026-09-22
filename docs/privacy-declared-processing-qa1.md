@@ -2,7 +2,9 @@
 
 ## Estado
 
-Plan congelado antes de ejecutar inferencias.
+**Cerrado — `NEEDS FIX`.**
+
+El plan fue congelado antes de ejecutar inferencias. QA1 se ejecutó sobre los 10 documentos congelados, con dos ejecuciones por documento.
 
 Este QA evalúa la calidad del extractor semántico común `declared_processing/v1`. No evalúa cumplimiento legal, PRV-202, scoring ni el diagnóstico público.
 
@@ -117,3 +119,26 @@ El informe final solo puede concluir:
 - `NEEDS FIX`.
 
 Las observaciones no cambian los gates congelados.
+
+
+## Resultado final QA1
+
+**NEEDS FIX**
+
+Se completaron las 20 ejecuciones previstas. Solo **3/20** salidas pasaron la validación y **17/20** fueron inválidas:
+
+- **12** `JSONDecodeError`: respuestas JSON truncadas durante la generación estructurada;
+- **5** `ValueError`: evidencia rechazada por no coincidir literalmente con el texto de entrada bajo la normalización vigente;
+- **3** salidas válidas: Q03 run 1 y Q09 runs 1 y 2.
+
+El gate congelado exigía **0 invalid outputs** en ambas ejecuciones. Por lo tanto, QA1 falla ese gate duro y el resultado final es `NEEDS FIX`. No es necesario usar precision, recall o estabilidad para alterar esta conclusión.
+
+Las fallas de infraestructura/timeout observadas en intentos previos no forman parte de este resultado final: la ejecución considerada completó las 20 llamadas sin timeout.
+
+## Cierre y continuación
+
+QA1 queda cerrado y sus diez documentos dejan de ser holdout independiente: pueden utilizarse únicamente como evidencia de desarrollo/diagnóstico de esta falla.
+
+La corrección posterior se realizó fuera de QA1 y quedó integrada después del cierre del experimento: aumento del límite de salida estructurada y normalización de diferencias Unicode/presentación para validar evidencia, sin cambiar el contrato `declared_processing/v1`.
+
+Cualquier validación independiente posterior será **QA2**, deberá congelarse antes de inferencia y utilizar un **holdout nuevo**. No se repetirá QA1 sobre estos diez documentos como evidencia independiente.
