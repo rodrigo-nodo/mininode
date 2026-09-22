@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from mininode_api.domain_packs.privacy.declared_processing import MAX_OUTPUT_TOKENS
+from .run import QA_BUDGET_USD, _accounted_call_cost, _may_start_call
 
 
 RUNNER = Path(__file__).with_name("run.py")
@@ -47,3 +48,18 @@ def test_qa2_input_ceiling_includes_full_serialized_request():
     assert "request = request_kwargs(doc)" in source
     assert "input_tokens_ceiling = max(1, request_bytes)" in source
     assert "len(text.encode" not in source
+
+
+def test_valid_response_without_usage_consumes_full_ceiling_and_blocks_next_call():
+    call_ceiling = 1.01
+    first_call_cost = _accounted_call_cost({}, call_ceiling)
+
+    assert first_call_cost == call_ceiling
+    assert first_call_cost <= QA_BUDGET_USD
+    assert not _may_start_call(first_call_cost, call_ceiling)
+
+
+def test_valid_response_with_usage_uses_provider_cost():
+    call_ceiling = 1.50
+    usage = {"input_tokens": 100_000, "output_tokens": 10_000}
+    assert _accounted_call_cost(usage, call_ceiling) == 0.6
