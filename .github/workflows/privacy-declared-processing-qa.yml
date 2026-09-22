@@ -12,7 +12,7 @@ jobs:
   qa:
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.head_branch == 'privacy/declared-processing-qa1-run' &&
+      github.event.workflow_run.head_branch == 'privacy/declared-processing-qa1-safe-run' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -47,6 +47,6 @@ jobs:
           git add backend/tests/domain_packs/privacy/declared_processing_qa1/outputs backend/tests/domain_packs/privacy/declared_processing_qa1/run_summary.json backend/tests/domain_packs/privacy/declared_processing_qa1/executed_sha.txt
           git diff --cached --quiet && exit 0
           git commit -m "test(privacy): record QA inference outputs"
-          git fetch origin privacy/declared-processing-qa1-run
-          git rebase origin/privacy/declared-processing-qa1-run
-          git push origin HEAD:privacy/declared-processing-qa1-run
+          git fetch origin privacy/declared-processing-qa1-safe-run
+          git rebase origin/privacy/declared-processing-qa1-safe-run
+          git push origin HEAD:privacy/declared-processing-qa1-safe-run
