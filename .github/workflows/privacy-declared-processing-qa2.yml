@@ -6,6 +6,11 @@ on:
         description: "Frozen commit SHA to execute"
         required: true
         type: string
+      result_branch:
+        description: "Branch that receives the QA2 attempt and outputs"
+        required: true
+        default: "privacy/declared-processing-qa2-execute"
+        type: string
 
 concurrency:
   group: privacy-declared-processing-qa2
@@ -19,6 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
+      - name: Validate result branch
+        env:
+          RESULT_BRANCH: ${{ inputs.result_branch }}
+        run: |
+          test "$RESULT_BRANCH" = "privacy/declared-processing-qa2-execute" || {
+            echo "Refusing unexpected result branch: $RESULT_BRANCH"
+            exit 2
+          }
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.execution_sha }}
@@ -58,6 +72,6 @@ jobs:
           git add backend/tests/domain_packs/privacy/declared_processing_qa2/outputs 2>/dev/null || true
           git diff --cached --quiet && exit 0
           git commit -m "test(privacy): record QA2 inference attempt"
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          git fetch origin "${{ inputs.result_branch }}"
+          git rebase "origin/${{ inputs.result_branch }}"
+          git push origin "HEAD:${{ inputs.result_branch }}"
