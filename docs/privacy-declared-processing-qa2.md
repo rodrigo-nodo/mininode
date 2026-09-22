@@ -102,7 +102,7 @@ Los cuatro primeros son gates duros. Cualquier valor mayor que cero produce `NEE
 
 El runner reservará un techo conservador usando **8192 output tokens**, consistente con la implementación vigente, y además registrará tokens/costo reales mediante `usage`.
 
-Presupuesto máximo QA2: **USD 10**. Si el techo previo a una llamada supera el saldo, se detiene antes de gastar. Errores de infraestructura producen fail-fast.
+Presupuesto máximo QA2: **USD 2**. Si el techo previo a una llamada supera el saldo, se detiene antes de gastar. Errores de infraestructura producen fail-fast.
 
 ## Disciplina
 
