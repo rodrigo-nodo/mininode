@@ -16,6 +16,8 @@ PROMPT_VERSION = "declared-processing-v1-01"
 REASONING_EFFORT = "medium"
 MAX_INPUT_BYTES = 48_000
 MAX_OUTPUT_TOKENS = 4_096
+API_TIMEOUT_SECONDS = 120.0
+API_MAX_RETRIES = 0
 
 FACT_FIELDS = (
     "technology",
@@ -236,7 +238,7 @@ def extract_declared_processing(
     if client is None:
         from openai import OpenAI
 
-        sdk = OpenAI(timeout=30.0, max_retries=1)
+        sdk = OpenAI(timeout=API_TIMEOUT_SECONDS, max_retries=API_MAX_RETRIES)
         response = sdk.responses.create(**kwargs)
         raw = json.loads(response.output_text)
     else:
