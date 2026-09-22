@@ -15,7 +15,7 @@ SCHEMA_VERSION = "declared_processing/v1"
 PROMPT_VERSION = "declared-processing-v1-01"
 REASONING_EFFORT = "medium"
 MAX_INPUT_BYTES = 48_000
-MAX_OUTPUT_TOKENS = 4_096
+MAX_OUTPUT_TOKENS = 8_192
 API_TIMEOUT_SECONDS = 120.0
 API_MAX_RETRIES = 0
 
@@ -166,6 +166,15 @@ def _normalize(value: str) -> str:
     return " ".join(value.split())
 
 
+def _normalize_evidence(value: str) -> str:
+    """Normalize Unicode presentation differences without changing words."""
+    import unicodedata
+
+    value = unicodedata.normalize("NFKC", value)
+    value = value.translate(str.maketrans({"“": '"', "”": '"', "’": "'", "‘": "'"}))
+    return " ".join(value.split())
+
+
 def validate_output(raw: Any, document: PublicDocument) -> dict[str, Any]:
     if not isinstance(raw, dict) or set(raw) != {"schema_version", "records"}:
         raise ValueError("output fields do not match declared_processing/v1")
@@ -175,7 +184,7 @@ def validate_output(raw: Any, document: PublicDocument) -> dict[str, Any]:
     if not isinstance(records, list) or len(records) > 100:
         raise ValueError("records must be a bounded list")
 
-    source_text = _normalize(document.text)
+    source_text = _normalize_evidence(document.text)
     seen_ids: set[str] = set()
     expected_record_fields = {"record_id", *FACT_FIELDS, "source"}
 
@@ -221,7 +230,7 @@ def validate_output(raw: Any, document: PublicDocument) -> dict[str, Any]:
                     raise ValueError("evidence source URL does not match input")
                 if not isinstance(quote, str) or not quote.strip():
                     raise ValueError("evidence text must be non-empty")
-                if _normalize(quote) not in source_text:
+                if _normalize_evidence(quote) not in source_text:
                     raise ValueError("evidence text is not present in input document")
 
     return raw
