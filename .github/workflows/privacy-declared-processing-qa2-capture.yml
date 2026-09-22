@@ -1,0 +1,32 @@
+name: Privacy declared processing QA2 capture
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/privacy-declared-processing-qa2-capture.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r backend/requirements.txt
+      - name: Capture frozen QA2 documents
+        run: python backend/tests/domain_packs/privacy/declared_processing_qa2/capture.py
+      - name: Commit immutable capture evidence branch
+        run: |
+          branch="privacy/declared-processing-qa2-evidence"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add backend/tests/domain_packs/privacy/declared_processing_qa2/captures backend/tests/domain_packs/privacy/declared_processing_qa2/capture_manifest.json
+          git commit -m "test(privacy): capture frozen QA2 public evidence"
+          git push origin "$branch"
