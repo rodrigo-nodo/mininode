@@ -1,0 +1,313 @@
+{
+  "schema_version": "declared_processing_qa2/reference-v1",
+  "evidence_sha": "d675f2c7e6a6f9c20a64d758ffa075ef7c52aea5",
+  "annotation_rule": "Only explicit facts in frozen captured text; evidence is literal text from the capture; no model outputs or PRV rules.",
+  "cases": [
+    {
+      "case_id": "Q2-01",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "data_categories",
+          "value": "account identity and contact data",
+          "evidence": "nombre(s) y apellido(s), una dirección de correo electrónico, nombre de la empresa, RUT, cargo, número de teléfono"
+        },
+        {
+          "family": "data_categories",
+          "value": "payment and billing data",
+          "evidence": "información de su tarjeta de crédito o datos de facturación"
+        },
+        {
+          "family": "purposes",
+          "value": "provide messaging and keep conversation history",
+          "evidence": "proporcionar el servicio de mensajería, mantener el historial de conversaciones"
+        },
+        {
+          "family": "recipients",
+          "value": "payment service providers",
+          "evidence": "confiamos en los servicios de los proveedores de pago para realizar cualquier pago"
+        },
+        {
+          "family": "legal_basis",
+          "value": "contractual obligations, legitimate interest and consent when required",
+          "evidence": "legítimo interés de facilitar la comunicación y el contacto comercial, el cumplimiento de obligaciones contractuales y su consentimiento cuando sea requerido"
+        },
+        {
+          "family": "retention",
+          "value": "as long as necessary for collection purposes or while account is active",
+          "evidence": "durante el tiempo que sea estrictamente necesario para cumplir con los fines para los que fueron recopilados, o mientras mantenga una cuenta activa con nosotros"
+        }
+      ]
+    },
+    {
+      "case_id": "Q2-02",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "data_categories",
+          "value": "identity and contact data",
+          "evidence": "nombre completo, nacionalidad, RUT, domicilios, teléfonos de contacto, correo electrónico"
+        },
+        {
+          "family": "data_categories",
+          "value": "financial transaction data",
+          "evidence": "números de tarjeta o cuenta, estados de cuenta, tipos de tarjeta, código del país, dirección postal, de facturación, historial crediticio y de consumo"
+        },
+        {
+          "family": "purposes",
+          "value": "provide banking services",
+          "evidence": "Prestación de los servicios bancarios"
+        },
+        {
+          "family": "purposes",
+          "value": "fraud and AML compliance",
+          "evidence": "prevención de fraudes, lavado de activos, financiamiento del terrorismo"
+        },
+        {
+          "family": "legal_basis",
+          "value": "contract, consent, and legal or regulatory provisions",
+          "evidence": "ejecución del contrato entre el cliente y el Banco o para medidas precontractuales o posteriores al contrato conforme a la regulación vigente. En ciertos casos el tratamiento se basa en el consentimiento libre e informado expresado por el titular y en otros casos se basa en disposiciones legales y regulatorias"
+        },
+        {
+          "family": "recipients",
+          "value": "external providers",
+          "evidence": "Proveedores externos:"
+        },
+        {
+          "family": "recipients",
+          "value": "affiliates and related companies",
+          "evidence": "Filiales y empresas relacionadas:"
+        },
+        {
+          "family": "retention",
+          "value": "while contractual relationship remains active",
+          "evidence": "Mientras se mantenga vigente la relación contractual con el titular de los datos"
+        }
+      ]
+    },
+    {
+      "case_id": "Q2-03",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "technology",
+          "value": "Google Analytics 4",
+          "evidence": "Google Analytics 4"
+        },
+        {
+          "family": "technology",
+          "value": "LinkedIn Insight Tag",
+          "evidence": "LinkedIn Insight Tag"
+        },
+        {
+          "family": "purposes",
+          "value": "audience measurement",
+          "evidence": "Nos muestran qué páginas se visitan, cuánto tiempo se quedan y por dónde se abandona el sitio"
+        },
+        {
+          "family": "purposes",
+          "value": "LinkedIn campaign measurement and advertising audiences",
+          "evidence": "Mide las visitas que provienen de avisos, permite armar audiencias para volver a mostrarte publicidad y registra conversiones."
+        },
+        {
+          "family": "provider",
+          "value": "LinkedIn Ireland Unlimited Company",
+          "evidence": "LinkedIn Ireland Unlimited Company"
+        },
+        {
+          "family": "retention",
+          "value": "Google Analytics cookies up to 2 years",
+          "evidence": "Hasta 2 años (_ga"
+        },
+        {
+          "family": "retention",
+          "value": "LinkedIn cookies up to 6 months",
+          "evidence": "Hasta 6 meses, según la cookie"
+        },
+        {
+          "family": "international_transfers",
+          "value": "Google may transfer data outside Chile",
+          "evidence": "Google puede transferir datos fuera de Chile."
+        },
+        {
+          "family": "international_transfers",
+          "value": "LinkedIn may transfer data outside Chile including EU and US",
+          "evidence": "puede transferir datos fuera de Chile, incluida la Unión Europea y Estados Unidos"
+        }
+      ]
+    },
+    {
+      "case_id": "Q2-04",
+      "status": "capture_failed",
+      "facts": []
+    },
+    {
+      "case_id": "Q2-05",
+      "status": "capture_failed",
+      "facts": []
+    },
+    {
+      "case_id": "Q2-06",
+      "status": "capture_failed",
+      "facts": []
+    },
+    {
+      "case_id": "Q2-07",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "data_categories",
+          "value": "identification data",
+          "evidence": "Datos de identificación, como nombre completo y RUT."
+        },
+        {
+          "family": "data_categories",
+          "value": "employment and CV data",
+          "evidence": "Datos laborales, como cargo al que postula, experiencia, antecedentes curriculares, ciudad, disponibilidad, referencias laborales y demás información contenida en el currículum vitae."
+        },
+        {
+          "family": "purposes",
+          "value": "manage job applications",
+          "evidence": "Gestionar postulaciones laborales recibidas voluntariamente por las personas interesadas."
+        },
+        {
+          "family": "purposes",
+          "value": "evaluate profiles for vacancies",
+          "evidence": "Evaluar perfiles laborales en relación con vacantes actuales o futuras."
+        },
+        {
+          "family": "recipients",
+          "value": "companies requesting recruitment processes",
+          "evidence": "Empresas solicitantes de procesos de selección, cuando el postulante sea considerado compatible con una vacante determinada."
+        },
+        {
+          "family": "recipients",
+          "value": "technology providers",
+          "evidence": "Proveedores tecnológicos, de hosting, correo electrónico, almacenamiento, seguridad o soporte del sitio web"
+        },
+        {
+          "family": "retention",
+          "value": "job application records up to 2 years",
+          "evidence": "podrán conservarse por un plazo máximo de 2 años contados desde la recepción de la postulación."
+        },
+        {
+          "family": "international_transfers",
+          "value": "technology providers may store or process outside Chile",
+          "evidence": "Cuando dichos proveedores almacenen o procesen información fuera de Chile"
+        }
+      ]
+    },
+    {
+      "case_id": "Q2-08",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "data_categories",
+          "value": "account and purchase identity/contact data",
+          "evidence": "nombre y apellidos, RUT, correo electrónico, teléfono, dirección de facturación, comuna y región"
+        },
+        {
+          "family": "data_categories",
+          "value": "academic activity data",
+          "evidence": "registros de conexión, avance en el curso, calificaciones, asistencia y certificados obtenidos"
+        },
+        {
+          "family": "purposes",
+          "value": "create account, process purchase, enroll and support",
+          "evidence": "crear y mantener la cuenta; procesar la compra; emitir el documento tributario correspondiente; matricular en el curso; entregar soporte."
+        },
+        {
+          "family": "provider",
+          "value": "PAYKU SpA",
+          "evidence": "PAYKU SpA"
+        },
+        {
+          "family": "provider",
+          "value": "Google LLC",
+          "evidence": "Google LLC"
+        },
+        {
+          "family": "provider",
+          "value": "Microsoft Corporation",
+          "evidence": "Microsoft Corporation"
+        },
+        {
+          "family": "provider",
+          "value": "Meta Platforms, Inc.",
+          "evidence": "Meta Platforms, Inc."
+        },
+        {
+          "family": "legal_basis",
+          "value": "contract and precontractual measures",
+          "evidence": "celebración y ejecución del contrato con el titular, y medidas precontractuales"
+        },
+        {
+          "family": "retention",
+          "value": "account data up to 24 months after last course or account closure",
+          "evidence": "hasta 24 meses después del término del último curso o del cierre de la cuenta"
+        },
+        {
+          "family": "international_transfers",
+          "value": "infrastructure outside Chile mainly United States",
+          "evidence": "Parte de la infraestructura que utilizamos está alojada fuera de Chile, principalmente en Estados Unidos."
+        }
+      ]
+    },
+    {
+      "case_id": "Q2-09",
+      "status": "annotated",
+      "facts": [
+        {
+          "family": "data_categories",
+          "value": "customer and user identity/contact data",
+          "evidence": "nombre, razón social, RUT, correo electrónico, teléfono."
+        },
+        {
+          "family": "data_categories",
+          "value": "recipient messaging data",
+          "evidence": "Números de teléfono, direcciones de correo electrónico e identificadores de WhatsApp."
+        },
+        {
+          "family": "purposes",
+          "value": "operate and maintain platform",
+          "evidence": "Prestar, operar y mantener la Plataforma y los Servicios contratados."
+        },
+        {
+          "family": "purposes",
+          "value": "route SMS email and WhatsApp messages",
+          "evidence": "Procesar y enrutar mensajes por SMS, correo electrónico y WhatsApp, y entregar sus estados."
+        },
+        {
+          "family": "legal_basis",
+          "value": "contract, consent, legitimate interest and legal obligations",
+          "evidence": "la ejecución del contrato con el Cliente; el consentimiento del titular cuando corresponde; el interés legítimo en la seguridad y mejora del servicio; y el cumplimiento de obligaciones legales."
+        },
+        {
+          "family": "provider",
+          "value": "Meta Platforms",
+          "evidence": "Meta Platforms"
+        },
+        {
+          "family": "recipients",
+          "value": "telecommunications operators and SMS aggregators",
+          "evidence": "Operadores de telecomunicaciones y agregadores de SMS"
+        },
+        {
+          "family": "recipients",
+          "value": "cloud infrastructure and hosting providers",
+          "evidence": "Proveedores de infraestructura tecnológica y alojamiento en la nube."
+        },
+        {
+          "family": "retention",
+          "value": "during customer relationship plus legally or operationally necessary periods",
+          "evidence": "mientras se mantenga la relación con el Cliente y durante los plazos adicionales que exija la ley o que resulten necesarios para atender reclamos, auditorías o requerimientos legales."
+        },
+        {
+          "family": "international_transfers",
+          "value": "some providers are outside Chile",
+          "evidence": "Algunos de nuestros proveedores se encuentran ubicados fuera de Chile."
+        }
+      ]
+    }
+  ]
+}
