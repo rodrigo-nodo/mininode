@@ -53,7 +53,10 @@ def run() -> None:
 
     marker = ROOT / "executed_sha.txt"
     if marker.exists():
-        raise SystemExit("QA2 already executed; refusing duplicate independent-QA spend")
+        raise SystemExit("QA2 already executed or attempted; refusing duplicate independent-QA spend")
+    # Persist the attempt before the first API call. A partial/ambiguous run is
+    # consumed QA evidence and must never be silently retried.
+    marker.write_text(execution_sha + "\\n", encoding="utf-8")
 
     infra_errors = {"RateLimitError", "APITimeoutError", "APIConnectionError", "InternalServerError"}
 
@@ -72,9 +75,16 @@ def run() -> None:
         )
 
         for run_number in (1, 2):
-            input_tokens_estimate = max(1, len(text.encode("utf-8")) // 3)
+            # UTF-8 byte length is a conservative token ceiling for the full
+            # serialized request material. Include instructions/schema overhead,
+            # not just document text. The extractor itself also enforces a hard
+            # 48k-byte input payload limit.
+            from mininode_api.domain_packs.privacy.declared_processing import request_kwargs
+            request = request_kwargs(doc)
+            request_bytes = len(json.dumps(request, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+            input_tokens_ceiling = max(1, request_bytes)
             call_ceiling = (
-                input_tokens_estimate / 1_000_000 * INPUT_USD_PER_MILLION
+                input_tokens_ceiling / 1_000_000 * INPUT_USD_PER_MILLION
                 + MAX_OUTPUT_TOKENS / 1_000_000 * OUTPUT_USD_PER_MILLION
             )
             # Hard guard: a new call is allowed only when the cost already
@@ -84,6 +94,7 @@ def run() -> None:
                 raise SystemExit("QA2 hard budget guard stopped before next API call")
 
             usage = {}
+            call_accounted = False
             try:
                 signal.alarm(CALL_TIMEOUT_SECONDS)
                 result = extract_declared_processing(doc, usage_sink=usage.update)
@@ -92,6 +103,7 @@ def run() -> None:
                     + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
                 )
                 actual_cost_usd += call_cost
+                call_accounted = True
                 (out / f"{cid}-run{run_number}.json").write_text(
                     json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
                 )
@@ -105,7 +117,28 @@ def run() -> None:
                 })
             except Exception as exc:
                 error_type = type(exc).__name__
-                calls.append({"case_id": cid, "run": run_number, "status": "invalid", "error_type": error_type})
+                # usage_sink is called immediately after an API response and
+                # before JSON parsing/validation. Charge that usage even when
+                # the semantic output is invalid. If usage is unavailable after
+                # an attempted request, conservatively consume the full ceiling.
+                if not call_accounted:
+                    if usage:
+                        call_cost = (
+                            usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
+                            + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
+                        )
+                        actual_cost_usd += call_cost
+                    else:
+                        call_cost = call_ceiling
+                        actual_cost_usd += call_ceiling
+                calls.append({
+                    "case_id": cid,
+                    "run": run_number,
+                    "status": "invalid",
+                    "error_type": error_type,
+                    "usage": usage,
+                    "accounted_cost_usd": round(call_cost, 6),
+                })
                 if error_type in infra_errors:
                     raise
             finally:
@@ -119,7 +152,6 @@ def run() -> None:
         }, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    marker.write_text(execution_sha + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
