@@ -46,7 +46,6 @@ def run() -> None:
     out = ROOT / "outputs"
     out.mkdir(exist_ok=True)
     calls = []
-    reserved_cost_usd = 0.0
     actual_cost_usd = 0.0
     execution_sha = os.environ.get("QA_EXECUTION_SHA")
     if not execution_sha:
@@ -78,14 +77,16 @@ def run() -> None:
                 input_tokens_estimate / 1_000_000 * INPUT_USD_PER_MILLION
                 + MAX_OUTPUT_TOKENS / 1_000_000 * OUTPUT_USD_PER_MILLION
             )
-            if reserved_cost_usd + call_ceiling > QA_BUDGET_USD:
-                raise SystemExit("QA2 budget guard stopped before next API call")
+            # Hard guard: a new call is allowed only when the cost already
+            # consumed plus the maximum possible cost of this call remains
+            # within the total QA2 budget.
+            if actual_cost_usd + call_ceiling > QA_BUDGET_USD:
+                raise SystemExit("QA2 hard budget guard stopped before next API call")
 
             usage = {}
             try:
                 signal.alarm(CALL_TIMEOUT_SECONDS)
                 result = extract_declared_processing(doc, usage_sink=usage.update)
-                reserved_cost_usd += call_ceiling
                 call_cost = (
                     usage.get("input_tokens", 0) / 1_000_000 * INPUT_USD_PER_MILLION
                     + usage.get("output_tokens", 0) / 1_000_000 * OUTPUT_USD_PER_MILLION
@@ -113,7 +114,6 @@ def run() -> None:
     (ROOT / "run_summary.json").write_text(
         json.dumps({
             "budget_usd": QA_BUDGET_USD,
-            "reserved_cost_usd": round(reserved_cost_usd, 6),
             "actual_cost_usd": round(actual_cost_usd, 6),
             "calls": calls,
         }, ensure_ascii=False, indent=2) + "\n",
