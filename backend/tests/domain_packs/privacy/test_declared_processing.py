@@ -186,3 +186,16 @@ def test_rejects_oversized_input_before_calling_model():
 def test_api_timeout_allows_slow_reasoning_without_hidden_retry():
     assert API_TIMEOUT_SECONDS == 120.0
     assert API_MAX_RETRIES == 0
+
+
+def test_evidence_accepts_unicode_presentation_equivalence():
+    document = PublicDocument(
+        url="https://example.test/privacy",
+        text="Usamos “Analytics” para estadísticas.",
+    )
+    record = _empty_record(document)
+    record["technology"] = [
+        _fact(document, "Analytics", 'Usamos "Analytics" para estadísticas.')
+    ]
+
+    assert validate_output({"schema_version": SCHEMA_VERSION, "records": [record]}, document)
