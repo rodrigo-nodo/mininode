@@ -19,7 +19,7 @@ from mininode_api.domain_packs.privacy.declared_processing import (
 
 ROOT = Path("backend/tests/domain_packs/privacy/declared_processing_qa2")
 CALL_TIMEOUT_SECONDS = 120
-QA_BUDGET_USD = 10.00
+QA_BUDGET_USD = 2.00
 INPUT_USD_PER_MILLION = 4.00
 OUTPUT_USD_PER_MILLION = 20.00
 
