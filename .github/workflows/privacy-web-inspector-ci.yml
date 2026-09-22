@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/privacy-web-inspector-ci.yml'
+      - '.github/workflows/privacy-declared-processing-qa2.yml'
       - 'backend/src/mininode_api/web_inspector/extractor.py'
       - 'backend/src/mininode_api/web_inspector/selector.py'
       - 'backend/src/mininode_api/domain_packs/privacy/**'
