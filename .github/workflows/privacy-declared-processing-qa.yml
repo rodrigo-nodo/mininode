@@ -3,6 +3,9 @@ on:
   workflow_run:
     workflows: ["Privacy Web CI"]
     types: [completed]
+concurrency:
+  group: privacy-declared-processing-qa-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
@@ -17,6 +20,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Refuse duplicate QA for this SHA
+        env:
+          QA_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          marker="backend/tests/domain_packs/privacy/declared_processing_qa1/executed_sha.txt"
+          if test -f "$marker" && grep -Fxq "$QA_SHA" "$marker"; then
+            echo "QA already executed for $QA_SHA; refusing duplicate API spend."
+            exit 3
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -26,13 +38,13 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           test -n "$OPENAI_API_KEY" || { echo "OPENAI_API_KEY secret is unavailable"; exit 2; }
-          PYTHONPATH=backend/src python backend/tests/domain_packs/privacy/declared_processing_qa1/run.py
+          QA_EXECUTION_SHA="${{ github.event.workflow_run.head_sha }}" PYTHONPATH=backend/src python backend/tests/domain_packs/privacy/declared_processing_qa1/run.py
       - name: Commit QA outputs
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/tests/domain_packs/privacy/declared_processing_qa1/outputs backend/tests/domain_packs/privacy/declared_processing_qa1/run_summary.json
+          git add backend/tests/domain_packs/privacy/declared_processing_qa1/outputs backend/tests/domain_packs/privacy/declared_processing_qa1/run_summary.json backend/tests/domain_packs/privacy/declared_processing_qa1/executed_sha.txt
           git diff --cached --quiet && exit 0
           git commit -m "test(privacy): record QA inference outputs"
           git fetch origin privacy/declared-processing-qa1-run
