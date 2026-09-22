@@ -39,7 +39,7 @@ Las URLs exactas están congeladas en `declared_processing_qa2/cases.json`.
 
 ## Captura
 
-Antes de llamar al modelo se capturará cada documento mediante GET público y pasivo. Se guardarán case_id, URL solicitada/final, fecha UTC, SHA-256, tipo, título y tamaño del texto.
+Antes de llamar al modelo se capturará cada documento mediante GET público y pasivo. Se guardarán case_id, URL solicitada/final, fecha UTC, SHA-256, tipo, estado HTTP y tamaño del texto. La captura se ejecuta una sola vez tras integrar el workflow de captura y se conserva en la rama de evidencia `privacy/declared-processing-qa2-evidence` antes de construir la referencia independiente.
 
 No se envían formularios, no hay login, no se aceptan consentimientos, no se crean cuentas y no se eluden protecciones.
 
