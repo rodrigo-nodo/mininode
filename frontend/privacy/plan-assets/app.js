@@ -116,6 +116,30 @@ const renderCheck = (check) => {
   }
   elements.checkStart.hidden = false;
 };
+const render = ({ site_url: siteUrl, plan, check }) => {
+  elements.site.textContent = friendlySite(siteUrl);
+  elements.score.textContent = `${plan.initial_score} / 100`;
+  elements.itemCount.textContent = plan.item_count;
+  elements.summaryCount.textContent = plan.item_count;
+  elements.closingCount.textContent = plan.item_count;
+  const counts = plan.items.reduce((result, item) => {
+    result[item.priority] = (result[item.priority] || 0) + 1;
+    return result;
+  }, {});
+  ['Alta', 'Media', 'Baja'].forEach((priority) => {
+    const li = document.createElement('li');
+    const strong = document.createElement('strong');
+    const span = document.createElement('span');
+    strong.textContent = counts[priority] || 0;
+    span.textContent = `prioridad ${priority.toLowerCase()}`;
+    li.append(strong, span);
+    elements.prioritySummary.append(li);
+  });
+  plan.items.forEach(renderItem);
+  renderCheck(check);
+  elements.loading.hidden = true;
+  elements.content.hidden = false;
+};
 const performCheck = async () => {
   if (checkInProgress || !currentToken) return;
   checkInProgress = true;
