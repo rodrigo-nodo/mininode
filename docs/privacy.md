@@ -55,7 +55,7 @@ PRV-201 tiene peso cero y queda fuera del Privacy Score, cobertura, prioridades 
 del alcance técnico inspeccionado, no que el sitio no utilice cookies. El scoring
 `0.3` registra esta exclusión y los diagnósticos `0.10/0.2` y `0.11/0.3` no son
 comparables.
-Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso cero, fuera del Privacy Score, cobertura, prioridades y Plan de corrección. El scoring `0.2` registra esta exclusión para preservar la comparabilidad de snapshots.
+Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso cero, fuera del Privacy Score, cobertura, prioridades y mejoras accionables de Privacy Web. El scoring `0.2` registra esta exclusión para preservar la comparabilidad de snapshots.
 Framework `0.9` mantiene la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción de `0.8`, y hace que PRV-103 combine acciones explícitas con objetos o resultados acotados dentro del mismo formulario. El clasificador sigue siendo determinístico, sin LLM, y no ejecuta JavaScript del sitio.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
