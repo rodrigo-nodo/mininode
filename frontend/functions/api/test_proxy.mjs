@@ -197,3 +197,27 @@ test('allows only GET for Access context and forwards the Cloudflare assertion',
     await assertRejected('/api/access/context', method);
   }
 });
+
+
+test('forwards Clerk bearer token only on protected Access routes', async () => {
+  const token = 'clerk-session-token';
+  const accessResult = await request('/api/access/me', 'GET', {
+    withoutApiKey: true,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  assert.equal(accessResult.response.status, 200);
+  assert.equal(accessResult.calls.length, 1);
+  assert.equal(
+    accessResult.calls[0].init.headers.get('Authorization'),
+    `Bearer ${token}`,
+  );
+  assert.equal(accessResult.calls[0].init.headers.has('X-Api-Key'), false);
+
+  const publicResult = await request('/api/privacy/diagnose', 'POST', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal(publicResult.response.status, 200);
+  assert.equal(publicResult.calls[0].init.headers.has('Authorization'), false);
+  assert.equal(publicResult.calls[0].init.headers.get('X-Api-Key'), API_KEY);
+});
