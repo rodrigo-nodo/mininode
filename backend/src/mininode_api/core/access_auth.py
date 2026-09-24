@@ -15,8 +15,15 @@ def _bearer_token(authorization: str | None) -> str | None:
     if authorization is None:
         return None
 
-    scheme, separator, token = authorization.partition(" ")
-    if separator != " " or scheme.lower() != "bearer" or not token.strip():
+    value = authorization.strip()
+    if not value:
+        return None
+
+    scheme, separator, token = value.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+
+    if separator != " " or not token.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Authorization header",
@@ -32,8 +39,8 @@ def _verified_email(
     """Resolve exactly one verified identity provider.
 
     Clerk Bearer tokens take precedence during the migration. Cloudflare Access
-    remains a fallback only when no Authorization header is present, so a failed
-    Clerk verification can never silently fall back to another identity.
+    remains a fallback when no Bearer token is present. A failed Clerk
+    verification can never silently fall back to another identity.
     """
 
     clerk_token = _bearer_token(authorization)
