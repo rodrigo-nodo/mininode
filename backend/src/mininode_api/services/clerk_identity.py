@@ -77,19 +77,46 @@ def _jwk_client(issuer: str) -> PyJWKClient:
     return PyJWKClient(f"{issuer}/.well-known/jwks.json")
 
 
+def _resolve_signing_key(client: PyJWKClient, token: str):
+    """Resolve token kid while separating bad tokens from unusable JWKS."""
+
+    try:
+        header = jwt.get_unverified_header(token)
+    except PyJWTError as exc:
+        raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
+
+    key_id = header.get("kid")
+    if not isinstance(key_id, str) or not key_id.strip():
+        raise ClerkIdentityInvalidError("Clerk session token key id is required")
+
+    for refresh in (False, True):
+        try:
+            signing_keys = client.get_signing_keys(refresh=refresh)
+        except (
+            PyJWKClientConnectionError,
+            PyJWKClientError,
+            PyJWTError,
+            ValueError,
+            TypeError,
+        ) as exc:
+            raise ClerkIdentityUnavailableError(
+                "Clerk signing keys are unavailable"
+            ) from exc
+
+        for signing_key in signing_keys:
+            if signing_key.key_id == key_id:
+                return signing_key
+
+    raise ClerkIdentityInvalidError("Clerk session token signing key is unknown")
+
+
 def verify_clerk_session(token: str) -> ClerkIdentity:
     if not token or not token.strip():
         raise ClerkIdentityInvalidError("Clerk session token is required")
 
     issuer, authorized_parties = _configuration()
     client = _jwk_client(issuer)
-
-    try:
-        signing_key = client.get_signing_key_from_jwt(token)
-    except PyJWKClientConnectionError as exc:
-        raise ClerkIdentityUnavailableError("Clerk signing keys are unavailable") from exc
-    except (PyJWKClientError, PyJWTError) as exc:
-        raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
+    signing_key = _resolve_signing_key(client, token)
 
     try:
         payload = jwt.decode(
