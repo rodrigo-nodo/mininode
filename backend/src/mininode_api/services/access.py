@@ -10,6 +10,10 @@ from uuid import UUID, uuid4
 
 import psycopg
 
+ROLE_OWNER = "owner"
+ROLE_MEMBER = "member"
+WORKSPACE_ROLES = frozenset({ROLE_OWNER, ROLE_MEMBER})
+
 INITIALIZE_SQL = """
 CREATE SCHEMA IF NOT EXISTS access;
 
@@ -148,3 +152,155 @@ def get_or_create_user(email: str) -> StoredUser:
         row = cursor.fetchone()
 
     return StoredUser(id=row[0], email=row[1])
+
+
+@dataclass(frozen=True)
+class SiteContext:
+    id: UUID
+    hostname: str
+
+
+@dataclass(frozen=True)
+class CompanyContext:
+    id: UUID
+    name: str
+    sites: tuple[SiteContext, ...]
+
+
+@dataclass(frozen=True)
+class WorkspaceContext:
+    id: UUID
+    name: str
+    role: str
+    companies: tuple[CompanyContext, ...]
+
+
+@dataclass(frozen=True)
+class AuthorizedSite:
+    site_id: UUID
+    company_id: UUID
+    workspace_id: UUID
+    role: str
+
+
+def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
+    """Return only workspace/company/site hierarchy authorized for this user."""
+
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                w.id,
+                w.name,
+                wm.role,
+                c.id,
+                c.name,
+                s.id,
+                s.hostname
+            FROM access.workspace_members AS wm
+            JOIN access.workspaces AS w
+              ON w.id = wm.workspace_id
+            LEFT JOIN access.companies AS c
+              ON c.workspace_id = w.id
+            LEFT JOIN access.sites AS s
+              ON s.company_id = c.id
+            WHERE wm.user_id = %s
+              AND wm.role IN (%s, %s)
+            ORDER BY
+                lower(w.name),
+                w.id,
+                lower(c.name) NULLS FIRST,
+                c.id NULLS FIRST,
+                s.hostname NULLS FIRST,
+                s.id NULLS FIRST
+            """,
+            (user_id, ROLE_OWNER, ROLE_MEMBER),
+        )
+        rows = cursor.fetchall()
+
+    workspace_builders: dict[UUID, dict] = {}
+    for (
+        workspace_id,
+        workspace_name,
+        role,
+        company_id,
+        company_name,
+        site_id,
+        hostname,
+    ) in rows:
+        workspace = workspace_builders.setdefault(
+            workspace_id,
+            {
+                "name": workspace_name,
+                "role": role,
+                "companies": {},
+            },
+        )
+
+        if company_id is None:
+            continue
+
+        company = workspace["companies"].setdefault(
+            company_id,
+            {
+                "name": company_name,
+                "sites": [],
+            },
+        )
+        if site_id is not None:
+            company["sites"].append(SiteContext(id=site_id, hostname=hostname))
+
+    return tuple(
+        WorkspaceContext(
+            id=workspace_id,
+            name=workspace["name"],
+            role=workspace["role"],
+            companies=tuple(
+                CompanyContext(
+                    id=company_id,
+                    name=company["name"],
+                    sites=tuple(company["sites"]),
+                )
+                for company_id, company in workspace["companies"].items()
+            ),
+        )
+        for workspace_id, workspace in workspace_builders.items()
+    )
+
+
+def get_authorized_site(user_id: UUID, site_id: UUID) -> AuthorizedSite | None:
+    """Resolve a site only when the user belongs to its workspace."""
+
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                s.id,
+                c.id,
+                w.id,
+                wm.role
+            FROM access.sites AS s
+            JOIN access.companies AS c
+              ON c.id = s.company_id
+            JOIN access.workspaces AS w
+              ON w.id = c.workspace_id
+            JOIN access.workspace_members AS wm
+              ON wm.workspace_id = w.id
+             AND wm.user_id = %s
+            WHERE s.id = %s
+              AND wm.role IN (%s, %s)
+            LIMIT 1
+            """,
+            (user_id, site_id, ROLE_OWNER, ROLE_MEMBER),
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return AuthorizedSite(
+        site_id=row[0],
+        company_id=row[1],
+        workspace_id=row[2],
+        role=row[3],
+    )
