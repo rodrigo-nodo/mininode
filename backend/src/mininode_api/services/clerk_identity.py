@@ -78,37 +78,35 @@ def _jwk_client(issuer: str) -> PyJWKClient:
 
 
 def _resolve_signing_key(client: PyJWKClient, token: str):
-    """Resolve token kid while separating bad tokens from unusable JWKS."""
+    """Resolve a signing key while distinguishing token and provider failures."""
 
     try:
-        header = jwt.get_unverified_header(token)
+        jwt.get_unverified_header(token)
     except PyJWTError as exc:
         raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
 
-    key_id = header.get("kid")
-    if not isinstance(key_id, str) or not key_id.strip():
-        raise ClerkIdentityInvalidError("Clerk session token key id is required")
-
-    for refresh in (False, True):
-        try:
-            signing_keys = client.get_signing_keys(refresh=refresh)
-        except (
-            PyJWKClientConnectionError,
-            PyJWKClientError,
-            PyJWTError,
-            ValueError,
-            TypeError,
-        ) as exc:
-            raise ClerkIdentityUnavailableError(
-                "Clerk signing keys are unavailable"
+    try:
+        return client.get_signing_key_from_jwt(token)
+    except PyJWKClientConnectionError as exc:
+        raise ClerkIdentityUnavailableError(
+            "Clerk signing keys are unavailable"
+        ) from exc
+    except PyJWKClientError as exc:
+        if "Unable to find a signing key that matches" in str(exc):
+            raise ClerkIdentityInvalidError(
+                "Clerk session token signing key is unknown"
             ) from exc
-
-        for signing_key in signing_keys:
-            if signing_key.key_id == key_id:
-                return signing_key
-
-    raise ClerkIdentityInvalidError("Clerk session token signing key is unknown")
-
+        raise ClerkIdentityUnavailableError(
+            "Clerk signing keys are unavailable"
+        ) from exc
+    except (ValueError, TypeError) as exc:
+        raise ClerkIdentityUnavailableError(
+            "Clerk signing keys are unavailable"
+        ) from exc
+    except PyJWTError as exc:
+        raise ClerkIdentityUnavailableError(
+            "Clerk signing keys are unavailable"
+        ) from exc
 
 def verify_clerk_session(token: str) -> ClerkIdentity:
     if not token or not token.strip():
