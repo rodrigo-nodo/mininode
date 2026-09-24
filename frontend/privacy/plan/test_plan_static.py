@@ -54,7 +54,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=1',
             '/privacy/plan-assets/styles.css?v=5',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=6',
+            '/privacy/plan-assets/app.js?v=7',
         ):
             self.assertIn(asset, HTML)
 
@@ -115,9 +115,9 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_controlled_error_states_are_distinct(self):
         self.assertIn("response.status === 404", APP)
         self.assertIn("if (!response.ok) { showError('unavailable')", APP)
-        self.assertIn("Plan no disponible", APP)
-        self.assertIn("No pudimos cargar el Plan", APP)
-        self.assertIn("No pudimos mostrar este Plan", APP)
+        self.assertIn("Privacy Web no disponible", APP)
+        self.assertIn("No pudimos cargar Privacy Web", APP)
+        self.assertIn("No pudimos mostrar Privacy Web", APP)
         self.assertIn("catch { showError('unavailable'); }", APP)
         self.assertIn("catch { showError('invalid'); return; }", APP)
         self.assertIn('href="/privacy/"', HTML)
@@ -148,7 +148,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=6"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=7"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -166,22 +166,27 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("Privacy Score es un indicador desarrollado por Mininode.", HTML)
         self.assertIn("no reemplaza una revisión jurídica o especializada", HTML)
 
-    def test_available_check_has_preventive_copy_cta_and_confirmation(self):
-        self.assertIn("1 comprobación incluida.", HTML)
+    def test_active_privacy_web_keeps_review_cta_and_confirmation(self):
+        self.assertNotIn("1 comprobación incluida.", HTML)
         self.assertIn('id="check-deadline"', HTML)
-        self.assertIn("Se recomienda utilizar esta comprobación después de realizar los cambios indicados en el Plan.", HTML)
-        self.assertIn(">Comprobar mejoras</button>", HTML)
-        self.assertIn("Se realizará una nueva revisión del sitio y se utilizará la comprobación incluida", HTML)
+        self.assertIn("Mientras Privacy Web esté activo, puedes volver a revisar el sitio", HTML)
+        self.assertIn("Revisa nuevamente el sitio después de aplicar cambios", HTML)
+        self.assertIn(">Revisar nuevamente</button>", HTML)
+        self.assertIn("Se realizará una nueva revisión del sitio y se comparará con el diagnóstico original.", HTML)
         self.assertIn("elements.checkStart.hidden = false", APP)
+        self.assertIn("check.latest_check", APP)
+        self.assertIn("Activo hasta:", APP)
 
-    def test_used_result_formats_score_counts_and_details_without_cta(self):
-        self.assertIn("result.score_change === 0 ? 'Sin cambios en el score'", APP)
+    def test_latest_result_formats_score_counts_and_keeps_repeat_cta(self):
+        self.assertIn("result.score_change === 0", APP)
         self.assertIn("result.score_change > 0 ? '+' : ''", APP)
         self.assertIn("result.corrected_count === 1 ? 'mejora corregida' : 'mejoras corregidas'", APP)
         self.assertIn("result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes'", APP)
         self.assertIn("result.items.forEach", APP)
-        self.assertIn("elements.checkAvailable.hidden = true", APP)
-        self.assertIn("elements.checkCreated.textContent = friendlyDate(check.created_at)", APP)
+        self.assertIn("elements.checkAvailable.hidden = false", APP)
+        self.assertIn("elements.checkCreated.textContent = friendlyDate(review.created_at)", APP)
+        self.assertIn("renderCheckResult(data);", APP)
+        self.assertIn("elements.checkStart.hidden = false", APP)
 
     def test_incomparable_result_shows_only_current_score_and_explanation(self):
         self.assertIn('id="check-not-comparable" hidden', HTML)
@@ -205,22 +210,21 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
 
     def test_expired_check_keeps_cta_disabled(self):
         expired_branch = APP[APP.index("if (check.status === 'expired')"):APP.index("elements.checkStart.hidden = false")]
-        self.assertIn("El plazo para realizar la comprobación", expired_branch)
+        self.assertIn("La vigencia de Privacy Web ha finalizado.", expired_branch)
         self.assertNotIn("checkStart.hidden = false", expired_branch)
 
-    def test_continuous_monitoring_is_only_revealed_for_used_check(self):
+    def test_continuous_monitoring_is_only_revealed_after_a_review(self):
         self.assertIn('id="continuous-monitoring"', HTML)
         self.assertIn('aria-labelledby="continuous-monitoring-title" hidden', HTML)
-        self.assertIn("elements.continuousMonitoring.hidden = check.status !== 'used'", APP)
-        self.assertIn("if (check.status === 'used') { renderCheckResult(check); return; }", APP)
-
-        available_and_expired_branch = APP[APP.index("const renderCheck = (check)"):APP.index("elements.checkStart.hidden = false")]
-        self.assertNotIn("continuousMonitoring.hidden = false", available_and_expired_branch)
+        self.assertIn("elements.continuousMonitoring.hidden = true", APP)
+        self.assertIn("elements.continuousMonitoring.hidden = false", APP)
+        self.assertIn("if (check.latest_check)", APP)
+        self.assertIn("renderCheckResult(check.latest_check)", APP)
 
     def test_continuous_monitoring_uses_roadmap_copy_without_cta_or_price(self):
         monitoring = HTML[HTML.index('<section class="continuous-monitoring"'):HTML.index('</section>', HTML.index('<section class="continuous-monitoring"'))]
         self.assertIn("Próximamente", monitoring)
-        self.assertIn("Seguimiento continuo", monitoring)
+        self.assertIn("Seguimiento automático", monitoring)
         self.assertIn("Mininode podrá revisar periódicamente el sitio y avisar si aparecen nuevas señales o si alguna mejora vuelve a quedar pendiente.", monitoring)
         self.assertNotIn("<button", monitoring)
         self.assertNotIn("<a ", monitoring)
@@ -233,7 +237,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             "elements.checkNow.textContent = `${result.current_score} / 100`",
             "elements.checkCorrected.textContent = result.corrected_count",
             "elements.checkPending.textContent = result.pending_count",
-            "elements.checkCreated.textContent = friendlyDate(check.created_at)",
+            "elements.checkCreated.textContent = friendlyDate(review.created_at)",
         ):
             self.assertIn(assignment, APP)
 
