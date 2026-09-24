@@ -122,7 +122,7 @@ def _require_correction_plan_database(request: Request) -> None:
     if not request.app.state.privacy_correction_plan_ready:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Servicio de planes no disponible.",
+            detail="Servicio de Privacy Web no disponible.",
         )
 
 
@@ -139,7 +139,7 @@ def _require_correction_plan_order_database(request: Request) -> None:
 
 def _require_correction_plan_check_database(request: Request) -> None:
     if not request.app.state.privacy_correction_plan_check_ready:
-        raise HTTPException(status_code=503, detail="Servicio de comprobación no disponible.")
+        raise HTTPException(status_code=503, detail="Servicio de revisión no disponible.")
 
 
 @router.post(
@@ -284,9 +284,9 @@ def get_correction_plan(access_token: str, request: Request):
         )
         return {**plan, "check": check}
     except privacy_correction_plan.CorrectionPlanNotFoundError:
-        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+        raise HTTPException(status_code=404, detail="Privacy Web no disponible.") from None
     except privacy_correction_plan_check.ImprovementCheckNotFoundError:
-        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+        raise HTTPException(status_code=404, detail="Privacy Web no disponible.") from None
 
 
 @router.post(
@@ -297,13 +297,13 @@ def check_correction_plan(access_token: str):
     try:
         return privacy_correction_plan_check.perform_check(access_token)
     except privacy_correction_plan_check.ImprovementCheckNotFoundError:
-        raise HTTPException(status_code=404, detail="Plan no encontrado.") from None
+        raise HTTPException(status_code=404, detail="Privacy Web no disponible.") from None
     except privacy_correction_plan_check.ImprovementCheckExpiredError:
         raise HTTPException(status_code=410, detail="La vigencia de Privacy Web ha finalizado.") from None
     except privacy_correction_plan_check.ImprovementCheckUnavailableError:
         raise HTTPException(status_code=409, detail="La revisión de Privacy Web no está disponible.") from None
     except privacy_correction_plan_check.ImprovementInspectionError:
-        raise HTTPException(status_code=503, detail="No pudimos completar la comprobación. Intente nuevamente en unos minutos.") from None
+        raise HTTPException(status_code=503, detail="No pudimos completar la revisión. Intente nuevamente en unos minutos.") from None
 
 
 _ERRORS = {
