@@ -94,6 +94,11 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("plan.item_count !== plan.items.length", APP)
         self.assertLess(APP.index("validPlanResponse(data)"), APP.index("render(data)"))
 
+    def test_plan_render_function_is_present_and_invoked(self):
+        self.assertIn("const render = ({ site_url: siteUrl, plan, check }) => {", APP)
+        self.assertIn("renderCheck(check);", APP)
+        self.assertIn("render(data);", APP)
+
     def test_snapshot_values_and_every_item_render_in_stored_order(self):
         self.assertIn("friendlySite(siteUrl)", APP)
         self.assertIn("plan.initial_score", APP)
