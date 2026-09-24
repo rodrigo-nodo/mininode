@@ -1,11 +1,12 @@
-"""Single-use, deterministic improvement check for a purchased correction plan."""
+"""Repeatable, deterministic Privacy Web reviews during an active month."""
 
 from __future__ import annotations
 
+import calendar
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Iterator, Mapping
 from uuid import UUID, uuid4
 
@@ -15,10 +16,6 @@ from psycopg.types.json import Jsonb
 from mininode_api.domain_packs.privacy.versioning import diagnostic_comparability
 from mininode_api.services import privacy_correction_plan, privacy_diagnostic_snapshot
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
-
-CHECK_WINDOW = timedelta(days=30)
-LEGACY_CHECK_WINDOW = timedelta(days=90)
-LEGACY_PRODUCT_AMOUNT = 49900
 
 INITIALIZE_SQL = """
 CREATE SCHEMA IF NOT EXISTS privacy;
@@ -30,26 +27,42 @@ CREATE TABLE IF NOT EXISTS privacy.correction_plan_check (
     original_diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
     check_diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
     result_snapshot JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (correction_plan_id)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+DECLARE
+    single_use_constraint RECORD;
+BEGIN
+    FOR single_use_constraint IN
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'privacy.correction_plan_check'::regclass
+          AND contype = 'u'
+          AND pg_get_constraintdef(oid) = 'UNIQUE (correction_plan_id)'
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE privacy.correction_plan_check DROP CONSTRAINT %I',
+            single_use_constraint.conname
+        );
+    END LOOP;
+END $$;
+
+CREATE INDEX IF NOT EXISTS correction_plan_check_plan_created_idx
+    ON privacy.correction_plan_check (correction_plan_id, created_at DESC);
 """
 
 
 class ImprovementCheckNotFoundError(Exception):
-    """The capability token does not resolve to an eligible plan."""
-
-
-class ImprovementCheckUsedError(Exception):
-    """The included check has already been consumed."""
+    """The capability token does not resolve to an eligible Privacy Web activation."""
 
 
 class ImprovementCheckExpiredError(Exception):
-    """The included check is outside its validity window."""
+    """Privacy Web is outside its active month."""
 
 
 class ImprovementCheckUnavailableError(Exception):
-    """The order is not paid or lacks a trustworthy payment time."""
+    """The order is not paid or lacks a trustworthy activation time."""
 
 
 class ImprovementInspectionError(Exception):
@@ -62,7 +75,6 @@ class CheckContext:
     diagnostic_id: UUID
     site_url: str
     paid_at: datetime
-    amount: int
     plan_snapshot: dict
 
 
@@ -84,16 +96,18 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def expires_at(paid_at: datetime, amount: int = 9900) -> datetime:
-    """Compute the check deadline exclusively from the trusted payment time."""
-    window = LEGACY_CHECK_WINDOW if amount == LEGACY_PRODUCT_AMOUNT else CHECK_WINDOW
-    return paid_at + window
+def expires_at(paid_at: datetime) -> datetime:
+    """Return one calendar month after the trusted activation time."""
+    year = paid_at.year + (1 if paid_at.month == 12 else 0)
+    month = 1 if paid_at.month == 12 else paid_at.month + 1
+    day = min(paid_at.day, calendar.monthrange(year, month)[1])
+    return paid_at.replace(year=year, month=month, day=day)
 
 
 def _context(cursor, plan_id: UUID) -> CheckContext:
     cursor.execute(
         """
-        SELECT o.id, o.diagnostic_id, d.site_url, o.paid_at, o.amount, p.plan_snapshot,
+        SELECT o.id, o.diagnostic_id, d.site_url, o.paid_at, p.plan_snapshot,
                o.status
         FROM privacy.correction_plan p
         JOIN privacy.correction_plan_order o ON o.correction_plan_id = p.id
@@ -105,16 +119,18 @@ def _context(cursor, plan_id: UUID) -> CheckContext:
     row = cursor.fetchone()
     if row is None:
         raise ImprovementCheckNotFoundError()
-    order_id, diagnostic_id, site_url, paid_at, amount, plan_snapshot, order_status = row
+    order_id, diagnostic_id, site_url, paid_at, plan_snapshot, order_status = row
     if order_status != "paid" or paid_at is None:
         raise ImprovementCheckUnavailableError()
-    return CheckContext(order_id, diagnostic_id, site_url, paid_at, amount, plan_snapshot)
+    return CheckContext(order_id, diagnostic_id, site_url, paid_at, plan_snapshot)
 
 
-def _existing(cursor, plan_id: UUID):
+def _latest(cursor, plan_id: UUID):
     cursor.execute(
         """SELECT created_at, result_snapshot FROM privacy.correction_plan_check
-           WHERE correction_plan_id = %s""",
+           WHERE correction_plan_id = %s
+           ORDER BY created_at DESC
+           LIMIT 1""",
         (plan_id,),
     )
     return cursor.fetchone()
@@ -123,13 +139,23 @@ def _existing(cursor, plan_id: UUID):
 def get_check_metadata(plan_id: UUID, *, now: datetime | None = None) -> dict:
     with _connection() as connection, connection.cursor() as cursor:
         context = _context(cursor, plan_id)
-        existing = _existing(cursor, plan_id)
-    if existing:
-        return {"status": "used", "created_at": existing[0], "result": existing[1]}
-    deadline = expires_at(context.paid_at, context.amount)
-    if (now or datetime.now(timezone.utc)) > deadline:
-        return {"status": "expired", "expires_at": deadline}
-    return {"status": "available", "expires_at": deadline}
+        latest = _latest(cursor, plan_id)
+
+    deadline = expires_at(context.paid_at)
+    metadata = {
+        "status": (
+            "expired"
+            if (now or datetime.now(timezone.utc)) > deadline
+            else "available"
+        ),
+        "expires_at": deadline,
+    }
+    if latest:
+        metadata["latest_check"] = {
+            "created_at": latest[0],
+            "result": latest[1],
+        }
+    return metadata
 
 
 def compare_diagnostics(
@@ -188,7 +214,7 @@ def compare_diagnostics(
 
 
 def perform_check(access_token: str, *, now: datetime | None = None) -> dict:
-    """Inspect and persist one check while holding a plan-scoped advisory lock."""
+    """Inspect and persist one review while holding a plan-scoped advisory lock."""
     try:
         plan_record = privacy_correction_plan.get_correction_plan(access_token)
     except privacy_correction_plan.CorrectionPlanNotFoundError as exc:
@@ -201,9 +227,8 @@ def perform_check(access_token: str, *, now: datetime | None = None) -> dict:
             (str(plan_id),),
         )
         context = _context(cursor, plan_id)
-        if _existing(cursor, plan_id):
-            raise ImprovementCheckUsedError()
-        if current_time > expires_at(context.paid_at, context.amount):
+        deadline = expires_at(context.paid_at)
+        if current_time > deadline:
             raise ImprovementCheckExpiredError()
 
         try:
@@ -228,8 +253,13 @@ def perform_check(access_token: str, *, now: datetime | None = None) -> dict:
                  checked.id, Jsonb(result)),
             )
             created_at = cursor.fetchone()[0]
-        except (ImprovementCheckUsedError, ImprovementCheckExpiredError):
+        except ImprovementCheckExpiredError:
             raise
         except Exception as exc:
             raise ImprovementInspectionError() from exc
-    return {"status": "used", "created_at": created_at, "result": result}
+    return {
+        "status": "available",
+        "expires_at": deadline,
+        "created_at": created_at,
+        "result": result,
+    }
