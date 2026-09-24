@@ -27,9 +27,9 @@ const friendlySite = (siteUrl) => { try { return new URL(siteUrl).host || siteUr
 const friendlyDate = (value) => new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
 const showError = (kind) => {
   const states = {
-    missing: ['Plan no disponible', 'No fue posible encontrar este Plan de corrección. Verifique que el enlace esté completo.'],
-    unavailable: ['No pudimos cargar el Plan', 'El Plan no está disponible temporalmente. Intente nuevamente en unos minutos.'],
-    invalid: ['No pudimos mostrar este Plan', 'La información recibida no tiene el formato necesario para mostrar el Plan.'],
+    missing: ['Privacy Web no disponible', 'No fue posible encontrar este acceso a Privacy Web. Verifique que el enlace esté completo.'],
+    unavailable: ['No pudimos cargar Privacy Web', 'Privacy Web no está disponible temporalmente. Intente nuevamente en unos minutos.'],
+    invalid: ['No pudimos mostrar Privacy Web', 'La información recibida no tiene el formato necesario para mostrar Privacy Web.'],
   };
   elements.loading.hidden = true; elements.content.hidden = true; elements.error.hidden = false;
   [elements.errorTitle.textContent, elements.errorMessage.textContent] = states[kind];
@@ -45,49 +45,119 @@ const renderItem = (item, index) => {
   item.action_steps.forEach((step) => { const li = document.createElement('li'); li.textContent = step; fragment.querySelector('.plan-item__steps').append(li); });
   elements.items.append(fragment);
 };
-const renderCheckResult = (check) => {
-  const result = check.result;
-  elements.checkAvailable.hidden = true; elements.checkStart.hidden = true; elements.checkConfirm.hidden = true; elements.checkResult.hidden = false; elements.checkMessage.hidden = true;
-  elements.continuousMonitoring.hidden = check.status !== 'used';
+const renderCheckResult = (review) => {
+  const result = review.result;
+  elements.checkResult.hidden = false;
+  elements.checkMessage.hidden = true;
+  elements.continuousMonitoring.hidden = false;
   const notComparable = result.comparability?.status === 'not_comparable';
-  elements.checkComparison.hidden = notComparable; elements.checkNotComparable.hidden = !notComparable;
+  elements.checkComparison.hidden = notComparable;
+  elements.checkNotComparable.hidden = !notComparable;
   if (notComparable) {
-    elements.checkLower.hidden = true; elements.checkItems.replaceChildren();
+    elements.checkLower.hidden = true;
+    elements.checkItems.replaceChildren();
     elements.checkCurrentScore.textContent = `${result.current_score} / 100`;
-    elements.checkCreated.textContent = friendlyDate(check.created_at);
+    elements.checkCreated.textContent = friendlyDate(review.created_at);
     return;
   }
-  elements.checkBefore.textContent = `${result.original_score} / 100`; elements.checkNow.textContent = `${result.current_score} / 100`;
-  elements.checkChange.textContent = result.score_change === 0 ? 'Sin cambios en el score' : `${result.score_change > 0 ? '+' : ''}${result.score_change} puntos`; elements.checkLower.hidden = result.score_change >= 0;
-  elements.checkCorrected.textContent = result.corrected_count; elements.checkCorrectedLabel.textContent = result.corrected_count === 1 ? 'mejora corregida' : 'mejoras corregidas';
-  elements.checkPending.textContent = result.pending_count; elements.checkPendingLabel.textContent = result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes'; elements.checkItems.replaceChildren();
-  result.items.forEach((item) => { const li = document.createElement('li'); const corrected = item.status === 'corrected'; const icon = document.createElement('span'); const content = document.createElement('span'); const status = document.createElement('small'); icon.className = `check-item__icon check-item__icon--${corrected ? 'corrected' : 'pending'}`; icon.textContent = corrected ? '✓' : '⚠'; icon.setAttribute('aria-hidden', 'true'); content.textContent = item.name; status.textContent = corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo'; content.append(status); li.append(icon, content); elements.checkItems.append(li); });
-  elements.checkCreated.textContent = friendlyDate(check.created_at);
+  elements.checkBefore.textContent = `${result.original_score} / 100`;
+  elements.checkNow.textContent = `${result.current_score} / 100`;
+  elements.checkChange.textContent = result.score_change === 0
+    ? 'Sin cambios en el score'
+    : `${result.score_change > 0 ? '+' : ''}${result.score_change} puntos`;
+  elements.checkLower.hidden = result.score_change >= 0;
+  elements.checkCorrected.textContent = result.corrected_count;
+  elements.checkCorrectedLabel.textContent = result.corrected_count === 1 ? 'mejora corregida' : 'mejoras corregidas';
+  elements.checkPending.textContent = result.pending_count;
+  elements.checkPendingLabel.textContent = result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes';
+  elements.checkItems.replaceChildren();
+  result.items.forEach((item) => {
+    const li = document.createElement('li');
+    const corrected = item.status === 'corrected';
+    const icon = document.createElement('span');
+    const content = document.createElement('span');
+    const status = document.createElement('small');
+    icon.className = `check-item__icon check-item__icon--${corrected ? 'corrected' : 'pending'}`;
+    icon.textContent = corrected ? '✓' : '⚠';
+    icon.setAttribute('aria-hidden', 'true');
+    content.textContent = item.name;
+    status.textContent = corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo';
+    content.append(status);
+    li.append(icon, content);
+    elements.checkItems.append(li);
+  });
+  elements.checkCreated.textContent = friendlyDate(review.created_at);
 };
 const renderCheck = (check) => {
-  if (!check) { document.querySelector('#improvement-check').hidden = true; return; }
-  if (check.expires_at) elements.checkDeadline.textContent = `Disponible hasta: ${friendlyDate(check.expires_at)}`;
-  if (check.status === 'used') { renderCheckResult(check); return; }
-  if (check.status === 'expired') { elements.checkDeadline.textContent = 'El plazo para realizar la comprobación incluida ha finalizado.'; elements.checkRecommendation.hidden = true; elements.checkFree.hidden = false; return; }
+  if (!check) {
+    document.querySelector('#improvement-check').hidden = true;
+    return;
+  }
+  elements.checkAvailable.hidden = false;
+  elements.checkConfirm.hidden = true;
+  elements.checkMessage.hidden = true;
+  elements.checkFree.hidden = true;
+  elements.checkRecommendation.hidden = false;
+  elements.checkStart.hidden = true;
+  elements.checkResult.hidden = true;
+  elements.continuousMonitoring.hidden = true;
+
+  if (check.latest_check) {
+    renderCheckResult(check.latest_check);
+  }
+  if (check.expires_at) {
+    elements.checkDeadline.textContent = `Activo hasta: ${friendlyDate(check.expires_at)}`;
+  }
+  if (check.status === 'expired') {
+    elements.checkDeadline.textContent = 'La vigencia de Privacy Web ha finalizado.';
+    elements.checkRecommendation.hidden = true;
+    elements.checkFree.hidden = false;
+    return;
+  }
   elements.checkStart.hidden = false;
-};
-const render = ({ site_url: siteUrl, plan, check }) => {
-  elements.site.textContent = friendlySite(siteUrl); elements.score.textContent = `${plan.initial_score} / 100`;
-  elements.itemCount.textContent = plan.item_count; elements.summaryCount.textContent = plan.item_count; elements.closingCount.textContent = plan.item_count;
-  const counts = plan.items.reduce((result, item) => { result[item.priority] = (result[item.priority] || 0) + 1; return result; }, {});
-  ['Alta', 'Media', 'Baja'].forEach((priority) => { const li = document.createElement('li'); const strong = document.createElement('strong'); const span = document.createElement('span'); strong.textContent = counts[priority] || 0; span.textContent = `prioridad ${priority.toLowerCase()}`; li.append(strong, span); elements.prioritySummary.append(li); });
-  plan.items.forEach(renderItem); renderCheck(check); elements.loading.hidden = true; elements.content.hidden = false;
 };
 const performCheck = async () => {
   if (checkInProgress || !currentToken) return;
-  checkInProgress = true; elements.checkSubmit.disabled = true; elements.checkCancel.disabled = true; elements.checkProgress.hidden = false; elements.checkMessage.hidden = true;
+  checkInProgress = true;
+  elements.checkSubmit.disabled = true;
+  elements.checkCancel.disabled = true;
+  elements.checkProgress.hidden = false;
+  elements.checkMessage.hidden = true;
   try {
-    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(currentToken)}/check`, { method: 'POST', headers: { Accept: 'application/json' } });
+    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(currentToken)}/check`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    });
     const data = await response.json();
-    if (!response.ok) { elements.checkMessage.textContent = data.detail || 'No pudimos completar la comprobación. Intente nuevamente en unos minutos.'; elements.checkMessage.hidden = false; return; }
+    if (!response.ok) {
+      elements.checkMessage.textContent = data.detail || 'No pudimos completar la revisión. Intente nuevamente en unos minutos.';
+      elements.checkMessage.hidden = false;
+      if (response.status === 410) {
+        elements.checkDeadline.textContent = 'La vigencia de Privacy Web ha finalizado.';
+        elements.checkRecommendation.hidden = true;
+        elements.checkConfirm.hidden = true;
+        elements.checkStart.hidden = true;
+        elements.checkFree.hidden = false;
+      }
+      return;
+    }
     renderCheckResult(data);
-  } catch { elements.checkMessage.textContent = 'No pudimos completar la comprobación. Intente nuevamente en unos minutos.'; elements.checkMessage.hidden = false; }
-  finally { checkInProgress = false; elements.checkSubmit.disabled = false; elements.checkCancel.disabled = false; elements.checkProgress.hidden = true; }
+    if (data.expires_at) {
+      elements.checkDeadline.textContent = `Activo hasta: ${friendlyDate(data.expires_at)}`;
+    }
+    elements.checkConfirm.hidden = true;
+    elements.checkStart.hidden = false;
+    elements.checkRecommendation.hidden = false;
+    elements.checkFree.hidden = true;
+  } catch {
+    elements.checkMessage.textContent = 'No pudimos completar la revisión. Intente nuevamente en unos minutos.';
+    elements.checkMessage.hidden = false;
+  } finally {
+    checkInProgress = false;
+    elements.checkSubmit.disabled = false;
+    elements.checkCancel.disabled = false;
+    elements.checkProgress.hidden = true;
+  }
 };
 const loadPlan = async () => {
   if (requestInProgress) return;
