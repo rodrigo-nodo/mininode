@@ -76,6 +76,11 @@ def verify_access_jwt(token: str) -> AccessIdentity:
         ) from exc
     except PyJWKClientError as exc:
         raise AccessIdentityInvalidError("Cloudflare Access assertion is invalid") from exc
+    except PyJWTError as exc:
+        # PyJWKClient parses the unverified JWT header before resolving the key.
+        # Malformed client-controlled assertions must remain authentication
+        # failures instead of escaping as internal server errors.
+        raise AccessIdentityInvalidError("Cloudflare Access assertion is invalid") from exc
 
     try:
         payload = jwt.decode(
