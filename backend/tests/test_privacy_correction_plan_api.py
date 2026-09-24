@@ -150,7 +150,8 @@ def test_public_check_endpoint_accepts_no_body_or_api_key(client, monkeypatch):
 
 @pytest.mark.parametrize(
     "error,expected",
-    [(checks.ImprovementCheckNotFoundError, 404),\n     (checks.ImprovementCheckExpiredError, 410), (checks.ImprovementInspectionError, 503)],
+    [(checks.ImprovementCheckNotFoundError, 404),
+     (checks.ImprovementCheckExpiredError, 410), (checks.ImprovementInspectionError, 503)],
 )
 def test_check_errors_are_controlled(client, monkeypatch, error, expected):
     monkeypatch.setattr(checks, "perform_check", lambda token: (_ for _ in ()).throw(error()))
