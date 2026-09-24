@@ -37,7 +37,8 @@ export const onRequest = async (ctx) => {
   const isAllowedPrivacyData = isPrivacyData && ['GET', 'POST', 'PATCH', 'DELETE'].includes(method);
   const isPrivacyDataReview = /^privacy\/data\/maps\/[A-Za-z0-9_-]+\/review$/.test(destPathPublic);
   const isAllowedPrivacyDataReview = isPrivacyDataReview && method === 'GET';
-  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview) {
+  const isAccessIdentity = destPathPublic === 'access/me' && method === 'GET';
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessIdentity) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -92,9 +93,13 @@ export const onRequest = async (ctx) => {
   const headers = new Headers();
   if (contentType) headers.set('Content-Type', contentType);
   headers.set('Accept', 'application/json');
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessIdentity) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+  if (isAccessIdentity) {
+    const accessAssertion = request.headers.get('Cf-Access-Jwt-Assertion');
+    if (accessAssertion) headers.set('Cf-Access-Jwt-Assertion', accessAssertion);
+  }
 
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !env.MININODE_API_KEY) {
+  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessIdentity && !env.MININODE_API_KEY) {
     return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY (Pages Secret)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },

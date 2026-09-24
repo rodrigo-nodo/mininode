@@ -7,7 +7,12 @@ on:
       - '.github/workflows/access-ci.yml'
       - 'backend/src/mininode_api/main.py'
       - 'backend/src/mininode_api/services/access.py'
+      - 'backend/src/mininode_api/services/access_identity.py'
+      - 'backend/src/mininode_api/api/access.py'
+      - 'backend/requirements.txt'
       - 'backend/tests/test_access_persistence.py'
+      - 'backend/tests/test_access_identity_api.py'
+      - 'frontend/functions/api/**'
 
 permissions:
   contents: read
@@ -48,7 +53,10 @@ jobs:
           pip install -r backend/requirements.txt pytest
 
       - name: Run Access tests
-        run: pytest -q backend/tests/test_access_persistence.py
+        run: pytest -q backend/tests/test_access_persistence.py backend/tests/test_access_identity_api.py
+
+      - name: Run Access proxy tests
+        run: node --test frontend/functions/api/test_proxy.mjs
 
       - name: Compile backend
         run: python -m compileall -q backend/src/mininode_api

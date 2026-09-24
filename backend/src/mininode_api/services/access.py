@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Iterator
+from uuid import UUID, uuid4
 
 import psycopg
 
@@ -114,3 +116,35 @@ def initialize_database() -> None:
     """Create the canonical Access schema idempotently."""
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(INITIALIZE_SQL)
+
+
+@dataclass(frozen=True)
+class StoredUser:
+    id: UUID
+    email: str
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def get_or_create_user(email: str) -> StoredUser:
+    normalized = normalize_email(email)
+    if not normalized:
+        raise ValueError("email is required")
+
+    user_id = uuid4()
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO access.users (id, email)
+            VALUES (%s, %s)
+            ON CONFLICT (email) DO UPDATE
+            SET email = EXCLUDED.email
+            RETURNING id, email
+            """,
+            (user_id, normalized),
+        )
+        row = cursor.fetchone()
+
+    return StoredUser(id=row[0], email=row[1])
