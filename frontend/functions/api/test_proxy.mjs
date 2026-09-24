@@ -153,3 +153,25 @@ test('allows only GET for Privacy Data map review', async () => {
   }
   await assertRejected(`/api/privacy/data/maps/${token}/review/extra`, 'GET');
 });
+
+
+test('allows only GET for Access identity and forwards the Cloudflare assertion', async () => {
+  const result = await request('/api/access/me', 'GET', {
+    withoutApiKey: true,
+    headers: { 'Cf-Access-Jwt-Assertion': 'signed-access-token' },
+  });
+
+  assert.equal(result.response.status, 200);
+  assert.equal(result.calls.length, 1);
+  assert.equal(result.calls[0].url, 'https://backend.example/access/me');
+  assert.equal(result.calls[0].init.method, 'GET');
+  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+  assert.equal(
+    result.calls[0].init.headers.get('Cf-Access-Jwt-Assertion'),
+    'signed-access-token',
+  );
+
+  for (const method of ['POST', 'PATCH', 'DELETE', 'PUT']) {
+    await assertRejected('/api/access/me', method);
+  }
+});
