@@ -27,6 +27,7 @@ La arquitectura busca mantener los productos simples, modulares, reutilizables y
 
 - PostgreSQL en Render cuando un producto necesita persistencia.
 - No asumir que toda funcionalidad necesita base de datos.
+- Access usa un modelo canónico compartido para usuario → workspace → empresa → sitio → entitlement.
 
 ### Código y despliegue
 
@@ -59,6 +60,7 @@ Cada producto puede tener un documento específico dentro de `docs/`.
 
 Actualmente:
 
-- `docs/privacy.md` - Mininode Privacy y Privacy Web Inspector.
+- `docs/access.md` - modelo transversal de identidad, workspace, empresa, sitio y entitlement.
+- `docs/privacy.md` - Privacy Web y Privacy Data.
 
 Los agentes de código deben leer únicamente los documentos necesarios para la Issue que están implementando.
