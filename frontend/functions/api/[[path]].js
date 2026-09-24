@@ -96,7 +96,9 @@ export const onRequest = async (ctx) => {
   headers.set('Accept', 'application/json');
   if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
   if (isAccessProtected) {
+    const authorization = request.headers.get('Authorization');
     const accessAssertion = request.headers.get('Cf-Access-Jwt-Assertion');
+    if (authorization) headers.set('Authorization', authorization);
     if (accessAssertion) headers.set('Cf-Access-Jwt-Assertion', accessAssertion);
   }
 
