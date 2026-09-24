@@ -301,7 +301,7 @@ const resetCommercialState = () => {
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
   orderSubmit.disabled = false;
-  orderAvailability.textContent = 'Disponible para comprar durante 24 horas después de este diagnóstico.';
+  orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
 };
 
 const renderCommercialOffer = (priorities) => {
@@ -324,7 +324,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderForm.hidden = true;
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
-  orderAvailability.textContent = 'Disponible para comprar durante 24 horas después de este diagnóstico.';
+  orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)

@@ -131,8 +131,8 @@ assert.equal(elements.get('privacy-correction-offer').hidden, false);
 assert.equal(elements.get('correction-order-open').disabled, false);
 assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-A');
 assert.equal(elements.get('privacy-no-priorities').hidden, true);
-assert.match(html, /Plan de corrección/);
-assert.match(html, /Activar Privacy Web por 1 mes/);
+assert.doesNotMatch(html, /Plan de corrección/);
+assert.match(html, /Activar Privacy Web/);
 assert.match(html, /Conocer Privacy Data/);
 assert.equal(elements.get('request-error').textContent, '');
 
@@ -186,7 +186,7 @@ context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: undefined },
 assert.equal(context.currentDiagnosticIdForTest(), '');
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-correction-unavailable').hidden, false);
-assert.match(html, /Plan de corrección no disponible/);
+assert.match(html, /Privacy Web no disponible/);
 assert.match(html, /Realizar nuevo diagnóstico/);
 
 let orderRequests = [];

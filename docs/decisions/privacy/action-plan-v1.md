@@ -24,9 +24,9 @@ Diagnóstico → Acción → Revalidación
 
 **Gratis:** Descubre qué deberías mejorar.
 
-**Pagado futuro:** Te ayudamos a corregirlo.
+**Privacy Web activo:** Por CLP $9.900, el sitio queda activo por un mes calendario. Durante esa vigencia se muestran todas las mejoras detectadas, instrucciones concretas y se pueden iniciar nuevas revisiones manuales para comparar avances con el diagnóstico original.
 
-**Seguimiento futuro:** Verificamos que siga correctamente implementado.
+**Seguimiento automático futuro:** Podrá revisar periódicamente el sitio y avisar si aparecen nuevas señales o si alguna mejora vuelve a quedar pendiente.
 
 ## Limitación
 

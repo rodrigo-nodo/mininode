@@ -51,12 +51,11 @@ La versión vigente del framework es `0.11`; el scoring vigente es `0.3`.
 Framework `0.11` redefine PRV-201 como observación técnica contextual de cookies
 vistas mediante encabezados `Set-Cookie` en las respuestas HTTP inspeccionadas. La
 ausencia de un banner o texto de cookies no produce por sí misma un resultado adverso;
-PRV-201 tiene peso cero y queda fuera del Privacy Score, cobertura, prioridades y Plan
-de corrección. `not_detected` significa únicamente que no se observaron cookies dentro
+PRV-201 tiene peso cero y queda fuera del Privacy Score, cobertura, prioridades y mejoras accionables de Privacy Web. `not_detected` significa únicamente que no se observaron cookies dentro
 del alcance técnico inspeccionado, no que el sitio no utilice cookies. El scoring
 `0.3` registra esta exclusión y los diagnósticos `0.10/0.2` y `0.11/0.3` no son
 comparables.
-Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso cero, fuera del Privacy Score, cobertura, prioridades y Plan de corrección. El scoring `0.2` registra esta exclusión para preservar la comparabilidad de snapshots.
+Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso cero, fuera del Privacy Score, cobertura, prioridades y mejoras accionables de Privacy Web. El scoring `0.2` registra esta exclusión para preservar la comparabilidad de snapshots.
 Framework `0.9` mantiene la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción de `0.8`, y hace que PRV-103 combine acciones explícitas con objetos o resultados acotados dentro del mismo formulario. El clasificador sigue siendo determinístico, sin LLM, y no ejecuta JavaScript del sitio.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
@@ -99,63 +98,48 @@ PRV-101 y PRV-104 sin cambios, prioriza un control determinista de transporte de
 formulario y posterga conclusiones sobre minimización, consentimiento, menores o datos
 de riesgo elevado cuando la evidencia pública no permite evitar falsos positivos.
 
-## Plan de corrección: frontera comercial
-
-PRV-103 observa de forma contextual y determinista si los formularios personales de
-alta confianza expresan una finalidad visible concreta, genérica, ausente o no
-evaluable. Usa exclusivamente `heading`, `legend`, `introductory_text` y
-`submit_text` asociados al mismo formulario; no infiere la finalidad desde campos,
-`nearby_text` ni señales de privacidad. Los formularios de confianza media no
-determinan el resultado y el control no participa en el Privacy Score, las
-prioridades ni el Plan de corrección. `none` se reserva para evidencia estructurada
-compuesta únicamente por ruido técnico u operativo conocido; el texto semántico no
-reconocido se clasifica como `unknown`. El reconocimiento conservador combina familias
-acotadas de acciones con sus objetos o resultados explícitos dentro del mismo formulario
-—como solicitudes con respuesta, acceso a
-contenido, recepción de comunicaciones y feedback—, mientras que el contacto con un
-equipo sin un resultado específico permanece como finalidad genérica. También trata
-como genéricas las invitaciones acotadas de contacto, envío, confirmación y suscripción,
-y reconoce conservadoramente como concretos el acceso explícito a una cuenta, la
-combinación de soporte con el envío de una pregunta y una prueba gratuita acompañada
-de una acción inequívoca para iniciarla.
+## Privacy Web activo: frontera comercial
 
 El diagnóstico Privacy Web es gratuito. Privacy Web activo cuesta CLP $9.900 por un
-mes, sin renovación automática por ahora, y mantiene internamente el código
-`PRIVACY_CORRECTION_PLAN`. Incluye el Plan de corrección, instrucciones concretas,
-orientación para comprobar cada mejora y una comprobación incluida. La implementación
-técnica por una persona es un servicio adicional que se evalúa por separado y no forma
-parte del precio. La solicitud pública crea solamente una orden
-`pending_payment` con el identificador del snapshot y un email normalizado. El precio, la
-moneda, el producto y el estado son definidos por el backend. Crear una orden no
-genera el Plan, su token o su entrega. Durante el Design Partner, la generación puede
-autorizarse manualmente mediante un endpoint interno protegido: la activación usa el
-`diagnostic_snapshot` asociado, no vuelve a inspeccionar el sitio, genera un único
-`CorrectionPlan`, lo vincula a la orden y marca técnicamente la orden como `paid`.
-En esta etapa `paid` significa autorización manual; representará un pago confirmado
-cuando se integre posteriormente un proveedor de pagos. El enlace se entrega
-manualmente y no se almacena el token en texto plano en la orden. El snapshot permite
-solicitar el Plan durante las 24 horas posteriores
-al diagnóstico y pueden existir varias órdenes para un mismo diagnóstico, sin
-deduplicación en este MVP. La oferta vigente incluye una única comprobación de mejoras
-utilizable hasta 30 días después de `paid_at`, que durante el Design Partner es el
-momento de activación manual. Esta capacidad vuelve a inspeccionar la URL persistida
-en el diagnóstico original, crea un nuevo snapshot y compara solamente las mejoras
-del Plan por código de control estable. Un advisory lock por Plan y una restricción
-única evitan la doble ejecución. El diagnóstico gratuito no queda
-limitado por la compra y puede volver a ejecutarse independientemente del Plan.
-Como compatibilidad legacy, las órdenes históricas de CLP $49.900 conservan su ventana
-de comprobación de 90 días mediante el monto persistido; no se reescriben. El constraint
-de monto admite CLP $49.900 y CLP $9.900, pero todas las órdenes nuevas usan CLP $9.900.
-La ventana de 24 horas se valida al crear la orden, no al activarla posteriormente.
-Las activaciones de una misma orden se serializan y la vinculación exige que siga
-`pending_payment`, evitando generar dos planes por reintentos. La creación del Plan y
-la actualización de la orden usan actualmente conexiones separadas; por ello, un
-fallo de base de datos exactamente entre ambas operaciones podría dejar un Plan
-huérfano sin exponer su token. Esta limitación se resolverá junto con una unidad de
-trabajo transaccional, sin almacenar el secreto para facilitar reintentos.
-La nueva inspección y su snapshot usan conexiones separadas de la inserción final de
-`correction_plan_check`: un fallo posterior puede dejar ese snapshot huérfano, pero
-la comprobación no se considera utilizada hasta guardar el resultado final.
+mes, sin renovación automática por ahora. La vigencia se calcula como **un mes
+calendario desde `paid_at`**, no como una cantidad fija de 30 días.
+
+Mientras Privacy Web esté activo para un sitio, la persona puede iniciar nuevas
+revisiones manuales del mismo sitio para comprobar sus cambios. Cada revisión vuelve a
+inspeccionar exclusivamente la URL persistida en el diagnóstico original, crea un nuevo
+snapshot y compara el resultado con el diagnóstico original cuando
+`framework_version` y `scoring_version` siguen siendo comparables. Todas las
+revisiones se conservan; la API expone la última revisión para la experiencia actual.
+No existe un estado de "comprobación utilizada" ni una regla especial de vigencia por
+monto histórico.
+
+La solicitud pública crea solamente una orden `pending_payment` con el identificador
+del snapshot y un email normalizado. El precio, la moneda, el producto y el estado son
+definidos por el backend. El snapshot permite solicitar la activación durante las 24
+horas posteriores al diagnóstico. Durante el Design Partner, la activación puede
+autorizarse manualmente mediante un endpoint interno protegido: usa el
+`diagnostic_snapshot` asociado, genera la estructura de mejoras, la vincula a la orden
+y registra `paid_at`. En esta etapa `paid` significa autorización manual; representará
+un pago confirmado cuando se integre posteriormente un proveedor de pagos.
+
+El enlace de acceso se entrega manualmente y su token no se almacena en texto plano en
+la orden. Las revisiones se serializan por activación mediante un advisory lock para
+evitar ejecuciones concurrentes sobre el mismo sitio. El diagnóstico gratuito no queda
+limitado por la compra y puede volver a ejecutarse independientemente de Privacy Web
+activo.
+
+Internamente se conservan temporalmente nombres técnicos anteriores como
+`PRIVACY_CORRECTION_PLAN`, `correction_plan` y la ruta `/privacy/plan/`; son detalles
+de implementación y no forman parte del lenguaje público del producto. Renombrarlos
+queda fuera de este cambio para no mezclar un refactor estructural con el ajuste de
+comportamiento.
+
+La creación de la estructura de mejoras y la actualización de la orden usan actualmente
+conexiones separadas; por ello, un fallo de base de datos exactamente entre ambas
+operaciones podría dejar un registro huérfano sin exponer su token. La nueva inspección
+y su snapshot también usan conexiones separadas de la inserción final de la revisión;
+un fallo posterior puede dejar ese snapshot huérfano, pero la revisión no se considera
+registrada hasta guardar el resultado final.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí
