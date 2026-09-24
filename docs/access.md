@@ -4,8 +4,11 @@
 
 Access es el nodo transversal que define **quién puede acceder a qué contexto de Mininode**.
 
-A0 establece únicamente el modelo canónico y su persistencia base. No implementa login,
-Cloudflare Access, autorización de endpoints, Billing ni una aplicación autenticada.
+A0 establece el modelo canónico y su persistencia base. A1 agrega la conversión de una
+identidad ya autenticada por Cloudflare Access a un usuario interno de Mininode.
+
+A1 no implementa autorización por workspace/empresa/sitio, Billing ni una aplicación
+de producto autenticada.
 
 ## Modelo
 
@@ -65,7 +68,9 @@ Identidad interna de Mininode.
 - `id`: UUID interno y estable.
 - `email`: atributo de identidad normalizado a minúsculas; no es la PK.
 
-La identidad externa que entregue Cloudflare Access se mapeará a este registro en A1.
+La identidad externa que entrega Cloudflare Access se mapea a este registro en A1.
+El primer acceso crea el usuario si su email verificado todavía no existe; accesos
+posteriores recuperan el mismo UUID interno.
 
 ### workspace
 
@@ -139,8 +144,11 @@ pero Billing no decidirá quién tiene permiso sobre un workspace.
 - La pertenencia debe demostrarse recorriendo
   `workspace_member → workspace → company → site`.
 - Los identificadores son UUID internos; el email no funciona como clave primaria.
-- A0 no introduce endpoints públicos ni cambia la autenticación existente por
-  `X-Api-Key`.
+- `GET /access/me` no confía en un email enviado por el frontend: valida el JWT
+  `Cf-Access-Jwt-Assertion` contra la firma, issuer y audience de Cloudflare Access.
+- `X-Api-Key` no sustituye identidad de usuario para `/access/me`.
+- El endpoint no devuelve workspaces, empresas, sitios ni entitlements; esa
+  autorización pertenece a A2.
 
 ## Persistencia
 
@@ -159,9 +167,36 @@ siguiendo el patrón de disponibilidad parcial existente.
 
 A0 no migra ni reescribe datos actuales de Privacy Web o Privacy Data.
 
+## A1 - Identidad Cloudflare Access
+
+La aplicación autenticada objetivo es `app.mininode.io`, protegida externamente por
+Cloudflare Access. Cloudflare añade un JWT de aplicación al header
+`Cf-Access-Jwt-Assertion`.
+
+El backend requiere:
+
+- `CF_ACCESS_TEAM_DOMAIN`: issuer HTTPS del equipo de Cloudflare Access;
+- `CF_ACCESS_AUD`: Application Audience (AUD) de la aplicación protegida.
+
+`GET /access/me`:
+
+1. exige que el schema Access esté disponible;
+2. valida criptográficamente el JWT con las claves públicas de Cloudflare Access;
+3. valida issuer y audience;
+4. exige un token de aplicación con email de usuario;
+5. normaliza el email;
+6. crea o recupera `access.users`;
+7. devuelve solamente `user_id` y `email`.
+
+El proxy de Pages permite exclusivamente `GET /api/access/me` para este flujo,
+reenvía el JWT original y no usa `X-Api-Key` como identidad.
+
+La configuración del dominio `app.mininode.io`, la aplicación y política de
+Cloudflare Access y sus variables de entorno son infraestructura externa al repositorio
+y deben existir antes de una validación E2E.
+
 ## Próximas etapas
 
-1. **A1 - Identidad:** Cloudflare Access → usuario interno Mininode.
-2. **A2 - Autorización:** resolver membresía y permisos por workspace/empresa/sitio.
-3. **A3 - App Privacy Web:** usar el modelo canónico para la aplicación autenticada.
-4. **A4 - Billing:** pago confirmado → entitlement.
+1. **A2 - Autorización:** resolver membresía y permisos por workspace/empresa/sitio.
+2. **A3 - App Privacy Web:** usar el modelo canónico para la aplicación autenticada.
+3. **A4 - Billing:** pago confirmado → entitlement.
