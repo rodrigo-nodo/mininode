@@ -58,6 +58,30 @@ def test_access_me_requires_cloudflare_assertion_even_with_api_key(client):
     assert response.status_code == 401
 
 
+def test_access_me_returns_401_for_malformed_assertion(client, monkeypatch):
+    monkeypatch.setenv("CF_ACCESS_TEAM_DOMAIN", "https://team.cloudflareaccess.com")
+    monkeypatch.setenv("CF_ACCESS_AUD", "app-aud")
+
+    class ParsingJwkClient:
+        def get_signing_key_from_jwt(self, token):
+            jwt.get_unverified_header(token)
+            raise AssertionError("malformed token unexpectedly parsed")
+
+    monkeypatch.setattr(
+        access_identity,
+        "_jwk_client",
+        lambda _domain: ParsingJwkClient(),
+    )
+
+    response = client.get(
+        "/access/me",
+        headers={"Cf-Access-Jwt-Assertion": "not-a-jwt"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid Cloudflare Access identity"
+
+
 @pytest.mark.parametrize(
     ("error", "status_code"),
     [
