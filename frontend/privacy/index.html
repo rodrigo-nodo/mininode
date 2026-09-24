@@ -6,10 +6,10 @@
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="styles.css?v=113">
+  <link rel="stylesheet" href="styles.css?v=114">
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
-  <script src="app.js?v=113" defer></script>
+  <script src="app.js?v=114" defer></script>
   <script src="framework-v0.6.js?v=5" defer></script>
 </head>
 <body>
@@ -96,29 +96,27 @@
             <p class="privacy-next__eyebrow">Recomendado según su diagnóstico</p>
             <h3>Privacy Web</h3>
             <p class="privacy-price" aria-label="Precio: 9.900 pesos chilenos">$9.900 CLP</p>
-            <p class="privacy-price-note">1 mes</p>
-            <p>Mantén tu Privacy Web activo por $9.900 al mes.</p>
-            <p>Incluye tu plan de corrección, instrucciones para abordar las mejoras detectadas y una comprobación para revisar los cambios.</p>
+            <p class="privacy-price-note">Activo por <strong>1 mes</strong></p>
+            <p>Te ayuda a abordar las mejoras detectadas y revisar cómo avanza tu sitio.</p>
           </div>
           <div class="privacy-includes">
-            <h4>El mes incluye</h4>
+            <h4>Incluye</h4>
             <ul>
               <li>Todas las mejoras detectadas</li>
               <li>Instrucciones concretas para cada mejora</li>
-              <li>Cómo comprobar cada corrección</li>
-              <li>1 comprobación de mejoras incluida</li>
+              <li>Cómo comprobar los cambios</li>
+              <li>Comparación antes/después</li>
+              <li>Seguimiento de tus avances</li>
             </ul>
-            <p class="privacy-check-note">Una vez realizados los cambios, puedes comparar el sitio con el diagnóstico original y comprobar qué mejoras fueron resueltas.</p>
-            <p class="privacy-check-validity">Disponible durante 30 días desde la compra.</p>
           </div>
           <div class="privacy-next__action">
-            <button class="btn privacy-secondary" type="button" id="correction-order-open">Activar Privacy Web por 1 mes</button>
-            <p>Sin renovación automática por ahora.</p>
-            <p class="privacy-order-availability" id="correction-order-availability">Disponible para comprar durante 24 horas después de este diagnóstico.</p>
+            <button class="btn privacy-secondary" type="button" id="correction-order-open">Activar Privacy Web</button>
+            <p class="privacy-order-availability" id="correction-order-availability">Disponible para activar durante 24 horas después de este diagnóstico.</p>
+            <p>Vigencia de 1 mes desde la compra. Sin renovación automática.</p>
             <form class="privacy-order-form" id="correction-order-form" hidden>
               <label for="correction-order-email">Email</label>
               <input id="correction-order-email" name="email" type="email" maxlength="254" autocomplete="email" required>
-              <small>Se utilizará para gestionar la solicitud y entregar el plan.</small>
+              <small>Se utilizará para gestionar la activación y entregar el acceso.</small>
               <button class="btn privacy-secondary" type="submit" id="correction-order-submit">Continuar</button>
               <p class="privacy-error" id="correction-order-error" role="alert" hidden></p>
             </form>
@@ -127,7 +125,7 @@
               <p>El pago en línea estará disponible próximamente.</p>
             </div>
             <div class="privacy-order-expired" id="correction-order-expired" role="alert" hidden>
-              <p>Este diagnóstico tiene más de 24 horas. Revise nuevamente el sitio para obtener un diagnóstico actualizado y generar un nuevo Plan.</p>
+              <p>Este diagnóstico tiene más de 24 horas. Revise nuevamente el sitio para obtener un diagnóstico actualizado y activar Privacy Web.</p>
               <button class="btn privacy-secondary" type="button" id="correction-order-retry">Revisar nuevamente</button>
             </div>
             <p>La implementación técnica no está incluida.</p>
@@ -149,8 +147,8 @@
 
       <div class="privacy-no-priorities privacy-help-offer" id="privacy-correction-unavailable" hidden>
         <p class="privacy-help-offer__label">Ayuda opcional</p>
-        <h3>Plan de corrección no disponible</h3>
-        <p>No fue posible habilitar el Plan de corrección para este diagnóstico.</p>
+        <h3>Privacy Web no disponible</h3>
+        <p>No fue posible habilitar Privacy Web para este diagnóstico.</p>
         <p>Puede realizar un nuevo diagnóstico e intentarlo nuevamente.</p>
         <button class="btn privacy-secondary" type="button" id="correction-unavailable-retry">Realizar nuevo diagnóstico</button>
       </div>
