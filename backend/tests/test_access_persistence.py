@@ -1,7 +1,10 @@
+import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+import psycopg
+import pytest
 from fastapi.testclient import TestClient
 
 BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
@@ -119,3 +122,84 @@ def test_access_startup_failure_does_not_break_health(monkeypatch, caplog):
         assert app.state.access_ready is False
 
     assert "Access database initialization failed" in caplog.text
+
+
+def test_access_schema_executes_twice_on_real_postgres():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for the PostgreSQL integration test")
+
+    expected_tables = {
+        "users",
+        "workspaces",
+        "workspace_members",
+        "companies",
+        "sites",
+        "entitlements",
+    }
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+    try:
+        access.initialize_database()
+        access.initialize_database()
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT tablename
+                FROM pg_tables
+                WHERE schemaname = 'access'
+                """
+            )
+            assert {row[0] for row in cursor.fetchall()} == expected_tables
+
+            cursor.execute(
+                """
+                SELECT c.relname, con.contype, pg_get_constraintdef(con.oid)
+                FROM pg_constraint con
+                JOIN pg_class c ON c.oid = con.conrelid
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'access'
+                """
+            )
+            constraints = cursor.fetchall()
+            definitions = [row[2] for row in constraints]
+
+            assert sum(row[1] == "f" for row in constraints) == 5
+            assert any(definition == "UNIQUE (email)" for definition in definitions)
+            assert any(
+                definition == "UNIQUE (company_id, hostname)"
+                for definition in definitions
+            )
+            assert any(
+                "active_until IS NULL OR active_until > active_from" in definition
+                for definition in definitions
+            )
+            assert any(
+                "email = lower(btrim(email))" in definition
+                for definition in definitions
+            )
+            assert any(
+                "hostname = lower(btrim(hostname))" in definition
+                for definition in definitions
+            )
+
+            cursor.execute(
+                """
+                SELECT indexname
+                FROM pg_indexes
+                WHERE schemaname = 'access'
+                """
+            )
+            indexes = {row[0] for row in cursor.fetchall()}
+            assert {
+                "access_workspace_members_user_idx",
+                "access_companies_workspace_idx",
+                "access_sites_company_idx",
+                "access_entitlements_site_product_idx",
+            }.issubset(indexes)
+    finally:
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
