@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from mininode_api.services import (
+        access,
         learn_feedback,
         privacy_correction_plan,
         privacy_correction_plan_order,
@@ -21,6 +22,15 @@ async def lifespan(app: FastAPI):
         privacy_diagnostic_snapshot,
     )
     from mininode_api.privacy_data.services import data_maps
+
+    try:
+        access.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Access database initialization failed; Access remains unavailable"
+        )
+    else:
+        app.state.access_ready = True
 
     try:
         learn_feedback.initialize_database()
@@ -103,6 +113,7 @@ def configure_application_logging() -> None:
 # Patrón app factory: facilita tests, evita efectos colaterales al importar.
 def create_app() -> FastAPI:
     app = FastAPI(title="Mininode API", version="0.1.0", lifespan=lifespan)
+    app.state.access_ready = False
     app.state.learn_feedback_ready = False
     app.state.privacy_correction_plan_ready = False
     app.state.privacy_correction_plan_order_ready = False
