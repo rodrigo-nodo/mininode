@@ -166,7 +166,7 @@ def test_invalid_or_revoked_token_returns_same_404(client, monkeypatch):
     monkeypatch.setattr(service, "get_correction_plan", missing)
     response = client.get("/privacy/correction-plans/not-active")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Plan no encontrado."}
+    assert response.json() == {"detail": "Privacy Web no disponible."}
 
 
 def test_no_list_endpoint_and_unavailable_service_is_controlled(client):
