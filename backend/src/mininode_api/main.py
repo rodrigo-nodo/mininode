@@ -159,6 +159,12 @@ def create_app() -> FastAPI:
         logging.exception("Failed to include auth_check router: %s", e)
 
     try:
+        from mininode_api.api.access import router as access_router
+        app.include_router(access_router)
+    except Exception as e:
+        logging.exception("Failed to include access router: %s", e)
+
+    try:
         from mininode_api.api.write import router as write_router
         app.include_router(write_router)
     except Exception as e:
