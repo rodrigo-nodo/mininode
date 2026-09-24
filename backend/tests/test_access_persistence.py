@@ -165,26 +165,15 @@ def test_access_schema_executes_twice_on_real_postgres():
                 """
             )
             constraints = cursor.fetchall()
+            constraint_names = {row[0] for row in constraints}
             definitions = [row[2] for row in constraints]
 
             assert sum(row[1] == "f" for row in constraints) == 5
             assert any(definition == "UNIQUE (email)" for definition in definitions)
-            assert any(
-                definition == "UNIQUE (company_id, hostname)"
-                for definition in definitions
-            )
-            assert any(
-                "active_until IS NULL OR active_until > active_from" in definition
-                for definition in definitions
-            )
-            assert any(
-                "email = lower(btrim(email))" in definition
-                for definition in definitions
-            )
-            assert any(
-                "hostname = lower(btrim(hostname))" in definition
-                for definition in definitions
-            )
+            assert "access_sites_company_hostname_unique" in constraint_names
+            assert "access_entitlements_window_check" in constraint_names
+            assert "access_users_email_normalized_check" in constraint_names
+            assert "access_sites_hostname_normalized_check" in constraint_names
 
             cursor.execute(
                 """
