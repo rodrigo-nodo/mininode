@@ -1,14 +1,17 @@
-# Mininode Access - Modelo canónico A0
+# Mininode Access
 
 ## Objetivo
 
-Access es el nodo transversal que define **quién puede acceder a qué contexto de Mininode**.
+Access es el nodo transversal que define **quién es el usuario y a qué contexto de
+Mininode puede acceder**.
 
-A0 establece el modelo canónico y su persistencia base. A1 agrega la conversión de una
-identidad ya autenticada por Cloudflare Access a un usuario interno de Mininode.
+El avance se divide así:
 
-A1 no implementa autorización por workspace/empresa/sitio, Billing ni una aplicación
-de producto autenticada.
+- **A0:** modelo canónico y persistencia.
+- **A1:** identidad Cloudflare Access → usuario interno Mininode.
+- **A2:** autorización por workspace → empresa → sitio.
+- **A3:** aplicación Privacy Web autenticada.
+- **A4:** Billing → entitlement.
 
 ## Modelo
 
@@ -31,33 +34,7 @@ Usuario ↔ Workspace
 ```
 
 El mismo modelo sirve tanto para una cuenta directa como para un partner. No existe un
-tipo estructural `partner`.
-
-Ejemplo directo:
-
-```text
-Workspace Rodrigo
-├─ Empresa A
-│  ├─ empresa-a.cl
-│  └─ tienda-a.cl
-└─ Empresa B
-   └─ empresa-b.cl
-```
-
-Ejemplo partner:
-
-```text
-Workspace Surtika
-├─ Cliente A
-│  └─ cliente-a.cl
-├─ Cliente B
-│  └─ cliente-b.cl
-└─ Cliente C
-   └─ cliente-c.cl
-```
-
-Las diferencias futuras de partner se expresarán mediante capacidades, no mediante otra
-aplicación ni otra jerarquía de datos.
+tipo estructural `partner`; las diferencias futuras se expresarán mediante capacidades.
 
 ## Entidades
 
@@ -66,11 +43,9 @@ aplicación ni otra jerarquía de datos.
 Identidad interna de Mininode.
 
 - `id`: UUID interno y estable.
-- `email`: atributo de identidad normalizado a minúsculas; no es la PK.
+- `email`: atributo normalizado a minúsculas; no es la PK.
 
-La identidad externa que entrega Cloudflare Access se mapea a este registro en A1.
-El primer acceso crea el usuario si su email verificado todavía no existe; accesos
-posteriores recuperan el mismo UUID interno.
+A1 mapea la identidad verificada de Cloudflare Access a este registro.
 
 ### workspace
 
@@ -82,8 +57,16 @@ Un workspace puede contener varias empresas y varios usuarios.
 
 Relaciona usuarios con workspaces.
 
-A0 persiste un campo `role`, pero **no fija todavía el vocabulario ni los permisos de
-cada rol**. Esa semántica pertenece a A2.
+A2 reconoce inicialmente dos roles:
+
+- `owner`;
+- `member`.
+
+En A2 ambos roles autorizan acceso al contexto completo del workspace. La diferencia
+entre ellos queda reservada para futuras acciones administrativas.
+
+Los valores de rol no reconocidos **no otorgan autorización**. A2 no introduce todavía
+endpoints para crear o administrar membresías.
 
 ### company
 
@@ -113,9 +96,9 @@ Campos base:
 - `source`;
 - `source_id`.
 
-A0 no define todavía el catálogo de estados ni de fuentes. Billing será responsable más
-adelante de crear o renovar entitlements a partir de una compra; Access y las
-aplicaciones los consumirán para decidir qué producto está habilitado.
+Billing será responsable más adelante de crear o renovar entitlements a partir de una
+compra. Access y las aplicaciones los consumirán para decidir qué producto está
+habilitado.
 
 ## Fronteras
 
@@ -138,17 +121,17 @@ pero Billing no decidirá quién tiene permiso sobre un workspace.
 
 ## Seguridad
 
-- La autorización se resolverá siempre en backend.
-- El frontend nunca será autoridad para seleccionar un `workspace_id`, `company_id`
+- La autenticación y autorización se resuelven en backend.
+- El frontend nunca es autoridad para seleccionar un `workspace_id`, `company_id`
   o `site_id`.
-- La pertenencia debe demostrarse recorriendo
+- La pertenencia se demuestra recorriendo
   `workspace_member → workspace → company → site`.
 - Los identificadores son UUID internos; el email no funciona como clave primaria.
-- `GET /access/me` no confía en un email enviado por el frontend: valida el JWT
-  `Cf-Access-Jwt-Assertion` contra la firma, issuer y audience de Cloudflare Access.
-- `X-Api-Key` no sustituye identidad de usuario para `/access/me`.
-- El endpoint no devuelve workspaces, empresas, sitios ni entitlements; esa
-  autorización pertenece a A2.
+- `X-Api-Key` no sustituye identidad de usuario.
+- Un `site_id` sólo se acepta cuando `get_authorized_site()` demuestra que el usuario
+  pertenece al workspace del sitio.
+- Roles desconocidos quedan fuera de las consultas de autorización y, por tanto, no
+  conceden acceso.
 
 ## Persistencia
 
@@ -165,38 +148,92 @@ La inicialización es idempotente y se ejecuta de forma independiente durante el
 del backend. Si Access no puede inicializarse, el resto de servicios puede continuar
 siguiendo el patrón de disponibilidad parcial existente.
 
-A0 no migra ni reescribe datos actuales de Privacy Web o Privacy Data.
+Access no migra ni reescribe datos actuales de Privacy Web o Privacy Data.
 
 ## A1 - Identidad Cloudflare Access
 
-La aplicación autenticada objetivo es `app.mininode.io`, protegida externamente por
-Cloudflare Access. Cloudflare añade un JWT de aplicación al header
-`Cf-Access-Jwt-Assertion`.
+`app.mininode.io` está protegido externamente por Cloudflare Access. Cloudflare añade
+un JWT de aplicación al header `Cf-Access-Jwt-Assertion`.
 
 El backend requiere:
 
 - `CF_ACCESS_TEAM_DOMAIN`: issuer HTTPS del equipo de Cloudflare Access;
 - `CF_ACCESS_AUD`: Application Audience (AUD) de la aplicación protegida.
 
-`GET /access/me`:
+La resolución de usuario autenticado está centralizada en
+`mininode_api.core.access_auth.require_access_user`. Ese componente:
 
-1. exige que el schema Access esté disponible;
-2. valida criptográficamente el JWT con las claves públicas de Cloudflare Access;
+1. exige que Access esté disponible;
+2. valida criptográficamente el JWT;
 3. valida issuer y audience;
-4. exige un token de aplicación con email de usuario;
+4. exige un token de aplicación con email;
 5. normaliza el email;
-6. crea o recupera `access.users`;
-7. devuelve solamente `user_id` y `email`.
+6. crea o recupera `access.users`.
 
-El proxy de Pages permite exclusivamente `GET /api/access/me` para este flujo,
-reenvía el JWT original y no usa `X-Api-Key` como identidad.
+`GET /access/me` devuelve solamente `user_id` y `email`.
 
-La configuración del dominio `app.mininode.io`, la aplicación y política de
-Cloudflare Access y sus variables de entorno son infraestructura externa al repositorio
-y deben existir antes de una validación E2E.
+El flujo A1 fue validado E2E en producción mediante
+`app.mininode.io → Cloudflare Access → Pages → Render → access.users`.
+
+## A2 - Autorización
+
+A2 toma el `user_id` autenticado y resuelve únicamente el contexto al que pertenece.
+
+```text
+user_id
+  ↓
+workspace_member
+  ↓
+workspace
+  ↓
+company
+  ↓
+site
+```
+
+### Contexto autorizado
+
+`GET /access/context` devuelve solamente los workspaces autorizados del usuario y,
+dentro de ellos, sus empresas y sitios.
+
+Un usuario sin membresías obtiene:
+
+```json
+{"workspaces":[]}
+```
+
+El endpoint no acepta un workspace, empresa o sitio enviado por frontend para decidir
+qué mostrar; el contexto se deriva desde `user_id` en PostgreSQL.
+
+### Guardia por sitio
+
+`get_authorized_site(user_id, site_id)` recorre en una sola consulta:
+
+```text
+site → company → workspace → workspace_member(user)
+```
+
+Si la cadena no existe o el rol no es `owner`/`member`, devuelve `None`.
+
+A3 deberá reutilizar esta función —o una dependencia construida sobre ella— antes de
+operar sobre cualquier recurso asociado a un sitio.
+
+### Alcance que A2 no cubre
+
+A2 no agrega:
+
+- creación automática de workspaces;
+- gestión de miembros;
+- permisos específicos por empresa o sitio;
+- diferencias funcionales entre `owner` y `member`;
+- UI;
+- entitlements ni Billing;
+- lógica propia de Privacy Web.
+
+Por ahora, una membresía válida da acceso a todas las empresas y sitios de ese
+workspace.
 
 ## Próximas etapas
 
-1. **A2 - Autorización:** resolver membresía y permisos por workspace/empresa/sitio.
-2. **A3 - App Privacy Web:** usar el modelo canónico para la aplicación autenticada.
-3. **A4 - Billing:** pago confirmado → entitlement.
+1. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
+2. **A4 - Billing:** pago confirmado → entitlement.

@@ -1,14 +1,15 @@
-"""Mininode Access identity endpoints."""
+"""Mininode Access identity and authorization endpoints."""
 
 from __future__ import annotations
 
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from mininode_api.services import access, access_identity
+from mininode_api.core.access_auth import require_access_user
+from mininode_api.services import access
 
 logger = logging.getLogger(__name__)
 
@@ -20,56 +21,69 @@ class AccessMeResponse(BaseModel):
     email: str
 
 
+class AccessSiteContextResponse(BaseModel):
+    id: UUID
+    hostname: str
+
+
+class AccessCompanyContextResponse(BaseModel):
+    id: UUID
+    name: str
+    sites: list[AccessSiteContextResponse]
+
+
+class AccessWorkspaceContextResponse(BaseModel):
+    id: UUID
+    name: str
+    role: str
+    companies: list[AccessCompanyContextResponse]
+
+
+class AccessContextResponse(BaseModel):
+    workspaces: list[AccessWorkspaceContextResponse]
+
+
 @router.get("/me", response_model=AccessMeResponse)
 def access_me(
-    request: Request,
-    cf_access_jwt_assertion: str | None = Header(
-        default=None,
-        alias="Cf-Access-Jwt-Assertion",
-    ),
+    user: access.StoredUser = Depends(require_access_user),
 ) -> AccessMeResponse:
-    if not request.app.state.access_ready:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Access is temporarily unavailable",
-        )
-
-    if not cf_access_jwt_assertion:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Cloudflare Access identity is required",
-        )
-
-    try:
-        identity = access_identity.verify_access_jwt(cf_access_jwt_assertion)
-    except access_identity.AccessIdentityConfigError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Access identity is not configured",
-        )
-    except access_identity.AccessIdentityUnavailableError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Access identity is temporarily unavailable",
-        )
-    except access_identity.AccessIdentityInvalidError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Cloudflare Access identity",
-        )
-    except access_identity.AccessIdentityEmailUnavailableError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cloudflare Access user email is required",
-        )
-
-    try:
-        user = access.get_or_create_user(identity.email)
-    except Exception:
-        logger.exception("Access user persistence failed")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Access is temporarily unavailable",
-        )
-
     return AccessMeResponse(user_id=user.id, email=user.email)
+
+
+@router.get("/context", response_model=AccessContextResponse)
+def access_context(
+    user: access.StoredUser = Depends(require_access_user),
+) -> AccessContextResponse:
+    try:
+        workspaces = access.list_authorized_context(user.id)
+    except Exception:
+        logger.exception("Access authorization context lookup failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        )
+
+    return AccessContextResponse(
+        workspaces=[
+            AccessWorkspaceContextResponse(
+                id=workspace.id,
+                name=workspace.name,
+                role=workspace.role,
+                companies=[
+                    AccessCompanyContextResponse(
+                        id=company.id,
+                        name=company.name,
+                        sites=[
+                            AccessSiteContextResponse(
+                                id=site.id,
+                                hostname=site.hostname,
+                            )
+                            for site in company.sites
+                        ],
+                    )
+                    for company in workspace.companies
+                ],
+            )
+            for workspace in workspaces
+        ]
+    )
