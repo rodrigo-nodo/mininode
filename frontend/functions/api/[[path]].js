@@ -37,7 +37,8 @@ export const onRequest = async (ctx) => {
   const isAllowedPrivacyData = isPrivacyData && ['GET', 'POST', 'PATCH', 'DELETE'].includes(method);
   const isPrivacyDataReview = /^privacy\/data\/maps\/[A-Za-z0-9_-]+\/review$/.test(destPathPublic);
   const isAllowedPrivacyDataReview = isPrivacyDataReview && method === 'GET';
-  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview) {
+  const isAccessIdentity = destPathPublic === 'access/me' && method === 'GET';
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessIdentity) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
