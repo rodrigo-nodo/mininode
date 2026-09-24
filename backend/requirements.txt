@@ -14,3 +14,4 @@ pytesseract>=0.3.10,<0.4
 Pillow>=10,<12
 PyYAML>=6,<7
 psycopg[binary]>=3.2,<4
+PyJWT[crypto]>=2.9,<3
