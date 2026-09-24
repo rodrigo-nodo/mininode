@@ -12,8 +12,7 @@ on:
       - 'backend/requirements.txt'
       - 'backend/tests/test_access_persistence.py'
       - 'backend/tests/test_access_identity_api.py'
-      - 'frontend/functions/api/[[path]].js'
-      - 'frontend/functions/api/test_proxy.mjs'
+      - 'frontend/functions/api/**'
 
 permissions:
   contents: read
