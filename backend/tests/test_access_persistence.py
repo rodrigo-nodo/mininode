@@ -157,7 +157,7 @@ def test_access_schema_executes_twice_on_real_postgres():
 
             cursor.execute(
                 """
-                SELECT c.relname, con.contype, pg_get_constraintdef(con.oid)
+                SELECT con.conname, con.contype, pg_get_constraintdef(con.oid)
                 FROM pg_constraint con
                 JOIN pg_class c ON c.oid = con.conrelid
                 JOIN pg_namespace n ON n.oid = c.relnamespace
