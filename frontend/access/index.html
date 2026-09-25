@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accede a Mininode</title>
+  <meta name="description" content="Accede a tu cuenta Mininode.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="../assets/js/core-head.js" defer></script>
+  <script
+    defer
+    crossorigin="anonymous"
+    src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/ui@1/dist/ui.browser.js"
+    type="text/javascript"
+  ></script>
+  <script
+    defer
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_aGVscGluZy1wdW1hLTE4Mi5jbGVyay5hY2NvdW50cy5kZXYk"
+    src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+  <script src="./app.js" defer></script>
+</head>
+<body class="access-page">
+  <header class="access-header container">
+    <a class="brand" href="https://mininode.io/" aria-label="Mininode — sitio público">
+      <span class="brand-name">Mininode</span>
+    </a>
+  </header>
+
+  <main class="access-main">
+    <section class="access-card" aria-labelledby="access-title">
+      <div id="access-intro">
+        <p class="eyebrow">Cuenta Mininode</p>
+        <h1 id="access-title">Accede a Mininode</h1>
+        <p class="access-lead">Entra de forma simple y segura. No necesitas crear una contraseña.</p>
+      </div>
+
+      <div id="access-loading" class="access-state" role="status">
+        Preparando acceso…
+      </div>
+
+      <div id="clerk-sign-in" class="access-clerk" hidden></div>
+
+      <section id="access-session" class="access-state access-state--ready" aria-live="polite" hidden>
+        <p class="access-state__label">Acceso confirmado</p>
+        <h2>Tu cuenta está lista.</h2>
+        <p id="access-email" class="access-email"></p>
+        <p class="access-state__copy">Mininode reconoció tu sesión y tu identidad interna.</p>
+        <button id="access-sign-out" class="access-secondary-button" type="button">Cerrar sesión</button>
+      </section>
+
+      <section id="access-error" class="access-state access-state--error" role="alert" hidden>
+        <p class="access-state__label">No pudimos completar el acceso</p>
+        <p id="access-error-message">Intenta nuevamente.</p>
+        <div class="access-error-actions">
+          <button id="access-retry" class="access-secondary-button" type="button">Reintentar</button>
+          <button id="access-error-sign-out" class="access-link-button" type="button">Cerrar sesión</button>
+        </div>
+      </section>
+
+      <p id="access-note" class="access-note">
+        Puedes continuar con Google o recibir un código por correo. Consulta nuestra
+        <a href="/legal/privacy/">Política de privacidad</a>.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
