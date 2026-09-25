@@ -78,8 +78,8 @@ def _jwk_client(issuer: str) -> PyJWKClient:
     return PyJWKClient(f"{issuer}/.well-known/jwks.json")
 
 
-def _resolve_signing_key(client: PyJWKClient, token: str):
-    """Resolve a signing key while distinguishing token and provider failures."""
+def _validate_token_syntax(token: str) -> None:
+    """Reject malformed client-controlled JWTs before any JWKS interaction."""
 
     parts = token.split(".")
     if len(parts) != 3:
@@ -100,6 +100,10 @@ def _resolve_signing_key(client: PyJWKClient, token: str):
     key_id = header.get("kid")
     if not isinstance(key_id, str) or not key_id.strip():
         raise ClerkIdentityInvalidError("Clerk session token key id is required")
+
+
+def _resolve_signing_key(client: PyJWKClient, token: str):
+    """Resolve a signing key while distinguishing token and provider failures."""
 
     try:
         return client.get_signing_key_from_jwt(token)
@@ -129,6 +133,7 @@ def verify_clerk_session(token: str) -> ClerkIdentity:
         raise ClerkIdentityInvalidError("Clerk session token is required")
 
     issuer, authorized_parties = _configuration()
+    _validate_token_syntax(token)
     client = _jwk_client(issuer)
     signing_key = _resolve_signing_key(client, token)
 
