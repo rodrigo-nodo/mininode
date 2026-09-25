@@ -81,7 +81,10 @@ def _resolve_signing_key(client: PyJWKClient, token: str):
     """Resolve a signing key while distinguishing token and provider failures."""
 
     try:
-        jwt.get_unverified_header(token)
+        jwt.decode_complete(
+            token,
+            options={"verify_signature": False},
+        )
     except PyJWTError as exc:
         raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
 
