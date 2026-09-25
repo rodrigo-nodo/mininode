@@ -230,6 +230,7 @@ window.addEventListener('load', async () => {
           },
           header: { display: 'none' },
           footer: { display: 'none' },
+          lastAuthenticationStrategyBadge: { display: 'none' },
           socialButtonsBlockButton: {
             minHeight: '46px',
             borderColor: 'var(--color-border)',
