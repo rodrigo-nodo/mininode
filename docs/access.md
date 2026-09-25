@@ -9,7 +9,8 @@ El avance se divide así:
 
 - **A0:** modelo canónico y persistencia.
 - **A1:** identidad Cloudflare Access → usuario interno Mininode.
-- **A1.1:** transición a Clerk como identidad cliente, conservando Cloudflare como fallback temporal.
+- **A1.1:** transición backend a Clerk como identidad cliente, conservando Cloudflare como fallback temporal.
+- **A1.2:** UX cliente Clerk con Google o email + código, sin contraseña Mininode.
 - **A2:** autorización por workspace → empresa → sitio.
 - **A3:** aplicación Privacy Web autenticada.
 - **A4:** Billing → entitlement.
@@ -46,7 +47,7 @@ Identidad interna de Mininode.
 - `id`: UUID interno y estable.
 - `email`: atributo normalizado a minúsculas; no es la PK.
 
-A1 mapea la identidad verificada de Cloudflare Access a este registro.
+La capa de identidad mapea una identidad verificada de Cloudflare Access o Clerk a este registro. El UUID interno permanece estable y el email es un atributo normalizado, no la clave de negocio.
 
 ### workspace
 
@@ -232,6 +233,32 @@ Durante la migración:
 El objetivo posterior es usar Clerk para identidad de clientes y reservar Cloudflare
 Access para herramientas internas si sigue siendo útil.
 
+## A1.2 - UX cliente Clerk
+
+La experiencia cliente de acceso vive en `/access/`. `app.mininode.io` deriva a esa
+ruta mientras el sitio público `mininode.io` conserva su landing actual.
+
+La interfaz utiliza los componentes de autenticación de Clerk con apariencia Mininode.
+Las alternativas del MVP son:
+
+- Google, cuando la conexión social esté habilitada en Clerk;
+- email + código de verificación;
+- sin contraseña propia de Mininode.
+
+La Publishable Key de Clerk puede estar en el frontend. No se utiliza ni se expone
+`CLERK_SECRET_KEY`.
+
+Cuando Clerk crea una sesión, el navegador obtiene el JWT mediante
+`session.getToken()` y lo envía como `Authorization: Bearer ...` únicamente a
+`/api/access/me`. Pages lo reenvía al backend y A1.1 verifica la firma y claims antes
+de resolver el UUID interno de Mininode.
+
+La pantalla de acceso no decide autorización de workspace, empresa o sitio. Su único
+objetivo es completar autenticación y confirmar que Mininode reconoce la identidad.
+
+Cloudflare Access sigue delante de `app.mininode.io` durante esta etapa. Se retira del
+flujo cliente sólo después de validar E2E Clerk → Pages → Render → `access.users`.
+
 ## A2 - Autorización
 
 A2 toma el `user_id` autenticado y resuelve únicamente el contexto al que pertenece.
@@ -292,7 +319,7 @@ workspace.
 
 ## Próximas etapas
 
-1. **UX Clerk E2E:** construir la pantalla Mininode email → código y validar
+1. **Validación E2E Clerk:** validar Google y email + código contra
    `Clerk → /api/access/me → mismo access.users`.
 2. **Retiro de Cloudflare Access cliente:** sólo después del E2E, manteniendo
    Cloudflare DNS/CDN/Pages/WAF.
