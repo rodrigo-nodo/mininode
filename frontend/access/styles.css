@@ -147,3 +147,9 @@
     padding: 24px 4px;
   }
 }
+
+/* Clerk marks the most recently used sign-in method with an overlay badge.
+   Hide it in the compact Mininode card so it never protrudes from the button. */
+.cl-lastAuthenticationStrategyBadge {
+  display: none !important;
+}
