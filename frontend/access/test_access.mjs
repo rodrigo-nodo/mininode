@@ -5,6 +5,7 @@ import test from 'node:test';
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
 
 test('loads Clerk browser SDK with only the publishable key', () => {
   assert.match(html, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
