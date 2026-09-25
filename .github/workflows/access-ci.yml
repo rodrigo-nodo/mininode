@@ -20,6 +20,9 @@ on:
       - 'backend/tests/test_access_provider_fallback.py'
       - 'backend/tests/test_access_authorization_api.py'
       - 'frontend/functions/api/**'
+      - 'frontend/index.html'
+      - 'frontend/access/**'
+      - 'docs/access.md'
 
 permissions:
   contents: read
@@ -64,6 +67,9 @@ jobs:
 
       - name: Run Access proxy tests
         run: node --test frontend/functions/api/test_proxy.mjs
+
+      - name: Run Access client UI tests
+        run: node --test frontend/access/test_access.mjs
 
       - name: Compile backend
         run: python -m compileall -q backend/src/mininode_api
