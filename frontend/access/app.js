@@ -214,13 +214,19 @@ window.addEventListener('load', async () => {
           fontFamily: 'var(--font-body)',
         },
         options: {
+          elevation: 'flush',
           socialButtonsPlacement: 'top',
           socialButtonsVariant: 'blockButton',
           privacyPageUrl: '/legal/privacy/',
         },
         elements: {
           rootBox: { width: '100%' },
-          cardBox: { width: '100%', boxShadow: 'none' },
+          cardBox: {
+            width: '100%',
+            maxWidth: '100%',
+            boxShadow: 'none',
+            overflow: 'visible',
+          },
           card: {
             width: '100%',
             boxShadow: 'none',
