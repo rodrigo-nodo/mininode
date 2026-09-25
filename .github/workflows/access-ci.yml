@@ -16,6 +16,7 @@ on:
       - 'backend/tests/test_access_identity_api.py'
       - 'backend/tests/test_access_clerk_identity.py'
       - 'backend/tests/test_access_clerk_jwks.py'
+      - 'backend/tests/test_access_clerk_malformed_token.py'
       - 'backend/tests/test_access_provider_fallback.py'
       - 'backend/tests/test_access_authorization_api.py'
       - 'frontend/functions/api/**'
@@ -59,7 +60,7 @@ jobs:
           pip install -r backend/requirements.txt pytest
 
       - name: Run Access tests
-        run: pytest -q backend/tests/test_access_persistence.py backend/tests/test_access_identity_api.py backend/tests/test_access_clerk_identity.py backend/tests/test_access_clerk_jwks.py backend/tests/test_access_provider_fallback.py backend/tests/test_access_authorization_api.py
+        run: pytest -q backend/tests/test_access_persistence.py backend/tests/test_access_identity_api.py backend/tests/test_access_clerk_identity.py backend/tests/test_access_clerk_jwks.py backend/tests/test_access_clerk_malformed_token.py backend/tests/test_access_provider_fallback.py backend/tests/test_access_authorization_api.py
 
       - name: Run Access proxy tests
         run: node --test frontend/functions/api/test_proxy.mjs
