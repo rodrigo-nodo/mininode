@@ -18,6 +18,7 @@ test('keeps the Mininode access flow passwordless and privacy-visible', () => {
   assert.match(html, /No necesitas crear una contraseña/);
   assert.match(html, /Google o recibir un código por correo/);
   assert.match(html, /href="\/legal\/privacy\/"/);
+  assert.match(app, /elevation: 'flush'/);
   assert.match(app, /socialButtonsPlacement: 'top'/);
   assert.match(app, /lastAuthenticationStrategyBadge: \{ display: 'none' \}/);
   assert.match(app, /withSignUp: true/);
