@@ -9,6 +9,7 @@ El avance se divide así:
 
 - **A0:** modelo canónico y persistencia.
 - **A1:** identidad Cloudflare Access → usuario interno Mininode.
+- **A1.1:** transición a Clerk como identidad cliente, conservando Cloudflare como fallback temporal.
 - **A2:** autorización por workspace → empresa → sitio.
 - **A3:** aplicación Privacy Web autenticada.
 - **A4:** Billing → entitlement.
@@ -128,6 +129,9 @@ pero Billing no decidirá quién tiene permiso sobre un workspace.
   `workspace_member → workspace → company → site`.
 - Los identificadores son UUID internos; el email no funciona como clave primaria.
 - `X-Api-Key` no sustituye identidad de usuario.
+- Para rutas Access, un `Authorization: Bearer ...` se interpreta exclusivamente
+  como sesión Clerk. Si existe y falla, no se intenta autenticar silenciosamente con
+  Cloudflare Access.
 - Un `site_id` sólo se acepta cuando `get_authorized_site()` demuestra que el usuario
   pertenece al workspace del sitio.
 - Roles desconocidos quedan fuera de las consultas de autorización y, por tanto, no
@@ -174,6 +178,59 @@ La resolución de usuario autenticado está centralizada en
 
 El flujo A1 fue validado E2E en producción mediante
 `app.mininode.io → Cloudflare Access → Pages → Render → access.users`.
+
+## A1.1 - Transición a Clerk
+
+Para la experiencia cliente se decidió separar la autenticación visual de la capa
+Cloudflare. La arquitectura objetivo es:
+
+```text
+UX Mininode
+  ↓
+Clerk (email + OTP + sesión)
+  ↓
+JWT Clerk
+  ↓
+Pages
+  ↓
+Backend Mininode
+  ↓
+access.users
+  ↓
+A2
+```
+
+Clerk gestiona generación/envío/verificación del OTP y la sesión. Mininode controla la
+UX y nunca valida el código OTP por su cuenta.
+
+El backend verifica el JWT Clerk criptográficamente mediante el JWKS público de la
+instancia y exige:
+
+- firma RS256 válida;
+- issuer configurado;
+- `exp`, `nbf`, `iss` y `sub`;
+- `azp` perteneciente a la lista explícita de orígenes autorizados;
+- sesión no pendiente;
+- claim `email` presente y no vacío.
+
+Configuración backend:
+
+- `CLERK_ISSUER`: Frontend API URL HTTPS de la instancia Clerk;
+- `CLERK_AUTHORIZED_PARTIES`: orígenes HTTPS permitidos, separados por coma.
+
+El claim `email` se agrega al token estándar `__session` desde la configuración de
+Clerk. No se necesita `CLERK_SECRET_KEY` para esta validación.
+
+Durante la migración:
+
+1. `Authorization: Bearer <Clerk JWT>` tiene prioridad;
+2. si no existe Bearer, se mantiene el JWT de Cloudflare Access como fallback;
+3. un Bearer inválido **no** cae a Cloudflare;
+4. Pages reenvía ambos headers solamente para las rutas protegidas de Access;
+5. Cloudflare Access continúa activo hasta completar y validar E2E la nueva UX.
+
+El objetivo posterior es usar Clerk para identidad de clientes y reservar Cloudflare
+Access para herramientas internas si sigue siendo útil.
 
 ## A2 - Autorización
 
@@ -235,5 +292,9 @@ workspace.
 
 ## Próximas etapas
 
-1. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
-2. **A4 - Billing:** pago confirmado → entitlement.
+1. **UX Clerk E2E:** construir la pantalla Mininode email → código y validar
+   `Clerk → /api/access/me → mismo access.users`.
+2. **Retiro de Cloudflare Access cliente:** sólo después del E2E, manteniendo
+   Cloudflare DNS/CDN/Pages/WAF.
+3. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
+4. **A4 - Billing:** pago confirmado → entitlement.

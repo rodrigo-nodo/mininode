@@ -6,34 +6,76 @@ import logging
 
 from fastapi import Header, HTTPException, Request, status
 
-from mininode_api.services import access, access_identity
+from mininode_api.services import access, access_identity, clerk_identity
 
 logger = logging.getLogger(__name__)
 
 
-def require_access_user(
-    request: Request,
-    cf_access_jwt_assertion: str | None = Header(
-        default=None,
-        alias="Cf-Access-Jwt-Assertion",
-    ),
-) -> access.StoredUser:
-    """Resolve a verified Cloudflare identity to the canonical Mininode user."""
+def _bearer_token(authorization: str | None) -> str | None:
+    if authorization is None:
+        return None
 
-    if not request.app.state.access_ready:
+    value = authorization.strip()
+    if not value:
+        return None
+
+    scheme, separator, token = value.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+
+    if separator != " " or not token.strip():
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Access is temporarily unavailable",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header",
         )
+    return token.strip()
+
+
+def _verified_email(
+    *,
+    authorization: str | None,
+    cf_access_jwt_assertion: str | None,
+) -> str:
+    """Resolve exactly one verified identity provider.
+
+    Clerk Bearer tokens take precedence during the migration. Cloudflare Access
+    remains a fallback when no Bearer token is present. A failed Clerk
+    verification can never silently fall back to another identity.
+    """
+
+    clerk_token = _bearer_token(authorization)
+    if clerk_token is not None:
+        try:
+            return clerk_identity.verify_clerk_session(clerk_token).email
+        except clerk_identity.ClerkIdentityConfigError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clerk identity is not configured",
+            )
+        except clerk_identity.ClerkIdentityUnavailableError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clerk identity is temporarily unavailable",
+            )
+        except clerk_identity.ClerkIdentityInvalidError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Clerk identity",
+            )
+        except clerk_identity.ClerkIdentityEmailUnavailableError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Clerk user email is required",
+            )
 
     if not cf_access_jwt_assertion:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Cloudflare Access identity is required",
+            detail="Authenticated identity is required",
         )
 
     try:
-        identity = access_identity.verify_access_jwt(cf_access_jwt_assertion)
+        return access_identity.verify_access_jwt(cf_access_jwt_assertion).email
     except access_identity.AccessIdentityConfigError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -55,8 +97,30 @@ def require_access_user(
             detail="Cloudflare Access user email is required",
         )
 
+
+def require_access_user(
+    request: Request,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    cf_access_jwt_assertion: str | None = Header(
+        default=None,
+        alias="Cf-Access-Jwt-Assertion",
+    ),
+) -> access.StoredUser:
+    """Resolve a verified external identity to the canonical Mininode user."""
+
+    if not request.app.state.access_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        )
+
+    email = _verified_email(
+        authorization=authorization,
+        cf_access_jwt_assertion=cf_access_jwt_assertion,
+    )
+
     try:
-        return access.get_or_create_user(identity.email)
+        return access.get_or_create_user(email)
     except Exception:
         logger.exception("Access user persistence failed")
         raise HTTPException(
