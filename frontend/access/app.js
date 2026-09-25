@@ -8,6 +8,7 @@ const localization = {
   formButtonPrimary__verify: 'Verificar',
   formFieldLabel__emailAddress: 'Correo electrónico',
   formFieldInputPlaceholder__emailAddress: 'nombre@empresa.cl',
+  footerActionLink__useAnotherMethod: 'Usar otro método',
   socialButtonsBlockButton: 'Continuar con {{provider|titleize}}',
   socialButtonsBlockButtonManyInView: '{{provider|titleize}}',
   signIn: {
