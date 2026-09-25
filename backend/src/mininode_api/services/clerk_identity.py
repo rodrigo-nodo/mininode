@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -80,13 +81,25 @@ def _jwk_client(issuer: str) -> PyJWKClient:
 def _resolve_signing_key(client: PyJWKClient, token: str):
     """Resolve a signing key while distinguishing token and provider failures."""
 
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise ClerkIdentityInvalidError("Clerk session token is invalid")
+
     try:
-        jwt.decode_complete(
-            token,
-            options={"verify_signature": False},
-        )
-    except PyJWTError as exc:
+        header_bytes = jwt.utils.base64url_decode(parts[0].encode("ascii"))
+        payload_bytes = jwt.utils.base64url_decode(parts[1].encode("ascii"))
+        jwt.utils.base64url_decode(parts[2].encode("ascii"))
+        header = json.loads(header_bytes.decode("utf-8"))
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except (ValueError, TypeError, UnicodeError) as exc:
         raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
+
+    if not isinstance(header, dict) or not isinstance(payload, dict):
+        raise ClerkIdentityInvalidError("Clerk session token is invalid")
+
+    key_id = header.get("kid")
+    if not isinstance(key_id, str) or not key_id.strip():
+        raise ClerkIdentityInvalidError("Clerk session token key id is required")
 
     try:
         return client.get_signing_key_from_jwt(token)
