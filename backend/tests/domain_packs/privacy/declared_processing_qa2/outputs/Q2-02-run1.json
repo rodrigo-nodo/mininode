@@ -1,0 +1,844 @@
+{
+  "schema_version": "declared_processing/v1",
+  "records": [
+    {
+      "record_id": "datos-personales-tratados",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos identificativos de clientes, prospectos, representantes, mandatarios, socios, directores, apoderados y beneficiarios finales de personas jurídicas, como nombre completo, nacionalidad, RUT, domicilios, teléfonos, correo electrónico, cargos e información relacionada con el empleo o profesión",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos identificativos de personas naturales clientes, prospectos, representantes, mandatarios y además, de socios, directores, apoderados y beneficiarios finales de personas jurídicas, que nos permitan identificarlos, tales como nombre completo, nacionalidad, RUT, domicilios, teléfonos de contacto, correo electrónico, cargos o información relacionada al empleo o profesión.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Datos personales sobre obligaciones económicas, financieras, bancarias o comerciales, incluidos créditos, situación patrimonial e ingresos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos personales sobre obligaciones de carácter económico, financiero, bancario o comercial, entre ellos, aquellas que se refieren a créditos conferidos y otros relacionados a la situación patrimonial y de ingresos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Información financiera relacionada con los servicios prestados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Información financiera relacionada a los servicios prestados, y en el caso de personas jurídicas, las de sus socios, directores, representantes, administradores o personas relacionadas, en caso de corresponder.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Información de transacciones, incluidos números de tarjeta o cuenta, estados de cuenta, tipos de tarjeta, código del país, direcciones postal y de facturación, historial crediticio y de consumo",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Información de sus transacciones, incluidos los números de tarjeta o cuenta, estados de cuenta, tipos de tarjeta, código del país, dirección postal, de facturación, historial crediticio y de consumo.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Datos identificativos e información de clientes, prospectos, socios y directores de personas jurídicas recogidos de fuentes públicas y privadas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos identificativos e información de clientes, prospectos, socios y directores de personas jurídicas que recogemos de fuentes públicas y privadas.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Otros datos personales necesarios conforme a las leyes y regulaciones vigentes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Otros datos personales que sean necesarios conforme a las leyes y regulaciones vigentes.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "datos-cookies-herramientas-aplicaciones",
+      "technology": [
+        {
+          "value": "cookies, herramientas tecnológicas y aplicaciones utilizadas por el Banco",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos recopilados a través de cookies, herramientas tecnológicas y aplicaciones utilizadas por el Banco.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos recopilados a través de cookies, herramientas tecnológicas y aplicaciones utilizadas por el Banco",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos recopilados a través de cookies, herramientas tecnológicas y aplicaciones utilizadas por el Banco.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "bases-tratamiento",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "datos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile realiza tratamiento de datos basado en la ejecución del contrato entre el cliente y el Banco o para medidas precontractuales o posteriores al contrato conforme a la regulación vigente.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "Ejecución del contrato entre el cliente y el Banco",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile realiza tratamiento de datos basado en la ejecución del contrato entre el cliente y el Banco",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Medidas precontractuales o posteriores al contrato conforme a la regulación vigente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "o para medidas precontractuales o posteriores al contrato conforme a la regulación vigente.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Consentimiento libre e informado expresado por el titular, en ciertos casos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En ciertos casos el tratamiento se basa en el consentimiento libre e informado expresado por el titular",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Disposiciones legales y regulatorias, en otros casos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "y en otros casos se basa en disposiciones legales y regulatorias.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "prestacion-servicios-bancarios",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Información personal de clientes personas naturales y de personas naturales vinculadas a la propiedad o administración de clientes personas jurídicas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "utilizamos la información personal de nuestros clientes personas naturales y de personas naturales vinculadas a la propiedad o administración de clientes personas jurídicas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Evaluación, gestión y ejecución de productos y servicios financieros",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Evaluación, gestión y ejecución de productos y servicios financieros (cuentas corrientes, tarjetas de crédito, créditos comerciales, de consumo e hipotecarios, entre otros).",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Verificación y actualización de la información del cliente, incluida la autenticación de su identidad en transacciones",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Verificación y actualización de la información del cliente, incluyendo la autenticación de su identidad en transacciones que realice.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Gestión de cobranza extrajudicial o judicial",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Gestión de cobranza, ya sea extrajudicial o judicial, realizada por Banco de Chile o a través de terceros contratados para tal efecto.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Terceros contratados para realizar gestión de cobranza",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Gestión de cobranza, ya sea extrajudicial o judicial, realizada por Banco de Chile o a través de terceros contratados para tal efecto.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "cumplimiento-prevencion-y-analisis",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Información personal de clientes y personas vinculadas a clientes personas jurídicas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "utilizamos la información personal de nuestros clientes personas naturales y de personas naturales vinculadas a la propiedad o administración de clientes personas jurídicas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Cumplimiento de obligaciones legales y normativas, como prevención de fraudes, lavado de activos, financiamiento del terrorismo y proliferación de armas de destrucción masiva",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cumplimiento de obligaciones legales y normativas, como la prevención de fraudes, lavado de activos, financiamiento del terrorismo y proliferación de armas de destrucción masiva.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Análisis del comportamiento financiero, comercial y crediticio del cliente para cumplir obligaciones legales y regulatorias",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Análisis del comportamiento financiero, comercial y crediticio del cliente, en cumplimiento de obligaciones legales y regulatorias.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "Obligaciones legales y regulatorias",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "en cumplimiento de obligaciones legales y regulatorias.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "comunicacion-deudas",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Deudas vigentes y/o morosas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Comunicación de deudas vigentes y/o morosas a registros o bancos de datos personales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Comunicación de deudas vigentes y/o morosas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Comunicación de deudas vigentes y/o morosas a registros o bancos de datos personales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Registros o bancos de datos personales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Comunicación de deudas vigentes y/o morosas a registros o bancos de datos personales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "perfil-cliente-acciones-comerciales",
+      "technology": [
+        {
+          "value": "correo electrónico, mensajes de texto (SMS), notificaciones en aplicaciones móviles, redes sociales y llamadas telefónicas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Estas comunicaciones se podrán realizar a través de correo electrónico, mensajes de texto (SMS), notificaciones en aplicaciones móviles, redes sociales, llamadas telefónicas, entre otros medios.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Información personal de clientes y personas vinculadas a clientes personas jurídicas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "utilizamos la información personal de nuestros clientes personas naturales y de personas naturales vinculadas a la propiedad o administración de clientes personas jurídicas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Mejora de la experiencia del cliente mediante asesoría, soporte y canales de comunicación efectivos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Mejora de la experiencia del cliente mediante asesoría, soporte y canales de comunicación efectivos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Desarrollo de productos y análisis de riesgo para ofrecer soluciones personalizadas y cumplir políticas internas y regulaciones vigentes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Desarrollo de productos y análisis de riesgo para ofrecer soluciones personalizadas y asimismo, para dar cumplimiento a las políticas internas previstas al efecto y, además, a las regulaciones vigentes.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Envío de información sobre productos, beneficios de programas de fidelización, eventos, sorteos, descuentos y encuestas de satisfacción",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Envío de información sobre productos, beneficios de programas de fidelización, eventos, sorteos, descuentos y encuestas de satisfacción.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Realizar encuestas de satisfacción",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Realizar encuestas de satisfacción.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "informacion-comercial-banco-filiales",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Información personal del titular",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para enviar al titular información proveniente del Banco o de las empresas filiales o relacionadas al Banco",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Enviar al titular campañas comerciales, promoción de productos y servicios bancarios y financieros, y beneficios de programas de fidelización",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "en especial, de campañas comerciales, promoción de productos y servicios relacionadas con productos bancarios y financieros, y beneficios en virtud de programas de fidelización;",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "conservacion-datos",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos personales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile conservará los datos personales durante el tiempo necesario conforme a la normativa vigente",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [
+        {
+          "value": "Durante el tiempo necesario conforme a la normativa vigente, incluidas las obligaciones establecidas por la Ley General de Bancos y otras regulaciones aplicables",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile conservará los datos personales durante el tiempo necesario conforme a la normativa vigente, incluidas las obligaciones establecidas por la Ley General de Bancos y otras regulaciones aplicables.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Mientras se mantenga vigente la relación contractual con el titular de los datos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cumplimiento contractual: Mientras se mantenga vigente la relación contractual con el titular de los datos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Durante los plazos exigidos por obligaciones legales y regulatorias, inclusive después de finalizada la relación contractual",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "establecen plazos específicos de conservación para efectos de auditoría, supervisión y cumplimiento de obligaciones legales y normativas, inclusive habiendo finalizado la relación contractual.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Para prevenir fraudes y actividades ilícitas y cumplir regulaciones sobre prevención del lavado de activos y financiamiento del terrorismo",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Prevención de fraudes y actividades ilícitas: Para proteger la seguridad del sistema financiero y cumplir con regulaciones sobre prevención del lavado de activos y financiamiento del terrorismo, según mandata la Unidad de Análisis Financiero.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Cuando sea necesario conservar información para atender reclamos o ejercer derechos legales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Defensa ante posibles responsabilidades legales: Cuando sea necesario conservar información para atender reclamos o ejercer derechos legales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "proveedores-externos",
+      "technology": [
+        {
+          "value": "Infraestructura puesta a disposición para la ejecución de procesos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "estos proveedores ponen a disposición su infraestructura para la ejecución de dichos procesos, lo que puede incluir la transmisión de datos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "Proveedores especializados que colaboran en la gestión de distintos procesos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para el desarrollo de nuestros servicios contamos con el apoyo de proveedores especializados que colaboran en la gestión de distintos procesos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "Datos cuya transmisión puede incluirse en la ejecución de los procesos",
+          "normalized_value": null,
+          "status": "ambiguous",
+          "evidence": {
+            "text": "lo que puede incluir la transmisión de datos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Desarrollo de los servicios y gestión de distintos procesos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para el desarrollo de nuestros servicios contamos con el apoyo de proveedores especializados que colaboran en la gestión de distintos procesos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Proveedores especializados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "estos proveedores ponen a disposición su infraestructura para la ejecución de dichos procesos, lo que puede incluir la transmisión de datos.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "filiales-empresas-relacionadas",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile podrá compartir datos con sus filiales y empresas asociadas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Complementar y optimizar los servicios ofrecidos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para complementar y optimizar los servicios que ofrecemos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Fines comerciales e informativos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "podrá compartir datos con sus filiales y empresas asociadas con fines comerciales e informativos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Facilitar la contratación de productos y servicios e informar a las filiales del cumplimiento de obligaciones legales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "facilitando la contratación de productos y servicios e informando a las filiales del cumplimiento de obligaciones legales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Filiales y empresas asociadas de Banco de Chile",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile podrá compartir datos con sus filiales y empresas asociadas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "terceros-acuerdos-comerciales",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Nombre",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "datos personales de sus clientes, tales como nombre, RUT, domicilio, actividad e información relacionada a la utilización de sus productos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "RUT",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "datos personales de sus clientes, tales como nombre, RUT, domicilio, actividad e información relacionada a la utilización de sus productos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Domicilio",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "datos personales de sus clientes, tales como nombre, RUT, domicilio, actividad e información relacionada a la utilización de sus productos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Actividad",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "datos personales de sus clientes, tales como nombre, RUT, domicilio, actividad e información relacionada a la utilización de sus productos",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Información relacionada con la utilización de productos que no esté sujeta a secreto y reserva bancaria",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "información relacionada a la utilización de sus productos que no se encuentre sujeta a secreto y reserva bancaria",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Complementar y optimizar los productos y servicios ofrecidos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para complementar y optimizar los productos y servicios que ofrece",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "Entrega de beneficios asociados a un plan o programa de fidelización",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para la entrega de beneficios asociados a un plan o programa de fidelización",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Terceros con quienes Banco de Chile haya celebrado acuerdos comerciales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "con terceros con quienes haya celebrado acuerdos comerciales para la entrega de beneficios asociados a un plan o programa de fidelización",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "prevencion-delitos-fraude",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Datos",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile podrá compartir datos con las entidades competentes en estas materias.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Mitigar riesgos asociados al lavado de activos, financiamiento del terrorismo, proliferación de armas de destrucción masiva, fraude y otras actividades ilícitas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Con el propósito de mitigar riesgos asociados al lavado de activos, financiamiento del terrorismo, proliferación de armas de destrucción masiva, prevención del fraude y otras actividades ilícitas",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Entidades competentes en prevención de delitos y fraude",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Banco de Chile podrá compartir datos con las entidades competentes en estas materias.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "requerimientos-autoridades",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "Información solicitada o requerida",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En respuesta a solicitudes o requerimientos de información de entidades administrativas o judiciales",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "Responder a solicitudes o requerimientos de información impartidos en ejercicio de las atribuciones de entidades administrativas o judiciales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En respuesta a solicitudes o requerimientos de información de entidades administrativas o judiciales, impartidas en el ejercicio de sus atribuciones.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Entidades administrativas o judiciales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En respuesta a solicitudes o requerimientos de información de entidades administrativas o judiciales",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [
+        {
+          "value": "Leyes, regulaciones, citaciones u órdenes judiciales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "En caso de ser requerido por leyes, regulaciones, citaciones u órdenes judiciales.",
+            "source_url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    }
+  ]
+}

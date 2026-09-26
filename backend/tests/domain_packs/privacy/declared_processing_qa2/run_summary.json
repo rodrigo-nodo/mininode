@@ -1,0 +1,166 @@
+{
+  "budget_usd": 2.0,
+  "actual_cost_usd": 1.640112,
+  "calls": [
+    {
+      "case_id": "Q2-01",
+      "run": 1,
+      "status": "invalid",
+      "error_type": "JSONDecodeError",
+      "usage": {
+        "input_tokens": 5011,
+        "output_tokens": 8192,
+        "total_tokens": 13203
+      },
+      "accounted_cost_usd": 0.183884
+    },
+    {
+      "case_id": "Q2-01",
+      "run": 2,
+      "status": "invalid",
+      "error_type": "ValueError",
+      "usage": {
+        "input_tokens": 5011,
+        "output_tokens": 7849,
+        "total_tokens": 12860
+      },
+      "accounted_cost_usd": 0.177024
+    },
+    {
+      "case_id": "Q2-02",
+      "run": 1,
+      "status": "valid",
+      "records": 14,
+      "usage": {
+        "input_tokens": 5266,
+        "output_tokens": 7463,
+        "total_tokens": 12729
+      },
+      "actual_cost_usd": 0.170324
+    },
+    {
+      "case_id": "Q2-02",
+      "run": 2,
+      "status": "valid",
+      "records": 12,
+      "usage": {
+        "input_tokens": 5266,
+        "output_tokens": 6201,
+        "total_tokens": 11467
+      },
+      "actual_cost_usd": 0.145084
+    },
+    {
+      "case_id": "Q2-03",
+      "run": 1,
+      "status": "invalid",
+      "error_type": "ValueError",
+      "usage": {
+        "input_tokens": 2020,
+        "output_tokens": 3258,
+        "total_tokens": 5278
+      },
+      "accounted_cost_usd": 0.07324
+    },
+    {
+      "case_id": "Q2-03",
+      "run": 2,
+      "status": "invalid",
+      "error_type": "ValueError",
+      "usage": {
+        "input_tokens": 2020,
+        "output_tokens": 2969,
+        "total_tokens": 4989
+      },
+      "accounted_cost_usd": 0.06746
+    },
+    {
+      "case_id": "Q2-04",
+      "status": "capture_failed"
+    },
+    {
+      "case_id": "Q2-05",
+      "status": "capture_failed"
+    },
+    {
+      "case_id": "Q2-06",
+      "status": "capture_failed"
+    },
+    {
+      "case_id": "Q2-07",
+      "run": 1,
+      "status": "valid",
+      "records": 7,
+      "usage": {
+        "input_tokens": 3321,
+        "output_tokens": 4964,
+        "total_tokens": 8285
+      },
+      "actual_cost_usd": 0.112564
+    },
+    {
+      "case_id": "Q2-07",
+      "run": 2,
+      "status": "valid",
+      "records": 7,
+      "usage": {
+        "input_tokens": 3321,
+        "output_tokens": 4133,
+        "total_tokens": 7454
+      },
+      "actual_cost_usd": 0.095944
+    },
+    {
+      "case_id": "Q2-08",
+      "run": 1,
+      "status": "invalid",
+      "error_type": "JSONDecodeError",
+      "usage": {
+        "input_tokens": 5436,
+        "output_tokens": 8192,
+        "total_tokens": 13628
+      },
+      "accounted_cost_usd": 0.185584
+    },
+    {
+      "case_id": "Q2-08",
+      "run": 2,
+      "status": "invalid",
+      "error_type": "JSONDecodeError",
+      "usage": {
+        "input_tokens": 5436,
+        "output_tokens": 8192,
+        "total_tokens": 13628
+      },
+      "accounted_cost_usd": 0.185584
+    },
+    {
+      "case_id": "Q2-09",
+      "run": 1,
+      "status": "valid",
+      "records": 14,
+      "usage": {
+        "input_tokens": 2495,
+        "output_tokens": 5533,
+        "total_tokens": 8028
+      },
+      "actual_cost_usd": 0.12064
+    },
+    {
+      "case_id": "Q2-09",
+      "run": 2,
+      "status": "valid",
+      "records": 15,
+      "usage": {
+        "input_tokens": 2495,
+        "output_tokens": 5640,
+        "total_tokens": 8135
+      },
+      "actual_cost_usd": 0.12278
+    },
+    {
+      "case_id": "Q2-10",
+      "status": "capture_failed"
+    }
+  ]
+}

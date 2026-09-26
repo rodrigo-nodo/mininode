@@ -1,0 +1,784 @@
+{
+  "schema_version": "declared_processing/v1",
+  "records": [
+    {
+      "record_id": "clientes_y_usuarios_datos",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "nombre, razón social, RUT, correo electrónico, teléfono",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de identificación y contacto: nombre, razón social, RUT, correo electrónico, teléfono.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "credenciales de acceso, rol, preferencias y configuración",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de cuenta: credenciales de acceso, rol, preferencias y configuración.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "datos de facturación y pago",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de facturación y pago.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "registros de actividad, campañas, reportes y métricas",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Datos de uso: registros de actividad, campañas, reportes y métricas.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "destinatarios_datos",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "números de teléfono, direcciones de correo electrónico e identificadores de WhatsApp",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Números de teléfono, direcciones de correo electrónico e identificadores de WhatsApp.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "contenido de los mensajes y archivos asociados que el Cliente decide enviar",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Contenido de los mensajes y archivos asociados que el Cliente decide enviar.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "estados de entrega, lectura, clics y eventos de interacción",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Estados de entrega, lectura, clics y eventos de interacción.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "datos_tecnicos",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "dirección IP, identificadores de dispositivo y navegador, registros de servidor (logs) y cookies",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Dirección IP, identificadores de dispositivo y navegador, registros de servidor (logs) y cookies.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "finalidades_generales",
+      "technology": [],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [
+        {
+          "value": "prestar, operar y mantener la Plataforma y los Servicios contratados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Prestar, operar y mantener la Plataforma y los Servicios contratados.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "procesar y enrutar mensajes por SMS, correo electrónico y WhatsApp, y entregar sus estados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Procesar y enrutar mensajes por SMS, correo electrónico y WhatsApp, y entregar sus estados.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "generar reportes, estadísticas y facturación",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Generar reportes, estadísticas y facturación.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "garantizar la seguridad, prevenir fraude, abuso y envíos no autorizados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Garantizar la seguridad, prevenir fraude, abuso y envíos no autorizados.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "brindar soporte y comunicar información relevante del servicio",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Brindar soporte y comunicar información relevante del servicio.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "cumplir obligaciones legales y requerimientos de autoridad competente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cumplir obligaciones legales y requerimientos de autoridad competente.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "bases_de_licitud_generales",
+      "technology": [],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "ejecución del contrato con el Cliente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "la ejecución del contrato con el Cliente",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "consentimiento del titular cuando corresponde",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el consentimiento del titular cuando corresponde",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "interés legítimo en la seguridad y mejora del servicio",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el interés legítimo en la seguridad y mejora del servicio",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "cumplimiento de obligaciones legales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el cumplimiento de obligaciones legales.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "consentimiento_comunicaciones_destinatarios",
+      "technology": [],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [
+        {
+          "value": "envío de las comunicaciones a los Destinatarios",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "necesario para el envío de las comunicaciones.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [
+        {
+          "value": "consentimiento previo, informado y verificable obtenido de los Destinatarios por el Cliente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "El Cliente declara y garantiza haber obtenido de los Destinatarios el consentimiento previo, informado y verificable",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "whatsapp_meta_enrutamiento",
+      "technology": [
+        {
+          "value": "WhatsApp Business Platform",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "la Plataforma se integra con la WhatsApp Business Platform",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "Meta Platforms Ireland Limited y sus afiliadas (\"Meta\")",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "provista por Meta Platforms Ireland Limited y sus afiliadas (\"Meta\").",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "número de teléfono del Destinatario",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el número de teléfono del Destinatario",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "contenido del mensaje",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "el contenido del mensaje",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "enrutar y entregar los mensajes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Para enrutar y entregar los mensajes",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "prestar los Servicios solicitados por el Cliente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "únicamente para prestar los Servicios solicitados por el Cliente",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "Meta",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "son transmitidos a y procesados por Meta.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "meta_embedded_signup",
+      "technology": [
+        {
+          "value": "registro integrado de Meta (Embedded Signup)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "mediante el registro integrado de Meta (Embedded Signup)",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [
+        {
+          "value": "Meta",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Connectus recibe de Meta cierta información necesaria para operar el canal",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "data_categories": [
+        {
+          "value": "identificadores de la cuenta de WhatsApp Business (WABA)",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "identificadores de la cuenta de WhatsApp Business (WABA)",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "identificadores y números de teléfono registrados",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "identificadores y números de teléfono registrados",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "estado y calificación de calidad del número",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "estado y calificación de calidad del número",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "plantillas de mensajes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "plantillas de mensajes",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "credenciales de acceso (tokens) otorgadas por el Cliente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "credenciales de acceso (tokens) otorgadas por el Cliente.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "operar el canal",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "información necesaria para operar el canal",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "prestar los Servicios al Cliente",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "se utilizan exclusivamente para prestar los Servicios al Cliente.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "comparticion_sms",
+      "technology": [
+        {
+          "value": "SMS",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "agregadores de SMS",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [
+        {
+          "value": "entrega de mensajes de texto",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "para la entrega de mensajes de texto.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "operadores de telecomunicaciones y agregadores de SMS",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Operadores de telecomunicaciones y agregadores de SMS",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "comparticion_proveedores_servicio",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "datos personales necesarios para prestar los Servicios",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Compartimos datos personales únicamente con quienes resulta necesario para prestar los Servicios",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "prestar los Servicios",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "necesario para prestar los Servicios",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "proveedores de envío de correo electrónico",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores de envío de correo electrónico.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "proveedores de infraestructura tecnológica y alojamiento en la nube",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Proveedores de infraestructura tecnológica y alojamiento en la nube.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "pasarelas y procesadores de pago",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Pasarelas y procesadores de pago.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "comparticion_autoridades",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "datos personales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Compartimos datos personales únicamente con quienes resulta necesario para prestar los Servicios",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "cumplir una obligación legal o requerimiento válido",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "cuando exista una obligación legal o requerimiento válido.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [
+        {
+          "value": "autoridades competentes",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Autoridades competentes",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [
+        {
+          "value": "obligación legal o requerimiento válido",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "cuando exista una obligación legal o requerimiento válido.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "transferencias_internacionales",
+      "technology": [],
+      "provider": [],
+      "data_categories": [],
+      "purposes": [],
+      "recipients": [
+        {
+          "value": "algunos proveedores ubicados fuera de Chile",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Algunos de nuestros proveedores se encuentran ubicados fuera de Chile.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [
+        {
+          "value": "transferencia internacional de datos a proveedores ubicados fuera de Chile, con resguardos razonables conforme a la normativa aplicable",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Cuando ello implique una transferencia internacional de datos, adoptamos resguardos razonables para que dicha transferencia se realice conforme a la normativa aplicable.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "conservacion_general",
+      "technology": [],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "datos personales",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Conservamos los datos personales",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [
+        {
+          "value": "mientras se mantenga la relación con el Cliente y durante los plazos adicionales exigidos por la ley o necesarios para atender reclamos, auditorías o requerimientos legales; después se eliminan o anonimizan",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "Conservamos los datos personales mientras se mantenga la relación con el Cliente y durante los plazos adicionales que exija la ley o que resulten necesarios para atender reclamos, auditorías o requerimientos legales. Cumplidos dichos plazos, los datos son eliminados o anonimizados.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    },
+    {
+      "record_id": "cookies",
+      "technology": [
+        {
+          "value": "cookies y tecnologías similares",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "El sitio y la Plataforma utilizan cookies y tecnologías similares",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "provider": [],
+      "data_categories": [
+        {
+          "value": "cookies",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "registros de servidor (logs) y cookies.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "purposes": [
+        {
+          "value": "inicio de sesión",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "necesarias para el inicio de sesión",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "seguridad",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "la seguridad y el funcionamiento del servicio",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "funcionamiento del servicio",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "la seguridad y el funcionamiento del servicio",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        },
+        {
+          "value": "recordar preferencias",
+          "normalized_value": null,
+          "status": "supported",
+          "evidence": {
+            "text": "así como cookies para recordar preferencias.",
+            "source_url": "https://www.connectus.cl/politica-de-privacidad"
+          }
+        }
+      ],
+      "recipients": [],
+      "legal_basis": [],
+      "retention": [],
+      "international_transfers": [],
+      "source": {
+        "url": "https://www.connectus.cl/politica-de-privacidad",
+        "document_type": "privacy_policy",
+        "page_title": null
+      }
+    }
+  ]
+}
