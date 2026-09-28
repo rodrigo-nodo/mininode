@@ -1,5 +1,6 @@
 import os
 import sys
+from uuid import uuid4
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from fastapi.testclient import TestClient
 
 BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
+
+MIGRATION_A2_1 = BACKEND_SRC.parents[0] / "migrations" / "20260928_access_a2_1_workspace_sites.sql"
 
 from mininode_api.main import create_app  # noqa: E402
 from mininode_api.services import access  # noqa: E402
@@ -60,6 +63,70 @@ def test_schema_defines_canonical_workspace_hierarchy():
     assert "source_id TEXT NULL" in sql
     assert "active_until IS NULL OR active_until > active_from" in sql
 
+
+
+def test_a2_1_destructive_migration_on_real_postgres():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for the PostgreSQL integration test")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+    try:
+        access.initialize_database()
+        user_id = uuid4()
+        workspace_id = uuid4()
+        company_id = uuid4()
+        old_site_id = uuid4()
+        old_workspace_site_id = uuid4()
+        old_entitlement_id = uuid4()
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("INSERT INTO access.users (id, email) VALUES (%s, %s)", (user_id, "kept@example.com"))
+            cursor.execute("INSERT INTO access.workspaces (id, name) VALUES (%s, %s)", (workspace_id, "Kept"))
+            cursor.execute(
+                "INSERT INTO access.workspace_members (workspace_id, user_id, role) VALUES (%s, %s, %s)",
+                (workspace_id, user_id, access.ROLE_OWNER),
+            )
+            cursor.execute(
+                "INSERT INTO access.companies (id, workspace_id, name) VALUES (%s, %s, %s)",
+                (company_id, workspace_id, "Kept Company"),
+            )
+            cursor.execute("INSERT INTO access.sites (id, hostname) VALUES (%s, %s)", (old_site_id, "discard.example"))
+            cursor.execute(
+                "INSERT INTO access.workspace_sites (id, workspace_id, site_id, company_id) VALUES (%s, %s, %s, %s)",
+                (old_workspace_site_id, workspace_id, old_site_id, company_id),
+            )
+            cursor.execute(
+                """
+                INSERT INTO access.entitlements
+                    (id, workspace_site_id, product_code, active_from, status, source)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s, %s)
+                """,
+                (old_entitlement_id, old_workspace_site_id, "privacy_web", "active", "test"),
+            )
+
+        migration_sql = MIGRATION_A2_1.read_text(encoding="utf-8")
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute(migration_sql)
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT count(*) FROM access.users WHERE id = %s", (user_id,))
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.workspaces WHERE id = %s", (workspace_id,))
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.companies WHERE id = %s", (company_id,))
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.sites")
+            assert cursor.fetchone()[0] == 0
+            cursor.execute("SELECT count(*) FROM access.workspace_sites")
+            assert cursor.fetchone()[0] == 0
+            cursor.execute("SELECT count(*) FROM access.entitlements")
+            assert cursor.fetchone()[0] == 0
+    finally:
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
 
 def test_initialize_database_executes_schema_once(monkeypatch):
     executions = []
