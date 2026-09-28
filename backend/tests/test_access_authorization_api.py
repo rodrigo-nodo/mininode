@@ -371,6 +371,19 @@ def test_follow_site_normalizes_public_url():
         access.normalize_site_url("localhost")
     with pytest.raises(ValueError):
         access.normalize_site_url("https://user:pass@example.com")
+    for value in (
+        "127.0.0.1",
+        "169.254.169.254",
+        "10.0.0.1",
+        "192.168.1.1",
+        "https://bad_host.example",
+        "https://-bad.example",
+        "https://bad-.example",
+        "https://example.123",
+    ):
+        with pytest.raises(ValueError):
+            access.normalize_site_url(value)
+    assert access.normalize_site_url("https://8.8.8.8/path") == ("8.8.8.8", "https://8.8.8.8")
 
 
 def test_follow_site_is_idempotent_and_isolated_on_real_postgres():
