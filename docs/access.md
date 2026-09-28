@@ -11,22 +11,24 @@ El avance se divide así:
 - **A1:** identidad Cloudflare Access → usuario interno Mininode.
 - **A1.1:** transición backend a Clerk como identidad cliente, conservando Cloudflare como fallback temporal.
 - **A1.2:** UX cliente Clerk con Google o email + código, sin contraseña Mininode.
-- **A2:** autorización por workspace → empresa → sitio.
+- **A2:** autorización canónica por workspace.
+- **A2.1:** sitio público + relación privada workspace ↔ sitio.
 - **A3:** aplicación Privacy Web autenticada.
 - **A4:** Billing → entitlement.
 
 ## Modelo
 
 ```text
-Usuario
-  ↓
-Workspace
-  ↓
-Empresa
-  ↓
-Sitio
-  ↓
-Entitlement
+Usuario ↔ Workspace
+             │
+             ↓
+       WorkspaceSite
+        ↙         ↘
+ Empresa          Sitio público
+ (opcional)       (hostname)
+             │
+             ↓
+        Entitlement
 ```
 
 Un usuario puede pertenecer a uno o más workspaces mediante `workspace_member`.
@@ -53,7 +55,7 @@ La capa de identidad mapea una identidad verificada de Cloudflare Access o Clerk
 
 Raíz de autorización y cuenta administrativa.
 
-Un workspace puede contener varias empresas y varios usuarios.
+Un workspace puede contener varias empresas, varios usuarios y varios sitios seguidos.
 
 ### workspace_member
 
@@ -78,19 +80,28 @@ Una empresa siempre pertenece a un solo workspace.
 
 ### site
 
-Sitio perteneciente a una empresa.
+Recurso web público observado por Mininode. No declara propiedad ni pertenencia a una empresa.
 
-- `hostname` es la identidad canónica normalizada del sitio.
-- `canonical_url` puede conservar la URL pública preferida cuando corresponda.
-- un mismo hostname no se duplica dentro de una empresa.
+- `hostname` es la identidad canónica normalizada y global del sitio;
+- `canonical_url` puede conservar la URL pública preferida;
+- un hostname existe una sola vez en `access.sites`.
+
+### workspace_site
+
+Relación privada entre un workspace y un sitio público.
+
+- dos workspaces pueden seguir independientemente el mismo sitio;
+- el mismo sitio no se duplica dentro de un workspace;
+- `company_id` es opcional y sirve sólo para agrupar el seguimiento;
+- su UUID es la identidad que las aplicaciones usan para autorización e historial.
 
 ### entitlement
 
-Representa que un producto está habilitado para un sitio durante una vigencia.
+Representa que un producto está habilitado para una relación workspace-sitio durante una vigencia.
 
 Campos base:
 
-- `site_id`;
+- `workspace_site_id`;
 - `product_code`;
 - `active_from`;
 - `active_until`;
@@ -109,12 +120,12 @@ habilitado.
 Responsable de identidad interna, membresía y autorización.
 
 ```text
-usuario → workspace → empresa → sitio
+usuario → workspace → workspace_site → sitio
 ```
 
 ### Entitlement
 
-Responde qué producto está habilitado para el sitio y durante qué período.
+Responde qué producto está habilitado para el seguimiento privado `workspace_site` y durante qué período.
 
 ### Billing
 
@@ -127,14 +138,14 @@ pero Billing no decidirá quién tiene permiso sobre un workspace.
 - El frontend nunca es autoridad para seleccionar un `workspace_id`, `company_id`
   o `site_id`.
 - La pertenencia se demuestra recorriendo
-  `workspace_member → workspace → company → site`.
+  `workspace_member → workspace → workspace_site → site`.
 - Los identificadores son UUID internos; el email no funciona como clave primaria.
 - `X-Api-Key` no sustituye identidad de usuario.
 - Para rutas Access, un `Authorization: Bearer ...` se interpreta exclusivamente
   como sesión Clerk. Si existe y falla, no se intenta autenticar silenciosamente con
   Cloudflare Access.
-- Un `site_id` sólo se acepta cuando `get_authorized_site()` demuestra que el usuario
-  pertenece al workspace del sitio.
+- Un `workspace_site_id` sólo se acepta cuando `get_authorized_site()` demuestra que el usuario
+  pertenece al workspace de ese seguimiento.
 - Roles desconocidos quedan fuera de las consultas de autorización y, por tanto, no
   conceden acceso.
 
@@ -147,13 +158,14 @@ El modelo vive en el schema PostgreSQL `access`:
 - `access.workspace_members`;
 - `access.companies`;
 - `access.sites`;
+- `access.workspace_sites`;
 - `access.entitlements`.
 
 La inicialización es idempotente y se ejecuta de forma independiente durante el startup
 del backend. Si Access no puede inicializarse, el resto de servicios puede continuar
 siguiendo el patrón de disponibilidad parcial existente.
 
-Access no migra ni reescribe datos actuales de Privacy Web o Privacy Data.
+A2.1 no migra ni reescribe datos actuales de Privacy Web o Privacy Data. Como todavía no existen clientes Access, la migración A2.1 reemplaza de forma destructiva únicamente las tablas estructurales `access.sites` y `access.entitlements` y crea `access.workspace_sites`; conserva usuarios, workspaces, membresías y empresas.
 
 ## A1 - Identidad Cloudflare Access
 
@@ -265,7 +277,7 @@ validación se retiró la aplicación cliente de Cloudflare Access de `app.minin
 
 ## A2 - Autorización
 
-A2 toma el `user_id` autenticado y resuelve únicamente el contexto al que pertenece.
+A2/A2.1 toman el `user_id` autenticado y resuelven únicamente el contexto privado al que pertenece.
 
 ```text
 user_id
@@ -274,9 +286,9 @@ workspace_member
   ↓
 workspace
   ↓
-company
+workspace_site
   ↓
-site
+site público
 ```
 
 ### Contexto autorizado
@@ -295,16 +307,16 @@ qué mostrar; el contexto se deriva desde `user_id` en PostgreSQL.
 
 ### Guardia por sitio
 
-`get_authorized_site(user_id, site_id)` recorre en una sola consulta:
+`get_authorized_site(user_id, workspace_site_id)` recorre en una sola consulta:
 
 ```text
-site → company → workspace → workspace_member(user)
+workspace_site → site + workspace → workspace_member(user)
 ```
 
 Si la cadena no existe o el rol no es `owner`/`member`, devuelve `None`.
 
 A3 deberá reutilizar esta función —o una dependencia construida sobre ella— antes de
-operar sobre cualquier recurso asociado a un sitio.
+operar sobre cualquier seguimiento. Dos workspaces pueden apuntar al mismo `site_id` sin compartir autorización, entitlement ni historial.
 
 ### Alcance que A2 no cubre
 
@@ -318,8 +330,7 @@ A2 no agrega:
 - entitlements ni Billing;
 - lógica propia de Privacy Web.
 
-Por ahora, una membresía válida da acceso a todas las empresas y sitios de ese
-workspace.
+Por ahora, una membresía válida da acceso a todos los `workspace_sites` de ese workspace. `company_id` puede agruparlos, pero no expresa propiedad del sitio.
 
 ## Próximas etapas
 
