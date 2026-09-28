@@ -6,6 +6,7 @@ import os
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterator
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 import psycopg
@@ -260,6 +261,74 @@ def get_or_create_personal_workspace(user_id: UUID) -> PersonalWorkspace:
             (workspace_id, user_id, ROLE_OWNER),
         )
         return PersonalWorkspace(id=workspace_id, name="Mi espacio", role=ROLE_OWNER)
+
+
+def normalize_site_url(value: str) -> tuple[str, str]:
+    raw = value.strip()
+    if not raw:
+        raise ValueError("url is required")
+    candidate = raw if "://" in raw else f"https://{raw}"
+    parsed = urlsplit(candidate)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("invalid public site url")
+    if parsed.username or parsed.password or parsed.port:
+        raise ValueError("invalid public site url")
+    hostname = parsed.hostname.rstrip(".").lower()
+    if not hostname or "." not in hostname or any(not label for label in hostname.split(".")):
+        raise ValueError("invalid public site hostname")
+    canonical_url = f"{parsed.scheme}://{hostname}"
+    return hostname, canonical_url
+
+
+def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | None:
+    """Associate a public site with an authorized workspace, idempotently."""
+    hostname, canonical_url = normalize_site_url(url)
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT wm.role
+            FROM access.workspace_members AS wm
+            WHERE wm.user_id = %s AND wm.workspace_id = %s
+              AND wm.role IN (%s, %s)
+            """,
+            (user_id, workspace_id, ROLE_OWNER, ROLE_MEMBER),
+        )
+        if cursor.fetchone() is None:
+            return None
+
+        site_id = uuid4()
+        cursor.execute(
+            """
+            INSERT INTO access.sites (id, hostname, canonical_url)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (hostname) DO UPDATE
+            SET hostname = EXCLUDED.hostname
+            RETURNING id, hostname
+            """,
+            (site_id, hostname, canonical_url),
+        )
+        site_id, stored_hostname = cursor.fetchone()
+
+        workspace_site_id = uuid4()
+        cursor.execute(
+            """
+            INSERT INTO access.workspace_sites (id, workspace_id, site_id)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (workspace_id, site_id) DO UPDATE
+            SET site_id = EXCLUDED.site_id
+            RETURNING id
+            """,
+            (workspace_site_id, workspace_id, site_id),
+        )
+        workspace_site_id = cursor.fetchone()[0]
+
+    return SiteContext(
+        id=workspace_site_id,
+        site_id=site_id,
+        hostname=stored_hostname,
+        company_id=None,
+        company_name=None,
+    )
 
 
 def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
