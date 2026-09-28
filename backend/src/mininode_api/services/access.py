@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterator
@@ -274,8 +276,24 @@ def normalize_site_url(value: str) -> tuple[str, str]:
     if parsed.username or parsed.password or parsed.port:
         raise ValueError("invalid public site url")
     hostname = parsed.hostname.rstrip(".").lower()
-    if not hostname or "." not in hostname or any(not label for label in hostname.split(".")):
+    if not hostname or "." not in hostname:
         raise ValueError("invalid public site hostname")
+
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        labels = hostname.split(".")
+        hostname_pattern = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+        if (
+            len(hostname) > 253
+            or any(not hostname_pattern.fullmatch(label) for label in labels)
+            or labels[-1].isdigit()
+        ):
+            raise ValueError("invalid public site hostname")
+    else:
+        if not address.is_global:
+            raise ValueError("site must use a public address")
+
     canonical_url = f"{parsed.scheme}://{hostname}"
     return hostname, canonical_url
 
