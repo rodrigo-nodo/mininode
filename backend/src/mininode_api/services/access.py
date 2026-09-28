@@ -185,6 +185,7 @@ class WorkspaceContext:
     id: UUID
     name: str
     role: str
+    sites: tuple[SiteContext, ...]
     companies: tuple[CompanyContext, ...]
 
 
@@ -244,6 +245,7 @@ def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
             id=workspace_id,
             name=workspace["name"],
             role=workspace["role"],
+            sites=tuple(workspace["unassigned_sites"]),
             companies=tuple(
                 CompanyContext(id=company_id, name=company["name"], sites=tuple(company["sites"]))
                 for company_id, company in workspace["companies"].items()
