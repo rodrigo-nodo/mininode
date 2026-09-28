@@ -60,7 +60,7 @@ Cada producto puede tener un documento específico dentro de `docs/`.
 
 Actualmente:
 
-- `docs/access.md` - modelo transversal de identidad, workspace, empresa, sitio y entitlement.
+- `docs/access.md` - modelo transversal de identidad, workspace, sitio público, relación workspace-sitio y entitlement.
 - `docs/privacy.md` - Privacy Web y Privacy Data.
 
 Los agentes de código deben leer únicamente los documentos necesarios para la Issue que están implementando.
