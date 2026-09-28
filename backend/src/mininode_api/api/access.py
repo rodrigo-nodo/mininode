@@ -25,12 +25,8 @@ class AccessSiteContextResponse(BaseModel):
     id: UUID
     site_id: UUID
     hostname: str
-
-
-class AccessCompanyContextResponse(BaseModel):
-    id: UUID
-    name: str
-    sites: list[AccessSiteContextResponse]
+    company_id: UUID | None
+    company_name: str | None
 
 
 class AccessWorkspaceContextResponse(BaseModel):
@@ -38,7 +34,6 @@ class AccessWorkspaceContextResponse(BaseModel):
     name: str
     role: str
     sites: list[AccessSiteContextResponse]
-    companies: list[AccessCompanyContextResponse]
 
 
 class AccessContextResponse(BaseModel):
@@ -72,23 +67,14 @@ def access_context(
                 name=workspace.name,
                 role=workspace.role,
                 sites=[
-                    AccessSiteContextResponse(id=site.id, site_id=site.site_id, hostname=site.hostname)
-                    for site in workspace.sites
-                ],
-                companies=[
-                    AccessCompanyContextResponse(
-                        id=company.id,
-                        name=company.name,
-                        sites=[
-                            AccessSiteContextResponse(
-                                id=site.id,
-                                site_id=site.site_id,
-                                hostname=site.hostname,
-                            )
-                            for site in company.sites
-                        ],
+                    AccessSiteContextResponse(
+                        id=site.id,
+                        site_id=site.site_id,
+                        hostname=site.hostname,
+                        company_id=site.company_id,
+                        company_name=site.company_name,
                     )
-                    for company in workspace.companies
+                    for site in workspace.sites
                 ],
             )
             for workspace in workspaces
