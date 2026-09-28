@@ -157,8 +157,11 @@ Access no migra ni reescribe datos actuales de Privacy Web o Privacy Data.
 
 ## A1 - Identidad Cloudflare Access
 
-`app.mininode.io` está protegido externamente por Cloudflare Access. Cloudflare añade
-un JWT de aplicación al header `Cf-Access-Jwt-Assertion`.
+Cloudflare Access fue la identidad inicial de `app.mininode.io` y su flujo E2E quedó
+validado. La aplicación cliente de Cloudflare Access ya fue retirada de ese dominio;
+Clerk es ahora la identidad cliente activa. El soporte backend para el header
+`Cf-Access-Jwt-Assertion` se conserva temporalmente como compatibilidad mientras no se
+retire explícitamente en una etapa posterior.
 
 El backend requiere:
 
@@ -222,16 +225,15 @@ Configuración backend:
 El claim `email` se agrega al token estándar `__session` desde la configuración de
 Clerk. No se necesita `CLERK_SECRET_KEY` para esta validación.
 
-Durante la migración:
+El backend mantiene temporalmente la compatibilidad de transición:
 
 1. `Authorization: Bearer <Clerk JWT>` tiene prioridad;
-2. si no existe Bearer, se mantiene el JWT de Cloudflare Access como fallback;
+2. si no existe Bearer, puede resolver el JWT de Cloudflare Access como fallback;
 3. un Bearer inválido **no** cae a Cloudflare;
-4. Pages reenvía ambos headers solamente para las rutas protegidas de Access;
-5. Cloudflare Access continúa activo hasta completar y validar E2E la nueva UX.
+4. Pages reenvía ambos headers solamente para las rutas protegidas de Access.
 
-El objetivo posterior es usar Clerk para identidad de clientes y reservar Cloudflare
-Access para herramientas internas si sigue siendo útil.
+La aplicación cliente de Cloudflare Access ya no protege `app.mininode.io`. Clerk es
+la identidad de clientes; Cloudflare continúa proporcionando DNS/CDN/Pages/WAF.
 
 ## A1.2 - UX cliente Clerk
 
@@ -256,8 +258,10 @@ de resolver el UUID interno de Mininode.
 La pantalla de acceso no decide autorización de workspace, empresa o sitio. Su único
 objetivo es completar autenticación y confirmar que Mininode reconoce la identidad.
 
-Cloudflare Access sigue delante de `app.mininode.io` durante esta etapa. Se retira del
-flujo cliente sólo después de validar E2E Clerk → Pages → Render → `access.users`.
+El E2E de producción quedó validado con ambos métodos: Google y email + código llegan
+a `Clerk → Pages → Render → /access/me → access.users`. Ambos métodos resolvieron el
+mismo registro interno de usuario, sin duplicar la identidad canónica. Tras esa
+validación se retiró la aplicación cliente de Cloudflare Access de `app.mininode.io`.
 
 ## A2 - Autorización
 
@@ -319,9 +323,5 @@ workspace.
 
 ## Próximas etapas
 
-1. **Validación E2E Clerk:** validar Google y email + código contra
-   `Clerk → /api/access/me → mismo access.users`.
-2. **Retiro de Cloudflare Access cliente:** sólo después del E2E, manteniendo
-   Cloudflare DNS/CDN/Pages/WAF.
-3. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
-4. **A4 - Billing:** pago confirmado → entitlement.
+1. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
+2. **A4 - Billing:** pago confirmado → entitlement.
