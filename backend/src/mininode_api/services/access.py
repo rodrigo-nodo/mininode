@@ -63,23 +63,35 @@ CREATE INDEX IF NOT EXISTS access_companies_workspace_idx
 
 CREATE TABLE IF NOT EXISTS access.sites (
     id UUID PRIMARY KEY,
-    company_id UUID NOT NULL REFERENCES access.companies(id),
     hostname TEXT NOT NULL,
     canonical_url TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT access_sites_hostname_normalized_check
         CHECK (hostname <> '' AND hostname = lower(btrim(hostname))),
-    CONSTRAINT access_sites_company_hostname_unique
-        UNIQUE (company_id, hostname)
+    CONSTRAINT access_sites_hostname_unique
+        UNIQUE (hostname)
 );
 
-CREATE INDEX IF NOT EXISTS access_sites_company_idx
-    ON access.sites (company_id, id);
+CREATE TABLE IF NOT EXISTS access.workspace_sites (
+    id UUID PRIMARY KEY,
+    workspace_id UUID NOT NULL REFERENCES access.workspaces(id) ON DELETE CASCADE,
+    site_id UUID NOT NULL REFERENCES access.sites(id) ON DELETE CASCADE,
+    company_id UUID NULL REFERENCES access.companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT access_workspace_sites_workspace_site_unique
+        UNIQUE (workspace_id, site_id)
+);
+
+CREATE INDEX IF NOT EXISTS access_workspace_sites_workspace_idx
+    ON access.workspace_sites (workspace_id, id);
+CREATE INDEX IF NOT EXISTS access_workspace_sites_site_idx
+    ON access.workspace_sites (site_id, workspace_id);
 
 CREATE TABLE IF NOT EXISTS access.entitlements (
     id UUID PRIMARY KEY,
-    site_id UUID NOT NULL REFERENCES access.sites(id),
+    workspace_site_id UUID NOT NULL REFERENCES access.workspace_sites(id) ON DELETE CASCADE,
     product_code TEXT NOT NULL,
     active_from TIMESTAMPTZ NOT NULL,
     active_until TIMESTAMPTZ NULL,
@@ -98,8 +110,8 @@ CREATE TABLE IF NOT EXISTS access.entitlements (
         CHECK (active_until IS NULL OR active_until > active_from)
 );
 
-CREATE INDEX IF NOT EXISTS access_entitlements_site_product_idx
-    ON access.entitlements (site_id, product_code, active_from DESC);
+CREATE INDEX IF NOT EXISTS access_entitlements_workspace_site_product_idx
+    ON access.entitlements (workspace_site_id, product_code, active_from DESC);
 """
 
 
@@ -157,6 +169,7 @@ def get_or_create_user(email: str) -> StoredUser:
 @dataclass(frozen=True)
 class SiteContext:
     id: UUID
+    site_id: UUID
     hostname: str
 
 
@@ -177,78 +190,54 @@ class WorkspaceContext:
 
 @dataclass(frozen=True)
 class AuthorizedSite:
+    workspace_site_id: UUID
     site_id: UUID
-    company_id: UUID
+    company_id: UUID | None
     workspace_id: UUID
     role: str
 
 
 def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
-    """Return only workspace/company/site hierarchy authorized for this user."""
+    """Return only workspace/company/site relationships authorized for this user."""
 
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT
-                w.id,
-                w.name,
-                wm.role,
-                c.id,
-                c.name,
-                s.id,
-                s.hostname
+            SELECT w.id, w.name, wm.role, c.id, c.name, ws.id, s.id, s.hostname
             FROM access.workspace_members AS wm
-            JOIN access.workspaces AS w
-              ON w.id = wm.workspace_id
-            LEFT JOIN access.companies AS c
-              ON c.workspace_id = w.id
-            LEFT JOIN access.sites AS s
-              ON s.company_id = c.id
+            JOIN access.workspaces AS w ON w.id = wm.workspace_id
+            LEFT JOIN access.companies AS c ON c.workspace_id = w.id
+            LEFT JOIN access.workspace_sites AS ws
+              ON ws.workspace_id = w.id
+             AND (ws.company_id = c.id OR (ws.company_id IS NULL AND c.id IS NULL))
+            LEFT JOIN access.sites AS s ON s.id = ws.site_id
             WHERE wm.user_id = %s
               AND wm.role IN (%s, %s)
-            ORDER BY
-                lower(w.name),
-                w.id,
-                lower(c.name) NULLS FIRST,
-                c.id NULLS FIRST,
-                s.hostname NULLS FIRST,
-                s.id NULLS FIRST
+            ORDER BY lower(w.name), w.id, lower(c.name) NULLS FIRST,
+                     c.id NULLS FIRST, s.hostname NULLS FIRST, ws.id NULLS FIRST
             """,
             (user_id, ROLE_OWNER, ROLE_MEMBER),
         )
         rows = cursor.fetchall()
 
     workspace_builders: dict[UUID, dict] = {}
-    for (
-        workspace_id,
-        workspace_name,
-        role,
-        company_id,
-        company_name,
-        site_id,
-        hostname,
-    ) in rows:
+    for workspace_id, workspace_name, role, company_id, company_name, workspace_site_id, site_id, hostname in rows:
         workspace = workspace_builders.setdefault(
             workspace_id,
-            {
-                "name": workspace_name,
-                "role": role,
-                "companies": {},
-            },
+            {"name": workspace_name, "role": role, "companies": {}, "unassigned_sites": []},
         )
-
+        site = (
+            SiteContext(id=workspace_site_id, site_id=site_id, hostname=hostname)
+            if workspace_site_id is not None
+            else None
+        )
         if company_id is None:
+            if site is not None:
+                workspace["unassigned_sites"].append(site)
             continue
-
-        company = workspace["companies"].setdefault(
-            company_id,
-            {
-                "name": company_name,
-                "sites": [],
-            },
-        )
-        if site_id is not None:
-            company["sites"].append(SiteContext(id=site_id, hostname=hostname))
+        company = workspace["companies"].setdefault(company_id, {"name": company_name, "sites": []})
+        if site is not None:
+            company["sites"].append(site)
 
     return tuple(
         WorkspaceContext(
@@ -256,42 +245,30 @@ def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
             name=workspace["name"],
             role=workspace["role"],
             companies=tuple(
-                CompanyContext(
-                    id=company_id,
-                    name=company["name"],
-                    sites=tuple(company["sites"]),
-                )
+                CompanyContext(id=company_id, name=company["name"], sites=tuple(company["sites"]))
                 for company_id, company in workspace["companies"].items()
             ),
         )
         for workspace_id, workspace in workspace_builders.items()
     )
 
-
-def get_authorized_site(user_id: UUID, site_id: UUID) -> AuthorizedSite | None:
-    """Resolve a site only when the user belongs to its workspace."""
+def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSite | None:
+    """Resolve a workspace-site relationship only for a member of that workspace."""
 
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT
-                s.id,
-                c.id,
-                w.id,
-                wm.role
-            FROM access.sites AS s
-            JOIN access.companies AS c
-              ON c.id = s.company_id
-            JOIN access.workspaces AS w
-              ON w.id = c.workspace_id
+            SELECT ws.id, s.id, ws.company_id, w.id, wm.role
+            FROM access.workspace_sites AS ws
+            JOIN access.sites AS s ON s.id = ws.site_id
+            JOIN access.workspaces AS w ON w.id = ws.workspace_id
             JOIN access.workspace_members AS wm
-              ON wm.workspace_id = w.id
-             AND wm.user_id = %s
-            WHERE s.id = %s
+              ON wm.workspace_id = w.id AND wm.user_id = %s
+            WHERE ws.id = %s
               AND wm.role IN (%s, %s)
             LIMIT 1
             """,
-            (user_id, site_id, ROLE_OWNER, ROLE_MEMBER),
+            (user_id, workspace_site_id, ROLE_OWNER, ROLE_MEMBER),
         )
         row = cursor.fetchone()
 
@@ -299,8 +276,9 @@ def get_authorized_site(user_id: UUID, site_id: UUID) -> AuthorizedSite | None:
         return None
 
     return AuthorizedSite(
-        site_id=row[0],
-        company_id=row[1],
-        workspace_id=row[2],
-        role=row[3],
+        workspace_site_id=row[0],
+        site_id=row[1],
+        company_id=row[2],
+        workspace_id=row[3],
+        role=row[4],
     )
