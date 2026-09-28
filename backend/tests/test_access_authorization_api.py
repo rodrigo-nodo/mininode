@@ -213,6 +213,16 @@ def test_authorization_context_and_site_guard_on_real_postgres():
                 ],
             )
 
+            with pytest.raises(psycopg.errors.ForeignKeyViolation):
+                cursor.execute(
+                    """
+                    INSERT INTO access.workspace_sites (id, workspace_id, site_id, company_id)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (uuid4(), alpha_workspace, other_site, other_company),
+                )
+            connection.rollback()
+
         context = access.list_authorized_context(allowed_user.id)
 
         assert [(workspace.name, workspace.role) for workspace in context] == [
