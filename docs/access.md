@@ -92,7 +92,7 @@ Relación privada entre un workspace y un sitio público.
 
 - dos workspaces pueden seguir independientemente el mismo sitio;
 - el mismo sitio no se duplica dentro de un workspace;
-- `company_id` es opcional y sirve sólo para agrupar el seguimiento;
+- `company_id` es opcional y sirve sólo para agrupar el seguimiento; la BD exige que esa empresa pertenezca al mismo workspace;
 - su UUID es la identidad que las aplicaciones usan para autorización e historial.
 
 ### entitlement
