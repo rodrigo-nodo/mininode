@@ -213,6 +213,7 @@ def test_authorization_context_and_site_guard_on_real_postgres():
                 ],
             )
 
+            cursor.execute("SAVEPOINT cross_workspace_company")
             with pytest.raises(psycopg.errors.ForeignKeyViolation):
                 cursor.execute(
                     """
@@ -221,7 +222,7 @@ def test_authorization_context_and_site_guard_on_real_postgres():
                     """,
                     (uuid4(), alpha_workspace, other_site, other_company),
                 )
-            connection.rollback()
+            cursor.execute("ROLLBACK TO SAVEPOINT cross_workspace_company")
 
         context = access.list_authorized_context(allowed_user.id)
 
