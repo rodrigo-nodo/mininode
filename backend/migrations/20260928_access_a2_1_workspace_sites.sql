@@ -7,6 +7,12 @@ DROP TABLE IF EXISTS access.entitlements;
 DROP TABLE IF EXISTS access.workspace_sites;
 DROP TABLE IF EXISTS access.sites;
 
+ALTER TABLE access.companies
+    DROP CONSTRAINT IF EXISTS access_companies_id_workspace_unique;
+ALTER TABLE access.companies
+    ADD CONSTRAINT access_companies_id_workspace_unique
+    UNIQUE (id, workspace_id);
+
 CREATE TABLE access.sites (
     id UUID PRIMARY KEY,
     hostname TEXT NOT NULL UNIQUE,
@@ -21,11 +27,14 @@ CREATE TABLE access.workspace_sites (
     id UUID PRIMARY KEY,
     workspace_id UUID NOT NULL REFERENCES access.workspaces(id) ON DELETE CASCADE,
     site_id UUID NOT NULL REFERENCES access.sites(id) ON DELETE CASCADE,
-    company_id UUID NULL REFERENCES access.companies(id) ON DELETE SET NULL,
+    company_id UUID NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT access_workspace_sites_workspace_site_unique
-        UNIQUE (workspace_id, site_id)
+        UNIQUE (workspace_id, site_id),
+    CONSTRAINT access_workspace_sites_company_same_workspace_fk
+        FOREIGN KEY (company_id, workspace_id)
+        REFERENCES access.companies(id, workspace_id)
 );
 
 CREATE INDEX access_workspace_sites_workspace_idx
