@@ -164,6 +164,7 @@ def test_authorization_context_and_site_guard_on_real_postgres():
         alpha_workspace_site = uuid4()
         hidden_workspace_site = uuid4()
         other_workspace_site = uuid4()
+        shared_other_workspace_site = uuid4()
 
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.executemany(
@@ -218,6 +219,7 @@ def test_authorization_context_and_site_guard_on_real_postgres():
                     (alpha_workspace_site, alpha_workspace, alpha_site, alpha_company),
                     (hidden_workspace_site, hidden_workspace, hidden_site, hidden_company),
                     (other_workspace_site, other_workspace, other_site, other_company),
+                    (shared_other_workspace_site, other_workspace, alpha_site, other_company),
                 ],
             )
 
@@ -243,6 +245,8 @@ def test_authorization_context_and_site_guard_on_real_postgres():
         )
         assert access.get_authorized_site(allowed_user.id, hidden_workspace_site) is None
         assert access.get_authorized_site(allowed_user.id, other_workspace_site) is None
+        # The same public site can be followed independently by another workspace.
+        assert access.get_authorized_site(allowed_user.id, shared_other_workspace_site) is None
         assert access.get_authorized_site(allowed_user.id, uuid4()) is None
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
