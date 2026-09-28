@@ -294,7 +294,7 @@ site público
 ### Contexto autorizado
 
 `GET /access/context` devuelve solamente los workspaces autorizados del usuario y,
-dentro de ellos, sus empresas y sitios.
+dentro de ellos, sus relaciones privadas con sitios. Cada sitio puede incluir `company_id` y `company_name` como agrupación opcional.
 
 Un usuario sin membresías obtiene:
 
@@ -324,7 +324,7 @@ A2 no agrega:
 
 - creación automática de workspaces;
 - gestión de miembros;
-- permisos específicos por empresa o sitio;
+- permisos específicos por empresa o `workspace_site`;
 - diferencias funcionales entre `owner` y `member`;
 - UI;
 - entitlements ni Billing;
