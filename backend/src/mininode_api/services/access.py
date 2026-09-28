@@ -171,13 +171,8 @@ class SiteContext:
     id: UUID
     site_id: UUID
     hostname: str
-
-
-@dataclass(frozen=True)
-class CompanyContext:
-    id: UUID
-    name: str
-    sites: tuple[SiteContext, ...]
+    company_id: UUID | None
+    company_name: str | None
 
 
 @dataclass(frozen=True)
@@ -186,7 +181,6 @@ class WorkspaceContext:
     name: str
     role: str
     sites: tuple[SiteContext, ...]
-    companies: tuple[CompanyContext, ...]
 
 
 @dataclass(frozen=True)
@@ -199,57 +193,48 @@ class AuthorizedSite:
 
 
 def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
-    """Return only workspace/company/site relationships authorized for this user."""
+    """Return only workspace-site relationships authorized for this user."""
 
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT w.id, w.name, wm.role, c.id, c.name, ws.id, s.id, s.hostname
+            SELECT w.id, w.name, wm.role, ws.id, s.id, s.hostname, c.id, c.name
             FROM access.workspace_members AS wm
             JOIN access.workspaces AS w ON w.id = wm.workspace_id
-            LEFT JOIN access.companies AS c ON c.workspace_id = w.id
-            LEFT JOIN access.workspace_sites AS ws
-              ON ws.workspace_id = w.id
-             AND (ws.company_id = c.id OR (ws.company_id IS NULL AND c.id IS NULL))
+            LEFT JOIN access.workspace_sites AS ws ON ws.workspace_id = w.id
             LEFT JOIN access.sites AS s ON s.id = ws.site_id
+            LEFT JOIN access.companies AS c ON c.id = ws.company_id
             WHERE wm.user_id = %s
               AND wm.role IN (%s, %s)
-            ORDER BY lower(w.name), w.id, lower(c.name) NULLS FIRST,
-                     c.id NULLS FIRST, s.hostname NULLS FIRST, ws.id NULLS FIRST
+            ORDER BY lower(w.name), w.id, s.hostname NULLS FIRST, ws.id NULLS FIRST
             """,
             (user_id, ROLE_OWNER, ROLE_MEMBER),
         )
         rows = cursor.fetchall()
 
     workspace_builders: dict[UUID, dict] = {}
-    for workspace_id, workspace_name, role, company_id, company_name, workspace_site_id, site_id, hostname in rows:
+    for workspace_id, workspace_name, role, workspace_site_id, site_id, hostname, company_id, company_name in rows:
         workspace = workspace_builders.setdefault(
             workspace_id,
-            {"name": workspace_name, "role": role, "companies": {}, "unassigned_sites": []},
+            {"name": workspace_name, "role": role, "sites": []},
         )
-        site = (
-            SiteContext(id=workspace_site_id, site_id=site_id, hostname=hostname)
-            if workspace_site_id is not None
-            else None
-        )
-        if company_id is None:
-            if site is not None:
-                workspace["unassigned_sites"].append(site)
-            continue
-        company = workspace["companies"].setdefault(company_id, {"name": company_name, "sites": []})
-        if site is not None:
-            company["sites"].append(site)
+        if workspace_site_id is not None:
+            workspace["sites"].append(
+                SiteContext(
+                    id=workspace_site_id,
+                    site_id=site_id,
+                    hostname=hostname,
+                    company_id=company_id,
+                    company_name=company_name,
+                )
+            )
 
     return tuple(
         WorkspaceContext(
             id=workspace_id,
             name=workspace["name"],
             role=workspace["role"],
-            sites=tuple(workspace["unassigned_sites"]),
-            companies=tuple(
-                CompanyContext(id=company_id, name=company["name"], sites=tuple(company["sites"]))
-                for company_id, company in workspace["companies"].items()
-            ),
+            sites=tuple(workspace["sites"]),
         )
         for workspace_id, workspace in workspace_builders.items()
     )
