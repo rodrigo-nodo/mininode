@@ -123,6 +123,23 @@ def test_a2_1_destructive_migration_on_real_postgres():
             assert cursor.fetchone()[0] == 0
             cursor.execute("SELECT count(*) FROM access.entitlements")
             assert cursor.fetchone()[0] == 0
+
+            new_site_id = uuid4()
+            new_workspace_site_id = uuid4()
+            cursor.execute(
+                "INSERT INTO access.sites (id, hostname) VALUES (%s, %s)",
+                (new_site_id, "after-migration.example"),
+            )
+            cursor.execute(
+                "INSERT INTO access.workspace_sites (id, workspace_id, site_id, company_id) VALUES (%s, %s, %s, %s)",
+                (new_workspace_site_id, workspace_id, new_site_id, company_id),
+            )
+            cursor.execute("DELETE FROM access.companies WHERE id = %s", (company_id,))
+            cursor.execute(
+                "SELECT company_id FROM access.workspace_sites WHERE id = %s",
+                (new_workspace_site_id,),
+            )
+            assert cursor.fetchone()[0] is None
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
