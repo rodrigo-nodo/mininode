@@ -47,6 +47,9 @@ def test_schema_defines_canonical_workspace_hierarchy():
     assert "hostname = lower(btrim(hostname))" in sql
     assert "UNIQUE (hostname)" in sql
     assert "UNIQUE (workspace_id, site_id)" in sql
+    assert "UNIQUE (id, workspace_id)" in sql
+    assert "FOREIGN KEY (company_id, workspace_id)" in sql
+    assert "REFERENCES access.companies(id, workspace_id)" in sql
     assert "workspace_site_id UUID NOT NULL" in sql
 
     assert "product_code TEXT NOT NULL" in sql
@@ -174,6 +177,8 @@ def test_access_schema_executes_twice_on_real_postgres():
             definitions = [row[2] for row in constraints]
 
             assert sum(row[1] == "f" for row in constraints) == 7
+            assert "access_companies_id_workspace_unique" in constraint_names
+            assert "access_workspace_sites_company_same_workspace_fk" in constraint_names
             assert any(definition == "UNIQUE (email)" for definition in definitions)
             assert "access_sites_hostname_unique" in constraint_names
             assert "access_workspace_sites_workspace_site_unique" in constraint_names
