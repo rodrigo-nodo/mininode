@@ -41,6 +41,7 @@ def test_access_context_returns_only_authorized_hierarchy(client, monkeypatch):
     workspace_id = uuid4()
     company_id = uuid4()
     site_id = uuid4()
+    workspace_site_id = uuid4()
 
     monkeypatch.setattr(
         access,
@@ -50,13 +51,15 @@ def test_access_context_returns_only_authorized_hierarchy(client, monkeypatch):
                 id=workspace_id,
                 name="Rodrigo",
                 role=access.ROLE_OWNER,
+                sites=(),
                 companies=(
                     access.CompanyContext(
                         id=company_id,
                         name="Empresa A",
                         sites=(
                             access.SiteContext(
-                                id=site_id,
+                                id=workspace_site_id,
+                                site_id=site_id,
                                 hostname="empresa-a.cl",
                             ),
                         ),
@@ -80,13 +83,15 @@ def test_access_context_returns_only_authorized_hierarchy(client, monkeypatch):
                 "id": str(workspace_id),
                 "name": "Rodrigo",
                 "role": "owner",
+                "sites": [],
                 "companies": [
                     {
                         "id": str(company_id),
                         "name": "Empresa A",
                         "sites": [
                             {
-                                "id": str(site_id),
+                                "id": str(workspace_site_id),
+                                "site_id": str(site_id),
                                 "hostname": "empresa-a.cl",
                             }
                         ],
@@ -156,6 +161,9 @@ def test_authorization_context_and_site_guard_on_real_postgres():
         alpha_site = uuid4()
         hidden_site = uuid4()
         other_site = uuid4()
+        alpha_workspace_site = uuid4()
+        hidden_workspace_site = uuid4()
+        other_workspace_site = uuid4()
 
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.executemany(
@@ -192,13 +200,24 @@ def test_authorization_context_and_site_guard_on_real_postgres():
             )
             cursor.executemany(
                 """
-                INSERT INTO access.sites (id, company_id, hostname)
-                VALUES (%s, %s, %s)
+                INSERT INTO access.sites (id, hostname)
+                VALUES (%s, %s)
                 """,
                 [
-                    (alpha_site, alpha_company, "alpha.example"),
-                    (hidden_site, hidden_company, "hidden.example"),
-                    (other_site, other_company, "other.example"),
+                    (alpha_site, "alpha.example"),
+                    (hidden_site, "hidden.example"),
+                    (other_site, "other.example"),
+                ],
+            )
+            cursor.executemany(
+                """
+                INSERT INTO access.workspace_sites (id, workspace_id, site_id, company_id)
+                VALUES (%s, %s, %s, %s)
+                """,
+                [
+                    (alpha_workspace_site, alpha_workspace, alpha_site, alpha_company),
+                    (hidden_workspace_site, hidden_workspace, hidden_site, hidden_company),
+                    (other_workspace_site, other_workspace, other_site, other_company),
                 ],
             )
 
@@ -210,17 +229,20 @@ def test_authorization_context_and_site_guard_on_real_postgres():
         ]
         assert context[0].companies[0].name == "Alpha Company"
         assert context[0].companies[0].sites[0].hostname == "alpha.example"
+        assert context[0].sites == ()
+        assert context[1].sites == ()
         assert context[1].companies == ()
 
-        authorized = access.get_authorized_site(allowed_user.id, alpha_site)
+        authorized = access.get_authorized_site(allowed_user.id, alpha_workspace_site)
         assert authorized == access.AuthorizedSite(
+            workspace_site_id=alpha_workspace_site,
             site_id=alpha_site,
             company_id=alpha_company,
             workspace_id=alpha_workspace,
             role="owner",
         )
-        assert access.get_authorized_site(allowed_user.id, hidden_site) is None
-        assert access.get_authorized_site(allowed_user.id, other_site) is None
+        assert access.get_authorized_site(allowed_user.id, hidden_workspace_site) is None
+        assert access.get_authorized_site(allowed_user.id, other_workspace_site) is None
         assert access.get_authorized_site(allowed_user.id, uuid4()) is None
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
