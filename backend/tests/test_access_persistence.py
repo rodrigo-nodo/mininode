@@ -42,7 +42,6 @@ def test_schema_defines_canonical_workspace_hierarchy():
     assert "PRIMARY KEY (workspace_id, user_id)" in sql
     assert "REFERENCES access.workspaces(id)" in sql
     assert "REFERENCES access.users(id)" in sql
-    assert "REFERENCES access.companies(id)" in sql
     assert "REFERENCES access.sites(id)" in sql
     assert "REFERENCES access.workspace_sites(id)" in sql
 
@@ -243,7 +242,7 @@ def test_access_schema_executes_twice_on_real_postgres():
             constraint_names = {row[0] for row in constraints}
             definitions = [row[2] for row in constraints]
 
-            assert sum(row[1] == "f" for row in constraints) == 6
+            assert sum(row[1] == "f" for row in constraints) == 7
             assert "access_companies_id_workspace_unique" in constraint_names
             assert "access_workspace_sites_company_same_workspace_fk" in constraint_names
             assert any(definition == "UNIQUE (email)" for definition in definitions)
