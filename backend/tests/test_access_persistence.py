@@ -31,6 +31,7 @@ def test_schema_defines_canonical_workspace_hierarchy():
         "access.workspace_members",
         "access.companies",
         "access.sites",
+        "access.workspace_sites",
         "access.entitlements",
     ):
         assert f"CREATE TABLE IF NOT EXISTS {table}" in sql
@@ -40,10 +41,13 @@ def test_schema_defines_canonical_workspace_hierarchy():
     assert "REFERENCES access.users(id)" in sql
     assert "REFERENCES access.companies(id)" in sql
     assert "REFERENCES access.sites(id)" in sql
+    assert "REFERENCES access.workspace_sites(id)" in sql
 
     assert "email = lower(btrim(email))" in sql
     assert "hostname = lower(btrim(hostname))" in sql
-    assert "UNIQUE (company_id, hostname)" in sql
+    assert "UNIQUE (hostname)" in sql
+    assert "UNIQUE (workspace_id, site_id)" in sql
+    assert "workspace_site_id UUID NOT NULL" in sql
 
     assert "product_code TEXT NOT NULL" in sql
     assert "active_from TIMESTAMPTZ NOT NULL" in sql
@@ -135,6 +139,7 @@ def test_access_schema_executes_twice_on_real_postgres():
         "workspace_members",
         "companies",
         "sites",
+        "workspace_sites",
         "entitlements",
     }
 
@@ -168,9 +173,10 @@ def test_access_schema_executes_twice_on_real_postgres():
             constraint_names = {row[0] for row in constraints}
             definitions = [row[2] for row in constraints]
 
-            assert sum(row[1] == "f" for row in constraints) == 5
+            assert sum(row[1] == "f" for row in constraints) == 8
             assert any(definition == "UNIQUE (email)" for definition in definitions)
-            assert "access_sites_company_hostname_unique" in constraint_names
+            assert "access_sites_hostname_unique" in constraint_names
+            assert "access_workspace_sites_workspace_site_unique" in constraint_names
             assert "access_entitlements_window_check" in constraint_names
             assert "access_users_email_normalized_check" in constraint_names
             assert "access_sites_hostname_normalized_check" in constraint_names
@@ -186,8 +192,9 @@ def test_access_schema_executes_twice_on_real_postgres():
             assert {
                 "access_workspace_members_user_idx",
                 "access_companies_workspace_idx",
-                "access_sites_company_idx",
-                "access_entitlements_site_product_idx",
+                "access_workspace_sites_workspace_idx",
+                "access_workspace_sites_site_idx",
+                "access_entitlements_workspace_site_product_idx",
             }.issubset(indexes)
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
