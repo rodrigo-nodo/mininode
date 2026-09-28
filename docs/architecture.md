@@ -29,6 +29,13 @@ La arquitectura busca mantener los productos simples, modulares, reutilizables y
 - No asumir que toda funcionalidad necesita base de datos.
 - Access usa un modelo canónico compartido para usuario → workspace → empresa → sitio → entitlement.
 
+### Migraciones de base de datos
+
+- Las migraciones SQL se mantienen explícitamente en `backend/migrations/`.
+- El backend incluye `backend/scripts/run_migration.py` para ejecutar una migración aprobada por nombre; no descubre ni aplica migraciones automáticamente al iniciar.
+- Las migraciones destructivas requieren aprobación explícita y validación posterior de la base de datos.
+- El runner no registra `DATABASE_URL` ni credenciales.
+
 ### Código y despliegue
 
 - GitHub es la fuente de verdad del código.
