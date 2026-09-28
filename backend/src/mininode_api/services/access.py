@@ -190,12 +190,76 @@ class WorkspaceContext:
 
 
 @dataclass(frozen=True)
+class PersonalWorkspace:
+    id: UUID
+    name: str
+    role: str
+
+
+@dataclass(frozen=True)
 class AuthorizedSite:
     workspace_site_id: UUID
     site_id: UUID
     company_id: UUID | None
     workspace_id: UUID
     role: str
+
+
+def get_or_create_personal_workspace(user_id: UUID) -> PersonalWorkspace:
+    """Return an existing workspace or create the user's first personal workspace atomically."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT w.id, w.name, wm.role
+            FROM access.workspace_members AS wm
+            JOIN access.workspaces AS w ON w.id = wm.workspace_id
+            WHERE wm.user_id = %s
+              AND wm.role IN (%s, %s)
+            ORDER BY wm.created_at, w.id
+            LIMIT 1
+            FOR UPDATE OF wm
+            """,
+            (user_id, ROLE_OWNER, ROLE_MEMBER),
+        )
+        row = cursor.fetchone()
+        if row is not None:
+            return PersonalWorkspace(id=row[0], name=row[1], role=row[2])
+
+        # Serialize first-workspace creation for this user. The user row is stable and
+        # provides a lock shared by concurrent onboarding requests.
+        cursor.execute("SELECT id FROM access.users WHERE id = %s FOR UPDATE", (user_id,))
+        if cursor.fetchone() is None:
+            raise ValueError("user does not exist")
+
+        cursor.execute(
+            """
+            SELECT w.id, w.name, wm.role
+            FROM access.workspace_members AS wm
+            JOIN access.workspaces AS w ON w.id = wm.workspace_id
+            WHERE wm.user_id = %s
+              AND wm.role IN (%s, %s)
+            ORDER BY wm.created_at, w.id
+            LIMIT 1
+            """,
+            (user_id, ROLE_OWNER, ROLE_MEMBER),
+        )
+        row = cursor.fetchone()
+        if row is not None:
+            return PersonalWorkspace(id=row[0], name=row[1], role=row[2])
+
+        workspace_id = uuid4()
+        cursor.execute(
+            "INSERT INTO access.workspaces (id, name) VALUES (%s, %s)",
+            (workspace_id, "Mi espacio"),
+        )
+        cursor.execute(
+            """
+            INSERT INTO access.workspace_members (workspace_id, user_id, role)
+            VALUES (%s, %s, %s)
+            """,
+            (workspace_id, user_id, ROLE_OWNER),
+        )
+        return PersonalWorkspace(id=workspace_id, name="Mi espacio", role=ROLE_OWNER)
 
 
 def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:

@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -256,6 +257,108 @@ def test_authorization_context_and_site_guard_on_real_postgres():
         # The same public site can be followed independently by another workspace.
         assert access.get_authorized_site(allowed_user.id, shared_other_workspace_site) is None
         assert access.get_authorized_site(allowed_user.id, uuid4()) is None
+    finally:
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+
+def test_access_onboarding_creates_or_reuses_personal_workspace(client, monkeypatch):
+    user_id = _verified_user(monkeypatch)
+    workspace_id = uuid4()
+    calls = []
+
+    def onboard(resolved_user_id):
+        calls.append(resolved_user_id)
+        return access.PersonalWorkspace(id=workspace_id, name="Mi espacio", role=access.ROLE_OWNER)
+
+    monkeypatch.setattr(access, "get_or_create_personal_workspace", onboard)
+
+    response = client.post(
+        "/access/onboarding",
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "workspace_id": str(workspace_id),
+        "name": "Mi espacio",
+        "role": "owner",
+    }
+    assert calls == [user_id]
+
+
+def test_access_onboarding_requires_verified_identity(client):
+    response = client.post("/access/onboarding")
+    assert response.status_code == 401
+
+
+def test_personal_workspace_is_idempotent_on_real_postgres():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for the PostgreSQL integration test")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+    try:
+        access.initialize_database()
+        user = access.get_or_create_user("new-user@example.com")
+
+        first = access.get_or_create_personal_workspace(user.id)
+        second = access.get_or_create_personal_workspace(user.id)
+
+        assert first == second
+        assert first.name == "Mi espacio"
+        assert first.role == access.ROLE_OWNER
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT count(*) FROM access.workspaces")
+            assert cursor.fetchone()[0] == 1
+            cursor.execute(
+                "SELECT count(*) FROM access.workspace_members WHERE user_id = %s AND role = %s",
+                (user.id, access.ROLE_OWNER),
+            )
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.entitlements")
+            assert cursor.fetchone()[0] == 0
+    finally:
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+
+def test_personal_workspace_concurrent_onboarding_creates_one_workspace_on_real_postgres():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for the PostgreSQL integration test")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+    try:
+        access.initialize_database()
+        user = access.get_or_create_user("concurrent-user@example.com")
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [
+                executor.submit(access.get_or_create_personal_workspace, user.id)
+                for _ in range(2)
+            ]
+            results = [future.result(timeout=10) for future in futures]
+
+        assert results[0].id == results[1].id
+        assert all(result.name == "Mi espacio" for result in results)
+        assert all(result.role == access.ROLE_OWNER for result in results)
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT count(*) FROM access.workspaces")
+            assert cursor.fetchone()[0] == 1
+            cursor.execute(
+                "SELECT count(*) FROM access.workspace_members WHERE user_id = %s AND role = %s",
+                (user.id, access.ROLE_OWNER),
+            )
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.entitlements")
+            assert cursor.fetchone()[0] == 0
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
