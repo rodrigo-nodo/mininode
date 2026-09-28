@@ -35,6 +35,7 @@ CREATE TABLE access.workspace_sites (
     CONSTRAINT access_workspace_sites_company_same_workspace_fk
         FOREIGN KEY (company_id, workspace_id)
         REFERENCES access.companies(id, workspace_id)
+        ON DELETE SET NULL (company_id)
 );
 
 CREATE INDEX access_workspace_sites_workspace_idx
