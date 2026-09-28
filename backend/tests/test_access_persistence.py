@@ -52,6 +52,7 @@ def test_schema_defines_canonical_workspace_hierarchy():
     assert "UNIQUE (id, workspace_id)" in sql
     assert "FOREIGN KEY (company_id, workspace_id)" in sql
     assert "REFERENCES access.companies(id, workspace_id)" in sql
+    assert "ON DELETE SET NULL (company_id)" in sql
     assert "workspace_site_id UUID NOT NULL" in sql
 
     assert "product_code TEXT NOT NULL" in sql
