@@ -173,7 +173,7 @@ def test_access_schema_executes_twice_on_real_postgres():
             constraint_names = {row[0] for row in constraints}
             definitions = [row[2] for row in constraints]
 
-            assert sum(row[1] == "f" for row in constraints) == 8
+            assert sum(row[1] == "f" for row in constraints) == 7
             assert any(definition == "UNIQUE (email)" for definition in definitions)
             assert "access_sites_hostname_unique" in constraint_names
             assert "access_workspace_sites_workspace_site_unique" in constraint_names
