@@ -40,6 +40,16 @@ class AccessContextResponse(BaseModel):
     workspaces: list[AccessWorkspaceContextResponse]
 
 
+class AccessFollowSiteRequest(BaseModel):
+    url: str
+
+
+class AccessFollowSiteResponse(BaseModel):
+    id: UUID
+    site_id: UUID
+    hostname: str
+
+
 class AccessOnboardingResponse(BaseModel):
     workspace_id: UUID
     name: str
@@ -71,6 +81,27 @@ def access_onboarding(
         name=workspace.name,
         role=workspace.role,
     )
+
+
+@router.post("/workspaces/{workspace_id}/sites", response_model=AccessFollowSiteResponse)
+def access_follow_site(
+    workspace_id: UUID,
+    request: AccessFollowSiteRequest,
+    user: access.StoredUser = Depends(require_access_user),
+) -> AccessFollowSiteResponse:
+    try:
+        site = access.follow_site(user.id, workspace_id, request.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except Exception:
+        logger.exception("Access site association failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        )
+    if site is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return AccessFollowSiteResponse(id=site.id, site_id=site.site_id, hostname=site.hostname)
 
 
 @router.get("/context", response_model=AccessContextResponse)
