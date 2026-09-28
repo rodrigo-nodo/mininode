@@ -51,18 +51,13 @@ def test_access_context_returns_only_authorized_hierarchy(client, monkeypatch):
                 id=workspace_id,
                 name="Rodrigo",
                 role=access.ROLE_OWNER,
-                sites=(),
-                companies=(
-                    access.CompanyContext(
-                        id=company_id,
-                        name="Empresa A",
-                        sites=(
-                            access.SiteContext(
-                                id=workspace_site_id,
-                                site_id=site_id,
-                                hostname="empresa-a.cl",
-                            ),
-                        ),
+                sites=(
+                    access.SiteContext(
+                        id=workspace_site_id,
+                        site_id=site_id,
+                        hostname="empresa-a.cl",
+                        company_id=company_id,
+                        company_name="Empresa A",
                     ),
                 ),
             ),
@@ -83,18 +78,13 @@ def test_access_context_returns_only_authorized_hierarchy(client, monkeypatch):
                 "id": str(workspace_id),
                 "name": "Rodrigo",
                 "role": "owner",
-                "sites": [],
-                "companies": [
+                "sites": [
                     {
-                        "id": str(company_id),
-                        "name": "Empresa A",
-                        "sites": [
-                            {
-                                "id": str(workspace_site_id),
-                                "site_id": str(site_id),
-                                "hostname": "empresa-a.cl",
-                            }
-                        ],
+                        "id": str(workspace_site_id),
+                        "site_id": str(site_id),
+                        "hostname": "empresa-a.cl",
+                        "company_id": str(company_id),
+                        "company_name": "Empresa A",
                     }
                 ],
             }
@@ -229,11 +219,9 @@ def test_authorization_context_and_site_guard_on_real_postgres():
             ("Alpha", "owner"),
             ("Beta", "member"),
         ]
-        assert context[0].companies[0].name == "Alpha Company"
-        assert context[0].companies[0].sites[0].hostname == "alpha.example"
-        assert context[0].sites == ()
+        assert context[0].sites[0].hostname == "alpha.example"
+        assert context[0].sites[0].company_name == "Alpha Company"
         assert context[1].sites == ()
-        assert context[1].companies == ()
 
         authorized = access.get_authorized_site(allowed_user.id, alpha_workspace_site)
         assert authorized == access.AuthorizedSite(
