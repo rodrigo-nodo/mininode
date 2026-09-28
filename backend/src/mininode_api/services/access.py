@@ -55,7 +55,9 @@ CREATE TABLE IF NOT EXISTS access.companies (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT access_companies_name_not_blank_check
-        CHECK (btrim(name) <> '')
+        CHECK (btrim(name) <> ''),
+    CONSTRAINT access_companies_id_workspace_unique
+        UNIQUE (id, workspace_id)
 );
 
 CREATE INDEX IF NOT EXISTS access_companies_workspace_idx
@@ -77,11 +79,14 @@ CREATE TABLE IF NOT EXISTS access.workspace_sites (
     id UUID PRIMARY KEY,
     workspace_id UUID NOT NULL REFERENCES access.workspaces(id) ON DELETE CASCADE,
     site_id UUID NOT NULL REFERENCES access.sites(id) ON DELETE CASCADE,
-    company_id UUID NULL REFERENCES access.companies(id) ON DELETE SET NULL,
+    company_id UUID NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT access_workspace_sites_workspace_site_unique
-        UNIQUE (workspace_id, site_id)
+        UNIQUE (workspace_id, site_id),
+    CONSTRAINT access_workspace_sites_company_same_workspace_fk
+        FOREIGN KEY (company_id, workspace_id)
+        REFERENCES access.companies(id, workspace_id)
 );
 
 CREATE INDEX IF NOT EXISTS access_workspace_sites_workspace_idx
