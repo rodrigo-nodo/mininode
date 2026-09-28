@@ -40,11 +40,37 @@ class AccessContextResponse(BaseModel):
     workspaces: list[AccessWorkspaceContextResponse]
 
 
+class AccessOnboardingResponse(BaseModel):
+    workspace_id: UUID
+    name: str
+    role: str
+
+
 @router.get("/me", response_model=AccessMeResponse)
 def access_me(
     user: access.StoredUser = Depends(require_access_user),
 ) -> AccessMeResponse:
     return AccessMeResponse(user_id=user.id, email=user.email)
+
+
+@router.post("/onboarding", response_model=AccessOnboardingResponse)
+def access_onboarding(
+    user: access.StoredUser = Depends(require_access_user),
+) -> AccessOnboardingResponse:
+    try:
+        workspace = access.get_or_create_personal_workspace(user.id)
+    except Exception:
+        logger.exception("Access onboarding failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        )
+
+    return AccessOnboardingResponse(
+        workspace_id=workspace.id,
+        name=workspace.name,
+        role=workspace.role,
+    )
 
 
 @router.get("/context", response_model=AccessContextResponse)
