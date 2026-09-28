@@ -332,7 +332,94 @@ A2 no agrega:
 
 Por ahora, una membresía válida da acceso a todos los `workspace_sites` de ese workspace. `company_id` puede agruparlos, pero no expresa propiedad del sitio.
 
+## A3 - Cuenta Mininode y aplicación de productos
+
+A3 no debe construir un portal aislado de Privacy Web. Access es transversal a Mininode y la experiencia autenticada debe servir también para Privacy Data y futuros productos.
+
+El acceso objetivo es:
+
+```text
+mininode.io
+  ↓
+Acceder
+  ↓
+Cuenta Mininode
+  ↓
+Workspace
+  ↓
+Productos
+  ├─ Privacy Web
+  ├─ Privacy Data
+  └─ futuros SaaS
+```
+
+La portada pública puede ofrecer una acción **Acceder**. Clerk autentica una única identidad Mininode; después del acceso, el usuario entra a un home autenticado desde el que ve los productos y servicios disponibles en su workspace.
+
+### Onboarding gratuito
+
+Crear una cuenta no requiere pago. Para el MVP:
+
+- un usuario nuevo puede crear su cuenta Mininode gratuitamente;
+- su primer uso puede crear un workspace personal y dejarlo como `owner`;
+- puede asociar sitios públicos a su workspace mediante `workspace_site`;
+- `company_id` continúa siendo opcional;
+- crear cuenta, workspace o `workspace_site` no crea por sí mismo un entitlement.
+
+La cuenta y el workspace son infraestructura transversal de Mininode, no recursos exclusivos de Privacy Web.
+
+### Privacy Web gratuito
+
+Por ahora no se implementan controles antiabuso ni límites de diagnósticos gratuitos.
+
+Un usuario puede:
+
+- ejecutar diagnósticos gratuitos;
+- repetir el diagnóstico de un sitio;
+- mantener el sitio asociado a su workspace;
+- volver posteriormente al sitio y ejecutar un nuevo diagnóstico.
+
+El sitio público `access.sites` no se elimina por falta de pago. Tampoco se considera propiedad del usuario o del workspace.
+
+Sin Privacy Web activo, el producto se comporta como una revisión actual: el usuario no obtiene las capacidades pagadas de continuidad, historial o seguimiento.
+
+### Privacy Web activo
+
+El pago no habilita la identidad ni la propiedad del sitio. Habilita capacidades del producto sobre un `workspace_site`.
+
+La propuesta comercial vigente para Privacy Web activo es un período de un mes, sin renovación automática. Durante la vigencia, las capacidades pagadas incluyen:
+
+- historial de revisiones;
+- seguimiento y evolución del sitio;
+- colaboración mediante miembros del workspace.
+
+La colaboración es una capacidad comercial pagada, pero `workspace_member` sigue siendo una entidad transversal de Access y no debe acoplarse estructuralmente a Privacy Web. Inicialmente no se define cobro por usuario adicional.
+
+Cuando expire Privacy Web, la cuenta, el workspace y el sitio asociado permanecen. La última revisión continúa disponible según la regla comercial vigente. La política exacta para historial anterior —por ejemplo, conservarlo oculto para una futura reactivación— se definirá con Billing antes de implementarla.
+
+### Entitlement
+
+La separación conceptual es:
+
+```text
+Access       → quién es el usuario y a qué workspace/recurso puede acceder
+Aplicación   → qué puede hacer gratuitamente
+Entitlement  → qué capacidades pagadas están activas para el recurso
+Billing      → cómo un pago crea o extiende ese entitlement
+```
+
+Para Privacy Web, el entitlement pertenece a `workspace_site`, no a cada usuario. Por ello, cuando un sitio tenga Privacy Web activo, los miembros autorizados del workspace podrán compartir las capacidades habilitadas conforme a las reglas del producto.
+
+A3 puede crear y utilizar un `workspace_site` sin entitlement. A4 será responsable de conectar pago y vigencia con el entitlement.
+
+### Secuencia de implementación A3
+
+1. **A3.1 - Onboarding Access:** workspace personal automático y alta de sitios seguidos.
+2. **A3.2 - Privacy Web autenticada:** conectar Privacy Web con `workspace_site_id` y aplicar autorización backend.
+3. **A3.3 - Home Mininode:** entrada autenticada transversal y navegación hacia Privacy Web, Privacy Data y futuros productos.
+
+A3 no incluye Billing, cobros ni creación de entitlements pagados.
+
 ## Próximas etapas
 
-1. **A3 - App Privacy Web:** usar identidad y autorización canónicas.
+1. **A3 - Cuenta Mininode y aplicaciones:** implementar el flujo autenticado sobre Access.
 2. **A4 - Billing:** pago confirmado → entitlement.
