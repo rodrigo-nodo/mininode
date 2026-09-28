@@ -24,7 +24,10 @@ RUN "$VIRTUAL_ENV/bin/pip" install --upgrade pip \
  && "$VIRTUAL_ENV/bin/pip" install --no-cache-dir -r requirements.txt
 
 # Copy source code
+# Copy application source plus explicit migration tooling.
 COPY src ./src
+COPY migrations ./migrations
+COPY scripts ./scripts
 
 # Create non-root user and fix ownership
 RUN useradd -m -u 10001 appuser \
