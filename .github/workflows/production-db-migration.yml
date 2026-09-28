@@ -1,0 +1,56 @@
+name: Production DB Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration:
+        description: 'Exact SQL filename from backend/migrations'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type RUN_PRODUCTION_MIGRATION to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Validate confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$CONFIRMATION" = "RUN_PRODUCTION_MIGRATION" || {
+            echo "Production migration confirmation does not match."
+            exit 1
+          }
+
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PostgreSQL driver
+        run: pip install 'psycopg[binary]>=3.2,<4'
+
+      - name: Run approved migration
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          MIGRATION: ${{ inputs.migration }}
+        run: |
+          test -n "$DATABASE_URL" || {
+            echo "PRODUCTION_DATABASE_URL secret is not configured."
+            exit 1
+          }
+          python scripts/run_migration.py "migrations/$MIGRATION"
