@@ -413,7 +413,7 @@ A3 puede crear y utilizar un `workspace_site` sin entitlement. A4 será responsa
 
 ### Secuencia de implementación A3
 
-1. **A3.1 - Onboarding Access:** workspace personal automático y alta de sitios seguidos.
+1. **A3.1 - Onboarding Access:** workspace personal automático y alta de sitios seguidos. El onboarding es explícito e idempotente: una cuenta autenticada puede crear su primer workspace personal sin pago ni entitlement; si ya pertenece a un workspace válido, se reutiliza y no se crea otro.
 2. **A3.2 - Privacy Web autenticada:** conectar Privacy Web con `workspace_site_id` y aplicar autorización backend.
 3. **A3.3 - Home Mininode:** entrada autenticada transversal y navegación hacia Privacy Web, Privacy Data y futuros productos.
 
