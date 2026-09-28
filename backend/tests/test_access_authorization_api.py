@@ -224,6 +224,14 @@ def test_authorization_context_and_site_guard_on_real_postgres():
                 )
             cursor.execute("ROLLBACK TO SAVEPOINT cross_workspace_company")
 
+            # Company is optional grouping: deleting it must keep the private tracking.
+            cursor.execute("DELETE FROM access.companies WHERE id = %s", (alpha_company,))
+            cursor.execute(
+                "SELECT workspace_id, site_id, company_id FROM access.workspace_sites WHERE id = %s",
+                (alpha_workspace_site,),
+            )
+            assert cursor.fetchone() == (alpha_workspace, alpha_site, None)
+
         context = access.list_authorized_context(allowed_user.id)
 
         assert [(workspace.name, workspace.role) for workspace in context] == [
@@ -231,14 +239,15 @@ def test_authorization_context_and_site_guard_on_real_postgres():
             ("Beta", "member"),
         ]
         assert context[0].sites[0].hostname == "alpha.example"
-        assert context[0].sites[0].company_name == "Alpha Company"
+        assert context[0].sites[0].company_id is None
+        assert context[0].sites[0].company_name is None
         assert context[1].sites == ()
 
         authorized = access.get_authorized_site(allowed_user.id, alpha_workspace_site)
         assert authorized == access.AuthorizedSite(
             workspace_site_id=alpha_workspace_site,
             site_id=alpha_site,
-            company_id=alpha_company,
+            company_id=None,
             workspace_id=alpha_workspace,
             role="owner",
         )
