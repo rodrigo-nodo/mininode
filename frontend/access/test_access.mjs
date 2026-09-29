@@ -28,7 +28,7 @@ test('builds the authenticated home from Access instead of client supplied owner
   assert.match(app, /api\('\/api\/access\/onboarding', \{ method: 'POST' \}\)/);
   assert.match(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
   assert.match(app, /Clerk\.session\?\.getToken\(\)/);
-  assert.match(app, /Authorization: `Bearer \\$\{token\}`/);
+  assert.match(app, /Authorization: `Bearer \$\{token\}`/);
   assert.doesNotMatch(app, /X-Api-Key/);
 });
 
