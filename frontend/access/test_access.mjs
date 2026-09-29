@@ -27,7 +27,7 @@ test('builds the authenticated home from Access instead of client supplied owner
   assert.match(app, /api\('\/api\/access\/context'\)/);
   assert.match(app, /api\('\/api\/access\/onboarding', \{ method: 'POST' \}\)/);
   assert.match(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
-  assert.match(app, /session\.getToken\(\)/);
+  assert.match(app, /Clerk\.session\?\.getToken\(\)/);
   assert.match(app, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.doesNotMatch(app, /X-Api-Key/);
 });
@@ -57,4 +57,10 @@ test('offers explicit recovery when an existing Clerk session is rejected', () =
 
 test('visibility helper tolerates optional UI elements', () => {
   assert.match(app, /function setVisible\(element, visible\) \{[\s\S]*if \(!element\) return;[\s\S]*element\.hidden = !visible;/);
+});
+
+
+test('refreshes the Clerk token for every authenticated API request', () => {
+  assert.match(app, /async function api\(path, options = \{\}\) \{[\s\S]*Clerk\.session\?\.getToken\(\)[\s\S]*Authorization: `Bearer \$\{token\}`/);
+  assert.doesNotMatch(app, /let accessToken/);
 });
