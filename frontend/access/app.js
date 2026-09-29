@@ -18,7 +18,6 @@ const errorPanel = document.querySelector('#access-error');
 const errorMessage = document.querySelector('#access-error-message');
 const note = document.querySelector('#access-note');
 const home = document.querySelector('#account-home');
-const accountEmail = document.querySelector('#account-email');
 const signOutButton = document.querySelector('#access-sign-out');
 const retryButton = document.querySelector('#access-retry');
 const errorSignOutButton = document.querySelector('#access-error-sign-out');
@@ -91,14 +90,13 @@ async function api(path, options = {}) {
 async function loadAccount(session) {
   if (!session) throw new Error('Clerk no entregó una sesión válida.');
 
-  const identity = await api('/api/access/me');
+  await api('/api/access/me');
   let nextContext = await api('/api/access/context');
   if (!Array.isArray(nextContext.workspaces) || nextContext.workspaces.length === 0) {
     await api('/api/access/onboarding', { method: 'POST' });
     nextContext = await api('/api/access/context');
   }
   context = nextContext;
-  accountEmail.textContent = identity.email || '';
   activeWorkspaceId = context.workspaces[0]?.id || '';
   renderHome();
 }
@@ -109,9 +107,12 @@ function renderSites(workspace) {
   sites.forEach((site) => {
     const row = document.createElement('div');
     row.className = 'site-row';
-    const name = document.createElement('span');
-    name.textContent = site.hostname;
-    row.append(name);
+    const link = document.createElement('a');
+    link.className = 'site-link';
+    link.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}`;
+    link.textContent = site.hostname;
+    link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+    row.append(link);
     siteList.append(row);
   });
   setVisible(siteEmpty, sites.length === 0);
