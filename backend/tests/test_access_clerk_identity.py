@@ -237,3 +237,42 @@ def test_access_me_maps_clerk_identity_failures(client, monkeypatch, error, stat
     )
 
     assert response.status_code == status_code
+
+
+def test_clerk_failure_log_identifies_stage_without_identity_data(monkeypatch, caplog):
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    _configure_clerk(monkeypatch, private_key.public_key())
+
+    token = _signed_clerk_token(
+        private_key,
+        azp="https://attacker.example",
+        email="secret-person@example.com",
+        subject="secret-user-id",
+    )
+
+    with caplog.at_level("WARNING", logger="mininode_api.services.clerk_identity"):
+        with pytest.raises(clerk_identity.ClerkIdentityInvalidError):
+            clerk_identity.verify_clerk_session(token)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert "Clerk verification failed: authorized_party" in messages
+    combined = "\n".join(messages)
+    assert token not in combined
+    assert "secret-person@example.com" not in combined
+    assert "secret-user-id" not in combined
+    assert "https://attacker.example" not in combined
+
+
+def test_clerk_claim_failure_log_exposes_exception_class_not_token(monkeypatch, caplog):
+    trusted_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    _configure_clerk(monkeypatch, trusted_key.public_key())
+    token = _signed_clerk_token(other_key)
+
+    with caplog.at_level("WARNING", logger="mininode_api.services.clerk_identity"):
+        with pytest.raises(clerk_identity.ClerkIdentityInvalidError):
+            clerk_identity.verify_clerk_session(token)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert "Clerk verification failed: claims_InvalidSignatureError" in messages
+    assert token not in "\n".join(messages)
