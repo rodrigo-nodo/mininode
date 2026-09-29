@@ -84,6 +84,7 @@ function clerkDomainFromPublishableKey(publishableKey) {
 }
 
 async function loadClerkRuntime() {
+  showLoading('Leyendo configuración de acceso…');
   const response = await fetch('/clerk-config', { headers: { Accept: 'application/json' }, cache: 'no-store' });
   if (!response.ok) throw new Error('Configuración de acceso no disponible.');
   const { publishableKey } = await response.json();
@@ -92,8 +93,18 @@ async function loadClerkRuntime() {
     throw new Error('Mininode no puede usar una instancia Clerk de desarrollo en producción.');
   }
   const clerkDomain = clerkDomainFromPublishableKey(publishableKey);
-  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/ui@1/dist/ui.browser.js');
-  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js', { 'data-clerk-publishable-key': publishableKey });
+  showLoading('Cargando interfaz de acceso…');
+  try {
+    await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/ui@1/dist/ui.browser.js');
+  } catch {
+    throw new Error('Falló la carga de Clerk UI.');
+  }
+  showLoading('Cargando servicio de acceso…');
+  try {
+    await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js', { 'data-clerk-publishable-key': publishableKey });
+  } catch {
+    throw new Error('Falló la carga de Clerk JS.');
+  }
 }
 
 function setVisible(element, visible) {
@@ -230,8 +241,10 @@ retryButton.addEventListener('click', () => {
 window.addEventListener('load', async () => {
   try {
     await loadClerkRuntime();
-    if (!window.Clerk || !window.__internal_ClerkUICtor) throw new Error('No pudimos cargar el servicio de acceso.');
+    if (!window.Clerk) throw new Error('Clerk JS cargó, pero no expuso Clerk en el navegador.');
+    if (!window.__internal_ClerkUICtor) throw new Error('Clerk UI cargó, pero no expuso su interfaz en el navegador.');
 
+    showLoading('Iniciando Clerk…');
     await Clerk.load({
       ui: { ClerkUI: window.__internal_ClerkUICtor },
       localization,
@@ -294,7 +307,7 @@ window.addEventListener('load', async () => {
     }, { skipInitialEmit: true });
 
     await requestSync(Clerk.session);
-  } catch {
-    showError('No pudimos iniciar el servicio de acceso. Intenta nuevamente.');
+  } catch (error) {
+    showError(error instanceof Error ? error.message : 'No pudimos iniciar el servicio de acceso. Intenta nuevamente.');
   }
 });
