@@ -362,3 +362,59 @@ def test_personal_workspace_concurrent_onboarding_creates_one_workspace_on_real_
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+
+def test_follow_site_normalizes_public_url():
+    assert access.normalize_site_url(" Example.COM/path?q=1 ") == ("example.com", "https://example.com")
+    assert access.normalize_site_url("http://WWW.Example.com/a") == ("www.example.com", "http://www.example.com")
+    with pytest.raises(ValueError):
+        access.normalize_site_url("localhost")
+    with pytest.raises(ValueError):
+        access.normalize_site_url("https://user:pass@example.com")
+    for value in (
+        "127.0.0.1",
+        "169.254.169.254",
+        "10.0.0.1",
+        "192.168.1.1",
+        "https://bad_host.example",
+        "https://-bad.example",
+        "https://bad-.example",
+        "https://example.123",
+    ):
+        with pytest.raises(ValueError):
+            access.normalize_site_url(value)
+    assert access.normalize_site_url("https://8.8.8.8/path") == ("8.8.8.8", "https://8.8.8.8")
+
+
+def test_follow_site_is_idempotent_and_isolated_on_real_postgres():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for the PostgreSQL integration test")
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+    try:
+        access.initialize_database()
+        owner = access.get_or_create_user("site-owner@example.com")
+        other = access.get_or_create_user("other-owner@example.com")
+        workspace = access.get_or_create_personal_workspace(owner.id)
+        other_workspace = access.get_or_create_personal_workspace(other.id)
+
+        first = access.follow_site(owner.id, workspace.id, "https://Example.COM/path")
+        second = access.follow_site(owner.id, workspace.id, "example.com/other")
+        shared = access.follow_site(other.id, other_workspace.id, "example.com")
+
+        assert first.id == second.id
+        assert first.site_id == second.site_id == shared.site_id
+        assert first.id != shared.id
+        assert access.follow_site(other.id, workspace.id, "blocked.example") is None
+
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT count(*) FROM access.sites")
+            assert cursor.fetchone()[0] == 1
+            cursor.execute("SELECT count(*) FROM access.workspace_sites")
+            assert cursor.fetchone()[0] == 2
+            cursor.execute("SELECT count(*) FROM access.entitlements")
+            assert cursor.fetchone()[0] == 0
+    finally:
+        with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+            cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
