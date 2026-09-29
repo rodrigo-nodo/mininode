@@ -206,6 +206,8 @@ class AuthorizedSite:
     company_id: UUID | None
     workspace_id: UUID
     role: str
+    hostname: str | None = None
+    canonical_url: str | None = None
 
 
 def get_or_create_personal_workspace(user_id: UUID) -> PersonalWorkspace:
@@ -402,7 +404,7 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT ws.id, s.id, ws.company_id, w.id, wm.role
+            SELECT ws.id, s.id, ws.company_id, w.id, wm.role, s.hostname, s.canonical_url
             FROM access.workspace_sites AS ws
             JOIN access.sites AS s ON s.id = ws.site_id
             JOIN access.workspaces AS w ON w.id = ws.workspace_id
@@ -425,4 +427,6 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
         company_id=row[2],
         workspace_id=row[3],
         role=row[4],
+        hostname=row[5],
+        canonical_url=row[6],
     )
