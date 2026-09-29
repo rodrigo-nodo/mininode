@@ -251,6 +251,8 @@ def test_authorization_context_and_site_guard_on_real_postgres():
             company_id=None,
             workspace_id=alpha_workspace,
             role="owner",
+            hostname="alpha.example",
+            canonical_url=None,
         )
         assert access.get_authorized_site(allowed_user.id, hidden_workspace_site) is None
         assert access.get_authorized_site(allowed_user.id, other_workspace_site) is None
