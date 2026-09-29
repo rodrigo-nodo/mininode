@@ -9,15 +9,21 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.api import privacy as privacy_api  # noqa: E402
-from mininode_api.core import access_auth  # noqa: E402
+from mininode_api.services import access_identity  # noqa: E402
 from mininode_api.main import create_app  # noqa: E402
 from mininode_api.services import access  # noqa: E402
 
 
 def _client(monkeypatch):
     user = access.StoredUser(id=uuid4(), email="owner@example.com")
-    monkeypatch.setattr(access_auth, "resolve_access_user", lambda request: user)
+    monkeypatch.setattr(
+        access_identity,
+        "verify_access_jwt",
+        lambda token: access_identity.AccessIdentity(email=user.email),
+    )
+    monkeypatch.setattr(access, "get_or_create_user", lambda email: user)
     app = create_app()
+    app.state.access_ready = True
     app.state.privacy_diagnostic_snapshot_ready = True
     return TestClient(app), user
 
@@ -29,7 +35,10 @@ def test_foreign_workspace_site_is_rejected_before_inspection(monkeypatch):
     calls = []
     monkeypatch.setattr(privacy_api, "diagnose_privacy_url", lambda url: calls.append(url))
 
-    response = client.post(f"/privacy/workspace-sites/{workspace_site_id}/diagnose")
+    response = client.post(
+        f"/privacy/workspace-sites/{workspace_site_id}/diagnose",
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
+    )
 
     assert response.status_code == 404
     assert calls == []
@@ -80,6 +89,7 @@ def test_authenticated_diagnosis_uses_stored_url_and_links_snapshot(monkeypatch)
     response = client.post(
         f"/privacy/workspace-sites/{workspace_site_id}/diagnose",
         json={"url": "https://attacker.example"},
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
     )
 
     assert response.status_code == 200
