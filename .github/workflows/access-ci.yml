@@ -30,6 +30,7 @@ on:
       - 'backend/tests/test_privacy_diagnostic_snapshot.py'
       - 'backend/tests/test_privacy_workspace_site_api.py'
       - 'frontend/functions/api/**'
+      - 'frontend/functions/clerk-config.js'
       - 'frontend/index.html'
       - 'frontend/access/**'
       - 'docs/access.md'
@@ -79,7 +80,7 @@ jobs:
         run: node --test frontend/functions/api/test_proxy.mjs
 
       - name: Run Access client UI tests
-        run: node --test frontend/access/test_access.mjs
+        run: node --test frontend/access/test_access.mjs frontend/access/test_clerk_config.mjs
 
       - name: Compile backend
         run: python -m compileall -q backend/src/mininode_api backend/scripts
