@@ -27,6 +27,8 @@ body{
 .nav{display:flex;align-items:center;gap:30px}
 .nav a{color:var(--fg);font-size:.95rem;font-weight:600;text-decoration:none;opacity:.78}
 .nav a:hover{color:var(--primary);opacity:1}
+.header-auth-button{border:0;background:transparent;color:var(--fg);cursor:pointer;font:inherit;font-size:.95rem;font-weight:600;opacity:.78;padding:0}
+.header-auth-button:hover,.header-auth-button:focus-visible{color:var(--primary);opacity:1}
 /* Details-based Info menu */
 .infodrop{position:relative}
 .infodrop > summary{
