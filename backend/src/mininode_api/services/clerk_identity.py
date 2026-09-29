@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -17,6 +18,8 @@ from jwt.exceptions import (
 )
 
 from mininode_api.services import access
+
+logger = logging.getLogger(__name__)
 
 
 class ClerkIdentityConfigError(Exception):
@@ -33,6 +36,11 @@ class ClerkIdentityUnavailableError(Exception):
 
 class ClerkIdentityEmailUnavailableError(Exception):
     """The verified Clerk session token has no usable email claim."""
+
+
+def _log_verification_failure(stage: str) -> None:
+    """Log only the failed verification stage; never token or identity data."""
+    logger.warning("Clerk verification failed: %s", stage)
 
 
 @dataclass(frozen=True)
@@ -130,6 +138,7 @@ def _resolve_signing_key(client: PyJWKClient, token: str):
 
 def verify_clerk_session(token: str) -> ClerkIdentity:
     if not token or not token.strip():
+        _log_verification_failure("token_missing")
         raise ClerkIdentityInvalidError("Clerk session token is required")
 
     issuer, authorized_parties = _configuration()
@@ -149,21 +158,26 @@ def verify_clerk_session(token: str) -> ClerkIdentity:
             },
         )
     except PyJWTError as exc:
+        _log_verification_failure(f"claims_{type(exc).__name__}")
         raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
 
     authorized_party = payload.get("azp")
     if not isinstance(authorized_party, str) or authorized_party not in authorized_parties:
+        _log_verification_failure("authorized_party")
         raise ClerkIdentityInvalidError("Clerk authorized party is invalid")
 
     if payload.get("sts") == "pending":
+        _log_verification_failure("session_pending")
         raise ClerkIdentityInvalidError("Clerk session is pending")
 
     subject = payload.get("sub")
     if not isinstance(subject, str) or not subject.strip():
+        _log_verification_failure("subject")
         raise ClerkIdentityInvalidError("Clerk subject is required")
 
     email = payload.get("email")
     if not isinstance(email, str) or not email.strip():
+        _log_verification_failure("email")
         raise ClerkIdentityEmailUnavailableError(
             "Verified Clerk session has no email claim"
         )
