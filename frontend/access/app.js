@@ -65,6 +65,7 @@ function unmountSignIn() {
 function showError(message) {
   unmountSignIn(); setVisible(loginPanel, true); setVisible(loading, false); setVisible(signInNode, false);
   setVisible(home, false); setVisible(signOutButton, Boolean(Clerk.session)); setVisible(errorPanel, true); setVisible(note, true);
+  setVisible(errorSignOutButton, Boolean(Clerk.session));
   errorMessage.textContent = message;
 }
 
@@ -74,7 +75,7 @@ async function api(path, options = {}) {
     headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
   });
   if (!response.ok) {
-    if (response.status === 401) throw new Error('La sesión fue creada, pero Mininode no pudo validarla.');
+    if (response.status === 401) throw new Error('Tu sesión ya no puede validarse. Cierra la sesión y vuelve a acceder.');
     if (response.status === 503) throw new Error('El servicio de acceso está temporalmente no disponible.');
     const body = await response.json().catch(() => ({}));
     throw new Error(typeof body.detail === 'string' ? body.detail : 'No pudimos completar la solicitud.');
