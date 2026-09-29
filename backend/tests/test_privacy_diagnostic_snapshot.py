@@ -44,7 +44,7 @@ def diagnostic():
 
 def stored_row(snapshot=None):
     created = datetime.now(timezone.utc)
-    return (uuid4(), "https://example.com/", snapshot or diagnostic(), 42, created, created + timedelta(hours=24))
+    return (uuid4(), "https://example.com/", snapshot or diagnostic(), 42, created, created + timedelta(hours=24), None)
 
 
 def test_initialization_defines_immutable_minimal_diagnostic_table(monkeypatch):
@@ -58,6 +58,7 @@ def test_initialization_defines_immutable_minimal_diagnostic_table(monkeypatch):
     assert "diagnostic_snapshot JSONB NOT NULL" in sql
     assert "score BETWEEN 0 AND 100" in sql
     assert "purchase_expires_at TIMESTAMPTZ NOT NULL" in sql
+    assert "workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL" in sql
     for personal_field in ("email", "user_agent", "ip_address", "name"):
         assert personal_field not in sql
     assert "UPDATE privacy.diagnostic" not in sql
@@ -74,6 +75,7 @@ def test_create_stores_snapshot_intact_with_backend_24_hour_expiration(monkeypat
     assert params[1] == snapshot["site_url"]
     assert params[2].obj == snapshot
     assert params[3] == 42
+    assert params[4] is None
     assert stored.diagnostic_snapshot == snapshot
     assert stored.purchase_expires_at - stored.created_at == timedelta(hours=24)
 
@@ -92,6 +94,6 @@ def test_missing_and_expired_diagnostics_are_controlled(monkeypatch):
     with pytest.raises(service.PrivacyDiagnosticSnapshotNotFoundError):
         service.get_diagnostic_snapshot(uuid4())
     created = datetime.now(timezone.utc) - timedelta(hours=25)
-    expired = service.StoredPrivacyDiagnostic(uuid4(), "https://example.com/", diagnostic(), 42, created, created + timedelta(hours=24))
+    expired = service.StoredPrivacyDiagnostic(uuid4(), "https://example.com/", diagnostic(), 42, created, created + timedelta(hours=24), None)
     with pytest.raises(service.PrivacyDiagnosticPurchaseExpiredError):
         service.require_purchasable(expired, now=datetime.now(timezone.utc))

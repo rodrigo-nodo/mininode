@@ -12,6 +12,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mininode_api.core.auth import require_api_key
+from mininode_api.core.access_auth import require_access_user
+from mininode_api.services import access
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
 from mininode_api.services import privacy_correction_plan
 from mininode_api.services import privacy_correction_plan_flow
@@ -317,6 +319,39 @@ _ERRORS = {
     "unsupported_content_type": (422, "La página inicial no contiene un formato compatible."),
     "inspection_failed": (422, "No fue posible inspeccionar el sitio solicitado."),
 }
+
+
+@router.post("/workspace-sites/{workspace_site_id}/diagnose")
+def diagnose_workspace_site(
+    workspace_site_id: UUID,
+    request: Request,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    authorized = access.get_authorized_site(user.id, workspace_site_id)
+    if authorized is None:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado.")
+    if not authorized.hostname:
+        raise HTTPException(status_code=409, detail="Sitio no disponible para diagnóstico.")
+    target_url = authorized.canonical_url or f"https://{authorized.hostname}"
+    try:
+        diagnostic = diagnose_privacy_url(target_url)
+    except PrivacyInspectionError as exc:
+        status_code, message = _ERRORS[exc.code]
+        return JSONResponse(status_code=status_code, content={"error": exc.code, "message": message})
+    except Exception:
+        logger.exception("Unexpected authenticated Privacy Diagnostic failure")
+        return JSONResponse(status_code=500, content={"error": "internal_error", "message": "No fue posible completar el diagnóstico."})
+
+    if request.app.state.privacy_diagnostic_snapshot_ready:
+        try:
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+                diagnostic, workspace_site_id=workspace_site_id
+            )
+        except Exception:
+            logger.error("Authenticated Privacy diagnostic snapshot persistence failed")
+        else:
+            diagnostic = {**diagnostic, "diagnostic_id": stored.id, "purchase_expires_at": stored.purchase_expires_at}
+    return diagnostic
 
 
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
