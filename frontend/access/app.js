@@ -18,7 +18,7 @@ const errorPanel = document.querySelector('#access-error');
 const errorMessage = document.querySelector('#access-error-message');
 const note = document.querySelector('#access-note');
 const home = document.querySelector('#account-home');
-const signOutButton = document.querySelector('#access-sign-out');
+let signOutButton = null;\nlet headerAccessLink = null;
 const retryButton = document.querySelector('#access-retry');
 const errorSignOutButton = document.querySelector('#access-error-sign-out');
 const workspacePickerLabel = document.querySelector('#workspace-picker-label');
@@ -37,7 +37,7 @@ let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 
-function setVisible(element, visible) {
+function syncHeaderControls(signedIn) {\n  signOutButton = document.querySelector('#header-sign-out');\n  headerAccessLink = document.querySelector('#header-access-link');\n  setVisible(signOutButton, signedIn);\n  setVisible(headerAccessLink, !signedIn);\n  document.querySelectorAll('#site-header-nav .nav > a:not(#header-access-link)').forEach((link) => setVisible(link, false));\n  if (signOutButton && !signOutButton.dataset.bound) {\n        signOutButton.dataset.bound = 'true';\n  }\n}\n\nfunction setVisible(element, visible) {
   if (!element) return;
   element.hidden = !visible;
 }
@@ -45,13 +45,13 @@ function setVisible(element, visible) {
 function showLoading(message = 'Preparando acceso…') {
   loading.textContent = message;
   setVisible(loginPanel, true); setVisible(loading, true); setVisible(signInNode, false);
-  setVisible(errorPanel, false); setVisible(home, false); setVisible(signOutButton, false);
+  setVisible(errorPanel, false); setVisible(home, false); syncHeaderControls(false);
 }
 
 function showSignedOut() {
   lastResolvedSessionId = null; context = { workspaces: [] }; activeWorkspaceId = '';
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
-  setVisible(home, false); setVisible(signOutButton, false); setVisible(signInNode, true); setVisible(note, true);
+  setVisible(home, false); syncHeaderControls(false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
     Clerk.mountSignIn(signInNode, { routing: 'hash', withSignUp: true, signInForceRedirectUrl: ACCESS_PATH, signUpForceRedirectUrl: ACCESS_PATH });
     signInMounted = true;
@@ -65,7 +65,7 @@ function unmountSignIn() {
 
 function showError(message) {
   unmountSignIn(); setVisible(loginPanel, true); setVisible(loading, false); setVisible(signInNode, false);
-  setVisible(home, false); setVisible(signOutButton, Boolean(Clerk.session)); setVisible(errorPanel, true); setVisible(note, true);
+  setVisible(home, false); syncHeaderControls(Boolean(Clerk.session)); setVisible(errorPanel, true); setVisible(note, true);
   setVisible(errorSignOutButton, Boolean(Clerk.session));
   errorMessage.textContent = message;
 }
@@ -134,7 +134,7 @@ function renderHome() {
   setVisible(workspacePickerLabel, workspaces.length > 1);
   renderSites(active);
 
-  unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true); setVisible(signOutButton, true);
+  unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true); syncHeaderControls(true);
 }
 
 async function syncAuthState(session) {
