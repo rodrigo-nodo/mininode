@@ -91,6 +91,7 @@ def _validate_token_syntax(token: str) -> None:
 
     parts = token.split(".")
     if len(parts) != 3:
+        _log_verification_failure("token_syntax")
         raise ClerkIdentityInvalidError("Clerk session token is invalid")
 
     try:
@@ -100,13 +101,16 @@ def _validate_token_syntax(token: str) -> None:
         header = json.loads(header_bytes.decode("utf-8"))
         payload = json.loads(payload_bytes.decode("utf-8"))
     except (ValueError, TypeError, UnicodeError) as exc:
+        _log_verification_failure("token_syntax")
         raise ClerkIdentityInvalidError("Clerk session token is invalid") from exc
 
     if not isinstance(header, dict) or not isinstance(payload, dict):
+        _log_verification_failure("token_syntax")
         raise ClerkIdentityInvalidError("Clerk session token is invalid")
 
     key_id = header.get("kid")
     if not isinstance(key_id, str) or not key_id.strip():
+        _log_verification_failure("token_key_id")
         raise ClerkIdentityInvalidError("Clerk session token key id is required")
 
 
@@ -121,6 +125,7 @@ def _resolve_signing_key(client: PyJWKClient, token: str):
         ) from exc
     except PyJWKClientError as exc:
         if "Unable to find a signing key that matches" in str(exc):
+            _log_verification_failure("signing_key_unknown")
             raise ClerkIdentityInvalidError(
                 "Clerk session token signing key is unknown"
             ) from exc
