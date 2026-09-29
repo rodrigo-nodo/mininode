@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     diagnostic_snapshot JSONB NOT NULL,
     score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    purchase_expires_at TIMESTAMPTZ NOT NULL
+    purchase_expires_at TIMESTAMPTZ NOT NULL,
+    workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL
 );
 """
 
@@ -42,6 +43,7 @@ class StoredPrivacyDiagnostic:
     score: int
     created_at: datetime
     purchase_expires_at: datetime
+    workspace_site_id: UUID | None = None
 
 
 def _database_url() -> str:
@@ -62,7 +64,7 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def create_diagnostic_snapshot(diagnostic: Mapping) -> StoredPrivacyDiagnostic:
+def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID | None = None) -> StoredPrivacyDiagnostic:
     """Persist the completed result unchanged, without inspecting the site again."""
     score = diagnostic.get("score")
     site_url = diagnostic.get("site_url")
@@ -77,12 +79,12 @@ def create_diagnostic_snapshot(diagnostic: Mapping) -> StoredPrivacyDiagnostic:
         cursor.execute(
             """
             INSERT INTO privacy.diagnostic (
-                id, site_url, diagnostic_snapshot, score, purchase_expires_at
-            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+                id, site_url, diagnostic_snapshot, score, purchase_expires_at, workspace_site_id
+            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s)
             RETURNING id, site_url, diagnostic_snapshot, score, created_at,
-                      purchase_expires_at
+                      purchase_expires_at, workspace_site_id
             """,
-            (diagnostic_id, site_url, Jsonb(snapshot), score),
+            (diagnostic_id, site_url, Jsonb(snapshot), score, workspace_site_id),
         )
         return StoredPrivacyDiagnostic(*cursor.fetchone())
 
@@ -92,7 +94,7 @@ def get_diagnostic_snapshot(diagnostic_id: UUID) -> StoredPrivacyDiagnostic:
         cursor.execute(
             """
             SELECT id, site_url, diagnostic_snapshot, score, created_at,
-                   purchase_expires_at
+                   purchase_expires_at, workspace_site_id
             FROM privacy.diagnostic WHERE id = %s
             """,
             (diagnostic_id,),
