@@ -16,6 +16,10 @@ test('loads Clerk browser SDK from environment configuration', () => {
   assert.match(app, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
   assert.match(app, /hostname === 'app\.mininode\.io'/);
   assert.match(app, /publishableKey\.startsWith\('pk_live_'\)/);
+  assert.match(app, /Falló la carga de Clerk UI/);
+  assert.match(app, /Falló la carga de Clerk JS/);
+  assert.match(app, /Clerk JS cargó, pero no expuso Clerk/);
+  assert.match(app, /Clerk UI cargó, pero no expuso su interfaz/);
   assert.doesNotMatch(html + app, /sk_(?:test|live)_/);
 });
 
