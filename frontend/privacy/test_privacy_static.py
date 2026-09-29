@@ -16,6 +16,17 @@ REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_authenticated_workspace_site_entry_uses_access_identity(self):
+        self.assertIn('mininode-favicon.svg', HTML)
+        self.assertIn('data-clerk-publishable-key="pk_test_', HTML)
+        self.assertIn("get('workspace_site_id')", APP)
+        self.assertIn("fetch('/api/access/context'", APP)
+        self.assertIn('/api/privacy/workspace-sites/', APP)
+        self.assertIn('encodeURIComponent(authenticatedWorkspaceSiteId)', APP)
+        self.assertIn('Authorization: `Bearer ${token}`', APP)
+        self.assertIn('urlInput.readOnly = true', APP)
+        self.assertIn("fetch('/api/privacy/diagnose'", APP)
+
     def test_obsolete_complete_diagnosis_offer_is_removed(self):
         obsolete_dir = PRIVACY_DIR / "diagnostico-completo"
         self.assertFalse((obsolete_dir / "index.html").exists())
@@ -272,7 +283,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=114" defer></script>', HTML)
+        self.assertIn('<script src="app.js?v=115" defer></script>', HTML)
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(
