@@ -260,7 +260,9 @@ Las alternativas del MVP son:
 - sin contraseña propia de Mininode.
 
 La Publishable Key de Clerk puede estar en el frontend. No se utiliza ni se expone
-`CLERK_SECRET_KEY`.
+`CLERK_SECRET_KEY`. La página obtiene `CLERK_PUBLISHABLE_KEY` desde la configuración
+del entorno de Cloudflare Pages mediante `/clerk-config`; `app.mininode.io` rechaza
+una clave de instancia Development y exige una Publishable Key `pk_live_`.
 
 Cuando Clerk crea una sesión, el navegador obtiene el JWT mediante
 `session.getToken()` y lo envía como `Authorization: Bearer ...` únicamente a
