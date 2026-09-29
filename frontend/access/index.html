@@ -3,55 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Accede a Mininode</title>
+  <title>Cuenta Mininode</title>
   <meta name="description" content="Accede a tu cuenta Mininode.">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="./styles.css">
   <script src="../assets/js/core-head.js" defer></script>
-  <script
-    defer
-    crossorigin="anonymous"
-    src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/ui@1/dist/ui.browser.js"
-    type="text/javascript"
-  ></script>
-  <script
-    defer
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_test_aGVscGluZy1wdW1hLTE4Mi5jbGVyay5hY2NvdW50cy5kZXYk"
-    src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js"
-    type="text/javascript"
-  ></script>
+  <script defer crossorigin="anonymous" src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/ui@1/dist/ui.browser.js" type="text/javascript"></script>
+  <script defer crossorigin="anonymous" data-clerk-publishable-key="pk_test_aGVscGluZy1wdW1hLTE4Mi5jbGVyay5hY2NvdW50cy5kZXYk" src="https://helping-puma-182.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js" type="text/javascript"></script>
   <script src="./app.js" defer></script>
 </head>
 <body class="access-page">
   <header class="access-header container">
-    <a class="brand" href="https://mininode.io/" aria-label="Mininode — sitio público">
-      <span class="brand-name">Mininode</span>
-    </a>
+    <a class="brand" href="https://mininode.io/" aria-label="Mininode — sitio público"><span class="brand-name">Mininode</span></a>
+    <button id="access-sign-out" class="access-link-button access-header__signout" type="button" hidden>Cerrar sesión</button>
   </header>
 
   <main class="access-main">
-    <section class="access-card" aria-labelledby="access-title">
+    <section id="access-login" class="access-card" aria-labelledby="access-title">
       <div id="access-intro">
         <p class="eyebrow">Cuenta Mininode</p>
         <h1 id="access-title">Accede a Mininode</h1>
         <p class="access-lead">Entra de forma simple y segura. No necesitas crear una contraseña.</p>
       </div>
-
-      <div id="access-loading" class="access-state" role="status">
-        Preparando acceso…
-      </div>
-
+      <div id="access-loading" class="access-state" role="status">Preparando acceso…</div>
       <div id="clerk-sign-in" class="access-clerk" hidden></div>
-
-      <section id="access-session" class="access-state access-state--ready" aria-live="polite" hidden>
-        <p class="access-state__label">Acceso confirmado</p>
-        <h2>Tu cuenta está lista.</h2>
-        <p id="access-email" class="access-email"></p>
-        <p class="access-state__copy">Mininode reconoció tu sesión y tu identidad interna.</p>
-        <button id="access-sign-out" class="access-secondary-button" type="button">Cerrar sesión</button>
-      </section>
-
       <section id="access-error" class="access-state access-state--error" role="alert" hidden>
         <p class="access-state__label">No pudimos completar el acceso</p>
         <p id="access-error-message">Intenta nuevamente.</p>
@@ -60,11 +35,63 @@
           <button id="access-error-sign-out" class="access-link-button" type="button">Cerrar sesión</button>
         </div>
       </section>
+      <p id="access-note" class="access-note">Puedes continuar con Google o recibir un código por correo. Consulta nuestra <a href="/legal/privacy/">Política de privacidad</a>.</p>
+    </section>
 
-      <p id="access-note" class="access-note">
-        Puedes continuar con Google o recibir un código por correo. Consulta nuestra
-        <a href="/legal/privacy/">Política de privacidad</a>.
-      </p>
+    <section id="account-home" class="account-home" aria-labelledby="account-title" hidden>
+      <div class="account-heading">
+        <div>
+          <p class="eyebrow">Cuenta Mininode</p>
+          <h1 id="account-title">Mi espacio</h1>
+          <p id="account-email" class="account-email"></p>
+        </div>
+        <label id="workspace-picker-label" class="workspace-picker" hidden>
+          Espacio
+          <select id="workspace-picker"></select>
+        </label>
+      </div>
+
+      <div class="product-list" aria-label="Productos">
+        <article class="product-card">
+          <div class="product-card__heading">
+            <div>
+              <p class="product-card__kicker">Producto</p>
+              <h2>Privacy Web</h2>
+              <p>Revisa señales públicas de privacidad de tus sitios web.</p>
+            </div>
+            <a class="product-card__open" href="/privacy/">Abrir Privacy Web →</a>
+          </div>
+          <div class="product-resources">
+            <h3>Mis sitios</h3>
+            <div id="site-list" class="site-list"></div>
+            <p id="site-empty" class="resource-empty">Aún no tienes sitios agregados.</p>
+            <button id="site-add-open" class="resource-add" type="button">+ Agregar sitio</button>
+            <form id="site-add-form" class="site-add-form" hidden>
+              <label for="site-url">Sitio web</label>
+              <div class="site-add-form__row">
+                <input id="site-url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="empresa.cl" required>
+                <button type="submit">Agregar</button>
+              </div>
+              <p id="site-add-error" class="form-error" role="alert" hidden></p>
+            </form>
+          </div>
+        </article>
+
+        <article class="product-card product-card--muted">
+          <div class="product-card__heading">
+            <div>
+              <p class="product-card__kicker">Producto</p>
+              <h2>Privacy Data</h2>
+              <p>Organiza y revisa cómo manejas datos personales.</p>
+            </div>
+            <span class="product-status">Próximamente</span>
+          </div>
+          <div class="product-resources">
+            <h3>Mapas</h3>
+            <p class="resource-empty">Privacy Data se incorporará a tu cuenta Mininode en una siguiente etapa.</p>
+          </div>
+        </article>
+      </div>
     </section>
   </main>
 </body>
