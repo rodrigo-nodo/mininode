@@ -7,10 +7,14 @@ const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
 
-test('loads Clerk browser SDK with only the publishable key', () => {
-  assert.match(html, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
-  assert.match(html, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
-  assert.match(html, /data-clerk-publishable-key="pk_test_/);
+test('loads Clerk browser SDK from environment configuration', () => {
+  assert.doesNotMatch(html, /clerk\.accounts\.dev/);
+  assert.doesNotMatch(html, /data-clerk-publishable-key/);
+  assert.match(app, /fetch\('\/clerk-config'/);
+  assert.match(app, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
+  assert.match(app, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
+  assert.match(app, /hostname === 'app\.mininode\.io'/);
+  assert.match(app, /publishableKey\.startsWith\('pk_live_'\)/);
   assert.doesNotMatch(html + app, /sk_(?:test|live)_/);
 });
 
