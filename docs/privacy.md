@@ -100,7 +100,7 @@ de riesgo elevado cuando la evidencia pública no permite evitar falsos positivo
 
 ## Privacy Web activo: frontera comercial
 
-El diagnóstico Privacy Web es gratuito. Privacy Web activo cuesta CLP $9.900 por un
+El diagnóstico Privacy Web es gratuito. En modo autenticado, el recurso canónico es `workspace_site_id`: Access autoriza al miembro del workspace y el backend obtiene desde allí la URL a inspeccionar. Los snapshots autenticados quedan vinculados al `workspace_site`; el endpoint público existente continúa disponible para diagnósticos anónimos. Privacy Web activo cuesta CLP $9.900 por un
 mes, sin renovación automática por ahora. La vigencia se calcula como **un mes
 calendario desde `paid_at`**, no como una cantidad fija de 30 días.
 
