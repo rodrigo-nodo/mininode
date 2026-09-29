@@ -39,7 +39,10 @@ let accessToken = '';
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 
-function setVisible(element, visible) { element.hidden = !visible; }
+function setVisible(element, visible) {
+  if (!element) return;
+  element.hidden = !visible;
+}
 
 function showLoading(message = 'Preparando acceso…') {
   loading.textContent = message;
