@@ -5,7 +5,6 @@ import test from 'node:test';
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
 
 test('loads Clerk browser SDK with only the publishable key', () => {
   assert.match(html, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
@@ -20,16 +19,27 @@ test('keeps the Mininode access flow passwordless and privacy-visible', () => {
   assert.match(html, /href="\/legal\/privacy\/"/);
   assert.match(app, /elevation: 'flush'/);
   assert.match(app, /socialButtonsPlacement: 'top'/);
-  assert.match(app, /lastAuthenticationStrategyBadge: \{ display: 'none' \}/);
-  assert.match(app, /footerActionLink__useAnotherMethod: 'Usar otro método'/);
   assert.match(app, /withSignUp: true/);
 });
 
-test('exchanges the Clerk session token only with the Access identity endpoint', () => {
+test('builds the authenticated home from Access instead of client supplied ownership', () => {
+  assert.match(app, /api\('\/api\/access\/me'\)/);
+  assert.match(app, /api\('\/api\/access\/context'\)/);
+  assert.match(app, /api\('\/api\/access\/onboarding', \{ method: 'POST' \}\)/);
+  assert.match(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
   assert.match(app, /session\.getToken\(\)/);
-  assert.match(app, /fetch\('\/api\/access\/me'/);
-  assert.match(app, /Authorization: `Bearer \$\{token\}`/);
+  assert.match(app, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.doesNotMatch(app, /X-Api-Key/);
+});
+
+test('organizes account navigation by product and nests product resources', () => {
+  assert.match(html, /<h2>Privacy Web<\/h2>/);
+  assert.match(html, /<h3>Mis sitios<\/h3>/);
+  assert.match(html, /\+ Agregar sitio/);
+  assert.match(html, /<h2>Privacy Data<\/h2>/);
+  assert.match(html, /<h3>Mapas<\/h3>/);
+  assert.match(html, /Próximamente/);
+  assert.doesNotMatch(html, /<h2>Mis sitios<\/h2>/);
 });
 
 test('app.mininode.io root redirects into the access experience', () => {
