@@ -34,6 +34,10 @@ test('builds the authenticated home from Access instead of client supplied owner
 
 test('organizes account navigation by product and nests product resources', () => {
   assert.match(html, /<h2>Privacy Web<\/h2>/);
+  assert.doesNotMatch(html, /<h1 id="account-title">Mi espacio<\/h1>/);
+  assert.doesNotMatch(html, /id="account-email"/);
+  assert.match(html, /mininode-favicon\.svg/);
+  assert.match(app, /\/privacy\/\?workspace_site_id=\$\{encodeURIComponent\(site\.id\)\}/);
   assert.match(html, /<h3>Mis sitios<\/h3>/);
   assert.match(html, /\+ Agregar sitio/);
   assert.match(html, /<h2>Privacy Data<\/h2>/);
