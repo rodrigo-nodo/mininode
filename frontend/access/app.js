@@ -35,7 +35,6 @@ let signInMounted = false;
 let lastResolvedSessionId = null;
 let syncInFlight = false;
 let syncRequested = false;
-let accessToken = '';
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 
@@ -51,7 +50,7 @@ function showLoading(message = 'Preparando acceso…') {
 }
 
 function showSignedOut() {
-  lastResolvedSessionId = null; accessToken = ''; context = { workspaces: [] }; activeWorkspaceId = '';
+  lastResolvedSessionId = null; context = { workspaces: [] }; activeWorkspaceId = '';
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
   setVisible(home, false); setVisible(signOutButton, false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
@@ -73,9 +72,12 @@ function showError(message) {
 }
 
 async function api(path, options = {}) {
+  const token = await Clerk.session?.getToken();
+  if (!token) throw new Error('Tu sesión ya no está disponible. Vuelve a acceder.');
+
   const response = await fetch(path, {
     ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) },
+    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...(options.headers || {}) },
   });
   if (!response.ok) {
     if (response.status === 401) throw new Error('Tu sesión ya no puede validarse. Cierra la sesión y vuelve a acceder.');
@@ -87,8 +89,7 @@ async function api(path, options = {}) {
 }
 
 async function loadAccount(session) {
-  accessToken = await session.getToken();
-  if (!accessToken) throw new Error('Clerk no entregó una sesión válida.');
+  if (!session) throw new Error('Clerk no entregó una sesión válida.');
 
   const identity = await api('/api/access/me');
   let nextContext = await api('/api/access/context');
