@@ -53,3 +53,8 @@ test('offers explicit recovery when an existing Clerk session is rejected', () =
   assert.match(app, /setVisible\(errorSignOutButton, Boolean\(Clerk\.session\)\)/);
   assert.match(html, /id="access-error-sign-out"/);
 });
+
+
+test('visibility helper tolerates optional UI elements', () => {
+  assert.match(app, /function setVisible\(element, visible\) \{[\s\S]*if \(!element\) return;[\s\S]*element\.hidden = !visible;/);
+});
