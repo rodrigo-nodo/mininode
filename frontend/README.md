@@ -25,6 +25,7 @@ Static site + small API proxy to talk to the backend. Uses English-only routes.
 ## Environment Variables
 - `MININODE_API_BASE`: URL base del backend (Render). El front también la usa directamente cuando corre como file://; si no se define, usa `/api` (proxy) en producción.
 - `MININODE_API_KEY`: secret en Pages; el proxy lo reenvía como `X-Api-Key` al backend.
+- `CLERK_PUBLISHABLE_KEY`: Publishable Key pública de Clerk correspondiente al entorno; producción debe usar `pk_live_`.
 - Defínelas en Cloudflare Pages → Project → Settings → Environment Variables / Secrets.
 
 ## API Proxy (Functions)
