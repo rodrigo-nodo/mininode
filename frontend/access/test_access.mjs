@@ -10,6 +10,7 @@ const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
 test('loads Clerk browser SDK from environment configuration', () => {
   assert.doesNotMatch(html, /clerk\.accounts\.dev/);
   assert.doesNotMatch(html, /data-clerk-publishable-key/);
+  assert.match(html, /<script src="\.\/app\.js" defer><\/script>/);
   assert.match(app, /fetch\('\/clerk-config'/);
   assert.match(app, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
   assert.match(app, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
