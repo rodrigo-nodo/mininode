@@ -423,3 +423,31 @@ A3 no incluye Billing, cobros ni creación de entitlements pagados.
 
 1. **A3 - Cuenta Mininode y aplicaciones:** implementar el flujo autenticado sobre Access.
 2. **A4 - Billing:** pago confirmado → entitlement.
+
+
+## Entornos DEV y PROD
+
+Mininode mantiene separados los recursos de validación y producción:
+
+```text
+DEV
+dev.mininode.io
+  → rama dev / Cloudflare Preview
+  → mininode-backend-dev
+  → mininode-db-dev
+  → Clerk Development
+
+PROD
+app.mininode.io
+  → main / Cloudflare Production
+  → mininode-backend-prod
+  → PostgreSQL producción
+  → Clerk Production
+```
+
+Las migraciones SQL son explícitas y controladas. Producción usa el environment de
+GitHub `production` y el secret `PRODUCTION_DATABASE_URL`; DEV usa el environment
+`development` y el secret `DEVELOPMENT_DATABASE_URL`. Ambos workflows exigen el
+nombre exacto de un archivo en `backend/migrations` y una confirmación propia del
+entorno. El workflow DEV ejecuta la migración contra el contenido de la rama permanente
+`dev`; no reutiliza credenciales ni confirmaciones de producción.
