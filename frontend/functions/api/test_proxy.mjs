@@ -221,3 +221,17 @@ test('forwards Clerk bearer token only on protected Access routes', async () => 
   assert.equal(publicResult.calls[0].init.headers.has('Authorization'), false);
   assert.equal(publicResult.calls[0].init.headers.get('X-Api-Key'), API_KEY);
 });
+
+
+test('forwards Clerk bearer token to authenticated Privacy Web diagnosis', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const result = await request(`/api/privacy/workspace-sites/${id}/diagnose`, 'POST', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer clerk-session-token' },
+  });
+  assert.equal(result.response.status, 200);
+  assert.equal(result.calls.length, 1);
+  assert.equal(result.calls[0].url, `https://backend.example/privacy/workspace-sites/${id}/diagnose`);
+  assert.equal(result.calls[0].init.headers.get('Authorization'), 'Bearer clerk-session-token');
+  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+});
