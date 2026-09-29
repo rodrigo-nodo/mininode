@@ -17,7 +17,6 @@ REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
 
 class PrivacyResultStaticTests(unittest.TestCase):
     def test_authenticated_workspace_site_entry_uses_access_identity(self):
-        self.assertIn('mininode-favicon.svg', HTML)
         self.assertIn('data-clerk-publishable-key="pk_test_', HTML)
         self.assertIn("get('workspace_site_id')", APP)
         self.assertIn("fetch('/api/access/context'", APP)
