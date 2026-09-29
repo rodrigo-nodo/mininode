@@ -18,7 +18,7 @@
 .access-note { margin: 26px 0 0; padding-top: 20px; border-top: 1px solid var(--color-border); color: var(--color-muted); font-size: var(--text-sm); line-height: 1.55; }
 .access-note a { color: var(--color-text); }
 
-.account-home { width: min(100%, 760px); }
+.account-home { width: min(100%, 760px); align-self: start; margin-top: clamp(32px, 6vh, 64px); }
 .workspace-picker { display: grid; gap: 6px; color: var(--color-muted); font-size: var(--text-sm); }
 .workspace-picker select { min-width: 180px; padding: 9px 34px 9px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; }
 
