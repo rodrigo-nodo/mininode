@@ -415,9 +415,27 @@ A3 puede crear y utilizar un `workspace_site` sin entitlement. A4 será responsa
 
 1. **A3.1 - Onboarding Access:** workspace personal automático y alta de sitios seguidos. El onboarding es explícito e idempotente: una cuenta autenticada puede crear su primer workspace personal sin pago ni entitlement; si ya pertenece a un workspace válido, se reutiliza y no se crea otro. Un usuario autenticado puede además asociar una URL pública a un workspace autorizado; el hostname se normaliza globalmente y la relación `workspace_site` es idempotente y privada por workspace.
 2. **A3.2 - Privacy Web autenticada:** el diagnóstico autenticado se inicia por `workspace_site_id`; el backend autoriza membership, obtiene la URL desde Access y vincula el snapshot persistido al `workspace_site`. El cliente no decide una URL distinta para ese recurso.
-3. **A3.3 - Home Mininode:** entrada autenticada transversal y navegación hacia Privacy Web, Privacy Data y futuros productos.
+3. **A3.3 - Home Mininode:** entrada autenticada transversal organizada por producto. La jerarquía visible es `producto → recursos del producto`: Privacy Web presenta sus sitios y permite agregar uno; Privacy Data presenta conceptualmente sus mapas y permanece como próximo paso. Los recursos técnicos compartidos de Access no se elevan por sí mismos al primer nivel de navegación.
 
 A3 no incluye Billing, cobros ni creación de entitlements pagados.
+
+### Regla de navegación de Cuenta Mininode
+
+La navegación principal se organiza por **productos**, no por las entidades técnicas de Access. Cada producto presenta dentro de su contexto los recursos que el usuario reconoce para trabajar:
+
+```text
+Cuenta Mininode
+  ├─ Privacy Web
+  │    └─ sitios
+  ├─ Privacy Data
+  │    └─ empresas / mapas
+  └─ futuros productos
+       └─ sus propios recursos
+```
+
+Esto no modifica el modelo de autorización. Un sitio continúa siendo un recurso público global y `workspace_site` continúa siendo la relación privada reutilizable por aplicaciones. La jerarquía de interfaz y la jerarquía técnica se mantienen deliberadamente separadas.
+
+A3.3 reutiliza A3.1 para onboarding y asociación gratuita de sitios. Agregar un sitio no expresa intención de compra y no crea entitlement. Privacy Web público continúa disponible sin cuenta.
 
 ## Próximas etapas
 
