@@ -34,7 +34,7 @@ test('builds the authenticated home from Access instead of client supplied owner
 
 test('organizes account navigation by product and nests product resources', () => {
   assert.match(html, /<h2>Privacy Web<\/h2>/);
-  assert.match(html, /data-include="\.\.\/partials\/footer\.html"/);
+  assert.match(html, /data-include="\.\.\/partials\/footer\.html"/);\n  assert.match(html, /data-include="\.\.\/partials\/header-nav\.html"/);
   assert.doesNotMatch(html, /<h1 id="account-title">Mi espacio<\/h1>/);
   assert.doesNotMatch(html, /id="account-email"/);
   assert.doesNotMatch(html, /mininode-favicon\.svg/);
@@ -68,4 +68,11 @@ test('visibility helper tolerates optional UI elements', () => {
 test('refreshes the Clerk token for every authenticated API request', () => {
   assert.match(app, /async function api\(path, options = \{\}\) \{[\s\S]*Clerk\.session\?\.getToken\(\)[\s\S]*Authorization: `Bearer \$\{token\}`/);
   assert.doesNotMatch(app, /let accessToken/);
+});
+
+
+test('shared header exposes session-aware account controls', () => {
+  assert.match(app, /#header-sign-out/);
+  assert.match(app, /#header-access-link/);
+  assert.match(app, /syncHeaderControls\(true\)/);
 });
