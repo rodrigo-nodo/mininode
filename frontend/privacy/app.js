@@ -37,6 +37,8 @@ const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:
 let lastFocusedElement = null;
 let isDiagnosing = false;
 let currentDiagnosticId = '';
+const requestedWorkspaceSiteId = new URLSearchParams(window.location.search).get('workspace_site_id') || '';
+let authenticatedWorkspaceSiteId = '';
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
 const renderDiagnosticError = 'Recibimos el diagnóstico, pero no pudimos mostrar el resultado. Intenta nuevamente.';
@@ -504,6 +506,44 @@ correctionUnavailableRetry?.addEventListener('click', () => {
   urlInput.focus();
 });
 
+const initializeAuthenticatedSite = async () => {
+  if (!requestedWorkspaceSiteId) return;
+
+  submitButton.disabled = true;
+  setRequestError();
+
+  try {
+    if (!window.Clerk) throw new Error('Clerk unavailable');
+    await Clerk.load();
+    const token = await Clerk.session?.getToken();
+    if (!token) {
+      window.location.assign('/access/');
+      return;
+    }
+
+    const response = await fetch('/api/access/context', {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`Access context HTTP ${response.status}`);
+    const accessContext = await response.json();
+    const sites = (Array.isArray(accessContext.workspaces) ? accessContext.workspaces : [])
+      .flatMap((workspace) => Array.isArray(workspace.sites) ? workspace.sites : []);
+    const site = sites.find((candidate) => candidate.id === requestedWorkspaceSiteId);
+    if (!site) throw new Error('Workspace site not authorized');
+
+    authenticatedWorkspaceSiteId = site.id;
+    urlInput.value = `https://${site.hostname}`;
+    urlInput.readOnly = true;
+    urlInput.setAttribute('aria-readonly', 'true');
+    submitButton.disabled = false;
+  } catch (error) {
+    reportFlowError('authenticated_site_init_failed', error);
+    setRequestError('No pudimos abrir este sitio desde tu cuenta Mininode.');
+  }
+};
+
+window.addEventListener('load', () => { void initializeAuthenticatedSite(); });
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -531,13 +571,23 @@ form.addEventListener('submit', async (event) => {
 
   let response;
   try {
-    response = await fetch('/api/privacy/diagnose', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: websiteUrl }),
-    });
+    if (authenticatedWorkspaceSiteId) {
+      const token = await Clerk.session?.getToken();
+      if (!token) {
+        window.location.assign('/access/');
+        return;
+      }
+      response = await fetch(`/api/privacy/workspace-sites/${encodeURIComponent(authenticatedWorkspaceSiteId)}/diagnose`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } else {
+      response = await fetch('/api/privacy/diagnose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: websiteUrl }),
+      });
+    }
   } catch (error) {
     reportFlowError('api_request_failed', error);
     loadingCard.hidden = true;
