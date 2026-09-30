@@ -56,6 +56,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindControls);
   else bindControls();
   window.addEventListener('mininode:includes-loaded', bindControls);
+  // Shared header is injected asynchronously; observe it as a fallback so
+  // theme controls are bound even when the include event fires before this script loads.
+  const observer = new MutationObserver(() => {
+    if (document.querySelector('[data-theme-toggle]:not([data-theme-bound="true"])')) bindControls();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 
   media.addEventListener?.('change', () => {
     if (!savedTheme()) updateControls();
