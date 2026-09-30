@@ -83,6 +83,8 @@ def test_clerk_sign_in_follows_mininode_theme():
     app = read("access/app.js")
     styles = read("access/styles.css")
     assert "appearance: signInAppearance()" in app
+    assert "theme: 'simple'" in app
+    assert "colorBorder:" in app
     assert "function mininodeTheme()" in app
     assert "colorInput:" in app
     assert "colorInputBackground" not in app
