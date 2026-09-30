@@ -26,6 +26,8 @@ body{
 .brand-mark{display:block;flex:0 0 auto;height:22px;width:22px}
 
 .nav{display:flex;align-items:center;gap:30px}
+.mobile-menu{display:flex;align-items:center;gap:30px}
+.nav-toggle{display:none;background:transparent;border:0;color:var(--fg);cursor:pointer;font:inherit;font-size:1.45rem;line-height:1;padding:8px}
 .nav a{color:var(--fg);font-size:.95rem;font-weight:600;text-decoration:none;opacity:.78}
 .nav a:hover{color:var(--primary);opacity:1}
 .header-auth-button{border:0;background:transparent;color:var(--fg);cursor:pointer;font:inherit;font-size:.95rem;font-weight:600;opacity:.78;padding:0}
@@ -227,9 +229,21 @@ body{min-height:100vh}
 .access-page .account-home{width:min(100%,1040px)}
 
 @media (max-width:720px){
+  .header{position:relative}
+  .nav-toggle{display:block}
+  .mobile-menu{
+    background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:0 12px 30px rgba(0,0,0,.10);display:grid;gap:0;min-width:210px;
+    padding:10px;position:absolute;right:20px;top:64px;z-index:30
+  }
+  .mobile-menu[hidden]{display:none}
+  .mobile-menu a,.mobile-menu .header-auth-button,.mobile-menu .theme-toggle{
+    display:flex!important;justify-content:flex-start;min-height:42px;padding:9px 10px;width:100%
+  }
+  .mobile-menu .header-auth-button[hidden]{display:none!important}
+  .mobile-menu .theme-toggle__label{display:inline}
   .theme-toggle__label{display:none}
   .theme-toggle{border:0;min-height:36px;padding:6px}
-  .nav__public{display:none}
   .contact-layout,.legal-layout{grid-template-columns:1fr}
   .contact-layout{padding-top:28px}
   .legal-page{padding-top:28px}
