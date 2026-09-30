@@ -34,6 +34,9 @@ on:
       - 'frontend/functions/api/**'
       - 'frontend/index.html'
       - 'frontend/access/**'
+      - 'frontend/privacy/**'
+      - 'frontend/partials/**'
+      - 'frontend/test_head_common.py'
       - 'docs/access.md'
 
 permissions:
@@ -81,7 +84,13 @@ jobs:
         run: node --test frontend/functions/api/test_proxy.mjs
 
       - name: Run Access client UI tests
-        run: node --test frontend/access/test_access.mjs
+        run: node --test frontend/access/test_access.mjs frontend/access/test_clerk_config.mjs
+
+      - name: Run Privacy Web static tests
+        run: pytest -q frontend/privacy/test_privacy_static.py
+
+      - name: Run shared head tests
+        run: pytest -q frontend/test_head_common.py
 
       - name: Compile backend
         run: python -m compileall -q backend/src/mininode_api backend/scripts
