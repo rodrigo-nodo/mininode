@@ -528,6 +528,25 @@ const loadClerkRuntime = async () => {
   });
 };
 
+const syncPrivacyHeader = (signedIn) => {
+  const accessLink = document.querySelector('#header-access-link');
+  const signOut = document.querySelector('#header-sign-out');
+  if (accessLink) accessLink.hidden = signedIn;
+  if (signOut) {
+    signOut.hidden = !signedIn;
+    if (signedIn && signOut.dataset.bound !== 'true') {
+      signOut.dataset.bound = 'true';
+      signOut.addEventListener('click', async () => {
+        try { await Clerk.signOut(); } finally { window.location.assign('/access/'); }
+      });
+    }
+  }
+};
+
+window.addEventListener('mininode:includes-loaded', () => {
+  syncPrivacyHeader(Boolean(requestedWorkspaceSiteId && window.Clerk?.session));
+});
+
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
 
@@ -555,6 +574,7 @@ const initializeAuthenticatedSite = async () => {
     if (!site) throw new Error('Workspace site not authorized');
 
     authenticatedWorkspaceSiteId = site.id;
+    syncPrivacyHeader(true);
     urlInput.value = `https://${site.hostname}`;
     urlInput.readOnly = true;
     urlInput.setAttribute('aria-readonly', 'true');
