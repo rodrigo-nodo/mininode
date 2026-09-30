@@ -33,10 +33,19 @@ on:
       - 'backend/tests/test_privacy_workspace_site_api.py'
       - 'frontend/functions/api/**'
       - 'frontend/index.html'
+      - 'frontend/styles.css'
+      - 'frontend/include.js'
+      - 'frontend/assets/css/tokens.css'
+      - 'frontend/assets/js/core-head.js'
+      - 'frontend/assets/js/core-theme.js'
+      - 'frontend/contact/**'
+      - 'frontend/learn/**'
+      - 'frontend/legal/**'
       - 'frontend/access/**'
       - 'frontend/privacy/**'
       - 'frontend/partials/**'
       - 'frontend/test_head_common.py'
+      - 'frontend/test_global_shell.py'
       - 'docs/access.md'
 
 permissions:
@@ -89,8 +98,8 @@ jobs:
       - name: Run Privacy Web static tests
         run: pytest -q frontend/privacy/test_privacy_static.py
 
-      - name: Run shared head tests
-        run: pytest -q frontend/test_head_common.py
+      - name: Run shared shell tests
+        run: pytest -q frontend/test_head_common.py frontend/test_global_shell.py
 
       - name: Compile backend
         run: python -m compileall -q backend/src/mininode_api backend/scripts
