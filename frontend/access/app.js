@@ -45,7 +45,8 @@ function syncHeaderControls(signedIn) {
   setVisible(headerAccessLink, !signedIn);
   document.querySelectorAll('#site-header-nav .nav > a:not(#header-access-link)').forEach((link) => setVisible(link, false));
   if (signOutButton && !signOutButton.dataset.bound) {
-        signOutButton.dataset.bound = 'true';
+    signOutButton.addEventListener('click', signOut);
+    signOutButton.dataset.bound = 'true';
   }
 }
 
