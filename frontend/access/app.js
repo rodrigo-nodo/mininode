@@ -244,7 +244,7 @@ window.addEventListener('load', async () => {
     await Clerk.load({
       ui: { ClerkUI: window.__internal_ClerkUICtor }, localization,
       appearance: {
-        variables: { colorPrimary: '#237985', colorText: '#1d2026', colorTextSecondary: '#5f6470', colorBackground: '#ffffff', colorInputBackground: '#ffffff', colorInputText: '#1d2026', borderRadius: '10px', fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif' },
+        variables: { colorPrimary: '#237985', colorForeground: '#1d2026', colorMutedForeground: '#5f6470', colorBackground: '#ffffff', colorInputBackground: '#ffffff', colorInputForeground: '#1d2026', borderRadius: '10px', fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif' },
         options: { elevation: 'flush', socialButtonsPlacement: 'top', socialButtonsVariant: 'blockButton', privacyPageUrl: '/legal/privacy/' },
         elements: {
           rootBox: { width: '100%' }, cardBox: { width: '100%', maxWidth: '100%', boxShadow: 'none', overflow: 'visible' },
