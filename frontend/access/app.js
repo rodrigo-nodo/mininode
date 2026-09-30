@@ -73,6 +73,41 @@ async function loadClerkRuntime() {
   await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js', { 'data-clerk-publishable-key': publishableKey });
 }
 
+async function loadExternalScript(src, attributes = {}) {
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    for (const [name, value] of Object.entries(attributes)) script.setAttribute(name, value);
+    script.addEventListener('load', resolve, { once: true });
+    script.addEventListener('error', () => reject(new Error('No pudimos cargar Clerk.')), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function clerkDomainFromPublishableKey(publishableKey) {
+  const encoded = publishableKey.split('_')[2];
+  if (!encoded) throw new Error('Configuración Clerk inválida.');
+  const domain = atob(encoded).slice(0, -1);
+  if (!domain || !/^[a-z0-9.-]+$/i.test(domain)) throw new Error('Configuración Clerk inválida.');
+  return domain;
+}
+
+async function loadClerkRuntime() {
+  showLoading('Leyendo configuración de acceso…');
+  const response = await fetch('/clerk-config', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+  if (!response.ok) throw new Error('Configuración de acceso no disponible.');
+  const { publishableKey } = await response.json();
+  if (typeof publishableKey !== 'string' || !/^pk_(?:test|live)_/.test(publishableKey)) throw new Error('Configuración de acceso inválida.');
+  if (window.location.hostname === 'app.mininode.io' && !publishableKey.startsWith('pk_live_')) {
+    throw new Error('Mininode no puede usar una instancia Clerk de desarrollo en producción.');
+  }
+  const clerkDomain = clerkDomainFromPublishableKey(publishableKey);
+  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/ui@1/dist/ui.browser.js');
+  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js', { 'data-clerk-publishable-key': publishableKey });
+}
+
 function syncHeaderControls(signedIn) {
   signOutButton = document.querySelector('#header-sign-out');
   headerAccessLink = document.querySelector('#header-access-link');
