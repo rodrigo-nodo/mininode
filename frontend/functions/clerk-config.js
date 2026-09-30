@@ -1,5 +1,5 @@
 export const onRequestGet = async ({ request, env }) => {
-  const publishableKey = env.CLERK_PUBLISHABLE_KEY || '';
+  const publishableKey = env.CLERK_PUBLISHABLE_KEY || env.CLERK_PUBLISHABLE_KEY_DEV || '';
   const hostname = new URL(request.url).hostname;
 
   if (!/^pk_(?:test|live)_/.test(publishableKey)) {
