@@ -59,3 +59,8 @@
   .site-add-form__row { align-items: stretch; flex-direction: column; }
 }
 .cl-lastAuthenticationStrategyBadge { display: none !important; }
+
+
+/* Clerk renders its own form; keep labels and inputs legible in both themes. */
+.access-clerk input{color:var(--color-text)!important;background:var(--color-bg)!important}
+.access-clerk label{color:var(--color-text)!important;opacity:1!important}
