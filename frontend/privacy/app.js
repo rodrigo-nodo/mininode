@@ -544,11 +544,22 @@ const syncPrivacyHeader = (signedIn) => {
 };
 
 window.addEventListener('mininode:includes-loaded', () => {
-  syncPrivacyHeader(Boolean(requestedWorkspaceSiteId && window.Clerk?.session));
+  syncPrivacyHeader(Boolean(window.Clerk?.session));
 });
 
 const initializeAuthenticatedSite = async () => {
-  if (!requestedWorkspaceSiteId) return;
+  if (!requestedWorkspaceSiteId) {
+    try {
+      await loadClerkRuntime();
+      if (!window.Clerk) return;
+      await Clerk.load();
+      syncPrivacyHeader(Boolean(Clerk.session));
+      Clerk.addListener(({ session }) => syncPrivacyHeader(Boolean(session)), { skipInitialEmit: true });
+    } catch {
+      syncPrivacyHeader(false);
+    }
+    return;
+  }
 
   submitButton.disabled = true;
   setRequestError();
@@ -557,6 +568,8 @@ const initializeAuthenticatedSite = async () => {
     await loadClerkRuntime();
     if (!window.Clerk) throw new Error('Clerk unavailable');
     await Clerk.load();
+    syncPrivacyHeader(Boolean(Clerk.session));
+    Clerk.addListener(({ session }) => syncPrivacyHeader(Boolean(session)), { skipInitialEmit: true });
     const token = await Clerk.session?.getToken();
     if (!token) {
       window.location.assign('/access/');
