@@ -42,14 +42,20 @@
   const preference = savedTheme();
   if (preference) document.documentElement.dataset.theme = preference;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function bindControls() {
     updateControls();
     document.querySelectorAll('[data-theme-toggle]').forEach((control) => {
+      if (control.dataset.themeBound === 'true') return;
+      control.dataset.themeBound = 'true';
       control.addEventListener('click', () => {
         selectTheme(currentTheme() === 'dark' ? 'light' : 'dark');
       });
     });
-  });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindControls);
+  else bindControls();
+  window.addEventListener('mininode:includes-loaded', bindControls);
 
   media.addEventListener?.('change', () => {
     if (!savedTheme()) updateControls();
