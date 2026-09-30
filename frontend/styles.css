@@ -23,6 +23,7 @@ body{
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
 .brand-name{font-weight:700;letter-spacing:-.02em;font-size:1.08rem}
 .logo{width:28px;height:28px}
+.brand-mark{display:block;flex:0 0 auto;height:22px;width:22px}
 
 .nav{display:flex;align-items:center;gap:30px}
 .nav a{color:var(--fg);font-size:.95rem;font-weight:600;text-decoration:none;opacity:.78}
