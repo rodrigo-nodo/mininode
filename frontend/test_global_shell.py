@@ -95,3 +95,12 @@ def test_clerk_sign_in_follows_mininode_theme():
     assert "appearance:" not in clerk_load
     assert ".access-clerk input" not in styles
     assert "color-scheme:light" not in styles
+
+
+def test_privacy_header_reflects_clerk_session_without_workspace_site_query():
+    app = read("privacy/app.js")
+    assert "syncPrivacyHeader(Boolean(window.Clerk?.session))" in app
+    assert "if (!requestedWorkspaceSiteId) {" in app
+    assert "syncPrivacyHeader(Boolean(Clerk.session))" in app
+    assert "Clerk.addListener(({ session }) => syncPrivacyHeader(Boolean(session))" in app
+    assert "requestedWorkspaceSiteId && window.Clerk?.session" not in app
