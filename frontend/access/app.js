@@ -9,6 +9,7 @@ function mininodeTheme() {
 function signInAppearance() {
   const dark = mininodeTheme() === 'dark';
   return {
+    theme: 'simple',
     variables: {
       colorPrimary: dark ? '#66c6d0' : '#176b78',
       colorForeground: dark ? '#f4f2fa' : '#0d0f14',
@@ -16,6 +17,7 @@ function signInAppearance() {
       colorBackground: dark ? '#111218' : '#ffffff',
       colorInput: dark ? '#111218' : '#ffffff',
       colorInputForeground: dark ? '#f4f2fa' : '#0d0f14',
+      colorBorder: dark ? '#3a3d47' : '#d9dde5',
       borderRadius: '10px',
       fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
     },
