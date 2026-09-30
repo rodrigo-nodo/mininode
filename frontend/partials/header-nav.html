@@ -3,9 +3,14 @@
     <span class="brand-name">Mininode</span>
   </a>
   <nav class="nav" aria-label="Principal">
-    <a href="/#products">Productos</a>
-    <a href="/learn/">Recursos</a>
-    <a href="/contact/">Contacto</a>
+    <a class="nav__public" href="/#products">Productos</a>
+    <a class="nav__public" href="/learn/">Recursos</a>
+    <a class="nav__public" href="/contact/">Contacto</a>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+      <span class="theme-toggle__icon theme-toggle__icon--dark" aria-hidden="true">☾</span>
+      <span class="theme-toggle__icon theme-toggle__icon--light" aria-hidden="true">☀</span>
+      <span class="theme-toggle__label" data-theme-label>Oscuro</span>
+    </button>
     <a id="header-access-link" href="/access/">Acceder</a>
     <button id="header-sign-out" class="header-auth-button" type="button" hidden>Cerrar sesión</button>
   </nav>
