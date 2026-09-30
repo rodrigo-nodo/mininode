@@ -34,7 +34,12 @@ function signInAppearance() {
       header: { display: 'none' },
       footer: { display: 'none' },
       lastAuthenticationStrategyBadge: { display: 'none' },
-      socialButtonsBlockButton: { minHeight: '46px' },
+      socialButtonsBlockButton: {
+        minHeight: '46px',
+        color: dark ? '#f4f2fa' : '#0d0f14',
+        backgroundColor: dark ? '#111218' : '#ffffff',
+        borderColor: dark ? '#3a3d47' : '#d9dde5',
+      },
       formFieldInput: { minHeight: '46px' },
       formButtonPrimary: { minHeight: '46px', textTransform: 'none', fontWeight: '650' },
     },
