@@ -79,13 +79,14 @@ def test_global_head_resolves_versioned_script_urls():
     assert "core-head.js?v=" in access
 
 
-def test_clerk_appearance_owns_sign_in_colors():
+def test_clerk_sign_in_follows_mininode_theme():
     app = read("access/app.js")
     styles = read("access/styles.css")
-    assert "colorForeground: '#1d2026'" in app
-    assert "colorMutedForeground: '#5f6470'" in app
-    assert "colorInputForeground: '#1d2026'" in app
-    assert "colorBackground: '#ffffff'" in app
-    assert "colorInputBackground: '#ffffff'" in app
+    assert "appearance: signInAppearance()" in app
+    assert "function mininodeTheme()" in app
+    assert "colorInput:" in app
+    assert "colorInputBackground" not in app
+    clerk_load = app.split("await Clerk.load({", 1)[1].split("Clerk.addListener", 1)[0]
+    assert "appearance:" not in clerk_load
     assert ".access-clerk input" not in styles
     assert "color-scheme:light" not in styles
