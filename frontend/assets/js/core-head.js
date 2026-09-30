@@ -55,7 +55,7 @@
       // core-head gets the same preference without page-specific wiring.
       if (!document.querySelector('script[data-mininode-theme]')) {
         const themeScript = document.createElement('script');
-        themeScript.src = prefix + 'assets/js/core-theme.js';
+        themeScript.src = prefix + 'assets/js/core-theme.js?v=282f';
         themeScript.dataset.mininodeTheme = 'true';
         document.head.appendChild(themeScript);
       }
