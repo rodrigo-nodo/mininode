@@ -61,6 +61,7 @@
 .cl-lastAuthenticationStrategyBadge { display: none !important; }
 
 
-/* Clerk renders its own form; keep labels and inputs legible in both themes. */
-.access-clerk input{color:var(--color-text)!important;background:var(--color-bg)!important}
-.access-clerk label{color:var(--color-text)!important;opacity:1!important}
+/* Clerk sign-in is an embedded surface: keep it light in either site theme. */
+.access-clerk{background:#fff;border-radius:var(--radius-md);color:#1d2026;padding:14px}
+.access-clerk input{color:#1d2026!important;background:#fff!important;border-color:#d9dde5!important}
+.access-clerk label{color:#1d2026!important;opacity:1!important}
