@@ -77,3 +77,9 @@ test('shared header exposes session-aware account controls', () => {
   assert.match(app, /#header-access-link/);
   assert.match(app, /syncHeaderControls\(true\)/);
 });
+
+
+test('does not bind sign out before the shared header is included', () => {
+  assert.doesNotMatch(app, /^signOutButton\.addEventListener\('click', signOut\);$/m);
+  assert.match(app, /if \(signOutButton && !signOutButton\.dataset\.bound\)/);
+});
