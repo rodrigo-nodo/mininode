@@ -193,7 +193,6 @@ siteAddForm.addEventListener('submit', async (event) => {
   } finally { submit.disabled = false; }
 });
 
-signOutButton.addEventListener('click', signOut);
 errorSignOutButton.addEventListener('click', signOut);
 retryButton.addEventListener('click', () => { lastResolvedSessionId = null; void requestSync(Clerk.session); });
 
