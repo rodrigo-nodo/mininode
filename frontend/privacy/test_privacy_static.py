@@ -17,7 +17,10 @@ REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
 
 class PrivacyResultStaticTests(unittest.TestCase):
     def test_authenticated_workspace_site_entry_uses_access_identity(self):
-        self.assertIn('data-clerk-publishable-key="pk_test_', HTML)
+        self.assertNotIn('data-clerk-publishable-key="pk_test_', HTML)
+        self.assertNotIn('clerk.accounts.dev', HTML)
+        self.assertIn("fetch('/clerk-config'", APP)
+        self.assertIn("publishableKey.startsWith('pk_live_')", APP)
         self.assertIn("get('workspace_site_id')", APP)
         self.assertIn("fetch('/api/access/context'", APP)
         self.assertIn('/api/privacy/workspace-sites/', APP)
