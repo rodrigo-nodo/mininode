@@ -244,16 +244,16 @@ window.addEventListener('load', async () => {
     await Clerk.load({
       ui: { ClerkUI: window.__internal_ClerkUICtor }, localization,
       appearance: {
-        variables: { colorPrimary: 'var(--color-primary)', colorText: 'var(--color-text)', colorTextSecondary: 'var(--color-muted)', colorBackground: 'transparent', colorInputBackground: 'var(--color-bg)', colorInputText: 'var(--color-text)', borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-body)' },
+        variables: { colorPrimary: '#237985', colorText: '#1d2026', colorTextSecondary: '#5f6470', colorBackground: '#ffffff', colorInputBackground: '#ffffff', colorInputText: '#1d2026', borderRadius: '10px', fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif' },
         options: { elevation: 'flush', socialButtonsPlacement: 'top', socialButtonsVariant: 'blockButton', privacyPageUrl: '/legal/privacy/' },
         elements: {
           rootBox: { width: '100%' }, cardBox: { width: '100%', maxWidth: '100%', boxShadow: 'none', overflow: 'visible' },
           card: { width: '100%', boxShadow: 'none', border: '0', padding: '0', background: 'transparent' },
           header: { display: 'none' }, footer: { display: 'none' }, lastAuthenticationStrategyBadge: { display: 'none' },
-          socialButtonsBlockButton: { minHeight: '46px', borderColor: 'var(--color-border)', color: 'var(--color-text)' },
-          formFieldLabel: { color: 'var(--color-text)', opacity: '1' },
-          formFieldInput: { minHeight: '46px', borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-bg)' },
-          formButtonPrimary: { minHeight: '46px', backgroundColor: 'var(--color-primary)', textTransform: 'none', fontWeight: '650' },
+          socialButtonsBlockButton: { minHeight: '46px', borderColor: '#d9dde5', color: '#1d2026', backgroundColor: '#ffffff' },
+          formFieldLabel: { color: '#1d2026', opacity: '1' },
+          formFieldInput: { minHeight: '46px', borderColor: '#d9dde5', color: '#1d2026', backgroundColor: '#ffffff' },
+          formButtonPrimary: { minHeight: '46px', backgroundColor: '#237985', color: '#ffffff', textTransform: 'none', fontWeight: '650' },
         },
       },
     });
