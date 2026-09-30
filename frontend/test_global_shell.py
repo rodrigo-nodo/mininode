@@ -85,6 +85,9 @@ def test_clerk_sign_in_follows_mininode_theme():
     assert "appearance: signInAppearance()" in app
     assert "theme: 'simple'" in app
     assert "colorBorder:" in app
+    assert "socialButtonsBlockButton:" in app
+    assert "backgroundColor: dark ?" in app
+    assert "borderColor: dark ?" in app
     assert "function mininodeTheme()" in app
     assert "colorInput:" in app
     assert "colorInputBackground" not in app
