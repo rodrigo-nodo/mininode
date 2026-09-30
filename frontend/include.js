@@ -69,5 +69,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Relative normalization failed', e);
   }
 
+  document.querySelectorAll('.nav-toggle').forEach((toggle) => {
+    if (toggle.dataset.bound === 'true') return;
+    toggle.dataset.bound = 'true';
+    toggle.addEventListener('click', () => {
+      const menu = document.getElementById(toggle.getAttribute('aria-controls'));
+      if (!menu) return;
+      const opening = menu.hidden;
+      menu.hidden = !opening;
+      toggle.setAttribute('aria-expanded', String(opening));
+      toggle.setAttribute('aria-label', opening ? 'Cerrar menú' : 'Abrir menú');
+      toggle.textContent = opening ? '×' : '☰';
+    });
+  });
+
   window.dispatchEvent(new CustomEvent('mininode:includes-loaded'));
 });
