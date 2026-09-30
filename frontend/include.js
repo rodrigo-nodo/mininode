@@ -68,4 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {
     console.warn('Relative normalization failed', e);
   }
+
+  window.dispatchEvent(new CustomEvent('mininode:includes-loaded'));
 });
