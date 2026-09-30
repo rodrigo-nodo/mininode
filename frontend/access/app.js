@@ -1,5 +1,44 @@
 const ACCESS_PATH = '/access/';
 
+function mininodeTheme() {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit === 'light' || explicit === 'dark') return explicit;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function signInAppearance() {
+  const dark = mininodeTheme() === 'dark';
+  return {
+    variables: {
+      colorPrimary: dark ? '#66c6d0' : '#176b78',
+      colorForeground: dark ? '#f4f2fa' : '#0d0f14',
+      colorMutedForeground: dark ? '#b5b1be' : '#626570',
+      colorBackground: dark ? '#111218' : '#ffffff',
+      colorInput: dark ? '#111218' : '#ffffff',
+      colorInputForeground: dark ? '#f4f2fa' : '#0d0f14',
+      borderRadius: '10px',
+      fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+    },
+    options: {
+      elevation: 'flush',
+      socialButtonsPlacement: 'top',
+      socialButtonsVariant: 'blockButton',
+      privacyPageUrl: '/legal/privacy/',
+    },
+    elements: {
+      rootBox: { width: '100%' },
+      cardBox: { width: '100%', maxWidth: '100%', boxShadow: 'none', overflow: 'visible' },
+      card: { width: '100%', boxShadow: 'none', border: '0', padding: '0', background: 'transparent' },
+      header: { display: 'none' },
+      footer: { display: 'none' },
+      lastAuthenticationStrategyBadge: { display: 'none' },
+      socialButtonsBlockButton: { minHeight: '46px' },
+      formFieldInput: { minHeight: '46px' },
+      formButtonPrimary: { minHeight: '46px', textTransform: 'none', fontWeight: '650' },
+    },
+  };
+}
+
 const localization = {
   locale: 'es-ES', backButton: 'Volver', dividerText: 'o', formButtonPrimary: 'Continuar',
   formButtonPrimary__verify: 'Verificar', formFieldLabel__emailAddress: 'Correo electrónico',
@@ -101,7 +140,7 @@ function showSignedOut() {
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
   setVisible(home, false); syncHeaderControls(false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
-    Clerk.mountSignIn(signInNode, { routing: 'hash', withSignUp: true, signInForceRedirectUrl: ACCESS_PATH, signUpForceRedirectUrl: ACCESS_PATH });
+    Clerk.mountSignIn(signInNode, { routing: 'hash', withSignUp: true, appearance: signInAppearance(), signInForceRedirectUrl: ACCESS_PATH, signUpForceRedirectUrl: ACCESS_PATH });
     signInMounted = true;
   }
 }
@@ -243,19 +282,6 @@ window.addEventListener('load', async () => {
     if (!window.Clerk || !window.__internal_ClerkUICtor) throw new Error('No pudimos cargar el servicio de acceso.');
     await Clerk.load({
       ui: { ClerkUI: window.__internal_ClerkUICtor }, localization,
-      appearance: {
-        variables: { colorPrimary: '#237985', colorForeground: '#1d2026', colorMutedForeground: '#5f6470', colorBackground: '#ffffff', colorInputBackground: '#ffffff', colorInputForeground: '#1d2026', borderRadius: '10px', fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif' },
-        options: { elevation: 'flush', socialButtonsPlacement: 'top', socialButtonsVariant: 'blockButton', privacyPageUrl: '/legal/privacy/' },
-        elements: {
-          rootBox: { width: '100%' }, cardBox: { width: '100%', maxWidth: '100%', boxShadow: 'none', overflow: 'visible' },
-          card: { width: '100%', boxShadow: 'none', border: '0', padding: '0', background: 'transparent' },
-          header: { display: 'none' }, footer: { display: 'none' }, lastAuthenticationStrategyBadge: { display: 'none' },
-          socialButtonsBlockButton: { minHeight: '46px', borderColor: '#d9dde5', color: '#1d2026', backgroundColor: '#ffffff' },
-          formFieldLabel: { color: '#1d2026', opacity: '1' },
-          formFieldInput: { minHeight: '46px', borderColor: '#d9dde5', color: '#1d2026', backgroundColor: '#ffffff' },
-          formButtonPrimary: { minHeight: '46px', backgroundColor: '#237985', color: '#ffffff', textTransform: 'none', fontWeight: '650' },
-        },
-      },
     });
     Clerk.addListener(({ session }) => { void requestSync(session); }, { skipInitialEmit: true });
     await requestSync(Clerk.session);
