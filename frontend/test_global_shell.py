@@ -77,3 +77,15 @@ def test_global_head_resolves_versioned_script_urls():
     access = read("access/index.html")
     assert "core-head\\.js(?:[?#].*)?$" in head
     assert "core-head.js?v=" in access
+
+
+def test_clerk_appearance_owns_sign_in_colors():
+    app = read("access/app.js")
+    styles = read("access/styles.css")
+    assert "colorForeground: '#1d2026'" in app
+    assert "colorMutedForeground: '#5f6470'" in app
+    assert "colorInputForeground: '#1d2026'" in app
+    assert "colorBackground: '#ffffff'" in app
+    assert "colorInputBackground: '#ffffff'" in app
+    assert ".access-clerk input" not in styles
+    assert "color-scheme:light" not in styles
