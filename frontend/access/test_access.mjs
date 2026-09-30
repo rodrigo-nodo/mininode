@@ -60,7 +60,7 @@ test('app.mininode.io root redirects into the access experience', () => {
 
 test('offers explicit recovery when an existing Clerk session is rejected', () => {
   assert.match(app, /Tu sesión ya no puede validarse\. Cierra la sesión y vuelve a acceder\./);
-  assert.match(app, /setVisible\(errorSignOutButton, Boolean\(Clerk\.session\)\)/);
+  assert.match(app, /setVisible\(errorSignOutButton, hasSession\)/);
   assert.match(html, /id="access-error-sign-out"/);
 });
 
