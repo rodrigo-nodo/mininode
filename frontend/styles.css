@@ -213,16 +213,16 @@ body{min-height:100vh}
 .legal-header{margin-bottom:clamp(36px,5vw,56px)}
 .legal-header h1{font-size:var(--text-h1);letter-spacing:-.04em;margin:0 0 8px}
 .legal-version{color:var(--muted);font-size:.9rem;margin:0}
-.legal-layout{display:grid;gap:clamp(36px,6vw,84px);grid-template-columns:minmax(180px,240px) minmax(0,720px);align-items:start}
+.legal-layout{display:grid;gap:clamp(36px,6vw,84px);grid-template-columns:minmax(180px,240px) minmax(0,720px);align-items:start;min-width:0;width:100%}
 .legal-toc{position:sticky;top:24px}
 .legal-toc strong{display:block;font-size:.82rem;margin-bottom:12px}
 .legal-toc nav{display:grid;gap:8px}
 .legal-toc a{color:var(--muted);font-size:.88rem;text-decoration:none}
 .legal-toc a:hover,.legal-toc a:focus-visible{color:var(--primary)}
-.legal-content section{scroll-margin-top:24px}
+.legal-content{min-width:0;width:100%}\n.legal-content section{min-width:0;scroll-margin-top:24px}
 .legal-content section+section{border-top:1px solid var(--border);margin-top:28px;padding-top:28px}
 .legal-content h2{font-size:1.18rem;margin:0 0 8px}
-.legal-content p{margin:0;max-width:70ch}
+.legal-content p{margin:0;max-width:70ch;overflow-wrap:anywhere}
 .legal-content a{color:var(--primary)}
 
 /* Account home can use desktop width; login remains deliberately compact. */
@@ -244,9 +244,9 @@ body{min-height:100vh}
   .mobile-menu .theme-toggle__label{display:inline}
   .theme-toggle__label{display:none}
   .theme-toggle{border:0;min-height:36px;padding:6px}
-  .contact-layout,.legal-layout{grid-template-columns:1fr}
+  .contact-layout,.legal-layout{grid-template-columns:minmax(0,1fr)}
   .contact-layout{padding-top:28px}
-  .legal-page{padding-top:28px}
+  .legal-page{overflow-x:hidden;padding-top:28px}\n  .legal-header h1{font-size:clamp(2rem,10vw,2.75rem);overflow-wrap:anywhere}\n  .legal-content p{max-width:none;width:100%}
   .legal-toc{border-bottom:1px solid var(--border);padding-bottom:20px;position:static}
   .legal-toc nav{display:flex;gap:8px 16px;overflow-x:auto;padding-bottom:4px}
   .legal-toc a{white-space:nowrap}
