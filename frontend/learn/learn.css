@@ -340,3 +340,23 @@
   .learn-catalog { padding-top: var(--space-4); }
   .learn-card { padding: var(--space-6) var(--space-1); }
 }
+
+
+/* Catalog uses desktop width for discovery while readers keep their reading measure. */
+@media (min-width: 860px) {
+  .learn-shelf:has(.learn-card--brief) {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .learn-shelf:has(.learn-card--brief) .learn-shelf__heading { grid-column: 1 / -1; }
+  .learn-shelf:has(.learn-card--brief) .learn-card {
+    border: 1px solid var(--learn-border);
+    border-radius: var(--radius-md);
+    grid-template-columns: 1fr;
+    padding: var(--space-6);
+  }
+  .learn-shelf:has(.learn-card--brief) .learn-card__duration { justify-self: start; }
+  .learn-shelf:has(.learn-card--brief) .learn-card__content,
+  .learn-shelf:has(.learn-card--brief) .learn-card__footer { grid-column: 1; }
+}
