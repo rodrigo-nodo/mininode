@@ -225,11 +225,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("Mininode Privacy", HOME_HTML)
         self.assertIn('<span class="product-status">Próximamente</span>', HOME_HTML)
         self.assertIn("Ordena cómo tu negocio maneja los datos personales por dentro.", DATA_HTML)
-        self.assertIn('<p class="data-state">Próximamente</p>', DATA_HTML)
-        self.assertIn(
-            "Privacy Data ayuda a pequeñas empresas a entender y ordenar el manejo interno de datos personales.",
-            DATA_HTML,
-        )
+        self.assertIn("Construye un mapa simple de dónde aparecen los datos personales en tu negocio y cómo los utilizas.", DATA_HTML)
+        self.assertIn("<li>Gratis</li>", DATA_HTML)
+        self.assertIn("<li>Sin registro</li>", DATA_HTML)
         self.assertNotIn("En desarrollo", HOME_HTML)
         self.assertNotIn("En desarrollo", DATA_HTML)
 
