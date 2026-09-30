@@ -60,3 +60,13 @@ def test_learn_readers_only_use_global_theme_control():
         page = read(path)
         assert "data-theme-toggle" not in page
         assert "assets/js/core-theme.js" not in page
+
+
+def test_header_has_no_literal_newline_escape_and_has_mobile_menu():
+    header = read("partials/header-nav.html")
+    assert r"\\n" not in header
+    assert 'class="nav-toggle"' in header
+    assert 'id="site-mobile-menu"' in header
+    include = read("include.js")
+    assert "aria-expanded" in include
+    assert "Abrir menú" in include
