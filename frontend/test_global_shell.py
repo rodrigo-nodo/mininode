@@ -40,3 +40,23 @@ def test_contact_uses_desktop_layout():
     assert 'class="container contact-layout"' in contact
     assert 'class="contact-layout__intro"' in contact
     assert 'class="contact-layout__form"' in contact
+
+
+def test_header_brand_uses_official_mark():
+    header = read("partials/header-nav.html")
+    assert 'class="brand-mark"' in header
+    assert '/assets/mininode-favicon.svg' in header
+
+
+def test_learn_readers_only_use_global_theme_control():
+    readers = [
+        "learn/privacy/index.html",
+        "learn/briefs/001-nueva-autoridad-de-datos/index.html",
+        "learn/briefs/002-evidencia-de-cumplimiento/index.html",
+        "learn/briefs/003-datos-personales/index.html",
+        "learn/guides/001-proteccion-de-datos-personales/index.html",
+    ]
+    for path in readers:
+        page = read(path)
+        assert "data-theme-toggle" not in page
+        assert "assets/js/core-theme.js" not in page
