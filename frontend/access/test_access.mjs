@@ -88,3 +88,11 @@ test('does not bind sign out before the shared header is included', () => {
   assert.match(app, /if \(signOutButton && !signOutButton\.dataset\.bound\)/);
   assert.match(app, /signOutButton\.addEventListener\('click', signOut\)/);
 });
+
+
+test('handles Clerk bootstrap failure before the global exists', () => {
+  assert.match(app, /Boolean\(window\.Clerk\?\.session\)/);
+  assert.doesNotMatch(app, /Boolean\(Clerk\.session\)/);
+  assert.equal((app.match(/async function loadClerkRuntime\(\)/g) || []).length, 1);
+  assert.equal((app.match(/async function loadExternalScript\(/g) || []).length, 1);
+});
