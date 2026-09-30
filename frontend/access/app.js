@@ -18,7 +18,8 @@ const errorPanel = document.querySelector('#access-error');
 const errorMessage = document.querySelector('#access-error-message');
 const note = document.querySelector('#access-note');
 const home = document.querySelector('#account-home');
-let signOutButton = null;\nlet headerAccessLink = null;
+let signOutButton = null;
+let headerAccessLink = null;
 const retryButton = document.querySelector('#access-retry');
 const errorSignOutButton = document.querySelector('#access-error-sign-out');
 const workspacePickerLabel = document.querySelector('#workspace-picker-label');
@@ -37,7 +38,18 @@ let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 
-function syncHeaderControls(signedIn) {\n  signOutButton = document.querySelector('#header-sign-out');\n  headerAccessLink = document.querySelector('#header-access-link');\n  setVisible(signOutButton, signedIn);\n  setVisible(headerAccessLink, !signedIn);\n  document.querySelectorAll('#site-header-nav .nav > a:not(#header-access-link)').forEach((link) => setVisible(link, false));\n  if (signOutButton && !signOutButton.dataset.bound) {\n        signOutButton.dataset.bound = 'true';\n  }\n}\n\nfunction setVisible(element, visible) {
+function syncHeaderControls(signedIn) {
+  signOutButton = document.querySelector('#header-sign-out');
+  headerAccessLink = document.querySelector('#header-access-link');
+  setVisible(signOutButton, signedIn);
+  setVisible(headerAccessLink, !signedIn);
+  document.querySelectorAll('#site-header-nav .nav > a:not(#header-access-link)').forEach((link) => setVisible(link, false));
+  if (signOutButton && !signOutButton.dataset.bound) {
+        signOutButton.dataset.bound = 'true';
+  }
+}
+
+function setVisible(element, visible) {
   if (!element) return;
   element.hidden = !visible;
 }
@@ -184,6 +196,10 @@ siteAddForm.addEventListener('submit', async (event) => {
 signOutButton.addEventListener('click', signOut);
 errorSignOutButton.addEventListener('click', signOut);
 retryButton.addEventListener('click', () => { lastResolvedSessionId = null; void requestSync(Clerk.session); });
+
+window.addEventListener('mininode:includes-loaded', () => {
+  syncHeaderControls(Boolean(Clerk.session));
+});
 
 window.addEventListener('load', async () => {
   if (!window.Clerk || !window.__internal_ClerkUICtor) { showError('No pudimos cargar el servicio de acceso.'); return; }
