@@ -1,8 +1,11 @@
 <header class="header container" id="site-header-nav">
   <a class="brand" href="/" aria-label="Mininode — inicio">
-    <img class="brand-mark" src="/assets/mininode-favicon.svg" alt="" width="22" height="22">\n    <span class="brand-name">Mininode</span>
+    <img class="brand-mark" src="/assets/mininode-favicon.svg" alt="" width="22" height="22">
+    <span class="brand-name">Mininode</span>
   </a>
-  <nav class="nav" aria-label="Principal">
+  <nav class="nav" id="site-primary-nav" aria-label="Principal">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-mobile-menu" aria-label="Abrir menú">☰</button>
+    <div class="mobile-menu" id="site-mobile-menu" hidden>
     <a class="nav__public" href="/#products">Productos</a>
     <a class="nav__public" href="/learn/">Recursos</a>
     <a class="nav__public" href="/contact/">Contacto</a>
@@ -13,5 +16,6 @@
     </button>
     <a id="header-access-link" href="/access/">Acceder</a>
     <button id="header-sign-out" class="header-auth-button" type="button" hidden>Cerrar sesión</button>
+    </div>
   </nav>
 </header>
