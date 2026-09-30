@@ -2,10 +2,11 @@
 (function(){
   function relPrefix(){
     try{
-      const self = document.currentScript || Array.from(document.scripts).find(s => (s.getAttribute && /assets\/js\/core-head\.js$/.test(s.getAttribute('src')||'')));
+      const coreHeadPattern = /assets\/js\/core-head\.js(?:[?#].*)?$/;
+      const self = document.currentScript || Array.from(document.scripts).find(s => (s.getAttribute && coreHeadPattern.test(s.getAttribute('src')||'')));
       const srcAttr = self && self.getAttribute && self.getAttribute('src');
-      if (srcAttr && /assets\/js\/core-head\.js$/.test(srcAttr)) {
-        return srcAttr.replace(/assets\/js\/core-head\.js$/, ''); // e.g., '../../'
+      if (srcAttr && coreHeadPattern.test(srcAttr)) {
+        return srcAttr.replace(coreHeadPattern, ''); // e.g., '../../'
       }
     }catch{}
     try{
