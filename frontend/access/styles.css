@@ -62,6 +62,8 @@
 
 
 /* Clerk sign-in is an embedded surface: keep it light in either site theme. */
-.access-clerk{background:#fff;border-radius:var(--radius-md);color:#1d2026;padding:14px}
-.access-clerk input{color:#1d2026!important;background:#fff!important;border-color:#d9dde5!important}
-.access-clerk label{color:#1d2026!important;opacity:1!important}
+.access-clerk{background:#fff;border:1px solid #d9dde5;border-radius:var(--radius-md);color:#1d2026;padding:18px}
+.access-clerk,.access-clerk *{color-scheme:light}
+.access-clerk input,.access-clerk [role="textbox"]{color:#1d2026!important;background:#fff!important;border-color:#bfc5cf!important}
+.access-clerk label,.access-clerk [data-localization-key*="formFieldLabel"]{color:#1d2026!important;opacity:1!important}
+.access-clerk input::placeholder{color:#747b87!important;opacity:1!important}
