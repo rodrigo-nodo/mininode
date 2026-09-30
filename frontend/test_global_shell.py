@@ -70,3 +70,10 @@ def test_header_has_no_literal_newline_escape_and_has_mobile_menu():
     include = read("include.js")
     assert "aria-expanded" in include
     assert "Abrir menú" in include
+
+
+def test_global_head_resolves_versioned_script_urls():
+    head = read("assets/js/core-head.js")
+    access = read("access/index.html")
+    assert "core-head\\.js(?:[?#].*)?$" in head
+    assert "core-head.js?v=" in access
