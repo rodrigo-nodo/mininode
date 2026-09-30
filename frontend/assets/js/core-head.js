@@ -50,6 +50,15 @@
       });
       // Append to head
       while(tmp.firstChild){ document.head.appendChild(tmp.firstChild); }
+
+      // Theme behavior is part of the global shell, so every page that loads
+      // core-head gets the same preference without page-specific wiring.
+      if (!document.querySelector('script[data-mininode-theme]')) {
+        const themeScript = document.createElement('script');
+        themeScript.src = prefix + 'assets/js/core-theme.js';
+        themeScript.dataset.mininodeTheme = 'true';
+        document.head.appendChild(themeScript);
+      }
     }catch(e){ /* silent */ }
   }
   if (document.readyState === 'loading') {
