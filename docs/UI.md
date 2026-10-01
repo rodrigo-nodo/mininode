@@ -41,6 +41,8 @@ Usar la escala corta de espacios y radios de `tokens.css`. Preferir bordes sutil
 - `frontend/partials/header-nav.html` y `frontend/partials/footer.html` son las únicas fuentes del header y footer; las páginas deben incluirlos mediante el mecanismo común existente.
 - `frontend/assets/js/core-auth.js` (`window.MininodeAuth`) es la única fuente frontend para identidad y sesión. Ninguna página o producto debe cargar/configurar Clerk, escuchar su sesión, obtener tokens o cerrar sesión directamente.
 - El header representa el estado entregado por `MininodeAuth`; CSS o JavaScript específicos de una página no deben ocultar, duplicar ni redefinir sus controles globales.
+- En sesión iniciada, la identidad se agrupa bajo **Mi cuenta**. El header no debe presentar **Cerrar sesión** como acción principal independiente; el menú de cuenta concentra identidad y sesión, mientras la navegación principal queda reservada para producto y contenido.
+- **Workspace** es contexto técnico/de trabajo, no una etiqueta de navegación global. Si existe un solo workspace no se eleva al header; la selección de workspace solo se muestra cuando hay más de uno.
 - Reutilizar botones, inputs, formularios, badges, cards básicas y estados de `frontend/assets/css/components.css` antes de crear variantes.
 - Todo control interactivo debe tener nombre accesible, contraste suficiente y un estado `:focus-visible` claro.
 - Conservar navegación por teclado, responsive, temas existentes y estados semánticos.
