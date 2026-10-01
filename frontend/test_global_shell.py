@@ -15,6 +15,7 @@ def test_shared_header_owns_global_theme_control():
     assert "Productos" in header and "Recursos" in header and "Contacto" in header
     assert 'id="header-auth-control"' in header
     assert header.count('id="header-auth-control"') == 1
+    assert 'href="/access/"' in header
     assert 'id="header-access-link"' not in header
     assert 'id="header-sign-out"' not in header
 
@@ -202,3 +203,12 @@ def test_mobile_shell_uses_atomic_auth_control_and_stays_full_width():
     assert ".header,.footer{width:100%}" in styles
     assert header.count('id="header-auth-control"') == 1
     assert "control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder'" in auth
+
+
+def test_signed_out_auth_control_keeps_native_access_navigation():
+    header = read("partials/header-nav.html")
+    auth = read("assets/js/core-auth.js")
+    assert '<a id="header-auth-control"' in header
+    assert 'href="/access/"' in header
+    assert "if (!api.isSignedIn()) return;" in auth
+    assert "event.preventDefault()" in auth
