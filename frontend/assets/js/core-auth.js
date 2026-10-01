@@ -129,11 +129,14 @@
       if (wantsUi && !initializedWithUi) {
         throw new Error('Authentication was initialized without UI support');
       }
+      syncHeader(Boolean(currentSession));
       return api;
     }
     readyPromise = initialize(options);
     try {
-      return await readyPromise;
+      const result = await readyPromise;
+      syncHeader(Boolean(currentSession));
+      return result;
     } catch (error) {
       readyPromise = null;
       throw error;
