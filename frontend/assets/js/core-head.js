@@ -64,7 +64,7 @@
       // Keep the shared public header aligned with the current Clerk session.
       if (!document.querySelector('script[data-mininode-auth]')) {
         const authScript = document.createElement('script');
-        authScript.src = prefix + 'assets/js/core-auth.js?v=282a';
+        authScript.src = prefix + 'assets/js/core-auth.js?v=282b';
         authScript.dataset.mininodeAuth = 'true';
         document.head.appendChild(authScript);
       }
