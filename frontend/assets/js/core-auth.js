@@ -7,6 +7,7 @@
   if (path.startsWith('/access') || path.startsWith('/privacy/')) return;
 
   let clerkReady = null;
+  let initialized = false;
 
   async function loadClerk() {
     if (window.Clerk) return window.Clerk;
@@ -70,6 +71,12 @@
   }
 
   async function initialize() {
+    if (initialized) {
+      syncHeader(Boolean(window.Clerk?.session));
+      return;
+    }
+    initialized = true;
+
     try {
       const clerk = await loadClerk();
       syncHeader(Boolean(clerk.session));
@@ -80,6 +87,20 @@
     }
   }
 
-  window.addEventListener('mininode:includes-loaded', initialize, { once: true });
-  if (document.querySelector('#header-access-link')) initialize();
+  function initializeWhenHeaderReady() {
+    if (document.querySelector('#header-access-link')) void initialize();
+  }
+
+  window.addEventListener('mininode:includes-loaded', initializeWhenHeaderReady, { once: true });
+  initializeWhenHeaderReady();
+
+  // The shared header is injected asynchronously. Observe DOM changes as a
+  // fallback so auth state still binds if the include event and this script
+  // cross in flight.
+  const observer = new MutationObserver(() => {
+    if (!document.querySelector('#header-access-link')) return;
+    initializeWhenHeaderReady();
+    observer.disconnect();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 }());
