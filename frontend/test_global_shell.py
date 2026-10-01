@@ -116,3 +116,5 @@ def test_global_shell_reflects_clerk_session_on_public_pages():
     assert "await window.Clerk?.signOut()" in auth
     assert "path.startsWith('/access')" in auth
     assert "path.startsWith('/privacy/')" in auth
+    assert "new MutationObserver" in auth
+    assert "initializeWhenHeaderReady" in auth
