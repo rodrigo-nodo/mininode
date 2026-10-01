@@ -116,6 +116,7 @@ def test_global_shell_reflects_clerk_session_on_public_pages():
     assert "await window.Clerk?.signOut()" in auth
     assert "path.startsWith('/access')" in auth
     assert "path.startsWith('/privacy/')" in auth
+    assert "!path.startsWith('/privacy/data/')" in auth
     assert "new MutationObserver" in auth
     assert "initializeWhenHeaderReady" in auth
 
@@ -146,3 +147,16 @@ def test_account_uses_standard_shared_shell_without_hiding_public_nav():
     assert 'data-include="../partials/header-nav.html"' in access
     assert 'data-include="../partials/footer.html"' in access
     assert "nav > a:not(#header-access-link)" not in app
+
+
+def test_access_styles_do_not_hide_shared_shell_navigation():
+    styles = read("access/styles.css")
+    assert "[hidden] { display: none !important; }" not in styles
+    assert ".mobile-menu[hidden]" not in styles
+
+
+def test_privacy_data_uses_global_auth_shell():
+    auth = read("assets/js/core-auth.js")
+    data = read("privacy/data/index.html")
+    assert "core-head.js?v=282g" in data
+    assert "!path.startsWith('/privacy/data/')" in auth
