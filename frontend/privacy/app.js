@@ -517,7 +517,12 @@ function waitForMininodeAuth() {
 
 const resolveWorkspaceForDiagnosis = async () => {
   const auth = await waitForMininodeAuth();
-  await auth.ready();
+  try {
+    await auth.ready();
+  } catch {
+    // Privacy Web remains publicly usable even if the optional identity runtime is unavailable.
+    return null;
+  }
   const token = await auth.getToken();
   if (!token) return null;
 
