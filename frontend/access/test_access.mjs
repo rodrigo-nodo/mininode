@@ -194,6 +194,13 @@ test('Privacy Web opens with the active workspace context', () => {
 });
 
 
+test('formats latest review date with Chile time', () => {
+  assert.match(app, /timeZone: 'America\/Santiago'/);
+  assert.match(app, /hour: '2-digit'/);
+  assert.match(app, /minute: '2-digit'/);
+  assert.match(app, /hour12: false/);
+});
+
 test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /\/api\/privacy\/workspaces\/\$\{encodeURIComponent\(workspace\.id\)\}\/latest-reviews/);
   assert.match(app, /Última revisión: \$\{formattedDate\}/);
