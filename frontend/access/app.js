@@ -64,8 +64,6 @@ const errorPanel = document.querySelector('#access-error');
 const errorMessage = document.querySelector('#access-error-message');
 const note = document.querySelector('#access-note');
 const home = document.querySelector('#account-home');
-let signOutButton = null;
-let headerAccessLink = null;
 const retryButton = document.querySelector('#access-retry');
 const errorSignOutButton = document.querySelector('#access-error-sign-out');
 const workspacePickerLabel = document.querySelector('#workspace-picker-label');
@@ -84,50 +82,13 @@ let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 
-async function loadExternalScript(src, attributes = {}) {
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    for (const [name, value] of Object.entries(attributes)) script.setAttribute(name, value);
-    script.addEventListener('load', resolve, { once: true });
-    script.addEventListener('error', () => reject(new Error('No pudimos cargar Clerk.')), { once: true });
-    document.head.appendChild(script);
+let mininodeAuth = null;
+
+function waitForMininodeAuth() {
+  if (window.MininodeAuth) return Promise.resolve(window.MininodeAuth);
+  return new Promise((resolve) => {
+    window.addEventListener('mininode:auth-api-ready', () => resolve(window.MininodeAuth), { once: true });
   });
-}
-
-function clerkDomainFromPublishableKey(publishableKey) {
-  const encoded = publishableKey.split('_')[2];
-  if (!encoded) throw new Error('Configuración Clerk inválida.');
-  const domain = atob(encoded).slice(0, -1);
-  if (!domain || !/^[a-z0-9.-]+$/i.test(domain)) throw new Error('Configuración Clerk inválida.');
-  return domain;
-}
-
-async function loadClerkRuntime() {
-  showLoading('Leyendo configuración de acceso…');
-  const response = await fetch('/clerk-config', { headers: { Accept: 'application/json' }, cache: 'no-store' });
-  if (!response.ok) throw new Error('Configuración de acceso no disponible.');
-  const { publishableKey } = await response.json();
-  if (typeof publishableKey !== 'string' || !/^pk_(?:test|live)_/.test(publishableKey)) throw new Error('Configuración de acceso inválida.');
-  if (window.location.hostname === 'app.mininode.io' && !publishableKey.startsWith('pk_live_')) {
-    throw new Error('Mininode no puede usar una instancia Clerk de desarrollo en producción.');
-  }
-  const clerkDomain = clerkDomainFromPublishableKey(publishableKey);
-  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/ui@1/dist/ui.browser.js');
-  await loadExternalScript('https://' + clerkDomain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js', { 'data-clerk-publishable-key': publishableKey });
-}
-
-function syncHeaderControls(signedIn) {
-  signOutButton = document.querySelector('#header-sign-out');
-  headerAccessLink = document.querySelector('#header-access-link');
-  setVisible(signOutButton, signedIn);
-  setVisible(headerAccessLink, !signedIn);
-  if (signOutButton && !signOutButton.dataset.bound) {
-    signOutButton.addEventListener('click', signOut);
-    signOutButton.dataset.bound = 'true';
-  }
 }
 
 function setVisible(element, visible) {
@@ -138,34 +99,34 @@ function setVisible(element, visible) {
 function showLoading(message = 'Preparando acceso…') {
   loading.textContent = message;
   setVisible(loginPanel, true); setVisible(loading, true); setVisible(signInNode, false);
-  setVisible(errorPanel, false); setVisible(home, false); syncHeaderControls(false);
+  setVisible(errorPanel, false); setVisible(home, false);
 }
 
 function showSignedOut() {
   lastResolvedSessionId = null; context = { workspaces: [] }; activeWorkspaceId = '';
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
-  setVisible(home, false); syncHeaderControls(false); setVisible(signInNode, true); setVisible(note, true);
+  setVisible(home, false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
-    Clerk.mountSignIn(signInNode, { routing: 'hash', withSignUp: true, appearance: signInAppearance(), signInForceRedirectUrl: ACCESS_PATH, signUpForceRedirectUrl: ACCESS_PATH });
+    mininodeAuth.mountSignIn(signInNode, { routing: 'hash', withSignUp: true, appearance: signInAppearance(), signInForceRedirectUrl: ACCESS_PATH, signUpForceRedirectUrl: ACCESS_PATH });
     signInMounted = true;
   }
 }
 
 function unmountSignIn() {
   if (!signInMounted) return;
-  Clerk.unmountSignIn(signInNode); signInMounted = false;
+  mininodeAuth?.unmountSignIn(signInNode); signInMounted = false;
 }
 
 function showError(message) {
   unmountSignIn(); setVisible(loginPanel, true); setVisible(loading, false); setVisible(signInNode, false);
-  const hasSession = Boolean(window.Clerk?.session);
-  setVisible(home, false); syncHeaderControls(hasSession); setVisible(errorPanel, true); setVisible(note, true);
+  const hasSession = Boolean(mininodeAuth?.isSignedIn());
+  setVisible(home, false); setVisible(errorPanel, true); setVisible(note, true);
   setVisible(errorSignOutButton, hasSession);
   errorMessage.textContent = message;
 }
 
 async function api(path, options = {}) {
-  const token = await Clerk.session?.getToken();
+  const token = await mininodeAuth.getToken();
   if (!token) throw new Error('Tu sesión ya no está disponible. Vuelve a acceder.');
 
   const response = await fetch(path, {
@@ -182,7 +143,7 @@ async function api(path, options = {}) {
 }
 
 async function loadAccount(session) {
-  if (!session) throw new Error('Clerk no entregó una sesión válida.');
+  if (!session) throw new Error('El servicio de acceso no entregó una sesión válida.');
 
   await api('/api/access/me');
   let nextContext = await api('/api/access/context');
@@ -228,7 +189,7 @@ function renderHome() {
   setVisible(workspacePickerLabel, workspaces.length > 1);
   renderSites(active);
 
-  unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true); syncHeaderControls(true);
+  unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);
 }
 
 async function syncAuthState(session) {
@@ -249,13 +210,13 @@ async function requestSync(session) {
   try { await syncAuthState(session); }
   finally {
     syncInFlight = false;
-    if (syncRequested) { syncRequested = false; await requestSync(Clerk.session); }
+    if (syncRequested) { syncRequested = false; await requestSync(mininodeAuth.session()); }
   }
 }
 
 async function signOut() {
   showLoading('Cerrando sesión…');
-  try { await Clerk.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
+  try { await mininodeAuth.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
 }
 
 workspacePicker.addEventListener('change', () => { activeWorkspaceId = workspacePicker.value; renderHome(); });
@@ -276,20 +237,19 @@ siteAddForm.addEventListener('submit', async (event) => {
 });
 
 errorSignOutButton.addEventListener('click', signOut);
-retryButton.addEventListener('click', () => { lastResolvedSessionId = null; void requestSync(Clerk.session); });
-
-window.addEventListener('mininode:includes-loaded', () => {
-  syncHeaderControls(Boolean(window.Clerk?.session));
+retryButton.addEventListener('click', () => {
+  lastResolvedSessionId = null;
+  void requestSync(mininodeAuth?.session() || null);
 });
 
 window.addEventListener('load', async () => {
   try {
-    await loadClerkRuntime();
-    if (!window.Clerk || !window.__internal_ClerkUICtor) throw new Error('No pudimos cargar el servicio de acceso.');
-    await Clerk.load({
-      ui: { ClerkUI: window.__internal_ClerkUICtor }, localization,
-    });
-    Clerk.addListener(({ session }) => { void requestSync(session); }, { skipInitialEmit: true });
-    await requestSync(Clerk.session);
-  } catch { showError('No pudimos iniciar el servicio de acceso. Intenta nuevamente.'); }
+    showLoading('Leyendo configuración de acceso…');
+    mininodeAuth = await waitForMininodeAuth();
+    await mininodeAuth.ready({ ui: true, localization });
+    mininodeAuth.subscribe(({ session }) => { void requestSync(session); }, { emitCurrent: false });
+    await requestSync(mininodeAuth.session());
+  } catch {
+    showError('No pudimos iniciar el servicio de acceso. Intenta nuevamente.');
+  }
 });
