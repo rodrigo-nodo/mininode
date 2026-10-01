@@ -132,7 +132,11 @@ test('global sign-out failure keeps the user on the current page and exposes ret
       scripts: [],
       querySelector(selector) { return selector === '#header-auth-control' ? control : null; },
     },
-    MutationObserver: class { observe() {} disconnect() {} },
+    MutationObserver: class {
+      constructor(callback) { this.callback = callback; }
+      observe() { this.callback(); }
+      disconnect() {}
+    },
     CustomEvent: class { constructor(type) { this.type = type; } },
     console,
     Set,
