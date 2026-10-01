@@ -84,8 +84,9 @@ test('refreshes the identity token through MininodeAuth for every authenticated 
 test('shared header session state is owned by MininodeAuth', () => {
   assert.doesNotMatch(app, /#header-sign-out/);
   assert.doesNotMatch(app, /#header-access-link/);
-  assert.match(coreAuth, /#header-sign-out/);
-  assert.match(coreAuth, /#header-access-link/);
+  assert.doesNotMatch(app, /#header-auth-control/);
+  assert.match(coreAuth, /#header-auth-control/);
+  assert.match(coreAuth, /control\.textContent = signedIn \? 'Cerrar sesión' : 'Acceder'/);
 });
 
 
