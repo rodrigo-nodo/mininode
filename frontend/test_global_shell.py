@@ -91,34 +91,42 @@ def test_clerk_sign_in_follows_mininode_theme():
     assert "function mininodeTheme()" in app
     assert "colorInput:" in app
     assert "colorInputBackground" not in app
-    clerk_load = app.split("await Clerk.load({", 1)[1].split("Clerk.addListener", 1)[0]
-    assert "appearance:" not in clerk_load
+    auth = read("assets/js/core-auth.js")
+    assert "window.MininodeAuth = api" in auth
+    assert "mountSignIn(node, options = {})" in auth
     assert ".access-clerk input" not in styles
     assert "color-scheme:light" not in styles
 
 
-def test_privacy_header_reflects_clerk_session_without_workspace_site_query():
+def test_privacy_web_consumes_shared_mininode_auth():
     app = read("privacy/app.js")
-    assert "syncPrivacyHeader(Boolean(window.Clerk?.session))" in app
-    assert "if (!requestedWorkspaceSiteId) {" in app
-    assert "syncPrivacyHeader(Boolean(Clerk.session))" in app
-    assert "Clerk.addListener(({ session }) => syncPrivacyHeader(Boolean(session))" in app
-    assert "requestedWorkspaceSiteId && window.Clerk?.session" not in app
+    assert "waitForMininodeAuth" in app
+    assert "auth.getToken()" in app
+    assert "fetch('/api/access/context'" in app
+    assert "Clerk." not in app
+    assert "window.Clerk" not in app
+    assert "fetch('/clerk-config'" not in app
+    assert "@clerk/" not in app
 
 
-def test_global_shell_reflects_clerk_session_on_public_pages():
+
+def test_global_shell_owns_identity_session_and_header_state():
     head = read("assets/js/core-head.js")
     auth = read("assets/js/core-auth.js")
     assert "assets/js/core-auth.js?v=" in head
-    assert "Boolean(clerk.session)" in auth
+    assert "window.MininodeAuth = api" in auth
+    assert "async getToken()" in auth
+    assert "async signOut()" in auth
+    assert "subscribe(listener" in auth
+    assert "mountSignIn(node, options = {})" in auth
     assert "header-access-link" in auth
     assert "header-sign-out" in auth
-    assert "await window.Clerk?.signOut()" in auth
-    assert "path.startsWith('/access')" in auth
-    assert "path.startsWith('/privacy/')" in auth
-    assert "!path.startsWith('/privacy/data/')" in auth
+    assert "window.Clerk.addListener" in auth
+    assert "fetch('/clerk-config'" in auth
+    assert "@clerk/clerk-js@6" in auth
+    assert "path.startsWith(" not in auth
     assert "new MutationObserver" in auth
-    assert "initializeWhenHeaderReady" in auth
+
 
 
 def test_all_shell_pages_version_global_head_loader():
@@ -138,7 +146,7 @@ def test_all_shell_pages_version_global_head_loader():
     ]
     for path in pages:
         page = read(path)
-        assert "core-head.js?v=282g" in page
+        assert "core-head.js?v=282h" in page
 
 
 def test_account_uses_standard_shared_shell_without_hiding_public_nav():
@@ -146,7 +154,14 @@ def test_account_uses_standard_shared_shell_without_hiding_public_nav():
     app = read("access/app.js")
     assert 'data-include="../partials/header-nav.html"' in access
     assert 'data-include="../partials/footer.html"' in access
+    assert 'data-mininode-auth-ui="clerk"' in access
     assert "nav > a:not(#header-access-link)" not in app
+    assert "waitForMininodeAuth" in app
+    assert "mininodeAuth.getToken()" in app
+    assert "Clerk." not in app
+    assert "window.Clerk" not in app
+    assert "fetch('/clerk-config'" not in app
+    assert "@clerk/" not in app
 
 
 def test_access_styles_do_not_hide_shared_shell_navigation():
@@ -158,5 +173,20 @@ def test_access_styles_do_not_hide_shared_shell_navigation():
 def test_privacy_data_uses_global_auth_shell():
     auth = read("assets/js/core-auth.js")
     data = read("privacy/data/index.html")
-    assert "core-head.js?v=282g" in data
-    assert "!path.startsWith('/privacy/data/')" in auth
+    assert "core-head.js?v=282h" in data
+    assert "path.startsWith(" not in auth
+
+
+def test_products_do_not_own_clerk_runtime():
+    auth = read("assets/js/core-auth.js")
+    product_apps = [
+        read("access/app.js"),
+        read("privacy/app.js"),
+    ]
+    assert "fetch('/clerk-config'" in auth
+    assert "@clerk/clerk-js@6" in auth
+    for app in product_apps:
+        assert "fetch('/clerk-config'" not in app
+        assert "@clerk/" not in app
+        assert "Clerk." not in app
+        assert "window.Clerk" not in app
