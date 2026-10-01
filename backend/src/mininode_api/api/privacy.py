@@ -417,7 +417,6 @@ def diagnose_workspace_url(
     if site is None:
         raise HTTPException(status_code=404, detail="Espacio no encontrado.")
 
-    diagnostic = {**diagnostic, "workspace_site_id": site.id}
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
@@ -431,7 +430,7 @@ def diagnose_workspace_url(
                 "diagnostic_id": stored.id,
                 "purchase_expires_at": stored.purchase_expires_at,
             }
-    return diagnostic
+    return {**diagnostic, "workspace_site_id": site.id}
 
 
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
