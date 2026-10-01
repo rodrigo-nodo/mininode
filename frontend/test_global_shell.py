@@ -190,3 +190,9 @@ def test_products_do_not_own_clerk_runtime():
         assert "@clerk/" not in app
         assert "Clerk." not in app
         assert "window.Clerk" not in app
+
+
+def test_mobile_shell_honors_hidden_auth_link_and_stays_full_width():
+    styles = read("styles.css")
+    assert ".header,.footer{width:100%}" in styles
+    assert ".mobile-menu a[hidden],.mobile-menu .header-auth-button[hidden]{display:none!important}" in styles
