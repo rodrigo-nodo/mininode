@@ -32,6 +32,31 @@ body{
 .nav a:hover{color:var(--primary);opacity:1}
 .header-auth-button{border:0;background:transparent;color:var(--fg);cursor:pointer;font:inherit;font-size:.95rem;font-weight:600;opacity:.78;padding:0}
 .header-auth-button:hover,.header-auth-button:focus-visible{color:var(--primary);opacity:1}
+.account-menu{position:relative}
+.account-menu > summary{
+  align-items:center;color:var(--fg);cursor:pointer;display:inline-flex;font-size:.95rem;font-weight:600;
+  gap:6px;list-style:none;opacity:.78;user-select:none
+}
+.account-menu > summary::-webkit-details-marker{display:none}
+.account-menu > summary:hover,.account-menu > summary:focus-visible{color:var(--primary);opacity:1}
+.account-menu[open] > summary{color:var(--primary);opacity:1}
+.account-menu__panel{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 10px 28px rgba(0,0,0,.10);display:grid;min-width:220px;padding:8px;
+  position:absolute;right:0;top:calc(100% + 10px);z-index:40
+}
+.account-menu__email{
+  color:var(--muted);font-size:.78rem;margin:0;max-width:240px;overflow:hidden;
+  padding:8px 10px;text-overflow:ellipsis;white-space:nowrap
+}
+.account-menu__link,.account-menu__action{
+  background:transparent;border:0;border-radius:8px;color:var(--fg);cursor:pointer;
+  display:flex;font:inherit;font-size:.9rem;font-weight:600;justify-content:flex-start;
+  min-height:38px;padding:8px 10px;text-align:left;text-decoration:none;width:100%
+}
+.account-menu__link:hover,.account-menu__link:focus-visible,
+.account-menu__action:hover,.account-menu__action:focus-visible{background:var(--primary-light);color:var(--primary)}
+.account-menu__separator{border-top:1px solid var(--border);margin:4px 6px}
 /* Details-based Info menu */
 .infodrop{position:relative}
 .infodrop > summary{
@@ -241,6 +266,15 @@ body{min-height:100vh}
   .mobile-menu a,.mobile-menu .header-auth-button,.mobile-menu .theme-toggle{
     display:flex!important;justify-content:flex-start;min-height:42px;padding:9px 10px;width:100%
   }
+  .mobile-menu .account-menu{width:100%}
+  .mobile-menu .account-menu > summary{
+    align-items:center;display:flex;justify-content:space-between;min-height:42px;padding:9px 10px;width:100%
+  }
+  .mobile-menu .account-menu__panel{
+    background:transparent;border:0;border-left:1px solid var(--border);border-radius:0;
+    box-shadow:none;margin:0 0 4px 10px;min-width:0;padding:2px 0 2px 8px;position:static
+  }
+  .mobile-menu .account-menu__email{padding:7px 10px}
   .mobile-menu .theme-toggle__label{display:inline}
   .theme-toggle__label{display:none}
   .theme-toggle{border:0;min-height:36px;padding:6px}
