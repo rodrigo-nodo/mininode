@@ -42,6 +42,7 @@ export const onRequest = async (ctx) => {
     || (destPathPublic === 'access/onboarding' && method === 'POST')
     || (/^access\/workspaces\/[0-9a-f-]+\/sites$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
+    || (/^privacy\/workspaces\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
   );
   if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {

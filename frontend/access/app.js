@@ -68,6 +68,7 @@ const retryButton = document.querySelector('#access-retry');
 const errorSignOutButton = document.querySelector('#access-error-sign-out');
 const workspacePickerLabel = document.querySelector('#workspace-picker-label');
 const workspacePicker = document.querySelector('#workspace-picker');
+const privacyWebOpen = document.querySelector('#privacy-web-open');
 const siteList = document.querySelector('#site-list');
 const siteEmpty = document.querySelector('#site-empty');
 
@@ -183,6 +184,7 @@ function renderHome() {
   });
   workspacePicker.value = active.id;
   setVisible(workspacePickerLabel, workspaces.length > 1);
+  privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
   renderSites(active);
 
   unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);

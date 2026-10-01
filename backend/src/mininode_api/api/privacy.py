@@ -354,6 +354,85 @@ def diagnose_workspace_site(
     return diagnostic
 
 
+@router.post("/workspaces/{workspace_id}/diagnose")
+def diagnose_workspace_url(
+    workspace_id: UUID,
+    body: PrivacyDiagnosticRequest,
+    request: Request,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    """Diagnose a URL and associate the successful review with an authorized workspace."""
+
+    try:
+        workspaces = access.list_authorized_context(user.id)
+    except Exception:
+        logger.exception("Access workspace lookup failed before Privacy diagnosis")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        ) from None
+
+    if not any(workspace.id == workspace_id for workspace in workspaces):
+        raise HTTPException(status_code=404, detail="Espacio no encontrado.")
+
+    try:
+        # Access owns the canonical Site rules. Validate those rules before spending
+        # inspection work, but do not persist the Site until the diagnosis succeeds.
+        access.normalize_site_url(body.url)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
+
+    try:
+        diagnostic = diagnose_privacy_url(body.url)
+    except PrivacyInspectionError as exc:
+        status_code, message = _ERRORS[exc.code]
+        return JSONResponse(
+            status_code=status_code,
+            content={"error": exc.code, "message": message},
+        )
+    except Exception:
+        logger.exception("Unexpected workspace Privacy Diagnostic failure")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "internal_error", "message": "No fue posible completar el diagnóstico."},
+        )
+
+    try:
+        site = access.follow_site(user.id, workspace_id, body.url)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
+    except Exception:
+        logger.exception("Automatic Privacy site association failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No pudimos guardar el sitio en tu cuenta.",
+        ) from None
+
+    if site is None:
+        raise HTTPException(status_code=404, detail="Espacio no encontrado.")
+
+    if request.app.state.privacy_diagnostic_snapshot_ready:
+        try:
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+                diagnostic, workspace_site_id=site.id
+            )
+        except Exception:
+            logger.error("Workspace Privacy diagnostic snapshot persistence failed")
+        else:
+            diagnostic = {
+                **diagnostic,
+                "diagnostic_id": stored.id,
+                "purchase_expires_at": stored.purchase_expires_at,
+            }
+    return {**diagnostic, "workspace_site_id": site.id}
+
+
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
 def diagnose_privacy(
     body: PrivacyDiagnosticRequest,

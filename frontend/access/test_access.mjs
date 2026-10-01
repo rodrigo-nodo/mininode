@@ -170,3 +170,9 @@ test('account home does not expose manual site creation', () => {
   assert.doesNotMatch(app, /siteAddForm/);
   assert.doesNotMatch(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
 });
+
+
+test('Privacy Web opens with the active workspace context', () => {
+  assert.match(html, /id="privacy-web-open"/);
+  assert.match(app, /privacyWebOpen\.href = `\/privacy\/\?workspace_id=\$\{encodeURIComponent\(active\.id\)\}`/);
+});

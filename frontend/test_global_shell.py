@@ -223,7 +223,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=282j" in access
     assert "./styles.css?v=282e" in access
-    assert "./app.js?v=282i" in access
+    assert "./app.js?v=282j" in access
 
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():
