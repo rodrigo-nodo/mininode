@@ -64,7 +64,7 @@
       // Load the shared Mininode identity/session layer for every shell page.
       if (!document.querySelector('script[data-mininode-auth]')) {
         const authScript = document.createElement('script');
-        authScript.src = prefix + 'assets/js/core-auth.js?v=282auth4';
+        authScript.src = prefix + 'assets/js/core-auth.js?v=286account1';
         authScript.dataset.mininodeAuth = 'true';
         document.head.appendChild(authScript);
       }
