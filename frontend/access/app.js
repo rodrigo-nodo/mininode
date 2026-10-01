@@ -191,10 +191,10 @@ function renderSites(workspace, reviews = []) {
     if (review && Number.isFinite(review.score)) {
       const meta = document.createElement('p');
       meta.className = 'site-review-meta';
-      const pieces = [`Última revisión · ${review.score}/100`];
-      if (typeof review.status === 'string' && review.status.trim()) pieces.push(review.status.trim());
       const formattedDate = formatReviewDate(review.created_at);
-      if (formattedDate) pieces.push(formattedDate);
+      const pieces = [formattedDate ? `Última revisión: ${formattedDate}` : 'Última revisión'];
+      pieces.push(`${review.score}/100`);
+      if (typeof review.status === 'string' && review.status.trim()) pieces.push(review.status.trim());
       meta.textContent = pieces.join(' · ');
       main.append(meta);
 
