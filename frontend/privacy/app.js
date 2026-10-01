@@ -605,6 +605,13 @@ const initializeAuthenticatedSite = async () => {
       }
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
+      const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
+      if (Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now() && !correctionOffer.hidden) {
+        orderOpenButton.hidden = true;
+        orderForm.hidden = true;
+        orderExpired.hidden = false;
+        orderAvailability.textContent = 'La ventana de activación de este diagnóstico ya finalizó.';
+      }
       loadingCard.hidden = true;
       resultCard.hidden = false;
     }
