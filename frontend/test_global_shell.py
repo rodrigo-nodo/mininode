@@ -230,7 +230,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "core-head.js?v=286account1" in access
     assert "../styles.css?v=286account1" in access
     assert "./styles.css?v=287latest1" in access
-    assert "./app.js?v=287latest2" in access
+    assert "./app.js?v=287latest3" in access
 
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():
