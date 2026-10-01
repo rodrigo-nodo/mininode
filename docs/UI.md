@@ -39,6 +39,8 @@ Usar la escala corta de espacios y radios de `tokens.css`. Preferir bordes sutil
 ## Componentes y accesibilidad
 
 - `frontend/partials/header-nav.html` y `frontend/partials/footer.html` son las únicas fuentes del header y footer; las páginas deben incluirlos mediante el mecanismo común existente.
+- `frontend/assets/js/core-auth.js` (`window.MininodeAuth`) es la única fuente frontend para identidad y sesión. Ninguna página o producto debe cargar/configurar Clerk, escuchar su sesión, obtener tokens o cerrar sesión directamente.
+- El header representa el estado entregado por `MininodeAuth`; CSS o JavaScript específicos de una página no deben ocultar, duplicar ni redefinir sus controles globales.
 - Reutilizar botones, inputs, formularios, badges, cards básicas y estados de `frontend/assets/css/components.css` antes de crear variantes.
 - Todo control interactivo debe tener nombre accesible, contraste suficiente y un estado `:focus-visible` claro.
 - Conservar navegación por teclado, responsive, temas existentes y estados semánticos.
