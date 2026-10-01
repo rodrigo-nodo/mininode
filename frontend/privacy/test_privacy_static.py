@@ -46,6 +46,14 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("workspace_selection_required", APP)
         self.assertIn("Selecciona el espacio desde tu cuenta", APP)
 
+
+    def test_account_latest_review_can_be_reopened_without_rerunning_diagnosis(self):
+        self.assertIn("privacyQuery.get('view') === 'latest'", APP)
+        self.assertIn("/latest-review", APP)
+        self.assertIn("requestedLatestReview", APP)
+        self.assertIn("renderDiagnostic(latestDiagnostic", APP)
+        self.assertIn("resultCard.hidden = false", APP)
+
     def test_signed_out_diagnosis_keeps_public_endpoint(self):
         self.assertIn("if (!token) return null;", APP)
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
