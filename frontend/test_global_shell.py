@@ -13,8 +13,10 @@ def test_shared_header_owns_global_theme_control():
     assert header.count("data-theme-toggle") == 1
     assert "data-theme-toggle" not in learn
     assert "Productos" in header and "Recursos" in header and "Contacto" in header
-    assert 'id="header-access-link"' in header
-    assert 'id="header-sign-out"' in header
+    assert 'id="header-auth-control"' in header
+    assert header.count('id="header-auth-control"') == 1
+    assert 'id="header-access-link"' not in header
+    assert 'id="header-sign-out"' not in header
 
 
 def test_global_theme_has_dark_tokens_and_shared_loader():
@@ -119,8 +121,9 @@ def test_global_shell_owns_identity_session_and_header_state():
     assert "async signOut()" in auth
     assert "subscribe(listener" in auth
     assert "mountSignIn(node, options = {})" in auth
-    assert "header-access-link" in auth
-    assert "header-sign-out" in auth
+    assert "header-auth-control" in auth
+    assert "Cerrar sesión" in auth
+    assert "Acceder a Mininode" in auth
     assert "window.Clerk.addListener" in auth
     assert "fetch('/clerk-config'" in auth
     assert "@clerk/clerk-js@6" in auth
@@ -192,7 +195,10 @@ def test_products_do_not_own_clerk_runtime():
         assert "window.Clerk" not in app
 
 
-def test_mobile_shell_honors_hidden_auth_link_and_stays_full_width():
+def test_mobile_shell_uses_atomic_auth_control_and_stays_full_width():
     styles = read("styles.css")
+    header = read("partials/header-nav.html")
+    auth = read("assets/js/core-auth.js")
     assert ".header,.footer{width:100%}" in styles
-    assert ".mobile-menu a[hidden],.mobile-menu .header-auth-button[hidden]{display:none!important}" in styles
+    assert header.count('id="header-auth-control"') == 1
+    assert "control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder'" in auth
