@@ -23,6 +23,9 @@ def fake_connection(monkeypatch, *, rows=()):
         def fetchone(self):
             return next(pending_rows, None)
 
+        def fetchall(self):
+            return list(pending_rows)
+
         def __enter__(self): return self
         def __exit__(self, *args): pass
 
@@ -97,3 +100,47 @@ def test_missing_and_expired_diagnostics_are_controlled(monkeypatch):
     expired = service.StoredPrivacyDiagnostic(uuid4(), "https://example.com/", diagnostic(), 42, created, created + timedelta(hours=24), None)
     with pytest.raises(service.PrivacyDiagnosticPurchaseExpiredError):
         service.require_purchasable(expired, now=datetime.now(timezone.utc))
+
+
+def test_latest_workspace_site_orders_newest_first(monkeypatch):
+    snapshot = diagnostic()
+    row = stored_row(snapshot)
+    workspace_site_id = uuid4()
+    row = (*row[:-1], workspace_site_id)
+    executions = fake_connection(monkeypatch, rows=[row])
+
+    stored = service.get_latest_for_workspace_site(workspace_site_id)
+
+    sql, params = executions[0]
+    assert "WHERE workspace_site_id = %s" in sql
+    assert "ORDER BY created_at DESC, id DESC" in sql
+    assert "LIMIT 1" in sql
+    assert params == (workspace_site_id,)
+    assert stored.workspace_site_id == workspace_site_id
+
+
+def test_latest_workspace_site_missing_is_controlled(monkeypatch):
+    fake_connection(monkeypatch)
+    with pytest.raises(service.PrivacyDiagnosticSnapshotNotFoundError):
+        service.get_latest_for_workspace_site(uuid4())
+
+
+def test_list_latest_for_workspace_returns_one_row_shape_per_site(monkeypatch):
+    workspace_id = uuid4()
+    site_a = uuid4()
+    site_b = uuid4()
+    row_a = (*stored_row(diagnostic())[:-1], site_a)
+    second = {**diagnostic(), "site_url": "https://second.example/", "score": 77}
+    row_b_base = stored_row(second)
+    row_b = (*row_b_base[:-1], site_b)
+    executions = fake_connection(monkeypatch, rows=[row_a, row_b])
+
+    stored = service.list_latest_for_workspace(workspace_id)
+
+    sql, params = executions[0]
+    assert "SELECT DISTINCT ON (d.workspace_site_id)" in sql
+    assert "JOIN access.workspace_sites AS ws ON ws.id = d.workspace_site_id" in sql
+    assert "WHERE ws.workspace_id = %s" in sql
+    assert "d.created_at DESC" in sql
+    assert params == (workspace_id,)
+    assert [item.workspace_site_id for item in stored] == [site_a, site_b]
