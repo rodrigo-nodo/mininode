@@ -37,7 +37,9 @@ const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:
 let lastFocusedElement = null;
 let isDiagnosing = false;
 let currentDiagnosticId = '';
-const requestedWorkspaceSiteId = new URLSearchParams(window.location.search).get('workspace_site_id') || '';
+const privacyQuery = new URLSearchParams(window.location.search);
+const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
+const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
 let authenticatedWorkspaceSiteId = '';
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
@@ -513,6 +515,43 @@ function waitForMininodeAuth() {
   });
 }
 
+const resolveWorkspaceForDiagnosis = async () => {
+  const auth = await waitForMininodeAuth();
+  await auth.ready();
+  const token = await auth.getToken();
+  if (!token) return null;
+
+  const contextResponse = await fetch('/api/access/context', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!contextResponse.ok) throw new Error(`Access context HTTP ${contextResponse.status}`);
+
+  let accessContext = await contextResponse.json();
+  let workspaces = Array.isArray(accessContext.workspaces) ? accessContext.workspaces : [];
+
+  if (workspaces.length === 0) {
+    const onboardingResponse = await fetch('/api/access/onboarding', {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    });
+    if (!onboardingResponse.ok) throw new Error(`Access onboarding HTTP ${onboardingResponse.status}`);
+    const onboarding = await onboardingResponse.json();
+    return { token, workspaceId: onboarding.workspace_id };
+  }
+
+  if (requestedWorkspaceId) {
+    const requested = workspaces.find((workspace) => workspace.id === requestedWorkspaceId);
+    if (!requested) throw new Error('workspace_not_authorized');
+    return { token, workspaceId: requested.id };
+  }
+
+  if (workspaces.length === 1) {
+    return { token, workspaceId: workspaces[0].id };
+  }
+
+  throw new Error('workspace_selection_required');
+};
+
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
 
@@ -590,16 +629,30 @@ form.addEventListener('submit', async (event) => {
         headers: { Authorization: `Bearer ${token}` },
       });
     } else {
-      response = await fetch('/api/privacy/diagnose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: websiteUrl }),
-      });
+      const workspaceAuth = await resolveWorkspaceForDiagnosis();
+      if (workspaceAuth) {
+        response = await fetch(`/api/privacy/workspaces/${encodeURIComponent(workspaceAuth.workspaceId)}/diagnose`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${workspaceAuth.token}`,
+          },
+          body: JSON.stringify({ url: websiteUrl }),
+        });
+      } else {
+        response = await fetch('/api/privacy/diagnose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: websiteUrl }),
+        });
+      }
     }
   } catch (error) {
     reportFlowError('api_request_failed', error);
     loadingCard.hidden = true;
-    setRequestError(genericDiagnosticError);
+    setRequestError(error instanceof Error && error.message === 'workspace_selection_required'
+      ? 'Selecciona el espacio desde tu cuenta antes de iniciar el diagnóstico.'
+      : genericDiagnosticError);
     requestError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     finishDiagnosis();
     return;
