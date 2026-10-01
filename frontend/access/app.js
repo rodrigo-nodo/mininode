@@ -124,7 +124,6 @@ function syncHeaderControls(signedIn) {
   headerAccessLink = document.querySelector('#header-access-link');
   setVisible(signOutButton, signedIn);
   setVisible(headerAccessLink, !signedIn);
-  document.querySelectorAll('#site-header-nav .nav > a:not(#header-access-link)').forEach((link) => setVisible(link, false));
   if (signOutButton && !signOutButton.dataset.bound) {
     signOutButton.addEventListener('click', signOut);
     signOutButton.dataset.bound = 'true';
