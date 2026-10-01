@@ -60,6 +60,14 @@
         themeScript.dataset.mininodeTheme = 'true';
         document.head.appendChild(themeScript);
       }
+
+      // Keep the shared public header aligned with the current Clerk session.
+      if (!document.querySelector('script[data-mininode-auth]')) {
+        const authScript = document.createElement('script');
+        authScript.src = prefix + 'assets/js/core-auth.js?v=282a';
+        authScript.dataset.mininodeAuth = 'true';
+        document.head.appendChild(authScript);
+      }
     }catch(e){ /* silent */ }
   }
   if (document.readyState === 'loading') {
