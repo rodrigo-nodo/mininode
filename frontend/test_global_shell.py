@@ -17,7 +17,9 @@ def test_shared_header_owns_global_theme_control():
     assert header.count('id="header-auth-control"') == 1
     assert 'href="/access/"' in header
     assert 'id="header-access-link"' not in header
-    assert 'id="header-sign-out"' not in header
+    assert 'id="header-account-menu"' in header
+    assert 'id="header-sign-out"' in header
+    assert ">Mi cuenta<" in header
 
 
 def test_global_theme_has_dark_tokens_and_shared_loader():
@@ -123,6 +125,8 @@ def test_global_shell_owns_identity_session_and_header_state():
     assert "subscribe(listener" in auth
     assert "mountSignIn(node, options = {})" in auth
     assert "header-auth-control" in auth
+    assert "header-account-menu" in auth
+    assert "header-sign-out" in auth
     assert "Cerrar sesión" in auth
     assert "Acceder a Mininode" in auth
     assert "window.Clerk.addListener" in auth
@@ -150,7 +154,7 @@ def test_all_shell_pages_version_global_head_loader():
     ]
     for path in pages:
         page = read(path)
-        assert "core-head.js?v=282j" in page
+        assert "core-head.js?v=286account1" in page
 
 
 def test_account_uses_standard_shared_shell_without_hiding_public_nav():
@@ -177,7 +181,7 @@ def test_access_styles_do_not_hide_shared_shell_navigation():
 def test_privacy_data_uses_global_auth_shell():
     auth = read("assets/js/core-auth.js")
     data = read("privacy/data/index.html")
-    assert "core-head.js?v=282j" in data
+    assert "core-head.js?v=286account1" in data
     assert "path.startsWith(" not in auth
 
 
@@ -196,13 +200,15 @@ def test_products_do_not_own_clerk_runtime():
         assert "window.Clerk" not in app
 
 
-def test_mobile_shell_uses_atomic_auth_control_and_stays_full_width():
+def test_mobile_shell_uses_account_menu_and_stays_full_width():
     styles = read("styles.css")
     header = read("partials/header-nav.html")
     auth = read("assets/js/core-auth.js")
     assert ".header,.footer{width:100%}" in styles
     assert header.count('id="header-auth-control"') == 1
-    assert "control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder'" in auth
+    assert header.count('id="header-account-menu"') == 1
+    assert ".mobile-menu .account-menu" in styles
+    assert "accountMenu.hidden = !signedIn" in auth
 
 
 def test_signed_out_auth_control_keeps_native_access_navigation():
@@ -210,8 +216,8 @@ def test_signed_out_auth_control_keeps_native_access_navigation():
     auth = read("assets/js/core-auth.js")
     assert '<a id="header-auth-control"' in header
     assert 'href="/access/"' in header
-    assert "if (!api.isSignedIn()) return;" in auth
-    assert "event.preventDefault()" in auth
+    assert "accessControl.hidden = signedIn" in auth
+    assert "accessControl.addEventListener" not in auth
 
 
 def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
@@ -221,7 +227,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "display: flex; flex-direction: column" not in styles
     assert "access-page .access-main { flex: 1; }" not in styles
     assert "syncHeader(Boolean(currentSession))" in auth
-    assert "core-head.js?v=282j" in access
+    assert "core-head.js?v=286account1" in access
     assert "./styles.css?v=282e" in access
     assert "./app.js?v=282j" in access
 
