@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
@@ -104,4 +105,54 @@ test('waits for the shared MininodeAuth API instead of bootstrapping identity lo
   assert.match(app, /mininodeAuth\.ready\(\{ ui: true, localization \}\)/);
   assert.doesNotMatch(app, /loadClerkRuntime/);
   assert.doesNotMatch(app, /loadExternalScript/);
+});
+
+
+test('global sign-out failure keeps the user on the current page and exposes retry state', async () => {
+  const listeners = new Map();
+  const control = {
+    dataset: {},
+    textContent: '',
+    title: '',
+    attributes: new Map(),
+    setAttribute(name, value) { this.attributes.set(name, value); },
+    removeAttribute(name) { this.attributes.delete(name); if (name === 'title') this.title = ''; },
+    addEventListener(name, listener) { listeners.set(name, listener); },
+  };
+  let redirectedTo = null;
+  const context = {
+    window: {
+      location: { hostname: 'dev.mininode.io', assign(url) { redirectedTo = url; } },
+      addEventListener() {},
+      dispatchEvent() {},
+    },
+    document: {
+      body: { dataset: { mininodeAuthUi: 'clerk' } },
+      documentElement: {},
+      scripts: [],
+      querySelector(selector) { return selector === '#header-auth-control' ? control : null; },
+    },
+    MutationObserver: class {
+      constructor(callback) { this.callback = callback; }
+      observe() { this.callback(); }
+      disconnect() {}
+    },
+    CustomEvent: class { constructor(type) { this.type = type; } },
+    console,
+    Set,
+  };
+  context.window.window = context.window;
+  context.window.document = context.document;
+  vm.runInNewContext(coreAuth, context);
+
+  context.window.MininodeAuth.isSignedIn = () => true;
+  context.window.MininodeAuth.signOut = async () => { throw new Error('provider unavailable'); };
+
+  let prevented = false;
+  await listeners.get('click')({ preventDefault() { prevented = true; } });
+
+  assert.equal(prevented, true);
+  assert.equal(redirectedTo, null);
+  assert.equal(control.textContent, 'Reintentar cierre');
+  assert.equal(control.attributes.get('aria-label'), 'No se pudo cerrar sesión. Intenta nuevamente.');
 });

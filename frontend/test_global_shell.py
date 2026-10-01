@@ -150,7 +150,7 @@ def test_all_shell_pages_version_global_head_loader():
     ]
     for path in pages:
         page = read(path)
-        assert "core-head.js?v=282i" in page
+        assert "core-head.js?v=282j" in page
 
 
 def test_account_uses_standard_shared_shell_without_hiding_public_nav():
@@ -177,7 +177,7 @@ def test_access_styles_do_not_hide_shared_shell_navigation():
 def test_privacy_data_uses_global_auth_shell():
     auth = read("assets/js/core-auth.js")
     data = read("privacy/data/index.html")
-    assert "core-head.js?v=282i" in data
+    assert "core-head.js?v=282j" in data
     assert "path.startsWith(" not in auth
 
 
@@ -221,6 +221,14 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "display: flex; flex-direction: column" not in styles
     assert "access-page .access-main { flex: 1; }" not in styles
     assert "syncHeader(Boolean(currentSession))" in auth
-    assert "core-head.js?v=282i" in access
+    assert "core-head.js?v=282j" in access
     assert "./styles.css?v=282e" in access
     assert "./app.js?v=282h" in access
+
+
+def test_failed_global_signout_does_not_redirect_as_if_successful():
+    auth = read("assets/js/core-auth.js")
+    assert "await api.signOut();\n          window.location.assign('/');" in auth
+    assert "catch (_error)" in auth
+    assert "Reintentar cierre" in auth
+    assert "No se pudo cerrar sesión. Intenta nuevamente." in auth

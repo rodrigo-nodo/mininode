@@ -67,6 +67,7 @@
     control.dataset.authState = signedIn ? 'signed-in' : 'signed-out';
     control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder';
     control.setAttribute('aria-label', signedIn ? 'Cerrar sesión' : 'Acceder a Mininode');
+    control.removeAttribute('title');
 
     if (control.dataset.authBound !== 'true') {
       control.dataset.authBound = 'true';
@@ -75,8 +76,12 @@
         event.preventDefault();
         try {
           await api.signOut();
-        } finally {
           window.location.assign('/');
+        } catch (_error) {
+          syncHeader(Boolean(currentSession));
+          control.textContent = 'Reintentar cierre';
+          control.setAttribute('aria-label', 'No se pudo cerrar sesión. Intenta nuevamente.');
+          control.title = 'No se pudo cerrar sesión. Intenta nuevamente.';
         }
       });
     }
