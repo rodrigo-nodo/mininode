@@ -139,6 +139,14 @@ def _require_correction_plan_order_database(request: Request) -> None:
         )
 
 
+def _require_privacy_snapshot_database(request: Request) -> None:
+    if not request.app.state.privacy_diagnostic_snapshot_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de revisiones no disponible.",
+        )
+
+
 def _require_correction_plan_check_database(request: Request) -> None:
     if not request.app.state.privacy_correction_plan_check_ready:
         raise HTTPException(status_code=503, detail="Servicio de revisión no disponible.")
@@ -332,7 +340,10 @@ def _review_summary(stored: privacy_diagnostic_snapshot.StoredPrivacyDiagnostic)
     }
 
 
-@router.get("/workspace-sites/{workspace_site_id}/latest-review")
+@router.get(
+    "/workspace-sites/{workspace_site_id}/latest-review",
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
 def get_latest_workspace_site_review(
     workspace_site_id: UUID,
     user: access.StoredUser = Depends(require_access_user),
@@ -353,7 +364,10 @@ def get_latest_workspace_site_review(
     }
 
 
-@router.get("/workspaces/{workspace_id}/latest-reviews")
+@router.get(
+    "/workspaces/{workspace_id}/latest-reviews",
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
 def list_workspace_latest_reviews(
     workspace_id: UUID,
     user: access.StoredUser = Depends(require_access_user),
