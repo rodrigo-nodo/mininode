@@ -61,10 +61,10 @@
         document.head.appendChild(themeScript);
       }
 
-      // Keep the shared public header aligned with the current Clerk session.
+      // Load the shared Mininode identity/session layer for every shell page.
       if (!document.querySelector('script[data-mininode-auth]')) {
         const authScript = document.createElement('script');
-        authScript.src = prefix + 'assets/js/core-auth.js?v=282c';
+        authScript.src = prefix + 'assets/js/core-auth.js?v=282auth1';
         authScript.dataset.mininodeAuth = 'true';
         document.head.appendChild(authScript);
       }
