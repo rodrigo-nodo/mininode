@@ -61,16 +61,20 @@
   }
 
   function syncHeader(signedIn) {
-    const accessLink = document.querySelector('#header-access-link');
-    const signOut = document.querySelector('#header-sign-out');
-    if (!accessLink || !signOut) return;
+    const control = document.querySelector('#header-auth-control');
+    if (!control) return;
 
-    accessLink.hidden = signedIn;
-    signOut.hidden = !signedIn;
+    control.dataset.authState = signedIn ? 'signed-in' : 'signed-out';
+    control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder';
+    control.setAttribute('aria-label', signedIn ? 'Cerrar sesión' : 'Acceder a Mininode');
 
-    if (signOut.dataset.authBound !== 'true') {
-      signOut.dataset.authBound = 'true';
-      signOut.addEventListener('click', async () => {
+    if (control.dataset.authBound !== 'true') {
+      control.dataset.authBound = 'true';
+      control.addEventListener('click', async () => {
+        if (!api.isSignedIn()) {
+          window.location.assign('/access/');
+          return;
+        }
         try {
           await api.signOut();
         } finally {
@@ -177,7 +181,7 @@
   window.dispatchEvent(new CustomEvent('mininode:auth-api-ready'));
 
   function bindHeaderWhenAvailable() {
-    if (!document.querySelector('#header-access-link')) return false;
+    if (!document.querySelector('#header-auth-control')) return false;
     syncHeader(Boolean(currentSession));
     return true;
   }
