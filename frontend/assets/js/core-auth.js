@@ -70,11 +70,9 @@
 
     if (control.dataset.authBound !== 'true') {
       control.dataset.authBound = 'true';
-      control.addEventListener('click', async () => {
-        if (!api.isSignedIn()) {
-          window.location.assign('/access/');
-          return;
-        }
+      control.addEventListener('click', async (event) => {
+        if (!api.isSignedIn()) return;
+        event.preventDefault();
         try {
           await api.signOut();
         } finally {
