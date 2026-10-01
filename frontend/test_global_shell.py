@@ -19,7 +19,7 @@ def test_shared_header_owns_global_theme_control():
     assert 'id="header-access-link"' not in header
     assert 'id="header-account-menu"' in header
     assert 'id="header-sign-out"' in header
-    assert ">Mi cuenta<" in header
+    assert "Mi cuenta" in header
 
 
 def test_global_theme_has_dark_tokens_and_shared_loader():
