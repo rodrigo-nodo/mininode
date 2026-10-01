@@ -223,7 +223,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=282j" in access
     assert "./styles.css?v=282e" in access
-    assert "./app.js?v=282h" in access
+    assert "./app.js?v=282i" in access
 
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():
@@ -232,3 +232,19 @@ def test_failed_global_signout_does_not_redirect_as_if_successful():
     assert "catch (_error)" in auth
     assert "Reintentar cierre" in auth
     assert "No se pudo cerrar sesión. Intenta nuevamente." in auth
+
+
+def test_access_copy_avoids_repeating_mininode_brand():
+    access = read("access/index.html")
+    assert "Accede a tu cuenta" in access
+    assert "Cuenta Mininode" not in access
+    assert "Accede a Mininode" not in access
+
+
+def test_workspace_home_has_no_manual_site_creation():
+    access = read("access/index.html")
+    app = read("access/app.js")
+    assert "+ Agregar sitio" not in access
+    assert 'id="site-add-form"' not in access
+    assert "siteAddForm" not in app
+    assert "Aún no has realizado revisiones." in access

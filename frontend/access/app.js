@@ -70,10 +70,6 @@ const workspacePickerLabel = document.querySelector('#workspace-picker-label');
 const workspacePicker = document.querySelector('#workspace-picker');
 const siteList = document.querySelector('#site-list');
 const siteEmpty = document.querySelector('#site-empty');
-const siteAddOpen = document.querySelector('#site-add-open');
-const siteAddForm = document.querySelector('#site-add-form');
-const siteUrl = document.querySelector('#site-url');
-const siteAddError = document.querySelector('#site-add-error');
 
 let signInMounted = false;
 let lastResolvedSessionId = null;
@@ -220,22 +216,6 @@ async function signOut() {
 }
 
 workspacePicker.addEventListener('change', () => { activeWorkspaceId = workspacePicker.value; renderHome(); });
-siteAddOpen.addEventListener('click', () => { setVisible(siteAddForm, true); siteAddOpen.hidden = true; siteUrl.focus(); });
-siteAddForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  siteAddError.hidden = true;
-  const submit = siteAddForm.querySelector('button[type="submit"]');
-  submit.disabled = true;
-  try {
-    await api(`/api/access/workspaces/${activeWorkspaceId}/sites`, { method: 'POST', body: JSON.stringify({ url: siteUrl.value }) });
-    context = await api('/api/access/context');
-    siteUrl.value = ''; siteAddForm.hidden = true; siteAddOpen.hidden = false; renderHome();
-  } catch (error) {
-    siteAddError.textContent = error instanceof Error ? error.message : 'No pudimos agregar el sitio.';
-    siteAddError.hidden = false;
-  } finally { submit.disabled = false; }
-});
-
 errorSignOutButton.addEventListener('click', signOut);
 retryButton.addEventListener('click', () => {
   lastResolvedSessionId = null;

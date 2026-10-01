@@ -36,7 +36,6 @@ test('builds the authenticated home from Access instead of client supplied owner
   assert.match(app, /api\('\/api\/access\/me'\)/);
   assert.match(app, /api\('\/api\/access\/context'\)/);
   assert.match(app, /api\('\/api\/access\/onboarding', \{ method: 'POST' \}\)/);
-  assert.match(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
   assert.match(app, /mininodeAuth\.getToken\(\)/);
   assert.match(app, /Authorization: `Bearer \$\{token\}`/);
   assert.doesNotMatch(app, /X-Api-Key/);
@@ -51,7 +50,8 @@ test('organizes account navigation by product and nests product resources', () =
   assert.doesNotMatch(html, /mininode-favicon\.svg/);
   assert.match(app, /\/privacy\/\?workspace_site_id=\$\{encodeURIComponent\(site\.id\)\}/);
   assert.match(html, /<h3>Mis sitios<\/h3>/);
-  assert.match(html, /\+ Agregar sitio/);
+  assert.doesNotMatch(html, /\+ Agregar sitio/);
+  assert.match(html, /Aún no has realizado revisiones\./);
   assert.match(html, /<h2>Privacy Data<\/h2>/);
   assert.match(html, /<h3>Mapas<\/h3>/);
   assert.match(html, /Próximamente/);
@@ -155,4 +155,18 @@ test('global sign-out failure keeps the user on the current page and exposes ret
   assert.equal(redirectedTo, null);
   assert.equal(control.textContent, 'Reintentar cierre');
   assert.equal(control.attributes.get('aria-label'), 'No se pudo cerrar sesión. Intenta nuevamente.');
+});
+
+
+test('workspace selector stays hidden for one workspace and appears only for multiple', () => {
+  assert.match(html, /id="workspace-picker-label" class="workspace-picker" hidden/);
+  assert.match(app, /setVisible\(workspacePickerLabel, workspaces\.length > 1\)/);
+});
+
+test('account home does not expose manual site creation', () => {
+  assert.doesNotMatch(html, /id="site-add-open"/);
+  assert.doesNotMatch(html, /id="site-add-form"/);
+  assert.doesNotMatch(app, /siteAddOpen/);
+  assert.doesNotMatch(app, /siteAddForm/);
+  assert.doesNotMatch(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
 });
