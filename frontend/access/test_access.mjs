@@ -192,3 +192,12 @@ test('Privacy Web opens with the active workspace context', () => {
   assert.match(html, /id="privacy-web-open"/);
   assert.match(app, /privacyWebOpen\.href = `\/privacy\/\?workspace_id=\$\{encodeURIComponent\(active\.id\)\}`/);
 });
+
+
+test('account shows the latest Privacy Web review for each site', () => {
+  assert.match(app, /\/api\/privacy\/workspaces\/\$\{encodeURIComponent\(workspace\.id\)\}\/latest-reviews/);
+  assert.match(app, /Última revisión · \$\{review\.score\}\/100/);
+  assert.match(app, /view=latest/);
+  assert.match(app, /Ver resultado →/);
+  assert.match(app, /site-review-meta/);
+});
