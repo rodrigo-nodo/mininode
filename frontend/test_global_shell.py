@@ -228,7 +228,8 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "access-page .access-main { flex: 1; }" not in styles
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=286account1" in access
-    assert "./styles.css?v=282e" in access
+    assert "../styles.css?v=286account1" in access
+    assert "./styles.css?v=286account1" in access
     assert "./app.js?v=282j" in access
 
 
