@@ -36,6 +36,20 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('urlInput.readOnly = true', APP)
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
 
+    def test_authenticated_free_diagnosis_auto_associates_site_to_workspace(self):
+        self.assertIn("get('workspace_id')", APP)
+        self.assertIn("resolveWorkspaceForDiagnosis", APP)
+        self.assertIn("fetch('/api/access/context'", APP)
+        self.assertIn("fetch('/api/access/onboarding'", APP)
+        self.assertIn("/api/privacy/workspaces/", APP)
+        self.assertIn("JSON.stringify({ url: websiteUrl })", APP)
+        self.assertIn("workspace_selection_required", APP)
+        self.assertIn("Selecciona el espacio desde tu cuenta", APP)
+
+    def test_signed_out_diagnosis_keeps_public_endpoint(self):
+        self.assertIn("if (!token) return null;", APP)
+        self.assertIn("fetch('/api/privacy/diagnose'", APP)
+
     def test_obsolete_complete_diagnosis_offer_is_removed(self):
         obsolete_dir = PRIVACY_DIR / "diagnostico-completo"
         self.assertFalse((obsolete_dir / "index.html").exists())
