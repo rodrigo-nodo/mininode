@@ -104,3 +104,15 @@ def test_privacy_header_reflects_clerk_session_without_workspace_site_query():
     assert "syncPrivacyHeader(Boolean(Clerk.session))" in app
     assert "Clerk.addListener(({ session }) => syncPrivacyHeader(Boolean(session))" in app
     assert "requestedWorkspaceSiteId && window.Clerk?.session" not in app
+
+
+def test_global_shell_reflects_clerk_session_on_public_pages():
+    head = read("assets/js/core-head.js")
+    auth = read("assets/js/core-auth.js")
+    assert "assets/js/core-auth.js?v=" in head
+    assert "Boolean(clerk.session)" in auth
+    assert "header-access-link" in auth
+    assert "header-sign-out" in auth
+    assert "await window.Clerk?.signOut()" in auth
+    assert "path.startsWith('/access')" in auth
+    assert "path.startsWith('/privacy/')" in auth
