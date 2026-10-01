@@ -87,7 +87,10 @@ test('shared header session state is owned by MininodeAuth', () => {
   assert.doesNotMatch(app, /#header-access-link/);
   assert.doesNotMatch(app, /#header-auth-control/);
   assert.match(coreAuth, /#header-auth-control/);
-  assert.match(coreAuth, /control\.textContent = signedIn \? 'Cerrar sesión' : 'Acceder'/);
+  assert.match(coreAuth, /#header-account-menu/);
+  assert.match(coreAuth, /#header-sign-out/);
+  assert.match(coreAuth, /accessControl\.hidden = signedIn/);
+  assert.match(coreAuth, /accountMenu\.hidden = !signedIn/);
 });
 
 
@@ -110,15 +113,24 @@ test('waits for the shared MininodeAuth API instead of bootstrapping identity lo
 
 test('global sign-out failure keeps the user on the current page and exposes retry state', async () => {
   const listeners = new Map();
-  const control = {
+  const makeElement = () => ({
     dataset: {},
+    hidden: false,
     textContent: '',
     title: '',
     attributes: new Map(),
     setAttribute(name, value) { this.attributes.set(name, value); },
-    removeAttribute(name) { this.attributes.delete(name); if (name === 'title') this.title = ''; },
+    removeAttribute(name) {
+      this.attributes.delete(name);
+      if (name === 'title') this.title = '';
+      if (name === 'open') this.open = false;
+    },
     addEventListener(name, listener) { listeners.set(name, listener); },
-  };
+  });
+  const accessControl = makeElement();
+  const accountMenu = makeElement();
+  const signOutControl = makeElement();
+  const email = makeElement();
   let redirectedTo = null;
   const context = {
     window: {
@@ -130,7 +142,13 @@ test('global sign-out failure keeps the user on the current page and exposes ret
       body: { dataset: { mininodeAuthUi: 'clerk' } },
       documentElement: {},
       scripts: [],
-      querySelector(selector) { return selector === '#header-auth-control' ? control : null; },
+      querySelector(selector) {
+        if (selector === '#header-auth-control') return accessControl;
+        if (selector === '#header-account-menu') return accountMenu;
+        if (selector === '#header-sign-out') return signOutControl;
+        if (selector === '#header-account-email') return email;
+        return null;
+      },
     },
     MutationObserver: class {
       constructor(callback) { this.callback = callback; }
@@ -148,13 +166,11 @@ test('global sign-out failure keeps the user on the current page and exposes ret
   context.window.MininodeAuth.isSignedIn = () => true;
   context.window.MininodeAuth.signOut = async () => { throw new Error('provider unavailable'); };
 
-  let prevented = false;
-  await listeners.get('click')({ preventDefault() { prevented = true; } });
+  await listeners.get('click')();
 
-  assert.equal(prevented, true);
   assert.equal(redirectedTo, null);
-  assert.equal(control.textContent, 'Reintentar cierre');
-  assert.equal(control.attributes.get('aria-label'), 'No se pudo cerrar sesión. Intenta nuevamente.');
+  assert.equal(signOutControl.textContent, 'Reintentar cierre');
+  assert.equal(signOutControl.attributes.get('aria-label'), 'No se pudo cerrar sesión. Intenta nuevamente.');
 });
 
 

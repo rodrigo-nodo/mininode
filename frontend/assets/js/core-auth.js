@@ -60,28 +60,62 @@
     return configPromise;
   }
 
+  function getSessionEmail(session) {
+    const user = session?.user;
+    const direct = user?.primaryEmailAddress?.emailAddress;
+    if (typeof direct === 'string' && direct.trim()) return direct.trim().toLowerCase();
+
+    const primaryId = user?.primaryEmailAddressId;
+    const emails = Array.isArray(user?.emailAddresses) ? user.emailAddresses : [];
+    const primary = emails.find((item) => item?.id === primaryId) || emails[0];
+    const fallback = primary?.emailAddress;
+    return typeof fallback === 'string' && fallback.trim() ? fallback.trim().toLowerCase() : '';
+  }
+
   function syncHeader(signedIn) {
-    const control = document.querySelector('#header-auth-control');
-    if (!control) return;
+    const accessControl = document.querySelector('#header-auth-control');
+    const accountMenu = document.querySelector('#header-account-menu');
+    const signOutControl = document.querySelector('#header-sign-out');
+    const email = document.querySelector('#header-account-email');
 
-    control.dataset.authState = signedIn ? 'signed-in' : 'signed-out';
-    control.textContent = signedIn ? 'Cerrar sesión' : 'Acceder';
-    control.setAttribute('aria-label', signedIn ? 'Cerrar sesión' : 'Acceder a Mininode');
-    control.removeAttribute('title');
+    if (!accessControl && !accountMenu) return;
 
-    if (control.dataset.authBound !== 'true') {
-      control.dataset.authBound = 'true';
-      control.addEventListener('click', async (event) => {
+    if (accessControl) {
+      accessControl.dataset.authState = signedIn ? 'signed-in' : 'signed-out';
+      accessControl.hidden = signedIn;
+      accessControl.textContent = 'Acceder';
+      accessControl.setAttribute('aria-label', 'Acceder a Mininode');
+    }
+
+    if (accountMenu) {
+      accountMenu.hidden = !signedIn;
+      if (!signedIn) accountMenu.removeAttribute('open');
+    }
+
+    if (email) {
+      const value = signedIn ? getSessionEmail(currentSession) : '';
+      email.textContent = value;
+      email.hidden = !value;
+    }
+
+    if (!signOutControl) return;
+
+    signOutControl.textContent = 'Cerrar sesión';
+    signOutControl.setAttribute('aria-label', 'Cerrar sesión');
+    signOutControl.removeAttribute('title');
+
+    if (signOutControl.dataset.authBound !== 'true') {
+      signOutControl.dataset.authBound = 'true';
+      signOutControl.addEventListener('click', async () => {
         if (!api.isSignedIn()) return;
-        event.preventDefault();
         try {
           await api.signOut();
           window.location.assign('/');
         } catch (_error) {
           syncHeader(Boolean(currentSession));
-          control.textContent = 'Reintentar cierre';
-          control.setAttribute('aria-label', 'No se pudo cerrar sesión. Intenta nuevamente.');
-          control.title = 'No se pudo cerrar sesión. Intenta nuevamente.';
+          signOutControl.textContent = 'Reintentar cierre';
+          signOutControl.setAttribute('aria-label', 'No se pudo cerrar sesión. Intenta nuevamente.');
+          signOutControl.title = 'No se pudo cerrar sesión. Intenta nuevamente.';
         }
       });
     }

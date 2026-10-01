@@ -15,6 +15,17 @@
       <span class="theme-toggle__label" data-theme-label>Oscuro</span>
     </button>
     <a id="header-auth-control" class="header-auth-button" href="/access/" data-auth-state="signed-out">Acceder</a>
+    <details id="header-account-menu" class="account-menu" hidden>
+      <summary class="account-menu__trigger" aria-label="Abrir menú de cuenta">
+        Mi cuenta <span aria-hidden="true">▾</span>
+      </summary>
+      <div class="account-menu__panel">
+        <p id="header-account-email" class="account-menu__email" hidden></p>
+        <a class="account-menu__link" href="/access/">Mi cuenta</a>
+        <div class="account-menu__separator" role="separator"></div>
+        <button id="header-sign-out" class="account-menu__action" type="button">Cerrar sesión</button>
+      </div>
+    </details>
     </div>
   </nav>
 </header>

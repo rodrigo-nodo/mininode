@@ -428,7 +428,9 @@ A3 no incluye Billing, cobros ni creación de entitlements pagados.
 
 ### Regla de navegación de Cuenta Mininode
 
-La navegación principal se organiza por **productos**, no por las entidades técnicas de Access. Cada producto presenta dentro de su contexto los recursos que el usuario reconoce para trabajar:
+La navegación principal se organiza por **productos**, no por las entidades técnicas de Access. La identidad del usuario se agrupa globalmente bajo **Mi cuenta**: con sesión iniciada, el header expone ese menú como punto de entrada a `/access/` y aloja allí **Cerrar sesión**. El workspace no se trata como una cuenta ni se muestra como navegación global cuando existe uno solo.
+
+Cada producto presenta dentro de su contexto los recursos que el usuario reconoce para trabajar:
 
 ```text
 Cuenta Mininode
