@@ -5,16 +5,21 @@ import test from 'node:test';
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const coreAuth = await readFile(new URL('../assets/js/core-auth.js', import.meta.url), 'utf8');
 
-test('loads Clerk browser SDK from environment configuration', () => {
+test('loads identity runtime only from shared MininodeAuth', () => {
   assert.doesNotMatch(html, /clerk\.accounts\.dev/);
   assert.doesNotMatch(html, /data-clerk-publishable-key="pk_(?:test|live)_/);
-  assert.match(app, /fetch\('\/clerk-config'/);
-  assert.match(app, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
-  assert.match(app, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
-  assert.match(app, /app\.mininode\.io/);
-  assert.match(app, /publishableKey\.startsWith\('pk_live_'\)/);
-  assert.doesNotMatch(html + app, /sk_(?:test|live)_/);
+  assert.match(coreAuth, /fetch\('\/clerk-config'/);
+  assert.match(coreAuth, /@clerk\/ui@1\/dist\/ui\.browser\.js/);
+  assert.match(coreAuth, /@clerk\/clerk-js@6\/dist\/clerk\.browser\.js/);
+  assert.match(coreAuth, /app\.mininode\.io/);
+  assert.match(coreAuth, /publishableKey\.startsWith\('pk_live_'\)/);
+  assert.match(coreAuth, /window\.MininodeAuth = api/);
+  assert.doesNotMatch(app, /fetch\('\/clerk-config'/);
+  assert.doesNotMatch(app, /@clerk\//);
+  assert.doesNotMatch(app, /(?:window\.)?Clerk\./);
+  assert.doesNotMatch(html + app + coreAuth, /sk_(?:test|live)_/);
 });
 
 test('keeps the Mininode access flow passwordless and privacy-visible', () => {
@@ -31,7 +36,7 @@ test('builds the authenticated home from Access instead of client supplied owner
   assert.match(app, /api\('\/api\/access\/context'\)/);
   assert.match(app, /api\('\/api\/access\/onboarding', \{ method: 'POST' \}\)/);
   assert.match(app, /\/api\/access\/workspaces\/\$\{activeWorkspaceId\}\/sites/);
-  assert.match(app, /Clerk\.session\?\.getToken\(\)/);
+  assert.match(app, /mininodeAuth\.getToken\(\)/);
   assert.match(app, /Authorization: `Bearer \$\{token\}`/);
   assert.doesNotMatch(app, /X-Api-Key/);
 });
@@ -70,29 +75,32 @@ test('visibility helper tolerates optional UI elements', () => {
 });
 
 
-test('refreshes the Clerk token for every authenticated API request', () => {
-  assert.match(app, /async function api\(path, options = \{\}\) \{[\s\S]*Clerk\.session\?\.getToken\(\)[\s\S]*Authorization: `Bearer \$\{token\}`/);
+test('refreshes the identity token through MininodeAuth for every authenticated API request', () => {
+  assert.match(app, /async function api\(path, options = \{\}\) \{[\s\S]*mininodeAuth\.getToken\(\)[\s\S]*Authorization: `Bearer \$\{token\}`/);
   assert.doesNotMatch(app, /let accessToken/);
 });
 
 
-test('shared header exposes session-aware account controls', () => {
-  assert.match(app, /#header-sign-out/);
-  assert.match(app, /#header-access-link/);
-  assert.match(app, /syncHeaderControls\(true\)/);
+test('shared header session state is owned by MininodeAuth', () => {
+  assert.doesNotMatch(app, /#header-sign-out/);
+  assert.doesNotMatch(app, /#header-access-link/);
+  assert.match(coreAuth, /#header-sign-out/);
+  assert.match(coreAuth, /#header-access-link/);
 });
 
 
-test('does not bind sign out before the shared header is included', () => {
-  assert.doesNotMatch(app, /^signOutButton\.addEventListener\('click', signOut\);$/m);
-  assert.match(app, /if \(signOutButton && !signOutButton\.dataset\.bound\)/);
-  assert.match(app, /signOutButton\.addEventListener\('click', signOut\)/);
+test('access does not own global sign-out binding', () => {
+  assert.doesNotMatch(app, /signOutButton/);
+  assert.doesNotMatch(app, /syncHeaderControls/);
+  assert.match(coreAuth, /dataset\.authBound/);
+  assert.match(coreAuth, /api\.signOut\(\)/);
 });
 
 
-test('handles Clerk bootstrap failure before the global exists', () => {
-  assert.match(app, /Boolean\(window\.Clerk\?\.session\)/);
-  assert.doesNotMatch(app, /Boolean\(Clerk\.session\)/);
-  assert.equal((app.match(/async function loadClerkRuntime\(\)/g) || []).length, 1);
-  assert.equal((app.match(/async function loadExternalScript\(/g) || []).length, 1);
+test('waits for the shared MininodeAuth API instead of bootstrapping identity locally', () => {
+  assert.match(app, /waitForMininodeAuth/);
+  assert.match(app, /mininode:auth-api-ready/);
+  assert.match(app, /mininodeAuth\.ready\(\{ ui: true, localization \}\)/);
+  assert.doesNotMatch(app, /loadClerkRuntime/);
+  assert.doesNotMatch(app, /loadExternalScript/);
 });
