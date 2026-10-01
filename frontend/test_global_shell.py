@@ -118,3 +118,31 @@ def test_global_shell_reflects_clerk_session_on_public_pages():
     assert "path.startsWith('/privacy/')" in auth
     assert "new MutationObserver" in auth
     assert "initializeWhenHeaderReady" in auth
+
+
+def test_all_shell_pages_version_global_head_loader():
+    pages = [
+        "index.html",
+        "contact/index.html",
+        "learn/index.html",
+        "learn/privacy/index.html",
+        "learn/briefs/001-nueva-autoridad-de-datos/index.html",
+        "learn/briefs/002-evidencia-de-cumplimiento/index.html",
+        "learn/briefs/003-datos-personales/index.html",
+        "learn/guides/001-proteccion-de-datos-personales/index.html",
+        "legal/privacy/index.html",
+        "privacy/index.html",
+        "privacy/data/index.html",
+        "access/index.html",
+    ]
+    for path in pages:
+        page = read(path)
+        assert "core-head.js?v=282g" in page
+
+
+def test_account_uses_standard_shared_shell_without_hiding_public_nav():
+    access = read("access/index.html")
+    app = read("access/app.js")
+    assert 'data-include="../partials/header-nav.html"' in access
+    assert 'data-include="../partials/footer.html"' in access
+    assert "nav > a:not(#header-access-link)" not in app
