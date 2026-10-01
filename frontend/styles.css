@@ -23,8 +23,11 @@ body{
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
 .brand-name{font-weight:700;letter-spacing:-.02em;font-size:1.08rem}
 .logo{width:28px;height:28px}
+.brand-mark{display:block;flex:0 0 auto;height:22px;width:22px}
 
 .nav{display:flex;align-items:center;gap:30px}
+.mobile-menu{display:flex;align-items:center;gap:30px}
+.nav-toggle{display:none;background:transparent;border:0;color:var(--fg);cursor:pointer;font:inherit;font-size:1.45rem;line-height:1;padding:8px}
 .nav a{color:var(--fg);font-size:.95rem;font-weight:600;text-decoration:none;opacity:.78}
 .nav a:hover{color:var(--primary);opacity:1}
 .header-auth-button{border:0;background:transparent;color:var(--fg);cursor:pointer;font:inherit;font-size:.95rem;font-weight:600;opacity:.78;padding:0}
@@ -175,4 +178,76 @@ input[type="text"], input[type="email"], textarea{
   .brand-name{font-size:1rem}
   .nav{gap:10px}
   .nav a{font-size:.78rem}
+}
+
+
+/* Global Mininode shell */
+body{min-height:100vh}
+.header{border-bottom:1px solid transparent}
+.header,.footer{width:100%}
+.theme-toggle{
+  align-items:center;background:transparent;border:1px solid var(--border);border-radius:999px;
+  color:var(--fg);cursor:pointer;display:inline-flex;font:inherit;font-size:.82rem;font-weight:650;
+  gap:6px;min-height:34px;padding:5px 10px
+}
+.theme-toggle:hover,.theme-toggle:focus-visible{background:var(--primary-light);border-color:var(--primary)}
+.theme-toggle__icon{font-size:.95rem;line-height:1}
+.theme-toggle__icon--light{display:none}
+:root[data-theme="dark"] .theme-toggle__icon--dark{display:none}
+:root[data-theme="dark"] .theme-toggle__icon--light{display:inline}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]) .theme-toggle__icon--dark{display:none}
+  :root:not([data-theme]) .theme-toggle__icon--light{display:inline}
+}
+.shell-wide{max-width:1180px}
+.shell-reading{max-width:760px}
+
+/* Contact uses desktop space for context + task, while the form stays readable. */
+.contact-layout{display:grid;gap:clamp(32px,6vw,88px);grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);padding-top:clamp(36px,6vw,72px)}
+.contact-layout__intro h1{font-size:var(--text-h1);letter-spacing:-.04em;margin:0 0 14px}
+.contact-layout__intro p{color:var(--muted);font-size:1.05rem;max-width:36ch}
+.contact-layout__form .form{max-width:620px}
+.contact-layout__privacy{font-size:.9rem;max-width:62ch}
+
+/* Legal/document layout: navigation uses desktop width; prose keeps a readable line length. */
+.legal-page{padding-top:clamp(36px,6vw,72px)}
+.legal-header{margin-bottom:clamp(36px,5vw,56px)}
+.legal-header h1{font-size:var(--text-h1);letter-spacing:-.04em;margin:0 0 8px}
+.legal-version{color:var(--muted);font-size:.9rem;margin:0}
+.legal-layout{display:grid;gap:clamp(36px,6vw,84px);grid-template-columns:minmax(180px,240px) minmax(0,720px);align-items:start;min-width:0;width:100%}
+.legal-toc{position:sticky;top:24px}
+.legal-toc strong{display:block;font-size:.82rem;margin-bottom:12px}
+.legal-toc nav{display:grid;gap:8px}
+.legal-toc a{color:var(--muted);font-size:.88rem;text-decoration:none}
+.legal-toc a:hover,.legal-toc a:focus-visible{color:var(--primary)}
+.legal-content{min-width:0;width:100%}\n.legal-content section{min-width:0;scroll-margin-top:24px}
+.legal-content section+section{border-top:1px solid var(--border);margin-top:28px;padding-top:28px}
+.legal-content h2{font-size:1.18rem;margin:0 0 8px}
+.legal-content p{margin:0;max-width:70ch;overflow-wrap:anywhere}
+.legal-content a{color:var(--primary)}
+
+/* Account home can use desktop width; login remains deliberately compact. */
+.access-page .account-home{width:min(100%,1040px)}
+
+@media (max-width:720px){
+  .header{position:relative}
+  .nav-toggle{display:block}
+  .mobile-menu{
+    background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:0 12px 30px rgba(0,0,0,.10);display:grid;gap:0;min-width:210px;
+    padding:10px;position:absolute;right:20px;top:64px;z-index:30
+  }
+  .mobile-menu[hidden]{display:none}
+  .mobile-menu a,.mobile-menu .header-auth-button,.mobile-menu .theme-toggle{
+    display:flex!important;justify-content:flex-start;min-height:42px;padding:9px 10px;width:100%
+  }
+  .mobile-menu .theme-toggle__label{display:inline}
+  .theme-toggle__label{display:none}
+  .theme-toggle{border:0;min-height:36px;padding:6px}
+  .contact-layout,.legal-layout{grid-template-columns:minmax(0,1fr)}
+  .contact-layout{padding-top:28px}
+  .legal-page{overflow-x:hidden;padding-top:28px}\n  .legal-header h1{font-size:clamp(2rem,10vw,2.75rem);overflow-wrap:anywhere}\n  .legal-content p{max-width:none;width:100%}
+  .legal-toc{border-bottom:1px solid var(--border);padding-bottom:20px;position:static}
+  .legal-toc nav{display:flex;gap:8px 16px;overflow-x:auto;padding-bottom:4px}
+  .legal-toc a{white-space:nowrap}
 }

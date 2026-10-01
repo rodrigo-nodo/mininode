@@ -506,27 +506,12 @@ correctionUnavailableRetry?.addEventListener('click', () => {
   urlInput.focus();
 });
 
-const loadClerkRuntime = async () => {
-  if (window.Clerk) return;
-  const response = await fetch('/clerk-config', { headers: { Accept: 'application/json' }, cache: 'no-store' });
-  if (!response.ok) throw new Error('Clerk configuration unavailable');
-  const { publishableKey } = await response.json();
-  if (typeof publishableKey !== 'string' || !/^pk_(?:test|live)_/.test(publishableKey)) throw new Error('Invalid Clerk configuration');
-  if (window.location.hostname === 'app.mininode.io' && !publishableKey.startsWith('pk_live_')) throw new Error('Development Clerk configuration rejected in production');
-  const encoded = publishableKey.split('_')[2];
-  const domain = encoded ? atob(encoded).slice(0, -1) : '';
-  if (!domain || !/^[a-z0-9.-]+$/i.test(domain)) throw new Error('Invalid Clerk domain');
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://' + domain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js';
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.setAttribute('data-clerk-publishable-key', publishableKey);
-    script.addEventListener('load', resolve, { once: true });
-    script.addEventListener('error', () => reject(new Error('Clerk runtime unavailable')), { once: true });
-    document.head.appendChild(script);
+function waitForMininodeAuth() {
+  if (window.MininodeAuth) return Promise.resolve(window.MininodeAuth);
+  return new Promise((resolve) => {
+    window.addEventListener('mininode:auth-api-ready', () => resolve(window.MininodeAuth), { once: true });
   });
-};
+}
 
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
@@ -535,10 +520,9 @@ const initializeAuthenticatedSite = async () => {
   setRequestError();
 
   try {
-    await loadClerkRuntime();
-    if (!window.Clerk) throw new Error('Clerk unavailable');
-    await Clerk.load();
-    const token = await Clerk.session?.getToken();
+    const auth = await waitForMininodeAuth();
+    await auth.ready();
+    const token = await auth.getToken();
     if (!token) {
       window.location.assign('/access/');
       return;
@@ -595,7 +579,8 @@ form.addEventListener('submit', async (event) => {
   let response;
   try {
     if (authenticatedWorkspaceSiteId) {
-      const token = await Clerk.session?.getToken();
+      const auth = await waitForMininodeAuth();
+      const token = await auth.getToken();
       if (!token) {
         window.location.assign('/access/');
         return;

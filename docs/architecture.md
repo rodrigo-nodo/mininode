@@ -17,6 +17,13 @@ La arquitectura busca mantener los productos simples, modulares, reutilizables y
 - `mininode.io` es el dominio principal.
 - Las ramas/PR pueden generar previews para validación visual antes del merge.
 
+### Shell e identidad frontend compartidos
+
+- Header y footer son componentes globales reutilizados por todas las páginas y productos.
+- `frontend/assets/js/core-auth.js` expone `window.MininodeAuth`, contrato único para sesión cliente, token y cierre de sesión.
+- Los productos consumen `MininodeAuth`; no cargan ni configuran directamente el proveedor de identidad.
+- Cambiar el proveedor o su integración cliente debe afectar principalmente esa capa transversal, no cada SaaS.
+
 ### Backend
 
 - Python y FastAPI.

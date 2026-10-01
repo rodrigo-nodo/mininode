@@ -1,5 +1,4 @@
-.access-page { min-height: 100vh; background: var(--color-bg); display: flex; flex-direction: column; }
-.access-page .access-main { flex: 1; }
+.access-page { min-height: 100vh; background: var(--color-bg); }
 .access-header { display: flex; align-items: center; justify-content: space-between; min-height: 80px; }
 .access-main { display: grid; place-items: center; padding: 32px 20px 48px; }
 .access-card { width: min(100%, 440px); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: clamp(24px, 5vw, 40px); box-shadow: 0 18px 60px rgba(13, 15, 20, .06); }
@@ -49,7 +48,6 @@
 .site-add-form input { flex: 1; min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 11px 12px; background: var(--color-bg); color: var(--color-text); font: inherit; }
 .site-add-form button { border: 0; border-radius: var(--radius-md); padding: 11px 16px; background: var(--color-primary); color: white; font-weight: 650; }
 .form-error { margin: 8px 0 0; color: #9d2c2c; font-size: var(--text-sm); }
-[hidden] { display: none !important; }
 
 @media (max-width: 640px) {
   .access-main { align-items: start; padding: 18px 16px 48px; }
@@ -59,3 +57,4 @@
   .site-add-form__row { align-items: stretch; flex-direction: column; }
 }
 .cl-lastAuthenticationStrategyBadge { display: none !important; }
+

@@ -5,8 +5,8 @@
 .pd-filter{display:grid;gap:6px;max-width:420px}.pd-third-list{display:grid;gap:12px}.pd-third{border:1px solid var(--border);border-radius:var(--radius-md);padding:12px}.pd-third>.pd-option{border:0;background:transparent}.pd-third__relationships{display:none;padding-inline:10px}.pd-third.is-selected .pd-third__relationships{display:block}.pd-third__relationships .pd-grid{margin-block:12px}.pd-confirm{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;background:var(--primary-light)}
 @media(max-width:640px){.pd-grid,.pd-cards,.pd-map-activities{grid-template-columns:1fr}.pd-summary{grid-template-columns:repeat(2,1fr)}.pd-actions{position:sticky;bottom:0;background:var(--bg);padding:12px 0}.pd-actions .btn{flex:1}.pd-fields{flex-direction:column}.pd-result-nav{gap:10px}.pd-result-nav button,.pd-result-nav span{padding-inline:4px}}
 
-.pd-loading{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;margin-top:24px;background:var(--bg-elev)}
-.pd-loading p{margin-bottom:0;color:var(--muted)}
+.pd-loading{border:1px solid var(--border);border-radius:var(--radius-md);padding:18px;margin-top:24px;background:var(--primary-light);color:var(--fg)}
+.pd-loading strong{color:var(--fg)}.pd-loading p{margin-bottom:0;color:var(--muted)}
 .pd-people{border:0;padding:0;margin:24px 0}
 .pd-people>legend{font-weight:700;padding:0}
 .pd-people>.pd-grid{margin-top:12px}
@@ -45,3 +45,7 @@
 .pd-micro-question--secondary .pd-grid{margin-top:14px}
 .pd-people[data-section="personal_data_types"]:not(:has(input:checked)) + .pd-micro-question,
 .pd-grid[data-section="data_origins"]:not(:has(input:checked)) + .pd-micro-question{display:none}
+
+/* Result views can use more desktop space; the question flow remains compact. */
+body:has(.pd-map-view) .pd,
+body:has(.pd-actions-view) .pd { max-width: 1120px; }

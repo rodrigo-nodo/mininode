@@ -1,12 +1,20 @@
 <header class="header container" id="site-header-nav">
   <a class="brand" href="/" aria-label="Mininode — inicio">
+    <img class="brand-mark" src="/assets/mininode-favicon.svg" alt="" width="22" height="22">
     <span class="brand-name">Mininode</span>
   </a>
-  <nav class="nav" aria-label="Principal">
-    <a href="/#products">Productos</a>
-    <a href="/learn/">Recursos</a>
-    <a href="/contact/">Contacto</a>
-    <a id="header-access-link" href="/access/">Acceder</a>
-    <button id="header-sign-out" class="header-auth-button" type="button" hidden>Cerrar sesión</button>
+  <nav class="nav" id="site-primary-nav" aria-label="Principal">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-mobile-menu" aria-label="Abrir menú">☰</button>
+    <div class="mobile-menu" id="site-mobile-menu" hidden>
+    <a class="nav__public" href="/#products">Productos</a>
+    <a class="nav__public" href="/learn/">Recursos</a>
+    <a class="nav__public" href="/contact/">Contacto</a>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+      <span class="theme-toggle__icon theme-toggle__icon--dark" aria-hidden="true">☾</span>
+      <span class="theme-toggle__icon theme-toggle__icon--light" aria-hidden="true">☀</span>
+      <span class="theme-toggle__label" data-theme-label>Oscuro</span>
+    </button>
+    <a id="header-auth-control" class="header-auth-button" href="/access/" data-auth-state="signed-out">Acceder</a>
+    </div>
   </nav>
 </header>

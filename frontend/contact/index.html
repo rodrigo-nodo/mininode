@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contacto — Mininode</title>
   <meta name="description" content="Escríbenos para iniciar tu proyecto.">
-  <link rel="stylesheet" href="../styles.css">
-  <script src="../assets/js/core-head.js" defer></script>
-  <script src="../include.js" defer></script>
+  <link rel="stylesheet" href="../styles.css?v=282d">
+  <script src="../assets/js/core-head.js?v=282i" defer></script>
+  <script src="../include.js?v=282c" defer></script>
 </head>
 <body>
 <div data-include="../partials/header-nav.html"></div>
 <main>
-  <section class="container doc">
-    <h1>Contacto</h1>
+  <section class="container contact-layout">
+    <div class="contact-layout__intro">
+      <p class="eyebrow">Contacto</p>
+      <h1>Conversemos.</h1>
+      <p>Cuéntanos qué necesitas. Te responderemos con el siguiente paso más simple para avanzar.</p>
+    </div>
+    <div class="contact-layout__form">
     <p class="contact-context" id="contactContext" hidden>Consulta sobre Mininode Privacy</p>
     <form id="contactForm" class="card form" autocomplete="on">
       <label>
@@ -32,7 +37,8 @@
       <button class="btn btn--primary" type="submit" id="contactSubmit">Enviar</button>
       <p id="formStatus" class="muted" role="status" aria-live="polite"></p>
     </form>
-    <p class="muted">Usaremos tus datos para responder tu consulta. Consulta nuestra <a href="/legal/privacy/">Política de privacidad</a>.</p>
+    <p class="muted contact-layout__privacy">Usaremos tus datos para responder tu consulta. Consulta nuestra <a href="/legal/privacy/">Política de privacidad</a>.</p>
+    </div>
   </section>
   <script>
   const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwprvwrk";

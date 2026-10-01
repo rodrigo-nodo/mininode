@@ -13,14 +13,21 @@ CSS = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8")
 DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
 HOME_HTML = (PRIVACY_DIR.parent / "index.html").read_text(encoding="utf-8")
 REDIRECTS = (FRONTEND_DIR / "_redirects").read_text(encoding="utf-8")
+CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding="utf-8")
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
     def test_authenticated_workspace_site_entry_uses_access_identity(self):
         self.assertNotIn('data-clerk-publishable-key="pk_test_', HTML)
         self.assertNotIn('clerk.accounts.dev', HTML)
-        self.assertIn("fetch('/clerk-config'", APP)
-        self.assertIn("publishableKey.startsWith('pk_live_')", APP)
+        self.assertNotIn("fetch('/clerk-config'", APP)
+        self.assertNotIn("@clerk/", APP)
+        self.assertNotIn("Clerk.", APP)
+        self.assertIn("window.MininodeAuth = api", CORE_AUTH)
+        self.assertIn("fetch('/clerk-config'", CORE_AUTH)
+        self.assertIn("publishableKey.startsWith('pk_live_')", CORE_AUTH)
+        self.assertIn("waitForMininodeAuth", APP)
+        self.assertIn("auth.getToken()", APP)
         self.assertIn("get('workspace_site_id')", APP)
         self.assertIn("fetch('/api/access/context'", APP)
         self.assertIn('/api/privacy/workspace-sites/', APP)
@@ -283,7 +290,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotRegex(APP, r"diagnostic\.score\s*=")
 
     def test_app_script_is_cache_busted_with_the_result_markup(self):
-        self.assertIn('<script src="app.js?v=115" defer></script>', HTML)
+        self.assertRegex(HTML, r'<script src="app\.js\?v=[^"&]+" defer></script>')
 
     def test_local_stylesheet_is_cache_busted(self):
         self.assertRegex(

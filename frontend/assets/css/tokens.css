@@ -39,3 +39,27 @@
   --primary-light: var(--color-primary-soft);
   --border: var(--color-border);
 }
+
+
+/* Global light/dark theme tokens. The selected preference is shared across Mininode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-bg: #111218;
+    --color-text: #f4f2fa;
+    --color-muted: #b5b1be;
+    --color-border: #3a3944;
+    --color-primary: #66c6d0;
+    --color-primary-hover: #8bd8df;
+    --color-primary-soft: #17353a;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #111218;
+  --color-text: #f4f2fa;
+  --color-muted: #b5b1be;
+  --color-border: #3a3944;
+  --color-primary: #66c6d0;
+  --color-primary-hover: #8bd8df;
+  --color-primary-soft: #17353a;
+}

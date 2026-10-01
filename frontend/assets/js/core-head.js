@@ -2,10 +2,11 @@
 (function(){
   function relPrefix(){
     try{
-      const self = document.currentScript || Array.from(document.scripts).find(s => (s.getAttribute && /assets\/js\/core-head\.js$/.test(s.getAttribute('src')||'')));
+      const coreHeadPattern = /assets\/js\/core-head\.js(?:[?#].*)?$/;
+      const self = document.currentScript || Array.from(document.scripts).find(s => (s.getAttribute && coreHeadPattern.test(s.getAttribute('src')||'')));
       const srcAttr = self && self.getAttribute && self.getAttribute('src');
-      if (srcAttr && /assets\/js\/core-head\.js$/.test(srcAttr)) {
-        return srcAttr.replace(/assets\/js\/core-head\.js$/, ''); // e.g., '../../'
+      if (srcAttr && coreHeadPattern.test(srcAttr)) {
+        return srcAttr.replace(coreHeadPattern, ''); // e.g., '../../'
       }
     }catch{}
     try{
@@ -50,6 +51,23 @@
       });
       // Append to head
       while(tmp.firstChild){ document.head.appendChild(tmp.firstChild); }
+
+      // Theme behavior is part of the global shell, so every page that loads
+      // core-head gets the same preference without page-specific wiring.
+      if (!document.querySelector('script[data-mininode-theme]')) {
+        const themeScript = document.createElement('script');
+        themeScript.src = prefix + 'assets/js/core-theme.js?v=282f';
+        themeScript.dataset.mininodeTheme = 'true';
+        document.head.appendChild(themeScript);
+      }
+
+      // Load the shared Mininode identity/session layer for every shell page.
+      if (!document.querySelector('script[data-mininode-auth]')) {
+        const authScript = document.createElement('script');
+        authScript.src = prefix + 'assets/js/core-auth.js?v=282auth3';
+        authScript.dataset.mininodeAuth = 'true';
+        document.head.appendChild(authScript);
+      }
     }catch(e){ /* silent */ }
   }
   if (document.readyState === 'loading') {
