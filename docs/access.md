@@ -262,13 +262,20 @@ Las alternativas del MVP son:
 La Publishable Key de Clerk puede estar en el frontend. No se utiliza ni se expone
 `CLERK_SECRET_KEY`.
 
-Cuando Clerk crea una sesión, el navegador obtiene el JWT mediante
-`session.getToken()` y lo envía como `Authorization: Bearer ...` únicamente a
-`/api/access/me`. Pages lo reenvía al backend y A1.1 verifica la firma y claims antes
-de resolver el UUID interno de Mininode.
+La integración frontend con Clerk está centralizada en `frontend/assets/js/core-auth.js`,
+que expone la abstracción transversal `window.MininodeAuth`. Es la única pieza frontend
+que puede cargar/configurar Clerk, observar cambios de sesión, obtener el JWT y cerrar
+sesión. Landing, Learn, Contacto, Access, Privacy Web, Privacy Data y futuros productos
+consumen ese contrato común; no inicializan Clerk directamente.
 
-La pantalla de acceso no decide autorización de workspace, empresa o sitio. Su único
-objetivo es completar autenticación y confirmar que Mininode reconoce la identidad.
+Cuando una aplicación necesita autenticarse contra el backend, solicita un token fresco a
+`MininodeAuth.getToken()` y lo envía como `Authorization: Bearer ...` a la ruta
+protegida correspondiente. Pages lo reenvía al backend y A1.1 verifica firma y claims
+antes de resolver el UUID interno de Mininode.
+
+`/access/` conserva únicamente la experiencia visual de ingreso (Google o email + código)
+y solicita a `MininodeAuth` montar/desmontar esa UI. La pantalla no decide autorización
+de workspace, empresa o sitio. Su objetivo es completar autenticación y mostrar la cuenta.
 
 El E2E de producción quedó validado con ambos métodos: Google y email + código llegan
 a `Clerk → Pages → Render → /access/me → access.users`. Ambos métodos resolvieron el
