@@ -4,7 +4,7 @@
   // Access owns its Clerk lifecycle. Privacy Web already loads Clerk because
   // authenticated diagnostics need a token, so it also owns that lifecycle.
   const path = window.location.pathname || '/';
-  if (path.startsWith('/access') || path.startsWith('/privacy/')) return;
+  if (path.startsWith('/access') || (path.startsWith('/privacy/') && !path.startsWith('/privacy/data/'))) return;
 
   let clerkReady = null;
   let initialized = false;
