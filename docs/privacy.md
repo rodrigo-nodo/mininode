@@ -253,3 +253,11 @@ limpia del cuerpo; en esa copia excluye `script`, `style`, `template`, `header`,
 límite y semántica, continúa siendo la evidencia usada por PRV-003 y actúa como
 fallback para construcciones anteriores. La muestra principal no se serializa en el
 Evidence Contract ni forma parte de respuestas o snapshots.
+
+## Cuenta y última revisión
+
+Cuando un diagnóstico autenticado queda vinculado a un `workspace_site`, su snapshot persistido puede reutilizarse como la última revisión visible en la cuenta Mininode.
+
+La cuenta muestra únicamente el snapshot más reciente por sitio: score, estado y fecha. **Ver resultado** abre ese snapshot ya almacenado; no ejecuta una nueva inspección. Una nueva revisión solo ocurre cuando el usuario inicia explícitamente otro diagnóstico.
+
+Esto no habilita historial completo ni modifica entitlement, vigencia o Billing.

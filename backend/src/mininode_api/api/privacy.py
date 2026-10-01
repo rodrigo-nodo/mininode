@@ -139,6 +139,14 @@ def _require_correction_plan_order_database(request: Request) -> None:
         )
 
 
+def _require_privacy_snapshot_database(request: Request) -> None:
+    if not request.app.state.privacy_diagnostic_snapshot_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de revisiones no disponible.",
+        )
+
+
 def _require_correction_plan_check_database(request: Request) -> None:
     if not request.app.state.privacy_correction_plan_check_ready:
         raise HTTPException(status_code=503, detail="Servicio de revisión no disponible.")
@@ -319,6 +327,72 @@ _ERRORS = {
     "unsupported_content_type": (422, "La página inicial no contiene un formato compatible."),
     "inspection_failed": (422, "No fue posible inspeccionar el sitio solicitado."),
 }
+
+
+def _review_summary(stored: privacy_diagnostic_snapshot.StoredPrivacyDiagnostic) -> dict[str, Any]:
+    status_value = stored.diagnostic_snapshot.get("status")
+    return {
+        "workspace_site_id": stored.workspace_site_id,
+        "diagnostic_id": stored.id,
+        "score": stored.score,
+        "status": status_value if isinstance(status_value, str) else None,
+        "created_at": stored.created_at,
+    }
+
+
+@router.get(
+    "/workspace-sites/{workspace_site_id}/latest-review",
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
+def get_latest_workspace_site_review(
+    workspace_site_id: UUID,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    if access.get_authorized_site(user.id, workspace_site_id) is None:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado.")
+    try:
+        stored = privacy_diagnostic_snapshot.get_latest_for_workspace_site(workspace_site_id)
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticSnapshotNotFoundError:
+        raise HTTPException(status_code=404, detail="Revisión no encontrada.") from None
+
+    return {
+        **stored.diagnostic_snapshot,
+        "diagnostic_id": stored.id,
+        "created_at": stored.created_at,
+        "purchase_expires_at": stored.purchase_expires_at,
+        "workspace_site_id": stored.workspace_site_id,
+    }
+
+
+@router.get(
+    "/workspaces/{workspace_id}/latest-reviews",
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
+def list_workspace_latest_reviews(
+    workspace_id: UUID,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    try:
+        workspaces = access.list_authorized_context(user.id)
+    except Exception:
+        logger.exception("Access workspace lookup failed before Privacy review listing")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Access is temporarily unavailable",
+        ) from None
+
+    if not any(workspace.id == workspace_id for workspace in workspaces):
+        raise HTTPException(status_code=404, detail="Espacio no encontrado.")
+
+    try:
+        reviews = privacy_diagnostic_snapshot.list_latest_for_workspace(workspace_id)
+    except Exception:
+        logger.exception("Privacy review listing failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No pudimos cargar tus revisiones.",
+        ) from None
+    return {"reviews": [_review_summary(review) for review in reviews]}
 
 
 @router.post("/workspace-sites/{workspace_site_id}/diagnose")

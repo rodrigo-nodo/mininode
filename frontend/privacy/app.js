@@ -40,6 +40,7 @@ let currentDiagnosticId = '';
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
+const requestedLatestReview = privacyQuery.get('view') === 'latest';
 let authenticatedWorkspaceSiteId = '';
 
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
@@ -587,6 +588,33 @@ const initializeAuthenticatedSite = async () => {
     urlInput.readOnly = true;
     urlInput.setAttribute('aria-readonly', 'true');
     submitButton.disabled = false;
+
+    if (requestedLatestReview) {
+      const latestResponse = await fetch(
+        `/api/privacy/workspace-sites/${encodeURIComponent(site.id)}/latest-review`,
+        { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } },
+      );
+      if (latestResponse.status === 404) {
+        setRequestError('No encontramos una revisión guardada para este sitio.');
+        return;
+      }
+      if (!latestResponse.ok) throw new Error(`Latest review HTTP ${latestResponse.status}`);
+      const latestDiagnostic = await latestResponse.json();
+      if (!isValidDiagnosticResponse(latestDiagnostic)) {
+        throw new Error('Latest review does not match the Privacy diagnostic contract');
+      }
+      resetCommercialState();
+      renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
+      const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
+      if (Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now() && !correctionOffer.hidden) {
+        orderOpenButton.hidden = true;
+        orderForm.hidden = true;
+        orderExpired.hidden = false;
+        orderAvailability.textContent = 'La ventana de activación de este diagnóstico ya finalizó.';
+      }
+      loadingCard.hidden = true;
+      resultCard.hidden = false;
+    }
   } catch (error) {
     reportFlowError('authenticated_site_init_failed', error);
     setRequestError('No pudimos abrir este sitio desde tu cuenta Mininode.');

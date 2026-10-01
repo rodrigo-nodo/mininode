@@ -251,3 +251,30 @@ test('forwards Clerk bearer token to workspace URL Privacy diagnosis', async () 
 
   await assertRejected(`/api/privacy/workspaces/${id}/diagnose`, 'GET');
 });
+
+
+test('forwards Clerk bearer token to latest Privacy review reads', async () => {
+  const siteId = '33333333-3333-4333-8333-333333333333';
+  const workspaceId = '44444444-4444-4444-8444-444444444444';
+
+  const latest = await request(`/api/privacy/workspace-sites/${siteId}/latest-review`, 'GET', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer clerk-session-token' },
+  });
+  assert.equal(latest.response.status, 200);
+  assert.equal(latest.calls[0].url, `https://backend.example/privacy/workspace-sites/${siteId}/latest-review`);
+  assert.equal(latest.calls[0].init.headers.get('Authorization'), 'Bearer clerk-session-token');
+  assert.equal(latest.calls[0].init.headers.has('X-Api-Key'), false);
+
+  const summaries = await request(`/api/privacy/workspaces/${workspaceId}/latest-reviews`, 'GET', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer clerk-session-token' },
+  });
+  assert.equal(summaries.response.status, 200);
+  assert.equal(summaries.calls[0].url, `https://backend.example/privacy/workspaces/${workspaceId}/latest-reviews`);
+  assert.equal(summaries.calls[0].init.headers.get('Authorization'), 'Bearer clerk-session-token');
+  assert.equal(summaries.calls[0].init.headers.has('X-Api-Key'), false);
+
+  await assertRejected(`/api/privacy/workspace-sites/${siteId}/latest-review`, 'POST');
+  await assertRejected(`/api/privacy/workspaces/${workspaceId}/latest-reviews`, 'POST');
+});

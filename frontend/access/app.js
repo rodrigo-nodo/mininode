@@ -78,6 +78,7 @@ let syncInFlight = false;
 let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
+let latestReviewsRequestId = 0;
 
 let mininodeAuth = null;
 
@@ -153,21 +154,78 @@ async function loadAccount(session) {
   renderHome();
 }
 
-function renderSites(workspace) {
+function formatReviewDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('es-CL', {
+    timeZone: 'America/Santiago',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function renderSites(workspace, reviews = []) {
   siteList.replaceChildren();
   const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
+  const reviewsBySite = new Map(
+    (Array.isArray(reviews) ? reviews : [])
+      .filter((review) => review?.workspace_site_id)
+      .map((review) => [review.workspace_site_id, review]),
+  );
+
   sites.forEach((site) => {
     const row = document.createElement('div');
     row.className = 'site-row';
+
+    const main = document.createElement('div');
+    main.className = 'site-row__main';
+
     const link = document.createElement('a');
     link.className = 'site-link';
     link.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}`;
     link.textContent = site.hostname;
     link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
-    row.append(link);
+    main.append(link);
+
+    const review = reviewsBySite.get(site.id);
+    if (review && Number.isFinite(review.score)) {
+      const meta = document.createElement('p');
+      meta.className = 'site-review-meta';
+      const formattedDate = formatReviewDate(review.created_at);
+      const pieces = [formattedDate ? `Última revisión: ${formattedDate}` : 'Última revisión'];
+      pieces.push(`${review.score}/100`);
+      if (typeof review.status === 'string' && review.status.trim()) pieces.push(review.status.trim());
+      meta.textContent = pieces.join(' · ');
+      main.append(meta);
+
+      const resultLink = document.createElement('a');
+      resultLink.className = 'site-review-link';
+      resultLink.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}&view=latest`;
+      resultLink.textContent = 'Ver resultado →';
+      resultLink.setAttribute('aria-label', `Ver última revisión de ${site.hostname}`);
+      row.append(main, resultLink);
+    } else {
+      row.append(main);
+    }
+
     siteList.append(row);
   });
   setVisible(siteEmpty, sites.length === 0);
+}
+
+async function loadLatestReviews(workspace) {
+  const requestId = ++latestReviewsRequestId;
+  try {
+    const payload = await api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`);
+    if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+    renderSites(workspace, Array.isArray(payload.reviews) ? payload.reviews : []);
+  } catch {
+    // Account remains usable even if review summaries are temporarily unavailable.
+  }
 }
 
 function renderHome() {
@@ -188,6 +246,7 @@ function renderHome() {
   renderSites(active);
 
   unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);
+  void loadLatestReviews(active);
 }
 
 async function syncAuthState(session) {

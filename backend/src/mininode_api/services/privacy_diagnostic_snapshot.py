@@ -105,6 +105,45 @@ def get_diagnostic_snapshot(diagnostic_id: UUID) -> StoredPrivacyDiagnostic:
     return StoredPrivacyDiagnostic(*row)
 
 
+def get_latest_for_workspace_site(workspace_site_id: UUID) -> StoredPrivacyDiagnostic:
+    """Return the newest stored review for one private workspace-site relation."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, site_url, diagnostic_snapshot, score, created_at,
+                   purchase_expires_at, workspace_site_id
+            FROM privacy.diagnostic
+            WHERE workspace_site_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (workspace_site_id,),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        raise PrivacyDiagnosticSnapshotNotFoundError("Diagnostic not found")
+    return StoredPrivacyDiagnostic(*row)
+
+
+def list_latest_for_workspace(workspace_id: UUID) -> tuple[StoredPrivacyDiagnostic, ...]:
+    """Return at most one newest stored review per site in the workspace."""
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT ON (d.workspace_site_id)
+                   d.id, d.site_url, d.diagnostic_snapshot, d.score, d.created_at,
+                   d.purchase_expires_at, d.workspace_site_id
+            FROM privacy.diagnostic AS d
+            JOIN access.workspace_sites AS ws ON ws.id = d.workspace_site_id
+            WHERE ws.workspace_id = %s
+            ORDER BY d.workspace_site_id, d.created_at DESC, d.id DESC
+            """,
+            (workspace_id,),
+        )
+        rows = cursor.fetchall()
+    return tuple(StoredPrivacyDiagnostic(*row) for row in rows)
+
+
 def require_purchasable(
     diagnostic: StoredPrivacyDiagnostic, *, now: datetime | None = None
 ) -> StoredPrivacyDiagnostic:

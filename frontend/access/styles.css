@@ -36,10 +36,14 @@
 .product-resources { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
 .product-resources h3 { margin: 0 0 12px; font-size: 1rem; }
 .site-list { display: grid; }
-.site-row { padding: 10px 0; border-bottom: 1px solid var(--color-border); font-weight: 650; overflow-wrap: anywhere; }
+.site-row { align-items: center; display: flex; gap: 18px; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
 .site-row:last-child { border-bottom: 0; }
+.site-row__main { min-width: 0; }
 .site-link { color: var(--color-text); font-weight: 650; text-decoration: none; }
 .site-link:hover, .site-link:focus-visible { color: var(--color-primary); text-decoration: underline; }
+.site-review-meta { color: var(--color-muted); font-size: var(--text-sm); font-weight: 400; margin: 3px 0 0; }
+.site-review-link { color: var(--color-primary); flex: 0 0 auto; font-size: var(--text-sm); font-weight: 650; text-decoration: none; }
+.site-review-link:hover, .site-review-link:focus-visible { text-decoration: underline; }
 .resource-empty { margin: 0 0 12px; color: var(--color-muted); font-size: var(--text-sm); }
 .resource-add { border: 0; background: transparent; color: var(--color-primary); padding: 8px 0; font-weight: 650; }
 .site-add-form { margin-top: 10px; }
@@ -55,6 +59,7 @@
   .product-card__heading { align-items: start; flex-direction: column; }
   .product-card { padding: 22px 18px; }
   .site-add-form__row { align-items: stretch; flex-direction: column; }
+  .site-row { align-items: flex-start; flex-direction: column; gap: 6px; }
 }
 .cl-lastAuthenticationStrategyBadge { display: none !important; }
 

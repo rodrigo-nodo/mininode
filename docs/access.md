@@ -446,6 +446,8 @@ Esto no modifica el modelo de autorización. Un sitio continúa siendo un recurs
 
 A3.3 reutiliza A3.1 para onboarding y no expone en la cuenta una acción manual para crear sitios. Privacy Web crea o reutiliza automáticamente el `workspace_site` después de un diagnóstico autenticado exitoso. Crear o asociar un `workspace_site` no expresa intención de compra y no crea entitlement. Privacy Web público continúa disponible sin cuenta.
 
+La cuenta muestra para cada sitio, cuando existe, un resumen de su **última revisión Privacy Web** (score, estado y fecha) y permite volver a abrir ese resultado almacenado sin ejecutar una nueva inspección. Esta vista no introduce historial completo ni cambia las reglas comerciales de Privacy Web activo; utiliza el snapshot más reciente ya vinculado al `workspace_site`.
+
 ## Próximas etapas
 
 1. **A3 - Cuenta Mininode y aplicaciones:** implementar el flujo autenticado sobre Access.
