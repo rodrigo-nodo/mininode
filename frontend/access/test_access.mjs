@@ -174,6 +174,45 @@ test('global sign-out failure keeps the user on the current page and exposes ret
 });
 
 
+test('successful global sign-out returns to the identification screen', async () => {
+  const listeners = new Map();
+  let redirectedTo = null;
+  const signOutControl = {
+    dataset: {}, hidden: false, textContent: '',
+    setAttribute() {}, removeAttribute() {},
+    addEventListener(name, listener) { listeners.set(name, listener); },
+  };
+  const context = {
+    window: {
+      location: { hostname: 'app.mininode.io', assign(url) { redirectedTo = url; } },
+      addEventListener() {}, dispatchEvent() {},
+    },
+    document: {
+      body: { dataset: { mininodeAuthUi: 'clerk' } },
+      documentElement: {}, scripts: [],
+      querySelector(selector) {
+        return selector === '#header-sign-out' ? signOutControl : null;
+      },
+    },
+    MutationObserver: class {
+      constructor(callback) { this.callback = callback; }
+      observe() { this.callback(); }
+      disconnect() {}
+    },
+    CustomEvent: class { constructor(type) { this.type = type; } },
+    console, Set,
+  };
+  context.window.window = context.window;
+  context.window.document = context.document;
+  vm.runInNewContext(coreAuth, context);
+  context.window.MininodeAuth.isSignedIn = () => true;
+  let providerSignedOut = false;
+  context.window.MininodeAuth.signOut = async () => { providerSignedOut = true; };
+  await listeners.get('click')();
+  assert.equal(providerSignedOut, true);
+  assert.equal(redirectedTo, '/access/');
+});
+
 test('workspace selector stays hidden for one workspace and appears only for multiple', () => {
   assert.match(html, /id="workspace-picker-label" class="workspace-picker" hidden/);
   assert.match(app, /setVisible\(workspacePickerLabel, workspaces\.length > 1\)/);
