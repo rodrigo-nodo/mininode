@@ -97,54 +97,6 @@ ON CONFLICT (content_key) DO NOTHING;
 INSERT INTO learn.content (
     content_key, slug, content_type, title, status, current_version, published_at
 ) SELECT
-    '001-privacidad-para-pequenos-negocios',
-    '/learn/privacy',
-    'micro_ebook',
-    'Privacidad para pequeños negocios',
-    'published',
-    1,
-    CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM learn.content
-    WHERE content_key = '001-privacidad-para-pequenos-negocios'
-)
-ON CONFLICT (content_key) DO NOTHING;
-
-INSERT INTO learn.content (
-    content_key, slug, content_type, title, status, current_version, published_at
-) SELECT
-    'brief-001-nueva-autoridad-de-datos',
-    '/learn/briefs/001-nueva-autoridad-de-datos',
-    'brief',
-    'Nueva autoridad de datos',
-    'published',
-    1,
-    CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM learn.content
-    WHERE content_key = 'brief-001-nueva-autoridad-de-datos'
-)
-ON CONFLICT (content_key) DO NOTHING;
-
-INSERT INTO learn.content (
-    content_key, slug, content_type, title, status, current_version, published_at
-) SELECT
-    'brief-003-datos-personales',
-    '/learn/briefs/003-datos-personales',
-    'brief',
-    'Datos personales',
-    'published',
-    1,
-    CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM learn.content
-    WHERE content_key = 'brief-003-datos-personales'
-)
-ON CONFLICT (content_key) DO NOTHING;
-
-INSERT INTO learn.content (
-    content_key, slug, content_type, title, status, current_version, published_at
-) SELECT
     'brief-004-conversaciones-con-inteligencia-artificial',
     '/learn/briefs/004-conversaciones-con-inteligencia-artificial',
     'brief',
