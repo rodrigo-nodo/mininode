@@ -235,7 +235,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():
     auth = read("assets/js/core-auth.js")
-    assert "await api.signOut();\n          window.location.assign('/');" in auth
+    assert "await api.signOut();\n          window.location.assign('/access/');" in auth
     assert "catch (_error)" in auth
     assert "Reintentar cierre" in auth
     assert "No se pudo cerrar sesión. Intenta nuevamente." in auth
