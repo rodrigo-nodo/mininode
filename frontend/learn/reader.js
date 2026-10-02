@@ -236,13 +236,14 @@
     const header = document.createElement('header');
     header.className = 'learn-reader__header';
     const country = metadata.country === 'CL' ? 'Chile' : metadata.country;
+    const countrySuffix = country ? ` · ${country}` : '';
     const topics = (metadata.topics || []).map((topic) =>
       `<span>${topic.charAt(0).toUpperCase() + topic.slice(1)}</span>`).join('');
     header.innerHTML = window.DOMPurify.sanitize(`
       <p class="learn-reader__eyebrow">MININODE BRIEF ${metadata.id}</p>
       <h1>${metadata.title}</h1>
       <p class="learn-reader__subtitle">${metadata.subtitle}</p>
-      <p class="learn-reader__details">${metadata.reading_time} min · Actualizado ${metadata.updated} · ${country}</p>
+      <p class="learn-reader__details">${metadata.reading_time} min · Actualizado ${metadata.updated}${countrySuffix}</p>
       <div class="learn-reader__topics">${topics}</div>
     `, { USE_PROFILES: { html: true } });
     return header;
