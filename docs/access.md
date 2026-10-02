@@ -244,6 +244,8 @@ El backend mantiene temporalmente la compatibilidad de transición:
 3. un Bearer inválido **no** cae a Cloudflare;
 4. Pages reenvía ambos headers solamente para las rutas protegidas de Access.
 
+La sesión de Clerk permanece activa durante la navegación hasta que el usuario elige «Cerrar sesión». El cierre global espera la confirmación de Clerk y luego navega a `/access/`, donde se presentan nuevamente las opciones de identificación. Google puede recordar la cuenta y omitir su selector: Mininode no fuerza la reautenticación de Google ni promete solicitar la contraseña en cada acceso. Si el cierre falla, se mantiene la página y se ofrece reintentar.
+
 La aplicación cliente de Cloudflare Access ya no protege `app.mininode.io`. Clerk es
 la identidad de clientes; Cloudflare continúa proporcionando DNS/CDN/Pages/WAF.
 
