@@ -110,7 +110,7 @@
         if (!api.isSignedIn()) return;
         try {
           await api.signOut();
-          window.location.assign('/');
+          window.location.assign('/access/');
         } catch (_error) {
           syncHeader(Boolean(currentSession));
           signOutControl.textContent = 'Reintentar cierre';
