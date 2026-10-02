@@ -182,6 +182,7 @@ test('successful global sign-out returns to the identification screen', async ()
     setAttribute() {}, removeAttribute() {},
     addEventListener(name, listener) { listeners.set(name, listener); },
   };
+  const accessControl = { dataset: {}, hidden: false, textContent: '', setAttribute() {} };
   const context = {
     window: {
       location: { hostname: 'app.mininode.io', assign(url) { redirectedTo = url; } },
@@ -191,6 +192,7 @@ test('successful global sign-out returns to the identification screen', async ()
       body: { dataset: { mininodeAuthUi: 'clerk' } },
       documentElement: {}, scripts: [],
       querySelector(selector) {
+        if (selector === '#header-auth-control') return accessControl;
         return selector === '#header-sign-out' ? signOutControl : null;
       },
     },
