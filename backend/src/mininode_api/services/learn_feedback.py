@@ -12,6 +12,7 @@ import psycopg
 CONTENT_KEY = "001-privacidad-para-pequenos-negocios"
 BRIEF_001_CONTENT_KEY = "brief-001-nueva-autoridad-de-datos"
 BRIEF_003_CONTENT_KEY = "brief-003-datos-personales"
+BRIEF_004_CONTENT_KEY = "brief-004-conversaciones-con-inteligencia-artificial"
 GUIDE_001_CONTENT_KEY = "guide-001-proteccion-de-datos-personales"
 UNSET = object()
 
@@ -90,6 +91,22 @@ INSERT INTO learn.content (
 WHERE NOT EXISTS (
     SELECT 1 FROM learn.content
     WHERE content_key = 'brief-003-datos-personales'
+)
+ON CONFLICT (content_key) DO NOTHING;
+
+INSERT INTO learn.content (
+    content_key, slug, content_type, title, status, current_version, published_at
+) SELECT
+    'brief-004-conversaciones-con-inteligencia-artificial',
+    '/learn/briefs/004-conversaciones-con-inteligencia-artificial',
+    'brief',
+    'Conversaciones con inteligencia artificial',
+    'published',
+    1,
+    CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+    SELECT 1 FROM learn.content
+    WHERE content_key = 'brief-004-conversaciones-con-inteligencia-artificial'
 )
 ON CONFLICT (content_key) DO NOTHING;
 
