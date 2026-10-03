@@ -24,7 +24,9 @@ const orderSubmit = document.querySelector('#correction-order-submit');
 const orderError = document.querySelector('#correction-order-error');
 const orderSuccess = document.querySelector('#correction-order-success');
 const orderAvailability = document.querySelector('#correction-order-availability');
+const orderValidity = document.querySelector('#correction-order-validity');
 const orderExpired = document.querySelector('#correction-order-expired');
+const orderExpiredDate = document.querySelector('#correction-order-expired-date');
 const orderRetry = document.querySelector('#correction-order-retry');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
@@ -305,7 +307,11 @@ const resetCommercialState = () => {
   orderError.hidden = true;
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
+  orderExpiredDate.hidden = true;
+  orderExpiredDate.textContent = '';
   orderSubmit.disabled = false;
+  orderAvailability.hidden = false;
+  orderValidity.hidden = false;
   orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
 };
 
@@ -329,6 +335,10 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderForm.hidden = true;
   orderSuccess.hidden = true;
   orderExpired.hidden = true;
+  orderExpiredDate.hidden = true;
+  orderExpiredDate.textContent = '';
+  orderAvailability.hidden = false;
+  orderValidity.hidden = false;
   orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
@@ -344,6 +354,34 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
 const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
   && typeof diagnostic === 'object'
   && Number.isFinite(diagnostic.score);
+
+const formatReviewDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('es-CL', {
+    timeZone: 'America/Santiago',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
+const showExpiredCommercialState = (reviewedAt = '') => {
+  orderOpenButton.hidden = true;
+  orderForm.hidden = true;
+  orderSuccess.hidden = true;
+  orderAvailability.hidden = true;
+  orderValidity.hidden = true;
+  orderExpired.hidden = false;
+
+  const formattedDate = formatReviewDate(reviewedAt);
+  orderExpiredDate.textContent = formattedDate ? `Última revisión: ${formattedDate}.` : '';
+  orderExpiredDate.hidden = !formattedDate;
+};
+
 
 const reportFlowError = (code, error) => {
   // Do not log the submitted URL, response payload, evidence, or form contents.
@@ -479,8 +517,7 @@ orderForm?.addEventListener('submit', async (event) => {
       body: JSON.stringify({ diagnostic_id: diagnosticId, email: orderEmail.value }),
     });
     if (response.status === 410) {
-      orderForm.hidden = true;
-      orderExpired.hidden = false;
+      showExpiredCommercialState();
       return;
     }
     if (!response.ok) {
@@ -607,10 +644,7 @@ const initializeAuthenticatedSite = async () => {
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
       const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
       if (Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now() && !correctionOffer.hidden) {
-        orderOpenButton.hidden = true;
-        orderForm.hidden = true;
-        orderExpired.hidden = false;
-        orderAvailability.textContent = 'La ventana de activación de este diagnóstico ya finalizó.';
+        showExpiredCommercialState(latestDiagnostic.created_at);
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;

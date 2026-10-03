@@ -266,6 +266,7 @@ body{min-height:100vh}
   .mobile-menu a,.mobile-menu .header-auth-button,.mobile-menu .theme-toggle{
     display:flex!important;justify-content:flex-start;min-height:42px;padding:9px 10px;width:100%
   }
+  .mobile-menu .header-auth-button[hidden]{display:none!important}
   .mobile-menu .account-menu{width:100%}
   .mobile-menu .account-menu > summary{
     align-items:center;display:flex;justify-content:space-between;min-height:42px;padding:9px 10px;width:100%

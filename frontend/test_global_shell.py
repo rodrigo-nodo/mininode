@@ -208,6 +208,7 @@ def test_mobile_shell_uses_account_menu_and_stays_full_width():
     assert header.count('id="header-auth-control"') == 1
     assert header.count('id="header-account-menu"') == 1
     assert ".mobile-menu .account-menu" in styles
+    assert ".mobile-menu .header-auth-button[hidden]{display:none!important}" in styles
     assert "accountMenu.hidden = !signedIn" in auth
 
 
@@ -228,7 +229,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "access-page .access-main { flex: 1; }" not in styles
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=286account1" in access
-    assert "../styles.css?v=286account1" in access
+    assert "../styles.css?v=294shell1" in access
     assert "./styles.css?v=287latest1" in access
     assert "./app.js?v=287latest3" in access
 
