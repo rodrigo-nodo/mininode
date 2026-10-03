@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="styles.css?v=286account1">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="app.js?v=287latest1" defer></script>
+  <script src="app.js?v=288expired1" defer></script>
   <script src="framework-v0.6.js?v=5" defer></script>
 </head>
 <body>
@@ -124,8 +124,10 @@
               <strong>Solicitud preparada</strong>
               <p>El pago en línea estará disponible próximamente.</p>
             </div>
-            <div class="privacy-order-expired" id="correction-order-expired" role="alert" hidden>
-              <p>Este diagnóstico tiene más de 24 horas. Revise nuevamente el sitio para obtener un diagnóstico actualizado y activar Privacy Web.</p>
+            <div class="privacy-order-expired" id="correction-order-expired" role="status" hidden>
+              <h4>Para activar Privacy Web necesitas una revisión reciente</h4>
+              <p>Esta revisión sigue disponible. Para activar Privacy Web, revisa nuevamente el sitio y obtén un diagnóstico actualizado.</p>
+              <p id="correction-order-expired-date" hidden></p>
               <button class="btn privacy-secondary" type="button" id="correction-order-retry">Revisar nuevamente</button>
             </div>
             <p>La implementación técnica no está incluida.</p>
