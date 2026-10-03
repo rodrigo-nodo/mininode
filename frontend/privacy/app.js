@@ -24,6 +24,7 @@ const orderSubmit = document.querySelector('#correction-order-submit');
 const orderError = document.querySelector('#correction-order-error');
 const orderSuccess = document.querySelector('#correction-order-success');
 const orderAvailability = document.querySelector('#correction-order-availability');
+const orderValidity = document.querySelector('#correction-order-validity');
 const orderExpired = document.querySelector('#correction-order-expired');
 const orderExpiredDate = document.querySelector('#correction-order-expired-date');
 const orderRetry = document.querySelector('#correction-order-retry');
@@ -310,6 +311,7 @@ const resetCommercialState = () => {
   orderExpiredDate.textContent = '';
   orderSubmit.disabled = false;
   orderAvailability.hidden = false;
+  orderValidity.hidden = false;
   orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
 };
 
@@ -336,6 +338,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderExpiredDate.hidden = true;
   orderExpiredDate.textContent = '';
   orderAvailability.hidden = false;
+  orderValidity.hidden = false;
   orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
@@ -371,6 +374,7 @@ const showExpiredCommercialState = (reviewedAt = '') => {
   orderForm.hidden = true;
   orderSuccess.hidden = true;
   orderAvailability.hidden = true;
+  orderValidity.hidden = true;
   orderExpired.hidden = false;
 
   const formattedDate = formatReviewDate(reviewedAt);
