@@ -193,7 +193,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("Plan de corrección", HTML)
         self.assertIn("$9.900", HTML)
         self.assertNotIn("$49.900", HTML)
-        self.assertEqual(HTML.count("1 mes"), 2)
+        self.assertEqual(HTML.count("Activo por <strong>1 mes</strong>"), 1)
         self.assertNotIn("pago único", HTML)
         self.assertIn("Activo por <strong>1 mes</strong>", HTML)
         self.assertIn("Te ayuda a abordar las mejoras detectadas y revisar cómo avanza tu sitio.", HTML)
