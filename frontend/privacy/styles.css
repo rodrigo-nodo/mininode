@@ -597,8 +597,8 @@
 }
 
 .privacy-next {
-  background: #f8fbfb;
-  border: 1px solid #cce1e3;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
   display: grid;
   gap: 18px;
@@ -674,6 +674,10 @@
 .privacy-next__action p {
   font-size: .86rem;
   margin-top: 9px;
+}
+
+.privacy-next__action > [hidden] {
+  display: none !important;
 }
 
 .privacy-order-form {
