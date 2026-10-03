@@ -116,8 +116,10 @@ monto histórico.
 La solicitud pública crea solamente una orden `pending_payment` con el identificador
 del snapshot y un email normalizado. El precio, la moneda, el producto y el estado son
 definidos por el backend. El snapshot permite solicitar la activación durante las 24
-horas posteriores al diagnóstico. Durante el Design Partner, la activación puede
-autorizarse manualmente mediante un endpoint interno protegido: usa el
+horas posteriores al diagnóstico. Una vez vencida esa ventana, el snapshot y su
+resultado permanecen disponibles; la interfaz deja de ofrecer la activación sobre esa
+revisión y pide realizar una revisión reciente antes de continuar. Durante el Design
+Partner, la activación puede autorizarse manualmente mediante un endpoint interno protegido: usa el
 `diagnostic_snapshot` asociado, genera la estructura de mejoras, la vincula a la orden
 y registra `paid_at`. En esta etapa `paid` significa autorización manual; representará
 un pago confirmado cuando se integre posteriormente un proveedor de pagos.
