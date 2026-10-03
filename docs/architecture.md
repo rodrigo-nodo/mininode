@@ -48,6 +48,7 @@ La arquitectura busca mantener los productos simples, modulares, reutilizables y
 - GitHub es la fuente de verdad del código.
 - `main` representa la versión aprobada.
 - Los cambios deben realizarse mediante ramas y Pull Requests hacia `main`.
+- El procedimiento oficial de desarrollo en DEV y publicación selectiva hacia PROD está en [`docs/dev-prod-release.md`](dev-prod-release.md). No fusionar `dev` completa por defecto ni interpretar commits divergentes como funcionalidades pendientes.
 - La validación debe privilegiar el resultado funcional/preview además de las pruebas técnicas.
 
 ## Estructura general del repositorio
