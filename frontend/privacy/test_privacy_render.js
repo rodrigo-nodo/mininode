@@ -166,6 +166,7 @@ context.showExpiredCommercialStateForTest('2026-10-01T21:57:00Z');
 assert.equal(elements.get('correction-order-open').hidden, true);
 assert.equal(elements.get('correction-order-form').hidden, true);
 assert.equal(elements.get('correction-order-availability').hidden, true);
+assert.equal(elements.get('correction-order-validity').hidden, true);
 assert.equal(elements.get('correction-order-expired').hidden, false);
 assert.equal(elements.get('correction-order-expired-date').hidden, false);
 assert.match(elements.get('correction-order-expired-date').textContent, /^Última revisión: /);
