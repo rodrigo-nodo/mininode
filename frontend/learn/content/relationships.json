@@ -26,7 +26,17 @@
       "slug": "004-conversaciones-con-inteligencia-artificial",
       "title": "Conversaciones con inteligencia artificial",
       "subtitle": "El punto de entrada para utilizar IA",
-      "related": []
+      "related": [
+        "005"
+      ]
+    },
+    "005": {
+      "slug": "005-contexto-para-la-inteligencia-artificial",
+      "title": "Contexto para la inteligencia artificial",
+      "subtitle": "La información que ayuda a obtener mejores respuestas",
+      "related": [
+        "004"
+      ]
     }
   }
 }
