@@ -345,7 +345,44 @@ No se debe trabajar exclusivamente desde memoria cuando el repositorio contiene 
 
 ---
 
-## 20. Checklist editorial
+## 20. Publicación e integración
+
+Un Brief no se considera integrado únicamente por disponer de su archivo Markdown aprobado.
+
+Para incorporarlo al sitio se debe verificar, según la arquitectura vigente:
+
+- contenido Markdown en la ubicación definida para Briefs;
+- ruta pública de lectura;
+- incorporación al catálogo `/learn`;
+- registro en el sistema de relaciones entre contenidos;
+- soporte del mecanismo de feedback cuando corresponda;
+- pruebas asociadas a los componentes modificados.
+
+La implementación debe seguir los componentes y esquemas vigentes del repositorio. Los Briefs existentes pueden utilizarse como referencia técnica para comprobar cómo está materializada la implementación, pero **no sustituyen esta directriz ni constituyen por sí mismos la especificación**.
+
+**No se deben inferir requisitos generales de publicación a partir de un Brief anterior. Si un requisito es común a los Briefs, debe estar documentado en esta directriz.**
+
+### Flujo de publicación
+
+El flujo normal es:
+
+**Redacción y revisión en el chat → aprobación editorial → integración en DEV → CI → validación del responsable en DEV → release selectivo a PROD → CI → validación del responsable en PROD → cerrado.**
+
+La aprobación editorial en el chat autoriza la integración en DEV. No requiere una validación visual adicional antes de esa integración: DEV es el ambiente destinado a realizar esa validación funcional y visual.
+
+Los estados no son equivalentes:
+
+- **Aprobado en el chat:** el contenido y los cambios propuestos fueron aceptados para integrarse en DEV.
+- **Validado en DEV:** el responsable revisó el resultado desplegado en DEV y dio su aprobación para preparar el release a producción.
+- **Validado en PROD:** el responsable revisó el resultado desplegado en producción. Solo entonces el Brief se considera cerrado.
+
+Un CI correcto o un merge no sustituyen la aprobación del responsable en DEV o PROD. No se debe avanzar de DEV a PROD sin su aprobación explícita en DEV, ni considerar cerrado un Brief únicamente porque el código fue fusionado a la rama de producción.
+
+Cuando las ramas DEV y PROD contengan otros cambios no relacionados, el paso a producción debe realizarse mediante un **release selectivo**, evitando incorporar cambios ajenos al Brief.
+
+---
+
+## 21. Checklist editorial
 
 Antes de considerar terminado un Brief, verificar:
 
@@ -370,7 +407,7 @@ Antes de considerar terminado un Brief, verificar:
 
 ---
 
-## 21. Criterio final
+## 22. Criterio final
 
 Un Mininode Brief debe poder responder afirmativamente a tres preguntas:
 
