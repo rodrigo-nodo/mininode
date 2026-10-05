@@ -150,6 +150,16 @@ Evitar:
 
 La redacción debe funcionar de manera natural en tercera persona o mediante construcciones impersonales.
 
+### Explicación simple y progresiva
+
+La explicación debe avanzar de manera **simple y progresiva**. Primero debe establecerse la idea necesaria para comprender lo que sigue y luego incorporar nuevos conceptos o matices.
+
+Debe evitarse introducir varias ideas nuevas al mismo tiempo, utilizar conceptos antes de explicarlos o anticipar detalles que se desarrollarán más adelante.
+
+**Cada parte del texto debe apoyarse naturalmente en lo que el lector ya pudo comprender.**
+
+La simplificación no debe sacrificar precisión: explicar progresivamente significa ordenar la complejidad, no eliminar información necesaria.
+
 ### Ritmo de párrafos
 
 Los párrafos deben ser breves, pero una oración no debe convertirse automáticamente en un párrafo.
