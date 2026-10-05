@@ -14,9 +14,7 @@ Para muchas personas, el primer contacto con la inteligencia artificial ocurre d
 
 Una pregunta. Una instrucción. Un texto para revisar. Una idea que desarrollar.
 
-La interacción se parece a una conversación, pero detrás existe una herramienta capaz de trabajar con el lenguaje y generar respuestas a partir de la información que recibe.
-
-Entender esta forma básica de interacción puede ser más útil que comenzar estudiando cómo funciona técnicamente la inteligencia artificial.
+La interacción se parece a una conversación, pero detrás existe una herramienta capaz de trabajar con el lenguaje y generar respuestas a partir de la información que recibe. Entender esta forma básica de interacción puede ser más útil que comenzar estudiando cómo funciona técnicamente la inteligencia artificial.
 
 ## Más que hacer preguntas
 
@@ -34,9 +32,7 @@ Por ejemplo:
 
 Lo que una persona escribe o entrega a la IA suele denominarse *prompt*. En términos simples, es la solicitud o instrucción que inicia o continúa la interacción.
 
-Aunque escribir es la forma más conocida de interactuar, algunas herramientas también permiten conversar mediante voz, incorporar imágenes o adjuntar documentos.
-
-En todos estos casos, la persona describe lo que necesita utilizando lenguaje cotidiano, sin necesidad de conocer programación.
+Aunque escribir es la forma más conocida de interactuar, algunas herramientas también permiten conversar mediante voz, incorporar imágenes o adjuntar documentos. En todos estos casos, la persona describe lo que necesita utilizando lenguaje cotidiano, sin necesidad de conocer programación.
 
 **La conversación se convierte en la interfaz.**
 
@@ -52,19 +48,13 @@ En cambio:
 
 > Redacta un correo breve y cordial para un cliente que tiene una factura vencida hace diez días. El objetivo es recordarle el pago sin que el mensaje suene agresivo. Utiliza un máximo de tres párrafos.
 
-La segunda solicitud orienta mejor la tarea.
+La segunda solicitud orienta mejor la tarea. Una instrucción puede indicar qué se necesita hacer y cómo se espera recibir el resultado. Cuando la tarea depende de una situación particular, también puede incorporar los antecedentes necesarios para comprenderla.
 
-Una instrucción puede indicar qué se necesita hacer y cómo se espera recibir el resultado. Cuando la tarea depende de una situación particular, también puede incorporar los antecedentes necesarios para comprenderla.
-
-No es necesario utilizar siempre una estructura determinada ni aprender fórmulas especiales.
-
-Lo importante es explicar con claridad qué se necesita.
+No es necesario utilizar siempre una estructura determinada ni aprender fórmulas especiales. Lo importante es explicar con claridad qué se necesita.
 
 ## La conversación puede continuar
 
-Una respuesta no tiene que ser el resultado final.
-
-También puede revisarse mediante nuevas instrucciones:
+Una respuesta no tiene que ser el resultado final. También puede revisarse mediante nuevas instrucciones:
 
 > Hazlo más corto.
 
@@ -76,9 +66,7 @@ También puede revisarse mediante nuevas instrucciones:
 
 > Mantén la idea, pero elimina la última parte.
 
-Esta capacidad permite trabajar de manera iterativa: obtener una primera respuesta, revisarla y solicitar modificaciones.
-
-También es posible aportar información adicional cuando se descubre que faltan antecedentes importantes.
+Esta capacidad permite trabajar de manera iterativa: obtener una primera respuesta, revisarla y solicitar modificaciones. También es posible aportar información adicional cuando se descubre que faltan antecedentes importantes.
 
 Por eso, utilizar una IA mediante conversación se parece menos a realizar una búsqueda aislada y más a desarrollar una tarea mediante sucesivas instrucciones.
 
@@ -96,9 +84,7 @@ Conversar facilita el uso de la inteligencia artificial, pero no elimina la nece
 
 ## Un punto de partida
 
-Utilizar inteligencia artificial no tiene que comenzar con automatizaciones, integraciones o sistemas complejos.
-
-Puede comenzar con una conversación.
+Utilizar inteligencia artificial no tiene que comenzar con automatizaciones, integraciones o sistemas complejos. Puede comenzar con una conversación.
 
 Plantear una tarea, recibir una respuesta y continuar la interacción permite trabajar mediante instrucciones sucesivas y ajustar el resultado a medida que avanza la tarea.
 
