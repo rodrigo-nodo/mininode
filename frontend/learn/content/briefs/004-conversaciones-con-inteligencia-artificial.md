@@ -52,17 +52,13 @@ En cambio:
 
 > Redacta un correo breve y cordial para un cliente que tiene una factura vencida hace diez días. El objetivo es recordarle el pago sin que el mensaje suene agresivo. Utiliza un máximo de tres párrafos.
 
-La segunda solicitud proporciona información que ayuda a orientar la respuesta.
+La segunda solicitud orienta mejor la tarea.
 
-Una forma sencilla de preparar una instrucción consiste en considerar tres elementos:
-
-- **Tarea:** qué se necesita hacer.
-- **Contexto:** qué información necesita la IA para comprender la situación.
-- **Resultado esperado:** cómo debería presentar la respuesta.
+Una instrucción puede indicar qué se necesita hacer y cómo se espera recibir el resultado. Cuando la tarea depende de una situación particular, también puede incorporar los antecedentes necesarios para comprenderla.
 
 No es necesario utilizar siempre una estructura determinada ni aprender fórmulas especiales.
 
-Lo importante es explicar con claridad el objetivo y proporcionar la información pertinente.
+Lo importante es explicar con claridad qué se necesita.
 
 ## La conversación puede continuar
 
@@ -94,7 +90,7 @@ La facilidad de conversar no significa que la herramienta conozca automáticamen
 
 Una respuesta clara o convincente tampoco es necesariamente correcta. Cuando el resultado sea importante, debe revisarse antes de utilizarlo.
 
-Además, conviene considerar qué información se entrega durante una conversación, especialmente cuando requiere cuidado.
+Además, conviene considerar qué información se entrega durante una conversación, especialmente cuando contiene datos personales o información confidencial.
 
 Conversar facilita el uso de la inteligencia artificial, pero no elimina la necesidad de aportar la información necesaria, cuidar lo que se comparte y evaluar los resultados.
 
@@ -106,7 +102,7 @@ Puede comenzar con una conversación.
 
 Plantear una tarea, recibir una respuesta y continuar la interacción permite trabajar mediante instrucciones sucesivas y ajustar el resultado a medida que avanza la tarea.
 
-**Conversar con la IA es una forma sencilla de comenzar a utilizarla sin necesidad de partir por sistemas complejos.**
+**La conversación permite comenzar a trabajar con IA mediante instrucciones sucesivas, sin necesidad de partir por sistemas complejos.**
 
 ## Fuentes
 
