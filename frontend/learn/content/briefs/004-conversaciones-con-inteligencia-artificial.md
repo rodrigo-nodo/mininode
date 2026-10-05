@@ -92,5 +92,5 @@ Plantear una tarea, recibir una respuesta y continuar la interacción permite tr
 
 ## Fuentes
 
-- OpenAI - Mejores prácticas de ingeniería de prompts para ChatGPT
-- OpenAI - Cómo crear un buen prompt para un modelo de IA
+- [OpenAI - Mejores prácticas de ingeniería de prompts para ChatGPT](https://help.openai.com/es-419/articles/10032626-prompt-engineering-best-practices-for-chatgpt)
+- [OpenAI - Cómo crear un buen prompt para un modelo de IA](https://help.openai.com/es-419/articles/4936848-how-do-i-create-a-good-prompt-for-an-ai-model)
