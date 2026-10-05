@@ -150,6 +150,14 @@ Evitar:
 
 La redacción debe funcionar de manera natural en tercera persona o mediante construcciones impersonales.
 
+### Ritmo de párrafos
+
+Los párrafos deben ser breves, pero una oración no debe convertirse automáticamente en un párrafo.
+
+Las oraciones que desarrollan una misma idea deben agruparse cuando esto favorezca una lectura continua. Los párrafos de una sola oración deben reservarse para énfasis, transición o un cambio deliberado de ritmo.
+
+El objetivo es evitar tanto los bloques de texto demasiado densos como una lectura excesivamente fragmentada por saltos de línea innecesarios.
+
 ---
 
 ## 9. Ejemplos
