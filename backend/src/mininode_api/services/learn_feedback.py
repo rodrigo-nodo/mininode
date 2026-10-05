@@ -14,6 +14,7 @@ BRIEF_001_CONTENT_KEY = "brief-001-nueva-autoridad-de-datos"
 BRIEF_003_CONTENT_KEY = "brief-003-datos-personales"
 BRIEF_004_CONTENT_KEY = "brief-004-conversaciones-con-inteligencia-artificial"
 BRIEF_005_CONTENT_KEY = "brief-005-contexto-para-la-inteligencia-artificial"
+BRIEF_006_CONTENT_KEY = "brief-006-informacion-compartida-con-la-inteligencia-artificial"
 GUIDE_001_CONTENT_KEY = "guide-001-proteccion-de-datos-personales"
 UNSET = object()
 
@@ -124,6 +125,22 @@ INSERT INTO learn.content (
 WHERE NOT EXISTS (
     SELECT 1 FROM learn.content
     WHERE content_key = 'brief-005-contexto-para-la-inteligencia-artificial'
+)
+ON CONFLICT (content_key) DO NOTHING;
+
+INSERT INTO learn.content (
+    content_key, slug, content_type, title, status, current_version, published_at
+) SELECT
+    'brief-006-informacion-compartida-con-la-inteligencia-artificial',
+    '/learn/briefs/006-informacion-compartida-con-la-inteligencia-artificial',
+    'brief',
+    'Información compartida con la inteligencia artificial',
+    'published',
+    1,
+    CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+    SELECT 1 FROM learn.content
+    WHERE content_key = 'brief-006-informacion-compartida-con-la-inteligencia-artificial'
 )
 ON CONFLICT (content_key) DO NOTHING;
 

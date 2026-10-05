@@ -35,7 +35,16 @@
       "title": "Contexto para la inteligencia artificial",
       "subtitle": "La información que ayuda a obtener mejores respuestas",
       "related": [
-        "004"
+        "004",
+        "006"
+      ]
+    },
+    "006": {
+      "slug": "006-informacion-compartida-con-la-inteligencia-artificial",
+      "title": "Información compartida con la inteligencia artificial",
+      "subtitle": "Qué conviene considerar antes de entregar datos, documentos y antecedentes",
+      "related": [
+        "005"
       ]
     }
   }
