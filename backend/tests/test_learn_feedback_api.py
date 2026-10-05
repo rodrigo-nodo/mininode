@@ -60,10 +60,12 @@ def test_initialization_uses_idempotent_learn_schema_and_seed(monkeypatch):
     assert learn_feedback.BRIEF_001_CONTENT_KEY in sql
     assert learn_feedback.BRIEF_003_CONTENT_KEY in sql
     assert learn_feedback.BRIEF_004_CONTENT_KEY in sql
+    assert learn_feedback.BRIEF_005_CONTENT_KEY in sql
     assert learn_feedback.GUIDE_001_CONTENT_KEY in sql
     assert "'/learn/briefs/001-nueva-autoridad-de-datos'" in sql
     assert "'/learn/briefs/003-datos-personales'" in sql
     assert "'/learn/briefs/004-conversaciones-con-inteligencia-artificial'" in sql
+    assert "'/learn/briefs/005-contexto-para-la-inteligencia-artificial'" in sql
     assert "'/learn/guides/001-proteccion-de-datos-personales'" in sql
     assert "'brief'" in sql
     assert "CREATE INDEX IF NOT EXISTS learn_feedback_content_id_idx" in sql
