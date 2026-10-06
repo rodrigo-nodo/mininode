@@ -30,3 +30,5 @@ def test_renewal_starts_after_current_active_period():
     source = inspect.getsource(billing.payment_confirmed)
     assert "max(active_until)" in source
     assert "max(verified_paid_at, latest)" in source
+    assert "latest > add_calendar_month(verified_paid_at)" in source
+    assert "already has one future period paid" in source
