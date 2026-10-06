@@ -114,8 +114,15 @@ def payment_confirmed(order_id: UUID, *, provider: str, provider_order_id: str,
             cur.execute("SELECT id FROM access.workspace_sites WHERE id = %s FOR UPDATE", (site_id,))
             if cur.fetchone() is None:
                 raise ValueError("Site not found")
-            cur.execute("SELECT status, provider, provider_order_id, product_code FROM billing.orders WHERE id = %s FOR UPDATE", (order_id,))
-            status, previous_provider, previous_reference, product = cur.fetchone()
+            cur.execute("""
+                SELECT o.status, o.provider, o.provider_order_id, o.product_code,
+                       d.purchase_expires_at
+                FROM billing.orders o
+                JOIN privacy.diagnostic d ON d.id = o.diagnostic_id
+                WHERE o.id = %s
+                FOR UPDATE OF o
+            """, (order_id,))
+            status, previous_provider, previous_reference, product, purchase_expires_at = cur.fetchone()
             if status == 'paid':
                 if (previous_provider, previous_reference) != (provider, provider_order_id):
                     raise ValueError("Payment reference mismatch")
@@ -128,6 +135,8 @@ def payment_confirmed(order_id: UUID, *, provider: str, provider_order_id: str,
                 raise ValueError("Order cannot be paid in current state")
             if previous_provider is not None and (previous_provider, previous_reference) != (provider, provider_order_id):
                 raise ValueError("Payment reference mismatch")
+            if verified_paid_at > purchase_expires_at:
+                raise ValueError("Diagnostic purchase window expired")
             cur.execute("""
                 SELECT max(active_until) FROM access.entitlements
                 WHERE workspace_site_id = %s AND product_code = %s AND status = 'active'
