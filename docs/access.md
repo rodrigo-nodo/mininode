@@ -141,7 +141,8 @@ del navegador desde un checkout nunca concede acceso por sí sola.
 
 La vigencia pagada es un mes calendario desde `paid_at`. Si ya existe una vigencia
 activa, una compra anticipada agrega el nuevo mes después de `active_until`, sin perder
-días. Las fuentes no comerciales (`internal`, `qa`, `demo` y posteriormente
+días. Solo se permite mantener un período futuro ya pagado: una nueva compra queda
+bloqueada hasta que comience ese período. Las fuentes no comerciales (`internal`, `qa`, `demo` y posteriormente
 `partner`) pueden crear entitlements sin convertir al proveedor de pago en autoridad
 comercial.
 
