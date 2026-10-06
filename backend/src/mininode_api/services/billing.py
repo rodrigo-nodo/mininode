@@ -90,6 +90,34 @@ def get_order(user_id: UUID, order_id: UUID) -> Order | None:
         """, (order_id, user_id)).fetchone()
     return Order(*row) if row else None
 
+def get_order_for_provider(order_id: UUID) -> Order | None:
+    """Internal provider lookup. Never expose this without user authorization."""
+    with _connect() as conn:
+        row = conn.execute(f"SELECT {ORDER_FIELDS} FROM billing.orders WHERE id = %s", (order_id,)).fetchone()
+    return Order(*row) if row else None
+
+def attach_provider_order(order_id: UUID, *, provider: str, provider_order_id: str) -> None:
+    """Link a pending Billing order to exactly one provider order."""
+    if not provider or not provider_order_id:
+        raise ValueError("Provider and provider order id are required")
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT status, provider, provider_order_id FROM billing.orders WHERE id=%s FOR UPDATE", (order_id,))
+            row = cur.fetchone()
+            if row is None:
+                raise ValueError("Order not found")
+            status, current_provider, current_reference = row
+            if status != "pending":
+                raise ValueError("Only pending orders can be linked")
+            if current_provider is not None:
+                if (current_provider, current_reference) == (provider, provider_order_id):
+                    return
+                raise ValueError("Order is already linked to another provider order")
+            cur.execute(
+                "UPDATE billing.orders SET provider=%s, provider_order_id=%s WHERE id=%s",
+                (provider, provider_order_id, order_id),
+            )
+
 def add_calendar_month(start: datetime) -> datetime:
     year = start.year + (start.month == 12)
     month = start.month % 12 + 1
