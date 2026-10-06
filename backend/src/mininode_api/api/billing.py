@@ -1,0 +1,51 @@
+"""Authenticated Billing endpoints. Provider callbacks are implemented by provider adapters."""
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from mininode_api.core.access_auth import require_access_user
+from mininode_api.services import access, billing
+
+router = APIRouter(prefix="/billing", tags=["billing"])
+
+class CreateOrderRequest(BaseModel):
+    workspace_site_id: UUID
+    diagnostic_id: UUID
+
+class OrderResponse(BaseModel):
+    id: UUID
+    workspace_site_id: UUID
+    diagnostic_id: UUID
+    product_code: str
+    amount: int
+    currency: str
+    status: str
+
+def _response(order: billing.Order) -> OrderResponse:
+    return OrderResponse(**{name: getattr(order, name) for name in OrderResponse.model_fields})
+
+@router.post("/orders", response_model=OrderResponse)
+def create_order(body: CreateOrderRequest, user: access.StoredUser = Depends(require_access_user)):
+    try:
+        return _response(billing.create_order(user.id, body.workspace_site_id, body.diagnostic_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+@router.get("/orders/{order_id}", response_model=OrderResponse)
+def get_order(order_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    order = billing.get_order(user.id, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return _response(order)
+
+class EntitlementResponse(BaseModel):
+    active: bool
+    active_from: object | None = None
+    active_until: object | None = None
+    source: str | None = None
+
+@router.get("/sites/{workspace_site_id}/entitlement", response_model=EntitlementResponse)
+def entitlement(workspace_site_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    row = billing.current_entitlement(user.id, workspace_site_id)
+    if row is None:
+        return EntitlementResponse(active=False)
+    return EntitlementResponse(active=True, active_from=row[1], active_until=row[2], source=row[3])
