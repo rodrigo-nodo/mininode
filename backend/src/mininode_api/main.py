@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 async def lifespan(app: FastAPI):
     from mininode_api.services import (
         access,
+        billing,
         learn_feedback,
         privacy_correction_plan,
         privacy_correction_plan_order,
@@ -31,6 +32,15 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.access_ready = True
+
+    try:
+        billing.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Billing database initialization failed; Billing remains unavailable"
+        )
+    else:
+        app.state.billing_ready = True
 
     try:
         learn_feedback.initialize_database()
@@ -114,6 +124,7 @@ def configure_application_logging() -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="Mininode API", version="0.1.0", lifespan=lifespan)
     app.state.access_ready = False
+    app.state.billing_ready = False
     app.state.learn_feedback_ready = False
     app.state.privacy_correction_plan_ready = False
     app.state.privacy_correction_plan_order_ready = False
@@ -163,6 +174,12 @@ def create_app() -> FastAPI:
         app.include_router(access_router)
     except Exception as e:
         logging.exception("Failed to include access router: %s", e)
+
+    try:
+        from mininode_api.api.billing import router as billing_router
+        app.include_router(billing_router)
+    except Exception as e:
+        logging.exception("Failed to include billing router: %s", e)
 
     try:
         from mininode_api.api.write import router as write_router
