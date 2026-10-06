@@ -54,6 +54,8 @@ def validate_webhook_signature(*, x_signature: str, x_request_id: str, data_id: 
 def create_checkout(order: billing.Order, *, payer_email: str) -> tuple[str, str]:
     if order.status != "pending":
         raise ValueError("Only pending orders can start checkout")
+    if order.provider is not None:
+        raise ValueError("Order already has a checkout")
     base = _return_base_url()
     payload = {
         "type": "online",
