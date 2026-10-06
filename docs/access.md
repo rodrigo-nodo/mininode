@@ -129,8 +129,24 @@ Responde qué producto está habilitado para el seguimiento privado `workspace_s
 
 ### Billing
 
-Será un nodo separado. Un pago confirmado podrá originar o extender un entitlement,
-pero Billing no decidirá quién tiene permiso sobre un workspace.
+Billing es un nodo separado y proveedor-independiente. Mantiene órdenes internas con
+producto, precio y moneda resueltos por backend; el frontend no decide el monto.
+
+Para Privacy Web, una orden se asocia a `workspace_site` y al diagnóstico elegible que
+la originó. La activación solo puede solicitarse dentro de las 24 horas del diagnóstico.
+
+La operación interna `payment_confirmed` recibe una confirmación ya verificada por un
+adaptador de pago y crea el entitlement de forma transaccional e idempotente. La vuelta
+del navegador desde un checkout nunca concede acceso por sí sola.
+
+La vigencia pagada es un mes calendario desde `paid_at`. Si ya existe una vigencia
+activa, una compra anticipada agrega el nuevo mes después de `active_until`, sin perder
+días. Las fuentes no comerciales (`internal`, `qa`, `demo` y posteriormente
+`partner`) pueden crear entitlements sin convertir al proveedor de pago en autoridad
+comercial.
+
+A4.1 no integra todavía Mercado Pago ni elimina las estructuras comerciales antiguas de
+Privacy Web; esa transición se hará separadamente después de validar Billing Core.
 
 ## Seguridad
 
