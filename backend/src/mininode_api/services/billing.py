@@ -134,6 +134,8 @@ def payment_confirmed(order_id: UUID, *, provider: str, provider_order_id: str,
                   AND active_until IS NOT NULL AND active_until > %s
             """, (site_id, product, verified_paid_at))
             latest = cur.fetchone()[0]
+            if latest is not None and latest > add_calendar_month(verified_paid_at):
+                raise ValueError("Privacy Web already has one future period paid")
             start = max(verified_paid_at, latest) if latest else verified_paid_at
             entitlement_id = uuid4()
             cur.execute("""
