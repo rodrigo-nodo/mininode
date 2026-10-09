@@ -34,13 +34,6 @@ async def lifespan(app: FastAPI):
         app.state.access_ready = True
 
     try:
-        billing.initialize_database()
-    except Exception:
-        logging.getLogger(__name__).exception("Billing database initialization failed")
-    else:
-        app.state.billing_ready = True
-
-    try:
         learn_feedback.initialize_database()
     except Exception:
         logging.getLogger(__name__).exception(
@@ -66,6 +59,13 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.privacy_diagnostic_snapshot_ready = True
+
+    try:
+        billing.initialize_database()
+    except Exception:
+        logging.getLogger(__name__).exception("Billing database initialization failed")
+    else:
+        app.state.billing_ready = True
 
     try:
         privacy_correction_plan_order.initialize_database()
