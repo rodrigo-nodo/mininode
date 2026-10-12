@@ -1,0 +1,43 @@
+name: Content Reader Public QA
+
+on:
+  push:
+    branches:
+      - qa/content-reader-smiley
+    paths:
+      - '.github/workflows/content-reader-public-qa.yml'
+      - 'automation/content_reader/qa_public_document.py'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Public URL to compare
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+      CONTENT_READER_QA_URL: ${{ inputs.url || 'https://www.abc.cl/terminos-y-condiciones.html' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Capture once and compare entire static document
+        run: python automation/content_reader/qa_public_document.py
+      - name: Upload QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-reader-public-qa
+          path: content-reader-qa-output/
+          retention-days: 7
+          if-no-files-found: warn
