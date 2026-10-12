@@ -108,6 +108,19 @@ def _render(node: Tag | NavigableString, output: list[str]) -> None:
     for child in node.children:
         _render(child, output)
 
+    if name in _SEPARATE_INLINE_ELEMENTS and output:
+        # Also separate a standalone inline label from subsequent sibling text:
+        # <a><span>Mis compras</span>Haz seguimiento</a>.
+        following = node.next_sibling
+        if (
+            isinstance(following, NavigableString)
+            and str(following)
+            and str(following)[0].isalnum()
+            and output[-1]
+            and output[-1][-1].isalnum()
+        ):
+            output.append(" ")
+
     if heading or name in _BLOCK_ELEMENTS:
         output.append("\n\n")
     elif name == "li":
