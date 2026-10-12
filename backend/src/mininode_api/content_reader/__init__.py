@@ -2,8 +2,11 @@
 
 from .reader import (
     MAX_DOCUMENT_CHARACTERS,
+    MAX_DOCUMENT_NODES,
+    MAX_DOM_DEPTH,
     ContentDocument,
     ContentLink,
+    ContentNode,
     ContentReadError,
     read_html_document,
     read_public_html_url,
@@ -11,8 +14,11 @@ from .reader import (
 
 __all__ = [
     "MAX_DOCUMENT_CHARACTERS",
+    "MAX_DOCUMENT_NODES",
+    "MAX_DOM_DEPTH",
     "ContentDocument",
     "ContentLink",
+    "ContentNode",
     "ContentReadError",
     "read_html_document",
     "read_public_html_url",

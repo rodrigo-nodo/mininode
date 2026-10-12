@@ -5,6 +5,7 @@ import pytest
 
 from mininode_api.content_reader import (
     ContentReadError, read_html_document, read_public_html_url,
+    MAX_DOCUMENT_NODES, MAX_DOM_DEPTH,
 )
 
 
@@ -67,7 +68,7 @@ def test_header_footer_form_table_and_nested_links_are_preserved():
     for expected in ("Encabezado legal", "Consentimiento", "Tratamiento",
                      "Plazo", "12 meses", "Contacto de privacidad"):
         assert expected in doc.text
-    assert [link.url for link in doc.links] == ["https://example.cl/visible"]
+    assert [link.url for link in doc.links] == ["https://example.cl/visible", "https://example.cl/hidden"]
 
 
 def test_url_adapter_reuses_existing_fetcher_and_surfaces_errors():
@@ -113,5 +114,138 @@ def test_comments_and_hidden_html_are_excluded():
         "<p>Final</p></body>", "https://example.cl",
     )
     assert "Visible" in doc.text and "Final" in doc.text
-    assert "Oculto" not in doc.text and "No visible" not in doc.text
+    assert "Oculto" in doc.text and "No visible" in doc.text
     assert "secret" not in doc.text
+
+
+def test_inline_boundaries_use_html_structure_not_capitalization():
+    doc = read_html_document(
+        "<body><p>e<strong>Mail</strong> i<strong>Phone</strong> "
+        "anti<strong>fraude</strong></p>"
+        "<p>abc<span>revisa</span> ABC<span>Revisa</span></p>"
+        "<p>Mis compras<span>Haz seguimiento</span></p>"
+        "<p>Mi Tarjeta abc<span>Revisa tus movimientos</span></p></body>",
+        "https://example.cl",
+    )
+    assert "eMail" in doc.text
+    assert "iPhone" in doc.text
+    assert "antifraude" in doc.text
+    assert "abcrevisa" in doc.text
+    assert "ABCRevisa" in doc.text
+    assert "Mis comprasHaz seguimiento" in doc.text
+    assert "Mi Tarjeta abcRevisa tus movimientos" in doc.text
+
+
+def test_hidden_and_aria_hidden_static_text_is_retained():
+    doc = read_html_document(
+        "<body><p>Visible</p><span hidden>Texto hidden</span>"
+        "<span aria-hidden='true'>Texto accesibilidad</span>"
+        "<script>NO_JS</script><style>NO_CSS</style></body>",
+        "https://example.cl",
+    )
+    assert "Texto hidden" in doc.text
+    assert "Texto accesibilidad" in doc.text
+    assert "NO_JS" not in doc.text
+    assert "NO_CSS" not in doc.text
+
+
+def test_links_and_punctuation_are_not_semantically_rewritten():
+    doc = read_html_document(
+        "<body><p>Consulta <a href='/p'>política</a>.</p>"
+        "<p>anti<strong>fraude</strong>, datos: 12 meses.</p></body>",
+        "https://example.cl",
+    )
+    assert "Consulta política." in doc.text
+    assert "antifraude, datos: 12 meses." in doc.text
+    assert doc.links[0].url == "https://example.cl/p"
+
+
+def test_abc_real_html_span_label_followed_by_raw_text():
+    doc = read_html_document(
+        "<body><p><a href='/seguimiento'><span>Mis compras</span>"
+        "Haz seguimiento</a></p><p><a href='/tarjeta'>"
+        "<span>Mi Tarjeta abc</span>Revisa tus movimientos</a></p></body>",
+        "https://example.cl",
+    )
+    assert "Mis comprasHaz seguimiento" in doc.text
+    assert "Mi Tarjeta abcRevisa tus movimientos" in doc.text
+    assert [link.url for link in doc.links] == [
+        "https://example.cl/seguimiento", "https://example.cl/tarjeta",
+    ]
+
+def test_exact_dom_fragments_are_primary_fidelity_contract():
+    doc = read_html_document(
+        "<body><a href='/track'><span>Mis compras</span>Haz seguimiento</a>"
+        "<p>anti<span>virus</span> <span>e</span>Mail "
+        "<a href='/web'>web</a>site <time>20</time>26</p>"
+        "<p hidden aria-hidden='true'>¿Quién?  ¡Sí! &amp; más.</p></body>",
+        "https://example.cl/",
+    )
+    assert doc.source_text == (
+        "Mis comprasHaz seguimiento"
+        "antivirus eMail website 2026"
+        "¿Quién?  ¡Sí! & más."
+    )
+    assert [n.text for n in doc.nodes if n.kind == "text"] == [
+        "Mis compras", "Haz seguimiento", "anti", "virus", " ", "e",
+        "Mail ", "web", "site ", "20", "26", "¿Quién?  ¡Sí! & más.",
+    ]
+    assert doc.source_sha256 == hashlib.sha256(doc.source_text.encode()).hexdigest()
+    assert doc.source_character_count == len(doc.source_text)
+    assert [n.href for n in doc.nodes if n.kind == "element" and n.href] == [
+        "https://example.cl/track", "https://example.cl/web",
+    ]
+    assert any(n.hidden and n.aria_hidden for n in doc.nodes)
+    assert doc.text.startswith("Mis comprasHaz seguimiento")
+
+
+def test_exact_punctuation_and_spacing_remain_in_source_nodes():
+    doc = read_html_document(
+        "<body><p>Uno,  dos.<em>¡Tres!</em></p><p>A &amp; B</p></body>",
+        "https://example.cl",
+    )
+    assert doc.source_text == "Uno,  dos.¡Tres!A & B"
+    assert "Uno, dos.¡Tres!" in doc.text
+
+
+def test_dom_node_limit_is_explicit_and_inclusive():
+    html = "<body><p>texto</p></body>"  # body, p, text
+    doc = read_html_document(html, "https://example.cl", max_nodes=3)
+    assert len(doc.nodes) == 3
+    with pytest.raises(ContentReadError) as error:
+        read_html_document(html, "https://example.cl", max_nodes=2)
+    assert error.value.code == "document_too_complex"
+
+
+def test_empty_elements_cannot_bypass_dom_node_limit():
+    html = "<body>" + "<span></span>" * 250 + "<p>texto</p></body>"
+    with pytest.raises(ContentReadError, match="document_too_complex"):
+        read_html_document(html, "https://example.cl", max_nodes=100)
+
+
+def test_dom_depth_limit_rejects_deep_nesting_without_recursion_error():
+    html = "<body>" + "<div>" * 1100 + "texto" + "</div>" * 1100 + "</body>"
+    with pytest.raises(ContentReadError) as error:
+        read_html_document(html, "https://example.cl", max_depth=128)
+    assert error.value.code == "document_too_complex"
+
+
+def test_dom_depth_boundary_and_invalid_limits():
+    doc = read_html_document(
+        "<body><div><p>texto</p></div></body>",
+        "https://example.cl", max_depth=3,
+    )
+    assert doc.source_text == "texto"
+    with pytest.raises(ContentReadError, match="document_too_complex"):
+        read_html_document(
+            "<body><div><p>texto</p></div></body>",
+            "https://example.cl", max_depth=2,
+        )
+    for kwargs in ({"max_nodes": 0}, {"max_depth": 0}):
+        with pytest.raises(ValueError):
+            read_html_document("<body>texto</body>", "https://example.cl", **kwargs)
+
+
+def test_dom_defaults_are_bounded():
+    assert MAX_DOCUMENT_NODES == 50_000
+    assert MAX_DOM_DEPTH == 128

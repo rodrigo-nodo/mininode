@@ -1,0 +1,57 @@
+name: Content Reader Public QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/content-reader-public-qa.yml'
+      - 'automation/content_reader/qa_public_document.py'
+      - 'backend/src/mininode_api/content_reader/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/tests/content_reader/**'
+  push:
+    branches: [fix/content-reader-inline-boundaries]
+    paths:
+      - '.github/workflows/content-reader-public-qa.yml'
+      - 'automation/content_reader/qa_public_document.py'
+      - 'backend/src/mininode_api/content_reader/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/tests/content_reader/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r backend/requirements.txt
+      - name: Compare static public documents and links
+        shell: bash
+        run: |
+          set -uo pipefail
+          rc=0
+          for entry in "abc|https://www.abc.cl/terminos-y-condiciones.html" "emol|https://www.emol.com/movil/terminos/privacidad.aspx" "smiley|https://www.smileykidsfood.com/politica-de-privacidad"; do
+            name="${entry%%|*}"
+            export CONTENT_READER_QA_URL="${entry#*|}"
+            rm -rf content-reader-qa-output
+            python automation/content_reader/qa_public_document.py || rc=1
+            mkdir -p qa-results/"$name"
+            cp -a content-reader-qa-output/. qa-results/"$name"/
+          done
+          exit "$rc"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: content-reader-public-fidelity-qa
+          path: qa-results/
+          if-no-files-found: warn
+          retention-days: 7
