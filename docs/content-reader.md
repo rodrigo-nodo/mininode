@@ -30,7 +30,7 @@ No se seleccionan ni resumen párrafos según su materia. Encabezados, formulari
 
 - No ejecuta JavaScript ni reproduce contenido generado en el navegador.
 - No aplica estilos CSS ni garantiza equivalencia pixel a pixel con el documento renderizado.
-- Omite scripts, estilos, plantillas, SVG/canvas y nodos marcados explícitamente como ocultos.
+- Omite scripts, estilos, plantillas y SVG/canvas. Conserva el texto de nodos `hidden` y `aria-hidden` para no excluir contenido estático silenciosamente.
 - Solo acepta el HTML respaldado por el `WebFetcher` existente; no incorpora PDF ni otras fuentes en V1.
 - Límite explícito de 200.000 caracteres de texto extraído. Si se supera, se devuelve `document_too_large`, **nunca un documento parcial presentado como completo**.
 - Un documento sin texto devuelve `empty_document`; los errores de obtención siguen siendo explícitos.
