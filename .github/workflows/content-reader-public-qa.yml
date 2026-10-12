@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/content-reader-public-qa.yml'
       - 'automation/content_reader/qa_public_document.py'
+      - 'backend/src/mininode_api/content_reader/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/tests/content_reader/**'
   workflow_dispatch:
 
 permissions:
