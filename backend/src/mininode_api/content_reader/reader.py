@@ -18,10 +18,6 @@ from mininode_api.web_inspector.fetcher import WebFetcher
 
 MAX_DOCUMENT_CHARACTERS = 200_000
 _SKIP_ELEMENTS = frozenset({"script", "style", "template", "svg", "canvas"})
-# Formatting tags (strong/em/etc.) can split a word deliberately.
-# Distinct phrasing containers may need a textual boundary in the absence
-# of source whitespace; this is structural, not capitalization-based.
-_SEPARATE_INLINE_ELEMENTS = frozenset({"span", "a", "label", "button", "time"})
 _BLOCK_ELEMENTS = frozenset({
     "address", "article", "aside", "blockquote", "body", "dd", "div", "dl", "dt",
     "fieldset", "figcaption", "figure", "footer", "form", "header", "main",
@@ -44,6 +40,24 @@ class ContentLink:
 
 
 @dataclass(frozen=True)
+class ContentNode:
+    """One source-order DOM node, with unaltered text and parent provenance.
+
+    Node IDs are preorder indices within ContentDocument.nodes. A text node's
+    parent_id identifies its owning element, even when tags are inline.
+    """
+
+    id: int
+    parent_id: int | None
+    kind: str  # "element" or "text"
+    tag: str | None = None
+    text: str | None = None
+    href: str | None = None
+    hidden: bool = False
+    aria_hidden: bool = False
+
+
+@dataclass(frozen=True)
 class ContentDocument:
     requested_url: str
     final_url: str
@@ -54,6 +68,11 @@ class ContentDocument:
     character_count: int
     extraction_scope: str = "static_html"
     truncated: bool = False
+    # Primary fidelity contract: ordered DOM nodes and exact source fragments.
+    nodes: tuple[ContentNode, ...] = ()
+    source_text: str = ""
+    source_sha256: str = ""
+    source_character_count: int = 0
 
 
 def _is_hidden(node: Tag) -> bool:
@@ -72,20 +91,6 @@ def _render(node: Tag | NavigableString, output: list[str]) -> None:
         return
 
     name = node.name or ""
-    if name in _SEPARATE_INLINE_ELEMENTS and output:
-        # Explicit structural separation for a new standalone inline element.
-        # Do not infer word boundaries from letter case. Formatting tags
-        # (e.g. strong) intentionally remain transparent to word joining.
-        previous = output[-1]
-        first_text = node.get_text(" ", strip=True)
-        if (
-            previous
-            and first_text
-            and not previous[-1].isspace()
-            and previous[-1].isalnum()
-            and first_text[0].isalnum()
-        ):
-            output.append(" ")
     if name == "br":
         output.append("\n")
         return
@@ -108,23 +113,47 @@ def _render(node: Tag | NavigableString, output: list[str]) -> None:
     for child in node.children:
         _render(child, output)
 
-    if name in _SEPARATE_INLINE_ELEMENTS and output:
-        # Also separate a standalone inline label from subsequent sibling text:
-        # <a><span>Mis compras</span>Haz seguimiento</a>.
-        following = node.next_sibling
-        if (
-            isinstance(following, NavigableString)
-            and str(following)
-            and str(following)[0].isalnum()
-            and output[-1]
-            and output[-1][-1].isalnum()
-        ):
-            output.append(" ")
-
     if heading or name in _BLOCK_ELEMENTS:
         output.append("\n\n")
     elif name == "li":
         output.append("\n")
+
+
+def _capture_dom_nodes(root: Tag, final_url: str) -> tuple[ContentNode, ...]:
+    """Capture preorder DOM structure and exact text without inferred spaces."""
+
+    nodes: list[ContentNode] = []
+
+    def visit(node: Tag | NavigableString, parent_id: int | None) -> None:
+        if isinstance(node, Comment):
+            return
+        if isinstance(node, NavigableString):
+            nodes.append(ContentNode(
+                id=len(nodes), parent_id=parent_id, kind="text", text=str(node),
+            ))
+            return
+        if not isinstance(node, Tag) or _is_hidden(node):
+            return
+
+        node_id = len(nodes)
+        href: str | None = None
+        if node.name == "a" and node.has_attr("href"):
+            href_raw = str(node.get("href") or "").strip()
+            if href_raw:
+                resolved = urljoin(final_url, href_raw)
+                if urlsplit(resolved).scheme.lower() in {"http", "https", "mailto", "tel"}:
+                    href = resolved
+
+        nodes.append(ContentNode(
+            id=node_id, parent_id=parent_id, kind="element", tag=node.name,
+            href=href, hidden=node.has_attr("hidden"),
+            aria_hidden=node.get("aria-hidden") == "true",
+        ))
+        for child in node.children:
+            visit(child, node_id)
+
+    visit(root, None)
+    return tuple(nodes)
 
 
 def _clean_lines(chunks: list[str]) -> str:
@@ -146,10 +175,12 @@ def read_html_document(
     requested_url: str | None = None,
     max_characters: int = MAX_DOCUMENT_CHARACTERS,
 ) -> ContentDocument:
-    """Read the entire static HTML body without semantic filtering or truncation.
+    """Preserve complete static HTML text and DOM structure, without inference.
 
-    Browser-generated content and CSS-dependent visibility are outside this
-    scope. Content above the size limit fails explicitly instead of truncating.
+    nodes/source_text are the fidelity contract; text is a derived readable
+    view that preserves explicit whitespace and block boundaries but does not
+    guess visual whitespace between adjacent inline fragments. Browser-generated
+    content and CSS-dependent layout are outside this scope.
     """
     if max_characters < 1:
         raise ValueError("max_characters must be positive")
@@ -164,9 +195,13 @@ def read_html_document(
     chunks: list[str] = []
     _render(root, chunks)
     text = _clean_lines(chunks)
-    if not text:
+    nodes = _capture_dom_nodes(root, final_url)
+    source_text = "".join(
+        node.text for node in nodes if node.kind == "text" and node.text is not None
+    )
+    if not source_text.strip():
         raise ContentReadError("empty_document")
-    if len(text) > max_characters:
+    if len(text) > max_characters or len(source_text) > max_characters:
         raise ContentReadError("document_too_large")
 
     links: list[ContentLink] = []
@@ -196,6 +231,10 @@ def read_html_document(
         links=tuple(links),
         content_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
         character_count=len(text),
+        nodes=nodes,
+        source_text=source_text,
+        source_sha256=hashlib.sha256(source_text.encode("utf-8")).hexdigest(),
+        source_character_count=len(source_text),
     )
 
 
