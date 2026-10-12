@@ -40,6 +40,7 @@ REQUEST_TIMEOUT_SECONDS = 10.0
 CONNECT_ATTEMPT_TIMEOUT_SECONDS = 4.0
 INSPECTION_BUDGET_SECONDS = 30.0
 HTML_CONTENT_TYPES = {"text/html", "application/xhtml+xml"}
+PDF_CONTENT_TYPE = "application/pdf"
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
@@ -163,6 +164,7 @@ class WebFetcher:
         candidate_urls: Iterable[str],
         *,
         deadline: float | None = None,
+        accept_pdf: bool = False,
     ) -> InspectionFetchResult:
         started = time.monotonic()
         candidates = list(candidate_urls)
@@ -234,7 +236,7 @@ class WebFetcher:
                 error = FetchError("robots_disallowed", "robots.txt disallows this path", requested_url)
                 page = FetchPageResult(requested_url=requested_url, error=error)
             else:
-                page = self._fetch_page(fetch_url, allowed_hostname, deadline=deadline)
+                page = self._fetch_page(fetch_url, allowed_hostname, deadline=deadline, accept_pdf=accept_pdf)
                 page.requested_url = requested_url
                 page.requested_hostname = requested_hostname
                 page.effective_hostname = effective_hostname
@@ -271,6 +273,7 @@ class WebFetcher:
         allowed_hostname: str | None,
         *,
         accept_plain_text: bool = False,
+        accept_pdf: bool = False,
         deadline: float | None = None,
     ) -> FetchPageResult:
         started = time.monotonic()
@@ -365,7 +368,7 @@ class WebFetcher:
                             )
                             accepted = content_type in HTML_CONTENT_TYPES or (
                                 accept_plain_text and content_type == "text/plain"
-                            )
+                            ) or (accept_pdf and content_type == PDF_CONTENT_TYPE)
                             if not accepted:
                                 return self._error_page(
                                     requested_url,
@@ -429,7 +432,8 @@ class WebFetcher:
                                 final_url=current_url,
                                 status_code=response.status_code,
                                 content_type=content_type,
-                                html=bytes(body).decode(encoding, errors="replace"),
+                                html=None if content_type == PDF_CONTENT_TYPE else bytes(body).decode(encoding, errors="replace"),
+                                binary_content=bytes(body) if content_type == PDF_CONTENT_TYPE and accept_pdf else None,
                                 elapsed_ms=int((time.monotonic() - started) * 1000),
                                 redirect_count=redirects,
                                 set_cookie_names=cookie_names,
