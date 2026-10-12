@@ -115,3 +115,19 @@ def test_comments_and_hidden_html_are_excluded():
     assert "Visible" in doc.text and "Final" in doc.text
     assert "Oculto" not in doc.text and "No visible" not in doc.text
     assert "secret" not in doc.text
+
+
+def test_adjacent_inline_labels_keep_word_boundaries_without_splitting_words():
+    html = """
+    <body>
+      <p>Mis compras<span>Haz seguimiento</span></p>
+      <p>Mi Tarjeta abc<span>Revisa tus movimientos</span></p>
+      <p>anti<strong>fraude</strong> y tratamiento de <strong>Datos</strong></p>
+    </body>
+    """
+    result = read_html_document(html, "https://example.cl")
+    assert "Mis compras Haz seguimiento" in result.text
+    assert "Mi Tarjeta abc Revisa tus movimientos" in result.text
+    assert "antifraude" in result.text
+    assert "anti fraude" not in result.text
+    assert "tratamiento de Datos" in result.text
