@@ -43,13 +43,12 @@ def independent_reference(html: str) -> str:
             element.name in {"script", "style", "template", "svg", "canvas"}
         ):
             element.decompose()
-    return " ".join(
-        str(node).strip()
+    return "".join(
+        str(node)
         for node in root.descendants
         if isinstance(node, NavigableString)
         and not isinstance(node, Comment)
         and node.parent is not None
-        and str(node).strip()
     )
 
 
@@ -99,8 +98,31 @@ def main() -> int:
         if urlsplit(resolved).scheme.lower() in {"http", "https", "mailto", "tel"}:
             links_baseline.append(resolved)
     links_reader = [link.url for link in document.links]
+    # Primary oracle: exact concatenated DOM text, including punctuation,
+    # whitespace and mixed inline node boundaries. Never join with spaces.
+    actual_source = document.source_text
     baseline = canonical_words(reference)
-    actual = canonical_words(document.text)
+    actual = canonical_words(actual_source)
+    exact_source = reference == actual_source
+    # Independent DOM preorder structural trace (tag names, parent indices,
+    # exact text values). Built without the ContentReader implementation.
+    from bs4 import Tag
+    expected_trace = []
+    def visit(node, parent):
+        if isinstance(node, Comment):
+            return
+        if isinstance(node, NavigableString):
+            expected_trace.append(("text", parent, None, str(node)))
+            return
+        if not isinstance(node, Tag) or node.name in {"script", "style", "template", "svg", "canvas"}:
+            return
+        idx = len(expected_trace)
+        expected_trace.append(("element", parent, node.name, None))
+        for child in node.children:
+            visit(child, idx)
+    visit(root, None)
+    actual_trace = [(n.kind, n.parent_id, n.tag, n.text) for n in document.nodes]
+    structure_match = expected_trace == actual_trace
     baseline_counts = Counter(baseline)
     actual_counts = Counter(actual)
     omitted = baseline_counts - actual_counts
@@ -120,16 +142,20 @@ def main() -> int:
     report = {
         "target": TARGET,
         "final_url": page.final_url,
-        "status": "PASS" if exact_word_order and links_match else "NEEDS_REVIEW",
+        "status": "PASS" if exact_source and structure_match and links_match else "NEEDS_REVIEW",
         "reader_executed": True,
-        "comparison_scope": "all_static_html_body_text_including_hidden_and_links",
+        "comparison_scope": "exact_dom_source_text_nodes_and_links",
+        "exact_source_text": exact_source,
+        "exact_dom_structure": structure_match,
+        "source_node_count": len(document.nodes),
+        "reference_node_count": len(expected_trace),
         "html_sha256": source_hash,
         "reference_sha256": hashlib.sha256(reference.encode("utf-8")).hexdigest(),
-        "reader_sha256": document.content_sha256,
+        "reader_sha256": document.source_sha256,
         "reference_words": len(baseline),
         "reader_words": len(actual),
         "reference_characters": len(reference),
-        "reader_characters": document.character_count,
+        "reader_characters": document.source_character_count,
         "reference_word_coverage_pct": (
             round(100 * matched_count / len(baseline), 3) if baseline else 100
         ),
@@ -150,11 +176,11 @@ def main() -> int:
             "Needs manual inspection of full diff: baseline joins independent "
             "HTML text nodes with spaces, which can differ from browser inline rendering."
             if not exact_word_order else
-            "All normalized words matched in sequence against independently parsed HTML."
+            "Exact source text and DOM trace evaluated independently from the readable view."
         ),
     }
-    save(report, ref_text=reference, reader_text=document.text)
-    return 0 if exact_word_order and links_match else 1
+    save(report, ref_text=reference, reader_text=actual_source)
+    return 0 if exact_source and structure_match and links_match else 1
 
 
 if __name__ == "__main__":
