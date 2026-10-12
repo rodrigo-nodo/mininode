@@ -37,7 +37,7 @@ No se seleccionan ni resumen párrafos según su materia. Encabezados, formulari
 - El lector no almacena documentos, no utiliza LLM ni transmite contenido a proveedores.
 - La procedencia y el hash permiten verificar que una comparación posterior utilice la misma captura.
 
-La integridad garantizada es **respecto del texto del HTML estático obtenido**, no de cualquier contenido dinámico o de recursos vinculados. La preparación de contexto adicional del sitio y selección de documentos corresponden a integraciones futuras.
+Nota de fidelidad: al concatenar fragmentos HTML inline, se añade una separación para etiquetas textuales contiguas cuando el siguiente fragmento comienza con mayúscula y el anterior termina en minúscula o puntuación de cierre. Este ajuste evita uniones detectadas en abc.cl sin introducir espacios indiscriminados entre fragmentos de una misma palabra. No sustituye el renderizado CSS/JS del navegador.\n\nLa integridad garantizada es **respecto del texto del HTML estático obtenido**, no de cualquier contenido dinámico o de recursos vinculados. La preparación de contexto adicional del sitio y selección de documentos corresponden a integraciones futuras.
 
 ## Compatibilidad y validación
 
