@@ -3,6 +3,9 @@ import io
 from types import SimpleNamespace
 
 import pytest
+import httpx
+
+from mininode_api.web_inspector.fetcher import WebFetcher
 from reportlab.pdfgen import canvas
 
 from mininode_api.content_reader_pdf import PdfReadError, read_pdf_document, read_public_pdf_url
@@ -108,3 +111,62 @@ def test_pdf_links_and_page_metadata():
     assert len(doc.pages[0].links) == 1
     assert doc.pages[0].links[0].url == "https://example.cl/legal"
     assert doc.pages[0].links[0].page == 1
+
+
+def test_safe_pdf_fetch_only_when_explicitly_enabled():
+    data = make_pdf(("Descarga segura",))
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        return httpx.Response(200, content=data, headers={"content-type": "application/pdf"})
+    kwargs = dict(
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        resolver=lambda hostname, port: {"93.184.216.34"},
+    )
+    with WebFetcher(**kwargs) as fetcher:
+        denied = fetcher.fetch("https://example.cl/a.pdf", ["https://example.cl/a.pdf"])
+        allowed = fetcher.fetch("https://example.cl/a.pdf", ["https://example.cl/a.pdf"], accept_pdf=True)
+    assert denied.pages[0].error.code == "unsupported_content_type"
+    assert denied.pages[0].binary_content is None
+    assert allowed.pages[0].error is None
+    assert allowed.pages[0].binary_content == data
+    assert allowed.pages[0].html is None
+
+
+def test_safe_pdf_fetch_respects_robots_and_ssrf():
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\\nDisallow: /blocked.pdf", headers={"content-type": "text/plain"})
+        return httpx.Response(200, content=make_pdf(("Texto",)), headers={"content-type": "application/pdf"})
+    with WebFetcher(
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        resolver=lambda hostname, port: {"93.184.216.34"},
+    ) as fetcher:
+        blocked = fetcher.fetch("https://example.cl/blocked.pdf", ["https://example.cl/blocked.pdf"], accept_pdf=True)
+    assert blocked.pages[0].error.code == "robots_disallowed"
+
+    with WebFetcher(
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        resolver=lambda hostname, port: {"127.0.0.1"},
+    ) as fetcher:
+        unsafe = fetcher.fetch("https://example.cl/a.pdf", ["https://example.cl/a.pdf"], accept_pdf=True)
+    assert unsafe.pages[0].error.code == "blocked_by_ssrf"
+
+
+def test_safe_pdf_fetch_rejects_oversized_and_wrong_mime():
+    from mininode_api.web_inspector.fetcher import MAX_RESPONSE_BYTES
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        if request.url.path == "/huge.pdf":
+            return httpx.Response(200, content=b"x" * (MAX_RESPONSE_BYTES + 1), headers={"content-type": "application/pdf"})
+        return httpx.Response(200, content=b"%PDF-fake", headers={"content-type": "text/html"})
+    with WebFetcher(
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        resolver=lambda hostname, port: {"93.184.216.34"},
+    ) as fetcher:
+        huge = fetcher.fetch("https://example.cl/huge.pdf", ["https://example.cl/huge.pdf"], accept_pdf=True)
+        fake = fetcher.fetch("https://example.cl/fake.pdf", ["https://example.cl/fake.pdf"], accept_pdf=True)
+    assert huge.pages[0].error.code == "response_too_large"
+    assert fake.pages[0].binary_content is None
+    assert fake.pages[0].html is not None
