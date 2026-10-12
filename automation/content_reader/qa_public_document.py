@@ -77,11 +77,6 @@ def main() -> int:
 
     source_hash = hashlib.sha256(page.html.encode("utf-8")).hexdigest()
     reference = independent_reference(page.html)
-    for phrase in ("Mis compras", "Mi Tarjeta abc", "¿Necesitas ayuda?"):
-        at = page.html.find(phrase)
-        if at >= 0:
-            print("HTML_BOUNDARY_DIAGNOSTIC", phrase,
-                  repr(page.html[max(0, at - 180):at + 260]), flush=True)
 
     try:
         document = read_html_document(
