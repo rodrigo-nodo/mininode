@@ -64,7 +64,22 @@ def _render(node: Tag | NavigableString, output: list[str]) -> None:
     if isinstance(node, Comment):
         return
     if isinstance(node, NavigableString):
-        output.append(re.sub(r"\s+", " ", str(node)))
+        value = re.sub(r"\s+", " ", str(node))
+        if (
+            value
+            and output
+            and output[-1]
+            and not output[-1][-1].isspace()
+            and not value[0].isspace()
+            and value[0].isupper()
+            and (output[-1][-1].islower() or output[-1][-1] in "?!")
+        ):
+            # Some sites omit separators between adjacent inline labels:
+            # <span>Mis compras</span><span>Haz seguimiento</span>.
+            # Do not insert spaces unconditionally: anti<strong>fraude</strong>
+            # deliberately forms one word.
+            output.append(" ")
+        output.append(value)
         return
     if not isinstance(node, Tag) or _is_hidden(node):
         return
