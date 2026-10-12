@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -20,7 +21,7 @@ from bs4 import BeautifulSoup, Comment, NavigableString
 from mininode_api.content_reader import ContentReadError, read_html_document
 from mininode_api.web_inspector import WebFetcher
 
-TARGET = "https://www.smileykidsfood.com/politica-de-privacidad"
+TARGET = os.environ.get("CONTENT_READER_QA_URL", "https://www.smileykidsfood.com/politica-de-privacidad")
 OUT = Path("content-reader-qa-output")
 OUT.mkdir(exist_ok=True)
 
