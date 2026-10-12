@@ -5,6 +5,7 @@ import pytest
 
 from mininode_api.content_reader import (
     ContentReadError, read_html_document, read_public_html_url,
+    MAX_DOCUMENT_NODES, MAX_DOM_DEPTH,
 )
 
 
@@ -205,3 +206,46 @@ def test_exact_punctuation_and_spacing_remain_in_source_nodes():
     )
     assert doc.source_text == "Uno,  dos.¡Tres!A & B"
     assert "Uno, dos.¡Tres!" in doc.text
+
+
+def test_dom_node_limit_is_explicit_and_inclusive():
+    html = "<body><p>texto</p></body>"  # body, p, text
+    doc = read_html_document(html, "https://example.cl", max_nodes=3)
+    assert len(doc.nodes) == 3
+    with pytest.raises(ContentReadError) as error:
+        read_html_document(html, "https://example.cl", max_nodes=2)
+    assert error.value.code == "document_too_complex"
+
+
+def test_empty_elements_cannot_bypass_dom_node_limit():
+    html = "<body>" + "<span></span>" * 250 + "<p>texto</p></body>"
+    with pytest.raises(ContentReadError, match="document_too_complex"):
+        read_html_document(html, "https://example.cl", max_nodes=100)
+
+
+def test_dom_depth_limit_rejects_deep_nesting_without_recursion_error():
+    html = "<body>" + "<div>" * 1100 + "texto" + "</div>" * 1100 + "</body>"
+    with pytest.raises(ContentReadError) as error:
+        read_html_document(html, "https://example.cl", max_depth=128)
+    assert error.value.code == "document_too_complex"
+
+
+def test_dom_depth_boundary_and_invalid_limits():
+    doc = read_html_document(
+        "<body><div><p>texto</p></div></body>",
+        "https://example.cl", max_depth=3,
+    )
+    assert doc.source_text == "texto"
+    with pytest.raises(ContentReadError, match="document_too_complex"):
+        read_html_document(
+            "<body><div><p>texto</p></div></body>",
+            "https://example.cl", max_depth=2,
+        )
+    for kwargs in ({"max_nodes": 0}, {"max_depth": 0}):
+        with pytest.raises(ValueError):
+            read_html_document("<body>texto</body>", "https://example.cl", **kwargs)
+
+
+def test_dom_defaults_are_bounded():
+    assert MAX_DOCUMENT_NODES == 50_000
+    assert MAX_DOM_DEPTH == 128
