@@ -157,3 +157,17 @@ def test_links_and_punctuation_are_not_semantically_rewritten():
     assert "Consulta política." in doc.text
     assert "antifraude, datos: 12 meses." in doc.text
     assert doc.links[0].url == "https://example.cl/p"
+
+
+def test_abc_real_html_span_label_followed_by_raw_text():
+    doc = read_html_document(
+        "<body><p><a href='/seguimiento'><span>Mis compras</span>"
+        "Haz seguimiento</a></p><p><a href='/tarjeta'>"
+        "<span>Mi Tarjeta abc</span>Revisa tus movimientos</a></p></body>",
+        "https://example.cl",
+    )
+    assert "Mis compras Haz seguimiento" in doc.text
+    assert "Mi Tarjeta abc Revisa tus movimientos" in doc.text
+    assert [link.url for link in doc.links] == [
+        "https://example.cl/seguimiento", "https://example.cl/tarjeta",
+    ]
