@@ -67,7 +67,7 @@ def test_header_footer_form_table_and_nested_links_are_preserved():
     for expected in ("Encabezado legal", "Consentimiento", "Tratamiento",
                      "Plazo", "12 meses", "Contacto de privacidad"):
         assert expected in doc.text
-    assert [link.url for link in doc.links] == ["https://example.cl/visible"]
+    assert [link.url for link in doc.links] == ["https://example.cl/visible", "https://example.cl/hidden"]
 
 
 def test_url_adapter_reuses_existing_fetcher_and_surfaces_errors():
