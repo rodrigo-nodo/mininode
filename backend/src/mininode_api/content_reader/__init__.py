@@ -2,6 +2,8 @@
 
 from .reader import (
     MAX_DOCUMENT_CHARACTERS,
+    MAX_DOCUMENT_NODES,
+    MAX_DOM_DEPTH,
     ContentDocument,
     ContentLink,
     ContentNode,
@@ -12,6 +14,8 @@ from .reader import (
 
 __all__ = [
     "MAX_DOCUMENT_CHARACTERS",
+    "MAX_DOCUMENT_NODES",
+    "MAX_DOM_DEPTH",
     "ContentDocument",
     "ContentLink",
     "ContentNode",
