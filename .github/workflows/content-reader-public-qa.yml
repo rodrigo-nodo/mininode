@@ -39,7 +39,7 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          for entry in "abc|https://www.abc.cl/terminos-y-condiciones.html" "emol|https://www.emol.com/movil/terminos/privacidad.aspx" "smiley|https://www.smileykidsfood.com/politica-de-privacidad"; do
+          for entry in "abc|https://www.abc.cl/terminos-y-condiciones.html" "emol|https://www.emol.com/movil/terminos/privacidad.aspx" "smiley|https://www.smileykidsfood.com/politica-de-privacidad" "santa-maria|https://www.clinicasantamaria.cl/informacion-general/politica-privacidad-app-portal-privado"; do
             name="${entry%%|*}"
             export CONTENT_READER_QA_URL="${entry#*|}"
             rm -rf content-reader-qa-output
