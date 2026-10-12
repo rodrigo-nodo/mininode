@@ -14,6 +14,10 @@ def make_pdf(*pages):
     for i, lines in enumerate(pages):
         for j, value in enumerate(lines):
             pdf.drawString(72, 760 - j * 24, value)
+        if not lines:
+            # Materialize an image-only page; a truly blank ReportLab page
+            # may not be serialized into the resulting PDF.
+            pdf.rect(70, 700, 40, 40, stroke=1, fill=0)
         if i < len(pages) - 1:
             pdf.showPage()
     pdf.save()
