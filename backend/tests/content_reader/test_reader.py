@@ -113,21 +113,47 @@ def test_comments_and_hidden_html_are_excluded():
         "<p>Final</p></body>", "https://example.cl",
     )
     assert "Visible" in doc.text and "Final" in doc.text
-    assert "Oculto" not in doc.text and "No visible" not in doc.text
+    assert "Oculto" in doc.text and "No visible" in doc.text
     assert "secret" not in doc.text
 
 
-def test_adjacent_inline_labels_keep_word_boundaries_without_splitting_words():
-    html = """
-    <body>
-      <p>Mis compras<span>Haz seguimiento</span></p>
-      <p>Mi Tarjeta abc<span>Revisa tus movimientos</span></p>
-      <p>anti<strong>fraude</strong> y tratamiento de <strong>Datos</strong></p>
-    </body>
-    """
-    result = read_html_document(html, "https://example.cl")
-    assert "Mis compras Haz seguimiento" in result.text
-    assert "Mi Tarjeta abc Revisa tus movimientos" in result.text
-    assert "antifraude" in result.text
-    assert "anti fraude" not in result.text
-    assert "tratamiento de Datos" in result.text
+def test_inline_boundaries_use_html_structure_not_capitalization():
+    doc = read_html_document(
+        "<body><p>e<strong>Mail</strong> i<strong>Phone</strong> "
+        "anti<strong>fraude</strong></p>"
+        "<p>abc<span>revisa</span> ABC<span>Revisa</span></p>"
+        "<p>Mis compras<span>Haz seguimiento</span></p>"
+        "<p>Mi Tarjeta abc<span>Revisa tus movimientos</span></p></body>",
+        "https://example.cl",
+    )
+    assert "eMail" in doc.text
+    assert "iPhone" in doc.text
+    assert "antifraude" in doc.text
+    assert "abc revisa" in doc.text
+    assert "ABC Revisa" in doc.text
+    assert "Mis compras Haz seguimiento" in doc.text
+    assert "Mi Tarjeta abc Revisa tus movimientos" in doc.text
+
+
+def test_hidden_and_aria_hidden_static_text_is_retained():
+    doc = read_html_document(
+        "<body><p>Visible</p><span hidden>Texto hidden</span>"
+        "<span aria-hidden='true'>Texto accesibilidad</span>"
+        "<script>NO_JS</script><style>NO_CSS</style></body>",
+        "https://example.cl",
+    )
+    assert "Texto hidden" in doc.text
+    assert "Texto accesibilidad" in doc.text
+    assert "NO_JS" not in doc.text
+    assert "NO_CSS" not in doc.text
+
+
+def test_links_and_punctuation_are_not_semantically_rewritten():
+    doc = read_html_document(
+        "<body><p>Consulta <a href='/p'>política</a>.</p>"
+        "<p>anti<strong>fraude</strong>, datos: 12 meses.</p></body>",
+        "https://example.cl",
+    )
+    assert "Consulta política." in doc.text
+    assert "antifraude, datos: 12 meses." in doc.text
+    assert doc.links[0].url == "https://example.cl/p"
