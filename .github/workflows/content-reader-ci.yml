@@ -1,0 +1,36 @@
+name: Content Reader CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/content-reader-ci.yml'
+      - 'backend/src/mininode_api/content_reader/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/tests/content_reader/**'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest
+
+      - name: Run Content Reader tests
+        run: pytest -q backend/tests/content_reader
