@@ -10,7 +10,7 @@ on:
       - 'backend/src/mininode_api/web_inspector/**'
       - 'backend/tests/content_reader/**'
   push:
-    branches: [fix/content-reader-inline-boundaries]
+    branches: [fix/content-reader-inline-boundaries, qa/content-reader-clinica-santa-maria]
     paths:
       - '.github/workflows/content-reader-public-qa.yml'
       - 'automation/content_reader/qa_public_document.py'
