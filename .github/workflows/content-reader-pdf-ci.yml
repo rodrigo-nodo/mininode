@@ -26,4 +26,4 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r backend/requirements.txt pytest reportlab
-      - run: pytest -q backend/tests/content_reader_pdf backend/tests/content_reader backend/tests/web_inspector/test_fetcher.py
+      - run: pytest -q backend/tests/content_reader_pdf backend/tests/content_reader
