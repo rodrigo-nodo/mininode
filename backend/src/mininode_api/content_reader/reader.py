@@ -18,6 +18,10 @@ from mininode_api.web_inspector.fetcher import WebFetcher
 
 MAX_DOCUMENT_CHARACTERS = 200_000
 _SKIP_ELEMENTS = frozenset({"script", "style", "template", "svg", "canvas"})
+# Formatting tags (strong/em/etc.) can split a word deliberately.
+# Distinct phrasing containers may need a textual boundary in the absence
+# of source whitespace; this is structural, not capitalization-based.
+_SEPARATE_INLINE_ELEMENTS = frozenset({"span", "a", "label", "button", "time"})
 _BLOCK_ELEMENTS = frozenset({
     "address", "article", "aside", "blockquote", "body", "dd", "div", "dl", "dt",
     "fieldset", "figcaption", "figure", "footer", "form", "header", "main",
@@ -53,38 +57,35 @@ class ContentDocument:
 
 
 def _is_hidden(node: Tag) -> bool:
-    return (
-        node.name in _SKIP_ELEMENTS
-        or node.has_attr("hidden")
-        or node.get("aria-hidden") == "true"
-    )
+    # Preserve source text even when hidden/aria-hidden; this is not a
+    # browser renderer, and aria-hidden does not mean visually hidden.
+    return node.name in _SKIP_ELEMENTS
 
 
 def _render(node: Tag | NavigableString, output: list[str]) -> None:
     if isinstance(node, Comment):
         return
     if isinstance(node, NavigableString):
-        value = re.sub(r"\s+", " ", str(node))
-        if (
-            value
-            and output
-            and output[-1]
-            and not output[-1][-1].isspace()
-            and not value[0].isspace()
-            and value[0].isupper()
-            and (output[-1][-1].islower() or output[-1][-1] in "?!")
-        ):
-            # Some sites omit separators between adjacent inline labels:
-            # <span>Mis compras</span><span>Haz seguimiento</span>.
-            # Do not insert spaces unconditionally: anti<strong>fraude</strong>
-            # deliberately forms one word.
-            output.append(" ")
-        output.append(value)
+        output.append(re.sub(r"\s+", " ", str(node)))
         return
     if not isinstance(node, Tag) or _is_hidden(node):
         return
 
     name = node.name or ""
+    if name in _SEPARATE_INLINE_ELEMENTS and output:
+        # Explicit structural separation for a new standalone inline element.
+        # Do not infer word boundaries from letter case. Formatting tags
+        # (e.g. strong) intentionally remain transparent to word joining.
+        previous = output[-1]
+        first_text = node.get_text(" ", strip=True)
+        if (
+            previous
+            and first_text
+            and not previous[-1].isspace()
+            and previous[-1].isalnum()
+            and first_text[0].isalnum()
+        ):
+            output.append(" ")
     if name == "br":
         output.append("\n")
         return
