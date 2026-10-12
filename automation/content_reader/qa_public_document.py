@@ -138,6 +138,9 @@ def main() -> int:
         matcher = SequenceMatcher(None, baseline, actual, autojunk=True)
         matched_order = sum(block.size for block in matcher.get_matching_blocks())
 
+    from collections import Counter as _Counter
+    print("LINK_DIFF", "baseline_extra", list((_Counter(links_baseline) - _Counter(links_reader)).elements()),
+          "reader_extra", list((_Counter(links_reader) - _Counter(links_baseline)).elements()), flush=True)
     links_match = links_baseline == links_reader
     report = {
         "target": TARGET,
