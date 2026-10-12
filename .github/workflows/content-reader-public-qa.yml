@@ -8,6 +8,11 @@ on:
       - '.github/workflows/content-reader-public-qa.yml'
       - 'automation/content_reader/qa_public_document.py'
   workflow_dispatch:
+    inputs:
+      url:
+        description: Public URL to compare
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -18,6 +23,7 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONPATH: backend/src
+      CONTENT_READER_QA_URL: ${{ inputs.url || 'https://www.emol.com/movil/terminos/privacidad.aspx' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -31,7 +37,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: content-reader-smiley-qa
+          name: content-reader-public-qa
           path: content-reader-qa-output/
           retention-days: 7
           if-no-files-found: warn
