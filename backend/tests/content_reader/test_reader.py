@@ -129,10 +129,10 @@ def test_inline_boundaries_use_html_structure_not_capitalization():
     assert "eMail" in doc.text
     assert "iPhone" in doc.text
     assert "antifraude" in doc.text
-    assert "abc revisa" in doc.text
-    assert "ABC Revisa" in doc.text
-    assert "Mis compras Haz seguimiento" in doc.text
-    assert "Mi Tarjeta abc Revisa tus movimientos" in doc.text
+    assert "abcrevisa" in doc.text
+    assert "ABCRevisa" in doc.text
+    assert "Mis comprasHaz seguimiento" in doc.text
+    assert "Mi Tarjeta abcRevisa tus movimientos" in doc.text
 
 
 def test_hidden_and_aria_hidden_static_text_is_retained():
@@ -166,8 +166,42 @@ def test_abc_real_html_span_label_followed_by_raw_text():
         "<span>Mi Tarjeta abc</span>Revisa tus movimientos</a></p></body>",
         "https://example.cl",
     )
-    assert "Mis compras Haz seguimiento" in doc.text
-    assert "Mi Tarjeta abc Revisa tus movimientos" in doc.text
+    assert "Mis comprasHaz seguimiento" in doc.text
+    assert "Mi Tarjeta abcRevisa tus movimientos" in doc.text
     assert [link.url for link in doc.links] == [
         "https://example.cl/seguimiento", "https://example.cl/tarjeta",
     ]
+
+def test_exact_dom_fragments_are_primary_fidelity_contract():
+    doc = read_html_document(
+        "<body><a href='/track'><span>Mis compras</span>Haz seguimiento</a>"
+        "<p>anti<span>virus</span> <span>e</span>Mail "
+        "<a href='/web'>web</a>site <time>20</time>26</p>"
+        "<p hidden aria-hidden='true'>¿Quién?  ¡Sí! &amp; más.</p></body>",
+        "https://example.cl/",
+    )
+    assert doc.source_text == (
+        "Mis comprasHaz seguimiento"
+        "antivirus eMail website 2026"
+        "¿Quién?  ¡Sí! & más."
+    )
+    assert [n.text for n in doc.nodes if n.kind == "text"] == [
+        "Mis compras", "Haz seguimiento", "anti", "virus", " ", "e",
+        "Mail ", "web", "site ", "20", "26", "¿Quién?  ¡Sí! & más.",
+    ]
+    assert doc.source_sha256 == hashlib.sha256(doc.source_text.encode()).hexdigest()
+    assert doc.source_character_count == len(doc.source_text)
+    assert [n.href for n in doc.nodes if n.kind == "element" and n.href] == [
+        "https://example.cl/track", "https://example.cl/web",
+    ]
+    assert any(n.hidden and n.aria_hidden for n in doc.nodes)
+    assert doc.text.startswith("Mis comprasHaz seguimiento")
+
+
+def test_exact_punctuation_and_spacing_remain_in_source_nodes():
+    doc = read_html_document(
+        "<body><p>Uno,  dos.<em>¡Tres!</em></p><p>A &amp; B</p></body>",
+        "https://example.cl",
+    )
+    assert doc.source_text == "Uno,  dos.¡Tres!A & B"
+    assert "Uno, dos.¡Tres!" in doc.text
