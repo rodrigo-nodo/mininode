@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from mininode_api.web_inspector.fetcher import WebFetcher
 
 MAX_DOCUMENT_CHARACTERS = 200_000
+MAX_DOCUMENT_NODES = 50_000
+MAX_DOM_DEPTH = 128
 _SKIP_ELEMENTS = frozenset({"script", "style", "template", "svg", "canvas"})
 _BLOCK_ELEMENTS = frozenset({
     "address", "article", "aside", "blockquote", "body", "dd", "div", "dl", "dt",
@@ -79,6 +81,41 @@ def _is_hidden(node: Tag) -> bool:
     # Preserve source text even when hidden/aria-hidden; this is not a
     # browser renderer, and aria-hidden does not mean visually hidden.
     return node.name in _SKIP_ELEMENTS
+
+
+def _check_dom_complexity(
+    root: Tag, *, max_nodes: int, max_depth: int,
+) -> None:
+    """Bound DOM traversal before constructing nodes or rendering text.
+
+    Count the same in-scope element and text nodes exposed by ContentNode.
+    Use iterative traversal so deeply nested HTML fails with a controlled
+    error rather than causing recursion exhaustion during extraction.
+    """
+    # Iterators, not whole child lists, keep memory bounded by DOM depth.
+    frames = [(iter((root,)), 0)]
+    count = 0
+    while frames:
+        iterator, parent_depth = frames[-1]
+        node = next(iterator, None)
+        if node is None:
+            frames.pop()
+            continue
+        if isinstance(node, Comment):
+            continue
+        if isinstance(node, NavigableString):
+            count += 1
+        elif isinstance(node, Tag) and not _is_hidden(node):
+            depth = parent_depth + 1
+            if depth > max_depth:
+                raise ContentReadError("document_too_complex")
+            count += 1
+            if count > max_nodes:
+                raise ContentReadError("document_too_complex")
+            frames.append((iter(node.children), depth))
+            continue
+        if count > max_nodes:
+            raise ContentReadError("document_too_complex")
 
 
 def _render(node: Tag | NavigableString, output: list[str]) -> None:
@@ -174,16 +211,23 @@ def read_html_document(
     *,
     requested_url: str | None = None,
     max_characters: int = MAX_DOCUMENT_CHARACTERS,
+    max_nodes: int = MAX_DOCUMENT_NODES,
+    max_depth: int = MAX_DOM_DEPTH,
 ) -> ContentDocument:
     """Preserve complete static HTML text and DOM structure, without inference.
 
     nodes/source_text are the fidelity contract; text is a derived readable
     view that preserves explicit whitespace and block boundaries but does not
     guess visual whitespace between adjacent inline fragments. Browser-generated
-    content and CSS-dependent layout are outside this scope.
+    content and CSS-dependent layout are outside this scope. Node count and
+    nesting limits are checked iteratively before recursive extraction.
     """
     if max_characters < 1:
         raise ValueError("max_characters must be positive")
+    if max_nodes < 1:
+        raise ValueError("max_nodes must be positive")
+    if max_depth < 1:
+        raise ValueError("max_depth must be positive")
     soup = BeautifulSoup(html, "lxml")
     title_node = soup.find("title")
     title = (
@@ -192,6 +236,7 @@ def read_html_document(
         else None
     )
     root = soup.body if isinstance(soup.body, Tag) else soup
+    _check_dom_complexity(root, max_nodes=max_nodes, max_depth=max_depth)
     chunks: list[str] = []
     _render(root, chunks)
     text = _clean_lines(chunks)
