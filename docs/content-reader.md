@@ -1,46 +1,28 @@
-# Content Reader - Primera pieza agnóstica
+# Content Reader V1 - Contrato estructurado
 
-## Objetivo
+## Propósito
 
-Entregar contenido completo de un documento HTML público para que una pieza posterior lo interprete. **Content Reader no determina relevancia, significado, cumplimiento, estados ni hallazgos.**
+Content Reader obtiene y representa íntegramente el texto y la estructura del **HTML estático recibido**, sin decidir relevancia ni interpretar significado. Su salida sirve como entrada a las piezas futuras: **2. Semantic Engine** (contenido + prompt + Markdown) y **3. Output Validator** (contrato y evidencia).
 
-Plan de piezas independientes:
+## Contrato
 
-1. **Content Reader** - adquirir y representar contenido sin filtrado semántico.
-2. **Semantic Engine** - ejecutar prompt + Markdown de instrucciones sobre contenido.
-3. **Output Validator** - verificar el contrato de salida y las evidencias.
+`read_html_document(html, final_url, requested_url=None)` o `read_public_html_url(url)` (mediante el WebFetcher seguro existente) produce `ContentDocument`:
 
-Solo la primera pieza está incluida en este cambio.
+- `nodes`: referencia **primaria** y ordenada (recorrido DOM preorder). Cada `ContentNode` tiene `id`, `parent_id`, `kind` (`element` o `text`), `tag`, `text` exacto decodificado del HTML, `href` absoluto si corresponde y flags `hidden`/`aria_hidden`. Las relaciones permiten reconstruir el árbol y distinguir fragmentos contiguos dentro de un enlace.
+- `source_text`: concatenación **exacta** de los valores de los nodos de texto incluidos, sin espacios inventados ni normalización de palabras, puntuación o saltos. `source_sha256` y `source_character_count` identifican esa representación.
+- `text`: vista legible **derivada** que normaliza espacio en blanco y marca límites de bloque, sin adivinar separaciones entre etiquetas inline. Puede diferir del texto renderizado por el navegador; **no constituye la fuente de verdad**.
+- `links`, título, URL solicitada y final, hash y tamaño de la vista, alcance `static_html`, `truncated=false`.
 
-## Contrato V1
+Ejemplo: `<a><span>Mis compras</span>Haz seguimiento</a>` conserva dos nodos de texto `Mis compras` y `Haz seguimiento`, ambos bajo la misma rama `a`. La vista no afirma que sea una oración ni un salto visual. Igualmente `anti<span>virus</span>` conserva `anti` y `virus`, sin introducir espacio.
 
-`read_html_document(html, final_url, requested_url=None)` recibe HTML ya obtenido. `read_public_html_url(url)` utiliza el `WebFetcher` existente, con sus protecciones de red, restricciones de robots y límites HTTP.
+## Límites
 
-Devuelve `ContentDocument` con:
+Se excluyen únicamente contenido técnico de `script`, `style`, `template`, `svg` y `canvas`, y comentarios HTML. Los nodos `hidden` y `aria-hidden` **se conservan**, marcados en la estructura (el segundo atributo no implica invisibilidad visual). No se ejecutan JavaScript ni CSS. No se procesan PDF, iframes externos ni documentos enlazados en V1. El límite de 200.000 caracteres aplica tanto a `source_text` como a `text`: si se supera, hay error explícito `document_too_large`, no truncamiento silencioso. El lector no usa LLM, no persiste textos y no realiza llamadas fuera del WebFetcher existente.
 
-- URL solicitada y URL final tras redirecciones;
-- título y contenido textual completo del HTML estático, manteniendo orden, encabezados y listas;
-- enlaces observables y destinos absolutos;
-- tamaño en caracteres, SHA-256 del texto y alcance `static_html`;
-- indicador `truncated=false`.
+## Validación
 
-No se seleccionan ni resumen párrafos según su materia. Encabezados, formularios y pies se mantienen porque pueden contener información relevante para algún consumidor.
+Los tests unitarios tienen **resultados esperados explícitos** para fragmentos, espacios, puntuación, enlaces, jerarquía y límites HTML ambiguos. El QA público compara el texto fuente exacto y la secuencia de nodos/etiquetas contra la captura original, sin crear espacios entre nodos al construir la referencia. Los enlaces también deben conservar destino y orden.
 
-## Límites explícitos
+El QA compara **HTML estático**, no garantiza equivalencia visual con Chrome ni contenido generado por JS. Cualquier capa de renderizado futuro debe ser un adaptador independiente.
 
-- No ejecuta JavaScript ni reproduce contenido generado en el navegador.
-- No aplica estilos CSS ni garantiza equivalencia pixel a pixel con el documento renderizado.
-- Omite scripts, estilos, plantillas y SVG/canvas. Conserva el texto de nodos `hidden` y `aria-hidden` para no excluir contenido estático silenciosamente.
-- Solo acepta el HTML respaldado por el `WebFetcher` existente; no incorpora PDF ni otras fuentes en V1.
-- Límite explícito de 200.000 caracteres de texto extraído. Si se supera, se devuelve `document_too_large`, **nunca un documento parcial presentado como completo**.
-- Un documento sin texto devuelve `empty_document`; los errores de obtención siguen siendo explícitos.
-- El lector no almacena documentos, no utiliza LLM ni transmite contenido a proveedores.
-- La procedencia y el hash permiten verificar que una comparación posterior utilice la misma captura.
-
-Nota de fidelidad: al concatenar fragmentos HTML inline, se añade una separación para etiquetas textuales contiguas cuando el siguiente fragmento comienza con mayúscula y el anterior termina en minúscula o puntuación de cierre. Este ajuste evita uniones detectadas en abc.cl sin introducir espacios indiscriminados entre fragmentos de una misma palabra. No sustituye el renderizado CSS/JS del navegador.\n\nLa integridad garantizada es **respecto del texto del HTML estático obtenido**, no de cualquier contenido dinámico o de recursos vinculados. La preparación de contexto adicional del sitio y selección de documentos corresponden a integraciones futuras.
-
-## Compatibilidad y validación
-
-Se agrega un paquete independiente bajo `backend/src/mininode_api/content_reader/`. No modifica `Web Inspector`, `EvidenceContract`, controles, evaluaciones, scoring, API ni UI de Privacy Web.
-
-Los tests incluyen un documento con información al final después de 12.000 caracteres, preservación de estructura/enlaces, errores ante límites, reutilización del fetcher y ausencia de interpretación semántica.
+No se modifican Web Inspector, Privacy Web, scoring, Semantic Engine ni Output Validator.
