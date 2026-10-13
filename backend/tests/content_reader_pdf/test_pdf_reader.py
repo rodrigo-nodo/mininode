@@ -283,3 +283,33 @@ def test_vertically_offset_parallel_columns_are_rejected():
     p.save()
     with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
         read_pdf_document(stream.getvalue())
+
+
+def test_narrow_sixteen_point_column_gap_rejected_without_interleaving():
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    left = "Texto izquierdo numero 0"
+    right_x = 40 + stringWidth(left, "Helvetica", 12) + 16
+    for n in range(5):
+        p.drawString(40, 740 - n * 27, left)
+        p.drawString(right_x, 740 - n * 27, "Texto derecho numero 0")
+    p.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
+
+
+def test_numbered_list_keeps_single_reading_order():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    for n in range(5):
+        p.drawString(40, 740 - n * 27, str(n + 1) + ".")
+        p.drawString(77, 740 - n * 27, "Elemento de lista con texto normal")
+    p.save()
+    doc = read_pdf_document(stream.getvalue())
+    assert doc.page_count == 1
+    assert len(doc.pages[0].lines) == 5
+    assert [line.text for line in doc.pages[0].lines] == [
+        str(n + 1) + ". Elemento de lista con texto normal" for n in range(5)
+    ]
