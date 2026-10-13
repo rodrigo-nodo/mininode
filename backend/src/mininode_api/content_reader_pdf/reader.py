@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass
 from typing import Callable
 
 from mininode_api.web_inspector.fetcher import WebFetcher
+from .structure import PdfLayoutRegion, extract_lines_with_sources, page_structure_candidates
 
 MAX_PDF_BYTES = 2 * 1024 * 1024
 MAX_PDF_PAGES = 50
@@ -35,6 +36,7 @@ class PdfTextLine:
     page: int
     text: str
     bbox: tuple[float, float, float, float]
+    source_char_indices: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,9 @@ class PdfPage:
     tables: tuple[PdfTable, ...] = ()
     blocks: tuple[PdfBlock, ...] = ()
     extraction_status: str = "digital_text"  # may be digital_text_with_images
+    layout_regions: tuple[PdfLayoutRegion, ...] = ()
+    structure_tags: tuple[str, ...] = ()
+    structure_tag_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -212,7 +217,7 @@ def _parse_pdf_in_worker(
     page_texts: list[str] = []
     count = 0
     try:
-        with pdfplumber.open(io.BytesIO(data)) as pdf:
+        with pdfplumber.open(io.BytesIO(data), laparams={"boxes_flow": 0.5}) as pdf:
             if not pdf.pages:
                 raise PdfReadError("empty_pdf")
             if len(pdf.pages) > max_pages:
@@ -312,18 +317,18 @@ def _parse_pdf_in_worker(
                 if _has_ambiguous_parallel_columns(remaining, float(page.width)):
                     raise PdfReadError("pdf_layout_ambiguous")
 
+                # Native pdfplumber line extraction preserves original glyph
+                # provenance. Manual baseline grouping is no longer used.
+                native_lines = extract_lines_with_sources(
+                    page, chars, [table.bbox for table in tables],
+                )
                 lines = []
-                for key in sorted(by_y):
-                    row = sorted(by_y[key], key=lambda w: float(w["x0"]))
-                    text = " ".join(str(w["text"]) for w in row)
-                    b = (
-                        min(float(w["x0"]) for w in row),
-                        min(float(w["top"]) for w in row),
-                        max(float(w["x1"]) for w in row),
-                        max(float(w["bottom"]) for w in row),
-                    )
-                    lines.append(PdfTextLine(number, text, b))
-                    blocks.append(PdfBlock(number, "text", text, b))
+                for value, bbox, indices in native_lines:
+                    lines.append(PdfTextLine(number, value, bbox, indices))
+                    blocks.append(PdfBlock(number, "text", value, bbox))
+                layout_regions, structure_tags, structure_tag_error = page_structure_candidates(
+                    page, number,
+                )
 
                 blocks.sort(key=lambda b: (b.bbox[1], b.bbox[0]))
                 text = "\n".join(block.text for block in blocks)
@@ -348,6 +353,7 @@ def _parse_pdf_in_worker(
                     number, float(page.width), float(page.height), tuple(lines),
                     tuple(links), len(page.images), tuple(tables), tuple(blocks),
                     "digital_text_with_images" if page.images else "digital_text",
+                    layout_regions, structure_tags, structure_tag_error,
                 ))
     except PdfReadError:
         raise
@@ -370,7 +376,10 @@ def _parse_pdf_in_worker(
 def _decode_worker_document(value: dict) -> PdfDocument:
     pages = []
     for item in value["pages"]:
-        lines = tuple(PdfTextLine(**line) for line in item["lines"])
+        lines = tuple(PdfTextLine(
+            page=line["page"], text=line["text"], bbox=tuple(line["bbox"]),
+            source_char_indices=tuple(line.get("source_char_indices", ())),
+        ) for line in item["lines"])
         links = tuple(PdfLink(**link) for link in item["links"])
         tables = tuple(
             PdfTable(
@@ -384,6 +393,9 @@ def _decode_worker_document(value: dict) -> PdfDocument:
             number=item["number"], width=item["width"], height=item["height"],
             lines=lines, links=links, image_count=item["image_count"],
             tables=tables, blocks=blocks, extraction_status=item["extraction_status"],
+            layout_regions=tuple(PdfLayoutRegion(**region) for region in item.get("layout_regions", ())),
+            structure_tags=tuple(item.get("structure_tags", ())),
+            structure_tag_error=item.get("structure_tag_error"),
         ))
     return PdfDocument(
         requested_url=value["requested_url"], final_url=value["final_url"],
