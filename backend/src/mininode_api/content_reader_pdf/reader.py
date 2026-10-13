@@ -160,7 +160,7 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
             else:
                 merged.append([x0, x1])
         typical_word_height = sorted(float(w["bottom"]) - float(w["top"]) for w in window)[len(window) // 2]
-        minimum_corridor = max(2.0, typical_word_height * 0.20)
+        minimum_corridor = max(3.5, typical_word_height * 0.45)
         for left_region, right_region in zip(merged, merged[1:]):
             if right_region[0] - left_region[1] < minimum_corridor:
                 continue
@@ -272,6 +272,40 @@ def _parse_pdf_in_worker(
                 for word in remaining:
                     key = (round(float(word["top"]), 1), round(float(word["bottom"]), 1))
                     by_y.setdefault(key, []).append(word)
+
+                # Detect repeated separate text runs that pdfplumber may join
+                # when their gap is smaller than its word-spacing threshold.
+                # Require the same complete two-field strings on 3+ lines;
+                # unlike a mere kerning gap, each field must be independently
+                # delimited by a nonspace glyph gap and recur at the same x.
+                glyph_lines: dict[float, list[dict]] = {}
+                for ch in chars:
+                    if not str(ch.get("text", "")).strip():
+                        continue
+                    center_x = (float(ch["x0"]) + float(ch["x1"])) / 2
+                    center_y = (float(ch["top"]) + float(ch["bottom"])) / 2
+                    if any(t.bbox[0] <= center_x <= t.bbox[2] and t.bbox[1] <= center_y <= t.bbox[3] for t in tables):
+                        continue
+                    glyph_lines.setdefault(round(center_y, 1), []).append(ch)
+                narrow_seams: dict[tuple[float, str, str], int] = {}
+                for glyphs in glyph_lines.values():
+                    glyphs.sort(key=lambda ch: float(ch["x0"]))
+                    for index in range(3, len(glyphs) - 3):
+                        left_glyph, right_glyph = glyphs[index - 1], glyphs[index]
+                        gap = float(right_glyph["x0"]) - float(left_glyph["x1"])
+                        if not 2.5 <= gap <= 5.0:
+                            continue
+                        lhs = "".join(ch["text"] for ch in glyphs[:index]).strip()
+                        rhs = "".join(ch["text"] for ch in glyphs[index:]).strip()
+                        if not (3 <= len(lhs) <= 40 and 3 <= len(rhs) <= 40):
+                            continue
+                        if " " in lhs or " " in rhs:
+                            continue
+                        seam_key = (round((float(left_glyph["x1"]) + float(right_glyph["x0"])) / 2),
+                                    lhs, rhs)
+                        narrow_seams[seam_key] = narrow_seams.get(seam_key, 0) + 1
+                if any(repeated >= 3 for repeated in narrow_seams.values()):
+                    raise PdfReadError("pdf_layout_ambiguous")
 
                 # Never silently interleave horizontally independent columns.
                 # A vertical offset or short labels must not bypass detection.
