@@ -134,7 +134,7 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
         """
         if len(left) < 2:
             return False
-        marker = re.compile(r"(?:\(\d{1,3}\)|\d{1,3}[.)]|[A-Za-z][.)]|[-–—•*])")
+        marker = re.compile(r"(?:\(\d{1,3}\)|\d{1,3}[.)]|\([A-Za-z]\)|[A-Za-z][.)]|[IVXLCDMivxlcdm]{1,6}[.)]|[-–—•◦▪*])")
         if not all(marker.fullmatch(str(word["text"])) for word in left):
             return False
         if max(float(w["x1"]) for w in left) - min(float(w["x0"]) for w in left) > page_width * 0.07:
@@ -160,7 +160,7 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
             else:
                 merged.append([x0, x1])
         typical_word_height = sorted(float(w["bottom"]) - float(w["top"]) for w in window)[len(window) // 2]
-        minimum_corridor = max(3.5, typical_word_height * 0.45)
+        minimum_corridor = max(2.0, typical_word_height * 0.20)
         for left_region, right_region in zip(merged, merged[1:]):
             if right_region[0] - left_region[1] < minimum_corridor:
                 continue
@@ -272,6 +272,43 @@ def _parse_pdf_in_worker(
                 for word in remaining:
                     key = (round(float(word["top"]), 1), round(float(word["bottom"]), 1))
                     by_y.setdefault(key, []).append(word)
+
+                # Repeated text lanes may be nearly touching; PDF word extraction
+                # can even merge adjacent independently positioned text runs.
+                # Examine the underlying positioned glyphs for consistent short
+                # gaps at the same x-coordinate across consecutive baselines.
+                # This is deliberately conservative for repeated unruled fields.
+                text_chars = [
+                    ch for ch in chars
+                    if not any(t.bbox[0] <= (float(ch["x0"]) + float(ch["x1"])) / 2 <= t.bbox[2]
+                               and t.bbox[1] <= (float(ch["top"]) + float(ch["bottom"])) / 2 <= t.bbox[3]
+                               for t in tables)
+                    and str(ch.get("text", "")).strip()
+                ]
+                by_glyph_line: dict[float, list[dict]] = {}
+                for ch in text_chars:
+                    line_key = round((float(ch["top"]) + float(ch["bottom"])) / 2, 1)
+                    by_glyph_line.setdefault(line_key, []).append(ch)
+                seam_candidates: list[tuple[float, float]] = []
+                for glyphs in by_glyph_line.values():
+                    glyphs = sorted(glyphs, key=lambda ch: float(ch["x0"]))
+                    if len(glyphs) < 4:
+                        continue
+                    for left_glyph, right_glyph in zip(glyphs, glyphs[1:]):
+                        distance = float(right_glyph["x0"]) - float(left_glyph["x1"])
+                        if not (2.0 <= distance <= 5.0):
+                            continue
+                        x_seam = (float(left_glyph["x1"]) + float(right_glyph["x0"])) / 2
+                        left_text = "".join(ch["text"] for ch in glyphs if float(ch["x1"]) < x_seam)
+                        right_text = "".join(ch["text"] for ch in glyphs if float(ch["x0"]) > x_seam)
+                        if len(left_text.strip()) >= 3 and len(right_text.strip()) >= 3:
+                            seam_candidates.append((x_seam, float(glyphs[0]["top"])))
+                if any(
+                    sum(abs(x - seam_x) <= 1.5 and abs(y - seam_y) > 4
+                        for x, y in seam_candidates) >= 3
+                    for seam_x, seam_y in seam_candidates
+                ):
+                    raise PdfReadError("pdf_layout_ambiguous")
 
                 # Never silently interleave horizontally independent columns.
                 # A vertical offset or short labels must not bypass detection.
