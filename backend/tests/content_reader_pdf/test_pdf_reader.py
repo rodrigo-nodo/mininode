@@ -313,3 +313,36 @@ def test_numbered_list_keeps_single_reading_order():
     assert [line.text for line in doc.pages[0].lines] == [
         str(n + 1) + ". Elemento de lista con texto normal" for n in range(5)
     ]
+
+
+def test_seven_point_parallel_columns_reject_full_document():
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    stream = io.BytesIO()
+    pdf = canvas.Canvas(stream, pagesize=(600, 800))
+    for index in range(5):
+        left = f"Izquierda numero {index}"
+        right = f"Derecha numero {index}"
+        pdf.drawString(40, 730 - index * 27, left)
+        pdf.drawString(40 + stringWidth(left, "Helvetica", 12) + 7, 730 - index * 27, right)
+    pdf.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
+
+
+@pytest.mark.parametrize("markers", [
+    ["-", "-", "-", "-", "-"],
+    ["a)", "b)", "c)", "d)", "e)"],
+])
+def test_common_lists_are_read_as_sequential_text(markers):
+    stream = io.BytesIO()
+    pdf = canvas.Canvas(stream, pagesize=(600, 800))
+    for index, marker in enumerate(markers):
+        pdf.drawString(40, 730 - index * 27, marker)
+        pdf.drawString(75, 730 - index * 27, f"Elemento de lista numero {index}")
+    pdf.save()
+    document = read_pdf_document(stream.getvalue())
+    assert document.page_count == 1
+    assert [line.text for line in document.pages[0].lines] == [
+        f"{marker} Elemento de lista numero {index}"
+        for index, marker in enumerate(markers)
+    ]
