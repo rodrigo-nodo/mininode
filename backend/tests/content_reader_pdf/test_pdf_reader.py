@@ -447,3 +447,14 @@ def test_ruled_table_cells_preserve_original_character_references():
                        index for cell in table.cells
                        for index in cell.source_char_indices
                    )
+
+
+def test_structural_evidence_checks_glyph_coverage_not_semantic_order():
+    from mininode_api.content_reader_pdf.structure import source_coverage_is_unique
+    chars = [{"text": "A"}, {"text": " "}, {"text": "B"}]
+    line = lambda *items: SimpleNamespace(source_char_indices=tuple(items))
+    assert source_coverage_is_unique(chars, [line(0, 2)], [])
+    assert not source_coverage_is_unique(chars, [line(0)], [])
+    assert not source_coverage_is_unique(chars, [line(0, 2), line(2)], [])
+    document = read_pdf_document(make_pdf(("Una frase digital",)))
+    assert document.pages[0].source_coverage_status == "all_nonwhitespace_glyphs_assigned_once"
