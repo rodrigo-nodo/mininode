@@ -105,6 +105,73 @@ def _validate_limits(data: bytes, max_bytes: int, max_pages: int, max_characters
         raise PdfReadError("invalid_pdf")
 
 
+
+def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> bool:
+    """Detect sustained parallel text lanes without requiring shared baselines.
+
+    Work on *non-table* words. A whitespace corridor running between two
+    vertically overlapping groups indicates independent reading regions.
+    Scan short consecutive vertical windows so a full-width title does not
+    hide two columns farther down the page. This check deliberately fails
+    closed: it does not claim to infer reading order from whitespace.
+    """
+    if len(words) < 4:
+        return False
+
+    by_baseline: dict[float, list[dict]] = {}
+    for word in words:
+        baseline = round((float(word["top"]) + float(word["bottom"])) / 2, 1)
+        by_baseline.setdefault(baseline, []).append(word)
+    bands = [by_baseline[key] for key in sorted(by_baseline)]
+
+    def is_parallel(window: list[dict]) -> bool:
+        # Look for a corridor at least 3.5% of page width with no word boxes.
+        # Normal gaps between adjacent words are much smaller than this.
+        occupied = sorted((float(w["x0"]), float(w["x1"])) for w in window)
+        if len(occupied) < 4:
+            return False
+        merged: list[list[float]] = []
+        for x0, x1 in occupied:
+            if merged and x0 <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], x1)
+            else:
+                merged.append([x0, x1])
+        for left_region, right_region in zip(merged, merged[1:]):
+            if right_region[0] - left_region[1] < page_width * 0.035:
+                continue
+            divider = (left_region[1] + right_region[0]) / 2
+            left = [w for w in window if float(w["x1"]) <= divider]
+            right = [w for w in window if float(w["x0"]) >= divider]
+            if len(left) < 2 or len(right) < 2:
+                continue
+
+            def baselines(items: list[dict]) -> set[float]:
+                return {
+                    round((float(w["top"]) + float(w["bottom"])) / 2, 1)
+                    for w in items
+                }
+
+            if len(baselines(left)) < 2 or len(baselines(right)) < 2:
+                continue
+            overlap = (
+                min(max(float(w["bottom"]) for w in left),
+                    max(float(w["bottom"]) for w in right))
+                - max(min(float(w["top"]) for w in left),
+                      min(float(w["top"]) for w in right))
+            )
+            if overlap > 8:
+                return True
+        return False
+
+    # Eight visual baselines suffice for two short columns even when their
+    # rows are offset. Sliding windows also handle multicolumn subsections.
+    for start in range(len(bands)):
+        window = [w for band in bands[start:start + 8] for w in band]
+        if is_parallel(window):
+            return True
+    return False
+
+
 def _parse_pdf_in_worker(
     data: bytes, final_url: str | None, requested_url: str | None,
     max_bytes: int, max_pages: int, max_characters: int,
@@ -179,22 +246,9 @@ def _parse_pdf_in_worker(
                     key = (round(float(word["top"]), 1), round(float(word["bottom"]), 1))
                     by_y.setdefault(key, []).append(word)
 
-                # Detect repeated, concurrent left/right reading areas.
-                # Without reliable separators, reject instead of interleaving.
-                ambiguous_rows = 0
-                for row_words in by_y.values():
-                    ordered = sorted(row_words, key=lambda word: float(word["x0"]))
-                    for a, b in zip(ordered, ordered[1:]):
-                        gap = float(b["x0"]) - float(a["x1"])
-                        if gap < float(page.width) * 0.10:
-                            continue
-                        divider = (float(a["x1"]) + float(b["x0"])) / 2
-                        left = " ".join(str(w["text"]) for w in ordered if float(w["x1"]) < divider)
-                        right = " ".join(str(w["text"]) for w in ordered if float(w["x0"]) > divider)
-                        if len(left.strip()) >= 10 and len(right.strip()) >= 10:
-                            ambiguous_rows += 1
-                            break
-                if ambiguous_rows >= 2:
+                # Never silently interleave horizontally independent columns.
+                # A vertical offset or short labels must not bypass detection.
+                if _has_ambiguous_parallel_columns(remaining, float(page.width)):
                     raise PdfReadError("pdf_layout_ambiguous")
 
                 lines = []
