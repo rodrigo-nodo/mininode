@@ -146,8 +146,20 @@ bloqueada hasta que comience ese período. Las fuentes no comerciales (`internal
 `partner`) pueden crear entitlements sin convertir al proveedor de pago en autoridad
 comercial.
 
-A4.1 no integra todavía Mercado Pago ni elimina las estructuras comerciales antiguas de
-Privacy Web; esa transición se hará separadamente después de validar Billing Core.
+A4.1 dejó Billing Core independiente del proveedor. A4.2 integra Mercado Pago Checkout Pro
+mediante la Orders API recomendada para integraciones nuevas. Mininode crea la order del
+proveedor desde una orden interna ya autorizada, usando el UUID interno como referencia e
+idempotency key, y devuelve únicamente el `checkout_url` para redirección en la misma pestaña.
+
+La vuelta del navegador sigue sin activar el producto. El webhook de Mercado Pago valida
+`x-signature` mediante HMAC-SHA256 y luego consulta la order directamente a Mercado Pago.
+Solo una order vinculada cuyo estado sea `processed/accredited`, moneda CLP y montos
+coincidentes puede invocar `payment_confirmed`. Las credenciales
+`MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` viven exclusivamente como
+secretos de entorno; `MININODE_PUBLIC_URL` define las URLs HTTPS de retorno.
+
+A4.2 se valida primero en sandbox/test users. No habilita cobros reales de producción ni
+elimina todavía las estructuras comerciales antiguas de Privacy Web.
 
 ## Seguridad
 

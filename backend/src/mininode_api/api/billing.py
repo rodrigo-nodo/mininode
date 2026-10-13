@@ -1,9 +1,9 @@
 """Authenticated Billing endpoints. Provider callbacks are implemented by provider adapters."""
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 from mininode_api.core.access_auth import require_access_user
-from mininode_api.services import access, billing
+from mininode_api.services import access, billing, mercadopago
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -49,3 +49,37 @@ def entitlement(workspace_site_id: UUID, user: access.StoredUser = Depends(requi
     if row is None:
         return EntitlementResponse(active=False)
     return EntitlementResponse(active=True, active_from=row[1], active_until=row[2], source=row[3])
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+
+@router.post("/orders/{order_id}/checkout", response_model=CheckoutResponse)
+def start_checkout(order_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    order = billing.get_order(user.id, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    try:
+        _, checkout_url = mercadopago.create_checkout(order, payer_email=user.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return CheckoutResponse(checkout_url=checkout_url)
+
+@router.post("/webhooks/mercadopago", include_in_schema=False)
+def mercadopago_webhook(
+    data_id: str = Query(alias="data.id"),
+    type_: str = Query(alias="type"),
+    x_signature: str = Header(alias="x-signature"),
+    x_request_id: str = Header(alias="x-request-id"),
+):
+    if type_ != "order":
+        return {"accepted": True}
+    if not mercadopago.validate_webhook_signature(
+        x_signature=x_signature, x_request_id=x_request_id, data_id=data_id
+    ):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    try:
+        mercadopago.process_order_notification(data_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"accepted": True}
