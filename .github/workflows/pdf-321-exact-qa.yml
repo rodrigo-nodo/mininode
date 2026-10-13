@@ -36,3 +36,6 @@ jobs:
           name: pdf321-pinned-pure-python-packages
           path: pdf321-wheels/*.whl
           retention-days: 1
+
+      - name: Inspect public QA glyph coverage (counts only)
+        run: python automation/content_reader_pdf/qa_debug_coverage.py
