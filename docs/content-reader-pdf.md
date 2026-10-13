@@ -55,6 +55,7 @@ El lector comienza a conservar la evidencia estructural de **pdfminer.six + pdfp
 - `PdfPage.layout_regions`: candidatos de regiones `LTTextBoxHorizontal`, con texto, página y coordenadas; la fuente se identifica explícitamente como `pdfminer_lttextbox_candidate`.
 - `PdfPage.structure_tags` y `structure_tag_error`: tipos de etiquetas presentes cuando `structure_tree` puede leerse; errores de etiquetas no se presentan como evidencia válida.
 - `PdfTextLine.source_char_indices`: índices a `page.chars` originales, obtenidos con `extract_text_lines(return_chars=True)` de pdfplumber, excluyendo caracteres que ya pertenecen a tablas identificadas. El texto y los espacios reconstruidos continúan siendo derivados.
+- `PdfTableCell.source_char_indices`: índices originales asociados a cada celda de tabla detectada mediante líneas. Permiten comprobar la procedencia y evitar doble asignación entre celdas y líneas narrativas.
 - Extracción de líneas realizada por la biblioteca, en lugar de reagrupar palabras manualmente por `top/bottom` redondeado.
 - Las tablas respaldadas por bordes mantienen su representación por filas y celdas. No se activa `find_tables(text)` indiscriminadamente: en las pruebas reales confundió listas y párrafos con tablas.
 
