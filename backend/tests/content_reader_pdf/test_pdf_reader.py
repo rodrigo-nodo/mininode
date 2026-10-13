@@ -416,3 +416,34 @@ def test_native_layout_candidates_retain_source_character_provenance():
         page.lines[1].source_char_indices
     )
     assert page.structure_tag_error is None or isinstance(page.structure_tag_error, str)
+
+
+def test_ruled_table_cells_preserve_original_character_references():
+    stream = io.BytesIO()
+    pdf = canvas.Canvas(stream, pagesize=(600, 800))
+    for x in (40, 280, 560):
+        pdf.line(x, 600, x, 720)
+    for y in (600, 640, 680, 720):
+        pdf.line(40, y, 560, y)
+    for y, left, right in (
+        (692, "Servicio", "Dato"),
+        (652, "Formulario", "Nombre"),
+        (612, "Consulta", "Correo"),
+    ):
+        pdf.drawString(55, y, left)
+        pdf.drawString(295, y, right)
+    pdf.save()
+    document = read_pdf_document(stream.getvalue())
+    page = document.pages[0]
+    table = page.tables[0]
+    assert len(table.cells) == 6
+    assert all(cell.source_char_indices for cell in table.cells)
+    assert len(set(index for cell in table.cells
+                   for index in cell.source_char_indices)) == sum(
+                       len(cell.source_char_indices) for cell in table.cells
+                   )
+    assert not set(index for line in page.lines
+                   for index in line.source_char_indices).intersection(
+                       index for cell in table.cells
+                       for index in cell.source_char_indices
+                   )
