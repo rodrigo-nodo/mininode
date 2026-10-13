@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -124,9 +125,30 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
         by_baseline.setdefault(baseline, []).append(word)
     bands = [by_baseline[key] for key in sorted(by_baseline)]
 
+    def is_numbered_list(left: list[dict], right: list[dict]) -> bool:
+        """List markers are not an independent reading column.
+
+        Require repeated explicit numeric markers on the *same baselines* as
+        the adjacent text; plain digits are intentionally not sufficient.
+        Textual columns such as A0/B0 remain ambiguous.
+        """
+        if len(left) < 2:
+            return False
+        marker = re.compile(r"(?:\(\d{1,3}\)|\d{1,3}[.)])")
+        if not all(marker.fullmatch(str(word["text"])) for word in left):
+            return False
+        if max(float(w["x1"]) for w in left) - min(float(w["x0"]) for w in left) > page_width * 0.07:
+            return False
+        return all(
+            any(abs((float(l["top"]) + float(l["bottom"])) -
+                    (float(r["top"]) + float(r["bottom"]))) <= 5 for r in right)
+            for l in left
+        )
+
     def is_parallel(window: list[dict]) -> bool:
-        # Look for a corridor at least 3.5% of page width with no word boxes.
-        # Normal gaps between adjacent words are much smaller than this.
+        # A persistent narrow whitespace corridor can separate parallel
+        # columns even if its width is less than 3.5% of the page.
+        # Word-to-word spaces alone are not sufficient evidence.
         occupied = sorted((float(w["x0"]), float(w["x1"])) for w in window)
         if len(occupied) < 4:
             return False
@@ -137,12 +159,14 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
             else:
                 merged.append([x0, x1])
         for left_region, right_region in zip(merged, merged[1:]):
-            if right_region[0] - left_region[1] < page_width * 0.035:
+            if right_region[0] - left_region[1] < max(8.0, page_width * 0.012):
                 continue
             divider = (left_region[1] + right_region[0]) / 2
             left = [w for w in window if float(w["x1"]) <= divider]
             right = [w for w in window if float(w["x0"]) >= divider]
             if len(left) < 2 or len(right) < 2:
+                continue
+            if is_numbered_list(left, right):
                 continue
 
             def baselines(items: list[dict]) -> set[float]:
