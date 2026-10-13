@@ -180,3 +180,84 @@ def test_character_limit_includes_page_separator():
     assert read_pdf_document(data, max_characters=8).character_count == 8
     with pytest.raises(PdfReadError, match="pdf_text_too_large"):
         read_pdf_document(data, max_characters=7)
+
+
+def test_two_columns_are_rejected_instead_of_interleaved():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    for n in range(5):
+        p.drawString(40, 720 - n * 25, "Izquierda contenido extenso numero " + str(n))
+        p.drawString(345, 720 - n * 25, "Derecha contenido extenso numero " + str(n))
+    p.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
+
+
+def test_grid_table_preserves_row_column_associations():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    for x in (40, 280, 560):
+        p.line(x, 600, x, 720)
+    for y in (600, 640, 680, 720):
+        p.line(40, y, 560, y)
+    for y, left, right in [
+        (692, "Servicio", "Dato personal"),
+        (652, "Urgencias", "Contacto"),
+        (612, "Imagenologia", "Diagnostico"),
+    ]:
+        p.drawString(55, y, left)
+        p.drawString(295, y, right)
+    p.save()
+    result = read_pdf_document(stream.getvalue())
+    assert len(result.pages[0].tables) == 1
+    table = result.pages[0].tables[0]
+    assert table.rows == (
+        ("Servicio", "Dato personal"),
+        ("Urgencias", "Contacto"),
+        ("Imagenologia", "Diagnostico"),
+    )
+    assert [(c.row, c.column, c.text) for c in table.cells] == [
+        (0, 0, "Servicio"), (0, 1, "Dato personal"),
+        (1, 0, "Urgencias"), (1, 1, "Contacto"),
+        (2, 0, "Imagenologia"), (2, 1, "Diagnostico"),
+    ]
+    assert result.pages[0].blocks[0].kind == "table"
+
+
+def test_mixed_digital_text_plus_image_is_not_declared_integrity_verified():
+    from PIL import Image, ImageDraw
+    from reportlab.lib.utils import ImageReader
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream)
+    p.drawString(72, 770, "Encabezado seleccionable")
+    image = Image.new("RGB", (200, 50), "white")
+    ImageDraw.Draw(image).text((10, 15), "Texto solo como imagen", fill="black")
+    p.drawImage(ImageReader(image), 72, 630, width=200, height=50)
+    p.save()
+    doc = read_pdf_document(stream.getvalue())
+    assert doc.pages[0].image_count >= 1
+    assert doc.pages[0].extraction_status == "digital_text_with_images"
+    assert doc.integrity_status == "unverified_visual_content"
+    assert "Texto solo como imagen" not in doc.text
+
+
+def test_highly_compressed_digital_glyph_bomb_is_rejected():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pageCompression=1)
+    p.setFont("Helvetica", 8)
+    for row in range(50):
+        p.drawString(30, 760 - row * 14, "0123456789" * 50)
+    p.save()
+    data = stream.getvalue()
+    assert len(data) < 50_000
+    with pytest.raises(PdfReadError, match="pdf_too_complex"):
+        read_pdf_document(data)
+
+
+def test_subprocess_timeout_yields_controlled_error(monkeypatch):
+    import subprocess
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired("pdf-worker", 15)
+    monkeypatch.setattr(subprocess, "run", timeout)
+    with pytest.raises(PdfReadError, match="pdf_processing_timeout"):
+        read_pdf_document(make_pdf(("Documento",)))
