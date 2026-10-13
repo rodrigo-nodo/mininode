@@ -346,3 +346,55 @@ def test_common_lists_are_read_as_sequential_text(markers):
         f"{marker} Elemento de lista numero {index}"
         for index, marker in enumerate(markers)
     ]
+
+
+@pytest.mark.parametrize("markers", [
+    ["◦"] * 5,
+    ["▪"] * 5,
+    ["(a)", "(b)", "(c)", "(d)", "(e)"],
+    ["I.", "II.", "III.", "IV.", "V."],
+])
+def test_unicode_and_roman_lists_keep_unambiguous_reading_order(markers):
+    from pathlib import Path
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    font_file = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    assert font_file.is_file(), "CI must provide a real Unicode font"
+    if "MininodeQABullets" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("MininodeQABullets", str(font_file)))
+    stream = io.BytesIO()
+    pdf = canvas.Canvas(stream, pagesize=(600, 800))
+    pdf.setFont("MininodeQABullets", 12)
+    for index, marker in enumerate(markers):
+        pdf.drawString(40, 730 - index * 27, marker)
+        pdf.drawString(86, 730 - index * 27, f"Descripcion del elemento {index}")
+    pdf.save()
+    doc = read_pdf_document(stream.getvalue())
+    assert doc.page_count == 1
+    assert [line.text for line in doc.pages[0].lines] == [
+        f"{marker} Descripcion del elemento {index}"
+        for index, marker in enumerate(markers)
+    ]
+
+
+@pytest.mark.parametrize("gap", [4.0, 3.0])
+def test_repeated_close_unruled_fields_are_ambiguous(gap):
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    stream = io.BytesIO()
+    pdf = canvas.Canvas(stream, pagesize=(600, 800))
+    for index in range(5):
+        x_left = 40
+        x_right = x_left + stringWidth("Ventas", "Helvetica", 12) + gap
+        y = 730 - index * 27
+        pdf.drawString(x_left, y, "Ventas")
+        pdf.drawString(x_right, y, "Costos")
+    pdf.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
+
+
+def test_single_two_word_sentence_is_not_automatically_two_columns():
+    document = read_pdf_document(make_pdf(("Ventas Costos",)))
+    assert document.pages[0].lines[0].text == "Ventas Costos"
