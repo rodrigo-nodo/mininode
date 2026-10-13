@@ -450,11 +450,12 @@ def test_ruled_table_cells_preserve_original_character_references():
 
 
 def test_structural_evidence_checks_glyph_coverage_not_semantic_order():
-    from mininode_api.content_reader_pdf.structure import source_coverage_is_unique
+    from mininode_api.content_reader_pdf.structure import source_coverage_counts
     chars = [{"text": "A"}, {"text": " "}, {"text": "B"}]
     line = lambda *items: SimpleNamespace(source_char_indices=tuple(items))
-    assert source_coverage_is_unique(chars, [line(0, 2)], [])
-    assert not source_coverage_is_unique(chars, [line(0)], [])
-    assert not source_coverage_is_unique(chars, [line(0, 2), line(2)], [])
+    assert source_coverage_counts(chars, [line(0, 2)], []) == (0, 0)
+    assert source_coverage_counts(chars, [line(0)], []) == (1, 0)
+    assert source_coverage_counts(chars, [line(0, 2), line(2)], []) == (0, 1)
     document = read_pdf_document(make_pdf(("Una frase digital",)))
-    assert document.pages[0].source_coverage_status == "all_nonwhitespace_glyphs_assigned_once"
+    assert document.pages[0].source_coverage_status == "all_nonwhitespace_glyphs_covered"
+    assert document.pages[0].repeated_source_refs >= 0
