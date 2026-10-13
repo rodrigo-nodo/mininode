@@ -1,20 +1,26 @@
-"""Independent digital-PDF reader. No OCR, no semantic classification."""
+"""Independent digital PDF reader; no OCR or semantic interpretation.
 
+The public API isolates untrusted PDF parsing in a time/memory/CPU limited
+child process. Reader HTML's contract and behavior are unchanged.
+"""
 from __future__ import annotations
 
 import hashlib
-import io
-from dataclasses import dataclass
+import json
+import subprocess
+import sys
+from dataclasses import asdict, dataclass
 from typing import Callable
-
-import pdfplumber
 
 from mininode_api.web_inspector.fetcher import WebFetcher
 
-MAX_PDF_BYTES = 2 * 1024 * 1024  # Matches the protected HTTP fetch cap.
+MAX_PDF_BYTES = 2 * 1024 * 1024
 MAX_PDF_PAGES = 50
 MAX_PDF_CHARACTERS = 200_000
 MAX_PDF_CHARS_PER_PAGE = 20_000
+MAX_PDF_WALL_SECONDS = 15
+MAX_PDF_CPU_SECONDS = 10
+MAX_PDF_MEMORY_MB = 768
 
 
 class PdfReadError(ValueError):
@@ -38,6 +44,31 @@ class PdfLink:
 
 
 @dataclass(frozen=True)
+class PdfTableCell:
+    row: int
+    column: int
+    text: str
+    bbox: tuple[float, float, float, float]
+
+
+@dataclass(frozen=True)
+class PdfTable:
+    page: int
+    bbox: tuple[float, float, float, float]
+    rows: tuple[tuple[str, ...], ...]
+    cells: tuple[PdfTableCell, ...]
+
+
+@dataclass(frozen=True)
+class PdfBlock:
+    page: int
+    kind: str  # text | table
+    text: str
+    bbox: tuple[float, float, float, float]
+    table_index: int | None = None
+
+
+@dataclass(frozen=True)
 class PdfPage:
     number: int
     width: float
@@ -45,7 +76,9 @@ class PdfPage:
     lines: tuple[PdfTextLine, ...]
     links: tuple[PdfLink, ...]
     image_count: int
-    extraction_status: str = "digital_text"
+    tables: tuple[PdfTable, ...] = ()
+    blocks: tuple[PdfBlock, ...] = ()
+    extraction_status: str = "digital_text"  # may be digital_text_with_images
 
 
 @dataclass(frozen=True)
@@ -60,112 +93,232 @@ class PdfDocument:
     page_count: int
     extraction_scope: str = "digital_pdf"
     truncated: bool = False
+    integrity_status: str = "not_visually_verified"
 
 
-def read_pdf_document(
-    data: bytes,
-    *,
-    final_url: str | None = None,
-    requested_url: str | None = None,
-    max_bytes: int = MAX_PDF_BYTES,
-    max_pages: int = MAX_PDF_PAGES,
-    max_characters: int = MAX_PDF_CHARACTERS,
-) -> PdfDocument:
-    """Read all digital-text pages, rejecting incomplete or ambiguous documents.
-
-    Coordinates are PDF page-local points, reported exactly as the extraction
-    library exposes them. Lines are derived layout groups, not source objects.
-    """
+def _validate_limits(data: bytes, max_bytes: int, max_pages: int, max_characters: int) -> None:
     if min(max_bytes, max_pages, max_characters) < 1:
         raise ValueError("PDF limits must be positive")
     if len(data) > max_bytes:
         raise PdfReadError("pdf_too_large")
     if not data.startswith(b"%PDF-"):
         raise PdfReadError("invalid_pdf")
+
+
+def _parse_pdf_in_worker(
+    data: bytes, final_url: str | None, requested_url: str | None,
+    max_bytes: int, max_pages: int, max_characters: int,
+) -> PdfDocument:
+    """Only call after the subprocess installs resource limits."""
+    import io
+    import pdfplumber
+
+    _validate_limits(data, max_bytes, max_pages, max_characters)
     pages: list[PdfPage] = []
-    texts: list[str] = []
+    page_texts: list[str] = []
     count = 0
     try:
         with pdfplumber.open(io.BytesIO(data)) as pdf:
-            if len(pdf.pages) == 0:
+            if not pdf.pages:
                 raise PdfReadError("empty_pdf")
             if len(pdf.pages) > max_pages:
                 raise PdfReadError("pdf_too_many_pages")
-            for number, page in enumerate(pdf.pages, start=1):
-                # Per-character coordinates are preserved by the library;
-                # grouping into lines is only a readable derived representation.
-                if len(page.chars) > MAX_PDF_CHARS_PER_PAGE:
+            for number, page in enumerate(pdf.pages, 1):
+                # This count is a *functional* cap. The process CPU/RAM limits
+                # protect evaluation of pdfplumber's lazy page.chars itself.
+                chars = page.chars
+                if len(chars) > MAX_PDF_CHARS_PER_PAGE:
                     raise PdfReadError("pdf_too_complex")
-                words = page.extract_words(
-                    keep_blank_chars=False,
-                    use_text_flow=False,
-                    return_chars=False,
-                )
+                words = page.extract_words(keep_blank_chars=False, use_text_flow=False)
                 if not words:
                     raise PdfReadError("pdf_page_without_text")
-                lines_by_position: dict[tuple[float, float], list[dict]] = {}
-                for word in words:
+
+                found = []
+                for candidate in page.find_tables(table_settings={
+                    "vertical_strategy": "lines", "horizontal_strategy": "lines",
+                }):
+                    rows = candidate.extract()
+                    if len(rows) >= 2 and all(len(row) >= 2 for row in rows):
+                        found.append(candidate)
+                found.sort(key=lambda table: (table.bbox[1], table.bbox[0]))
+                if len(found) > 30:
+                    raise PdfReadError("pdf_too_complex")
+
+                tables: list[PdfTable] = []
+                blocks: list[PdfBlock] = []
+                for table in found:
+                    rows = tuple(tuple((str(cell) if cell is not None else "") for cell in row)
+                                 for row in table.extract())
+                    if sum(len(row) for row in rows) > 5000:
+                        raise PdfReadError("pdf_too_complex")
+                    cells = []
+                    for r, table_row in enumerate(table.rows):
+                        for col, bbox in enumerate(table_row.cells):
+                            if bbox is None:
+                                if rows[r][col].strip():
+                                    raise PdfReadError("pdf_layout_ambiguous")
+                                continue
+                            cells.append(PdfTableCell(
+                                r, col, rows[r][col], tuple(float(p) for p in bbox),
+                            ))
+                    b = tuple(float(v) for v in table.bbox)
+                    table_index = len(tables)
+                    tables.append(PdfTable(number, b, rows, tuple(cells)))
+                    text = "\n".join(" | ".join(row) for row in rows)
+                    blocks.append(PdfBlock(number, "table", text, b, table_index))
+
+                def within_table(w: dict) -> bool:
+                    cx = (float(w["x0"]) + float(w["x1"])) / 2
+                    cy = (float(w["top"]) + float(w["bottom"])) / 2
+                    return any(t.bbox[0] <= cx <= t.bbox[2] and t.bbox[1] <= cy <= t.bbox[3]
+                               for t in tables)
+
+                remaining = [w for w in words if not within_table(w)]
+                by_y: dict[tuple[float, float], list[dict]] = {}
+                for word in remaining:
                     key = (round(float(word["top"]), 1), round(float(word["bottom"]), 1))
-                    lines_by_position.setdefault(key, []).append(word)
-                lines: list[PdfTextLine] = []
-                for key in sorted(lines_by_position):
-                    row = sorted(lines_by_position[key], key=lambda w: float(w["x0"]))
-                    line = " ".join(str(w["text"]) for w in row)
-                    lines.append(PdfTextLine(
-                        page=number,
-                        text=line,
-                        bbox=(min(float(w["x0"]) for w in row), min(float(w["top"]) for w in row),
-                              max(float(w["x1"]) for w in row), max(float(w["bottom"]) for w in row)),
-                    ))
-                text = "\n".join(line.text for line in lines)
+                    by_y.setdefault(key, []).append(word)
+
+                # Detect repeated, concurrent left/right reading areas.
+                # Without reliable separators, reject instead of interleaving.
+                ambiguous_rows = 0
+                for row_words in by_y.values():
+                    ordered = sorted(row_words, key=lambda word: float(word["x0"]))
+                    for a, b in zip(ordered, ordered[1:]):
+                        gap = float(b["x0"]) - float(a["x1"])
+                        if gap < float(page.width) * 0.10:
+                            continue
+                        divider = (float(a["x1"]) + float(b["x0"])) / 2
+                        left = " ".join(str(w["text"]) for w in ordered if float(w["x1"]) < divider)
+                        right = " ".join(str(w["text"]) for w in ordered if float(w["x0"]) > divider)
+                        if len(left.strip()) >= 10 and len(right.strip()) >= 10:
+                            ambiguous_rows += 1
+                            break
+                if ambiguous_rows >= 2:
+                    raise PdfReadError("pdf_layout_ambiguous")
+
+                lines = []
+                for key in sorted(by_y):
+                    row = sorted(by_y[key], key=lambda w: float(w["x0"]))
+                    text = " ".join(str(w["text"]) for w in row)
+                    b = (
+                        min(float(w["x0"]) for w in row),
+                        min(float(w["top"]) for w in row),
+                        max(float(w["x1"]) for w in row),
+                        max(float(w["bottom"]) for w in row),
+                    )
+                    lines.append(PdfTextLine(number, text, b))
+                    blocks.append(PdfBlock(number, "text", text, b))
+
+                blocks.sort(key=lambda b: (b.bbox[1], b.bbox[0]))
+                text = "\n".join(block.text for block in blocks)
                 if not text.strip():
                     raise PdfReadError("pdf_page_without_text")
-                count += len(text) + (2 if texts else 0)
+                count += len(text) + (2 if page_texts else 0)
                 if count > max_characters:
                     raise PdfReadError("pdf_text_too_large")
-                texts.append(text)
-                links: list[PdfLink] = []
+                page_texts.append(text)
+
+                links = []
                 for link in page.hyperlinks:
                     uri = link.get("uri")
-                    if isinstance(uri, str) and uri.startswith(("https://", "http://", "mailto:", "tel:")):
+                    if isinstance(uri, str) and uri.startswith(
+                        ("https://", "http://", "mailto:", "tel:")
+                    ):
                         links.append(PdfLink(
-                            page=number,
-                            url=uri,
-                            bbox=(float(link.get("x0") or 0), float(link.get("top") or 0),
-                                  float(link.get("x1") or 0), float(link.get("bottom") or 0)),
+                            number, uri, (float(link.get("x0") or 0), float(link.get("top") or 0),
+                                          float(link.get("x1") or 0), float(link.get("bottom") or 0)),
                         ))
                 pages.append(PdfPage(
-                    number=number,
-                    width=float(page.width),
-                    height=float(page.height),
-                    lines=tuple(lines),
-                    links=tuple(links),
-                    image_count=len(page.images),
+                    number, float(page.width), float(page.height), tuple(lines),
+                    tuple(links), len(page.images), tuple(tables), tuple(blocks),
+                    "digital_text_with_images" if page.images else "digital_text",
                 ))
     except PdfReadError:
         raise
     except Exception as exc:
         raise PdfReadError("pdf_parse_failed") from exc
 
-    full_text = "\n\n".join(texts)
+    full_text = "\n\n".join(page_texts)
     return PdfDocument(
-        requested_url=requested_url or final_url,
-        final_url=final_url,
-        pages=tuple(pages),
-        text=full_text,
-        file_sha256=hashlib.sha256(data).hexdigest(),
-        text_sha256=hashlib.sha256(full_text.encode("utf-8")).hexdigest(),
-        character_count=len(full_text),
-        page_count=len(pages),
+        requested_url or final_url, final_url, tuple(pages), full_text,
+        hashlib.sha256(data).hexdigest(),
+        hashlib.sha256(full_text.encode("utf-8")).hexdigest(),
+        len(full_text), len(pages),
+        integrity_status=(
+            "unverified_visual_content" if any(p.image_count for p in pages)
+            else "text_extracted_not_visually_verified"
+        ),
     )
 
 
-def read_public_pdf_url(
-    url: str,
-    *,
-    fetcher_factory: Callable[[], WebFetcher] = WebFetcher,
+def _decode_worker_document(value: dict) -> PdfDocument:
+    pages = []
+    for item in value["pages"]:
+        lines = tuple(PdfTextLine(**line) for line in item["lines"])
+        links = tuple(PdfLink(**link) for link in item["links"])
+        tables = tuple(
+            PdfTable(
+                page=t["page"], bbox=tuple(t["bbox"]),
+                rows=tuple(tuple(row) for row in t["rows"]),
+                cells=tuple(PdfTableCell(**cell) for cell in t["cells"]),
+            ) for t in item["tables"]
+        )
+        blocks = tuple(PdfBlock(**block) for block in item["blocks"])
+        pages.append(PdfPage(
+            number=item["number"], width=item["width"], height=item["height"],
+            lines=lines, links=links, image_count=item["image_count"],
+            tables=tables, blocks=blocks, extraction_status=item["extraction_status"],
+        ))
+    return PdfDocument(
+        requested_url=value["requested_url"], final_url=value["final_url"],
+        pages=tuple(pages), text=value["text"], file_sha256=value["file_sha256"],
+        text_sha256=value["text_sha256"], character_count=value["character_count"],
+        page_count=value["page_count"], extraction_scope=value["extraction_scope"],
+        truncated=value["truncated"], integrity_status=value["integrity_status"],
+    )
+
+
+def read_pdf_document(
+    data: bytes, *, final_url: str | None = None,
+    requested_url: str | None = None, max_bytes: int = MAX_PDF_BYTES,
+    max_pages: int = MAX_PDF_PAGES,
+    max_characters: int = MAX_PDF_CHARACTERS,
 ) -> PdfDocument:
-    """Fetch a public PDF via the established robots/SSRF/pinned-IP guard."""
+    """Parse untrusted bytes in a CPU, memory and wall-clock constrained worker."""
+    _validate_limits(data, max_bytes, max_pages, max_characters)
+    args = json.dumps({
+        "final_url": final_url, "requested_url": requested_url,
+        "max_bytes": max_bytes, "max_pages": max_pages,
+        "max_characters": max_characters,
+    })
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "mininode_api.content_reader_pdf._worker", args],
+            input=data, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=MAX_PDF_WALL_SECONDS, check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise PdfReadError("pdf_processing_timeout") from exc
+    except OSError as exc:
+        raise PdfReadError("pdf_worker_failed") from exc
+    if result.returncode != 0:
+        raise PdfReadError("pdf_resource_limit" if result.returncode < 0 else "pdf_worker_failed")
+    try:
+        payload = json.loads(result.stdout)
+        if payload.get("error"):
+            raise PdfReadError(str(payload["error"]))
+        return _decode_worker_document(payload["document"])
+    except PdfReadError:
+        raise
+    except (ValueError, KeyError, TypeError) as exc:
+        raise PdfReadError("pdf_worker_failed") from exc
+
+
+def read_public_pdf_url(
+    url: str, *, fetcher_factory: Callable[[], WebFetcher] = WebFetcher,
+) -> PdfDocument:
+    """Fetch a public PDF through the existing robots/SSRF/pinned-IP guard."""
     with fetcher_factory() as fetcher:
         fetched = fetcher.fetch(url, [url], accept_pdf=True)
     page = fetched.pages[0] if fetched.pages else None
