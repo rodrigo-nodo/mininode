@@ -38,7 +38,21 @@ def main() -> int:
     last_section_ok = "derechos" in page_texts[-1]
     final_date_ok = "noviembre 2024" in page_texts[-1]
     all_pages_text = all(page.lines and page_text.strip() for page, page_text in zip(document.pages, page_texts))
-    success = all((page_count_ok, main_title_ok, last_section_ok, final_date_ok, all_pages_text))
+    two_tables_found = len(document.pages[0].tables) == 2 if document.pages else False
+    table_shapes_ok = (
+        len(document.pages[0].tables[0].rows) == 6
+        and len(document.pages[0].tables[1].rows) == 3
+        and all(len(row) == 2 for table in document.pages[0].tables for row in table.rows)
+    ) if two_tables_found else False
+    table_pairs = [
+        [(normalized(row[0]), normalized(row[1])) for row in table.rows]
+        for table in document.pages[0].tables
+    ] if two_tables_found else []
+    service_pair_ok = any("reservar horas" in left and "nombre" in right for left, right in table_pairs[0]) if two_tables_found else False
+    results_pair_ok = any("resultados de examenes" in left and "id de atencion" in right for left, right in table_pairs[0]) if two_tables_found else False
+    profiles_pair_ok = any("elaborar perfiles" in left and "run" in right for left, right in table_pairs[1]) if two_tables_found else False
+    success = all((page_count_ok, main_title_ok, last_section_ok, final_date_ok, all_pages_text,
+                   two_tables_found, table_shapes_ok, service_pair_ok, results_pair_ok, profiles_pair_ok))
     print(json.dumps({
         "status": "PASS" if success else "NEEDS_REVIEW",
         "final_url": document.final_url,
@@ -49,6 +63,11 @@ def main() -> int:
         "table_counts": [len(page.tables) for page in document.pages],
         "table_shapes": [[(len(t.rows), max(map(len, t.rows), default=0)) for t in page.tables] for page in document.pages],
         "integrity_status": document.integrity_status,
+        "first_page_two_tables": two_tables_found,
+        "first_page_table_shapes_ok": table_shapes_ok,
+        "reservation_data_same_row": service_pair_ok,
+        "exams_data_same_row": results_pair_ok,
+        "profiles_data_same_row": profiles_pair_ok,
         "page_count_matches_reference": page_count_ok,
         "title_on_page_1": main_title_ok,
         "rights_on_last_page": last_section_ok,
