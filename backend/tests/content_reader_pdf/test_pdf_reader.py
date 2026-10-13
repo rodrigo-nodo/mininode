@@ -136,7 +136,7 @@ def test_safe_pdf_fetch_only_when_explicitly_enabled():
 def test_safe_pdf_fetch_respects_robots_and_ssrf():
     def handler(request):
         if request.url.path == "/robots.txt":
-            return httpx.Response(200, text="User-agent: *\\nDisallow: /blocked.pdf\\n", headers={"content-type": "text/plain"})
+            return httpx.Response(200, text="User-agent: *\nDisallow: /blocked.pdf\n", headers={"content-type": "text/plain"})
         return httpx.Response(200, content=make_pdf(("Texto",)), headers={"content-type": "application/pdf"})
     with WebFetcher(
         client=httpx.Client(transport=httpx.MockTransport(handler)),
