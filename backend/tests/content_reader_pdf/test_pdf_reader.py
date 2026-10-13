@@ -398,3 +398,21 @@ def test_repeated_close_unruled_fields_are_ambiguous(gap):
 def test_single_two_word_sentence_is_not_automatically_two_columns():
     document = read_pdf_document(make_pdf(("Ventas Costos",)))
     assert document.pages[0].lines[0].text == "Ventas Costos"
+
+
+def test_native_layout_candidates_retain_source_character_provenance():
+    data = make_pdf(("Texto de una linea", "Otra linea independiente"))
+    document = read_pdf_document(data)
+    page = document.pages[0]
+    assert page.layout_regions
+    assert all(region.page == 1 and region.bbox[2] > region.bbox[0]
+               for region in page.layout_regions)
+    assert [line.text for line in page.lines] == [
+        "Texto de una linea", "Otra linea independiente",
+    ]
+    assert all(line.source_char_indices for line in page.lines)
+    # Provenance refers to positions in the PDF's original character array.
+    assert set(page.lines[0].source_char_indices).isdisjoint(
+        page.lines[1].source_char_indices
+    )
+    assert page.structure_tag_error is None or isinstance(page.structure_tag_error, str)
