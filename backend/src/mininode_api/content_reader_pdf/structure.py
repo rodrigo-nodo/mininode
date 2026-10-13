@@ -63,3 +63,22 @@ def extract_lines_with_sources(page, original_chars, table_boxes):
                 tuple(original_ids[id(ch)] for ch in line["chars"] if id(ch) in original_ids),
             ))
     return result
+
+def source_coverage_is_unique(original_chars, text_lines, tables):
+    """Validate lossless, single-owner glyph assignment; ignore whitespace only.
+
+    The check proves that digitally available content is not lost or
+    duplicated between narrative lines and accepted table cells. It DOES
+    NOT prove reading order or semantic interpretation.
+    """
+    owners = {}
+    for line in text_lines:
+        for index in line.source_char_indices:
+            owners[index] = owners.get(index, 0) + 1
+    for table in tables:
+        for cell in table.cells:
+            for index in cell.source_char_indices:
+                owners[index] = owners.get(index, 0) + 1
+    expected = {index for index, ch in enumerate(original_chars)
+                if str(ch.get("text", "")).strip()}
+    return all(owners.get(index) == 1 for index in expected)
