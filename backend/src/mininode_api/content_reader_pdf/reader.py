@@ -52,6 +52,7 @@ class PdfTableCell:
     column: int
     text: str
     bbox: tuple[float, float, float, float]
+    source_char_indices: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -257,9 +258,13 @@ def _parse_pdf_in_worker(
                                 if rows[r][col].strip():
                                     raise PdfReadError("pdf_layout_ambiguous")
                                 continue
-                            cells.append(PdfTableCell(
-                                r, col, rows[r][col], tuple(float(p) for p in bbox),
-                            ))
+                            bcell = tuple(float(p) for p in bbox)
+                            source_indices = tuple(
+                                index for index, char in enumerate(chars)
+                                if bcell[0] <= (float(char["x0"]) + float(char["x1"])) / 2 <= bcell[2]
+                                and bcell[1] <= (float(char["top"]) + float(char["bottom"])) / 2 <= bcell[3]
+                            )
+                            cells.append(PdfTableCell(r, col, rows[r][col], bcell, source_indices))
                     b = tuple(float(v) for v in table.bbox)
                     table_index = len(tables)
                     tables.append(PdfTable(number, b, rows, tuple(cells)))
@@ -385,7 +390,11 @@ def _decode_worker_document(value: dict) -> PdfDocument:
             PdfTable(
                 page=t["page"], bbox=tuple(t["bbox"]),
                 rows=tuple(tuple(row) for row in t["rows"]),
-                cells=tuple(PdfTableCell(**cell) for cell in t["cells"]),
+                cells=tuple(PdfTableCell(
+                    row=cell["row"], column=cell["column"], text=cell["text"],
+                    bbox=tuple(cell["bbox"]),
+                    source_char_indices=tuple(cell.get("source_char_indices", ())),
+                ) for cell in t["cells"]),
             ) for t in item["tables"]
         )
         blocks = tuple(PdfBlock(**block) for block in item["blocks"])
