@@ -26,3 +26,13 @@ jobs:
         run: pip install -r backend/requirements.txt reportlab
       - name: Evaluate PDF capabilities (no product changes)
         run: python automation/content_reader_pdf/qa_exact_env_321.py
+
+      - name: Collect pinned library wheels for local-only validation of user supplied PDF
+        run: |
+          mkdir -p pdf321-wheels
+          python -m pip download --no-deps --dest pdf321-wheels pdfplumber==0.11.4 pdfminer.six==20231228
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdf321-pinned-pure-python-packages
+          path: pdf321-wheels/*.whl
+          retention-days: 1
