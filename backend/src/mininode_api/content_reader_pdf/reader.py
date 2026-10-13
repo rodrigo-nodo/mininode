@@ -15,7 +15,7 @@ from typing import Callable
 
 from mininode_api.web_inspector.fetcher import WebFetcher
 from .structure import (PdfLayoutRegion, extract_lines_with_sources,
-                        page_structure_candidates, source_coverage_is_unique)
+                        page_structure_candidates, source_coverage_counts)
 
 MAX_PDF_BYTES = 2 * 1024 * 1024
 MAX_PDF_PAGES = 50
@@ -88,6 +88,7 @@ class PdfPage:
     structure_tags: tuple[str, ...] = ()
     structure_tag_error: str | None = None
     source_coverage_status: str = "not_checked"
+    repeated_source_refs: int = 0
 
 
 @dataclass(frozen=True)
@@ -336,7 +337,8 @@ def _parse_pdf_in_worker(
                 layout_regions, structure_tags, structure_tag_error = page_structure_candidates(
                     page, number,
                 )
-                if not source_coverage_is_unique(chars, lines, tables):
+                missing_glyphs, repeated_refs = source_coverage_counts(chars, lines, tables)
+                if missing_glyphs:
                     raise PdfReadError("pdf_layout_ambiguous")
 
                 blocks.sort(key=lambda b: (b.bbox[1], b.bbox[0]))
@@ -363,7 +365,7 @@ def _parse_pdf_in_worker(
                     tuple(links), len(page.images), tuple(tables), tuple(blocks),
                     "digital_text_with_images" if page.images else "digital_text",
                     layout_regions, structure_tags, structure_tag_error,
-                    "all_nonwhitespace_glyphs_assigned_once",
+                    "all_nonwhitespace_glyphs_covered", repeated_refs,
                 ))
     except PdfReadError:
         raise
@@ -411,6 +413,7 @@ def _decode_worker_document(value: dict) -> PdfDocument:
             structure_tags=tuple(item.get("structure_tags", ())),
             structure_tag_error=item.get("structure_tag_error"),
             source_coverage_status=item.get("source_coverage_status", "not_checked"),
+            repeated_source_refs=item.get("repeated_source_refs", 0),
         ))
     return PdfDocument(
         requested_url=value["requested_url"], final_url=value["final_url"],
