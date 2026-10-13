@@ -64,12 +64,13 @@ def extract_lines_with_sources(page, original_chars, table_boxes):
             ))
     return result
 
-def source_coverage_is_unique(original_chars, text_lines, tables):
-    """Validate lossless, single-owner glyph assignment; ignore whitespace only.
+def source_coverage_counts(original_chars, text_lines, tables):
+    """Count missing and repeatedly referenced digital glyphs.
 
-    The check proves that digitally available content is not lost or
-    duplicated between narrative lines and accepted table cells. It DOES
-    NOT prove reading order or semantic interpretation.
+    Native line extraction can return a glyph in more than one line candidate;
+    this is not proof of duplicated *content* and must not cause an automatic
+    rejection. Complete coverage, however, is mandatory. Neither check proves
+    correct reading order.
     """
     owners = {}
     for line in text_lines:
@@ -81,4 +82,6 @@ def source_coverage_is_unique(original_chars, text_lines, tables):
                 owners[index] = owners.get(index, 0) + 1
     expected = {index for index, ch in enumerate(original_chars)
                 if str(ch.get("text", "")).strip()}
-    return all(owners.get(index) == 1 for index in expected)
+    missing = sum(owners.get(index, 0) == 0 for index in expected)
+    referenced_more_than_once = sum(owners.get(index, 0) > 1 for index in expected)
+    return missing, referenced_more_than_once
