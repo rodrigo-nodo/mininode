@@ -170,3 +170,13 @@ def test_safe_pdf_fetch_rejects_oversized_and_wrong_mime():
     assert huge.pages[0].error.code == "response_too_large"
     assert fake.pages[0].binary_content is None
     assert fake.pages[0].html is not None
+
+
+def test_character_limit_includes_page_separator():
+    data = make_pdf(("Uno",), ("Dos",))
+    doc = read_pdf_document(data)
+    assert doc.text == "Uno\n\nDos"
+    assert doc.character_count == 8
+    assert read_pdf_document(data, max_characters=8).character_count == 8
+    with pytest.raises(PdfReadError, match="pdf_text_too_large"):
+        read_pdf_document(data, max_characters=7)
