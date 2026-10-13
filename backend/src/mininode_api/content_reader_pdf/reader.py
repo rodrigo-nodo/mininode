@@ -126,15 +126,15 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
     bands = [by_baseline[key] for key in sorted(by_baseline)]
 
     def is_numbered_list(left: list[dict], right: list[dict]) -> bool:
-        """List markers are not an independent reading column.
+        """Recognize short, aligned list markers, not an independent column.
 
-        Require repeated explicit numeric markers on the *same baselines* as
-        the adjacent text; plain digits are intentionally not sufficient.
-        Textual columns such as A0/B0 remain ambiguous.
+        Require short explicit markers (numbers, letters, bullets or dashes)
+        on the same baselines as adjacent text, and a narrow marker lane.
+        A0/B0 labels are not markers and must still be treated as ambiguous.
         """
         if len(left) < 2:
             return False
-        marker = re.compile(r"(?:\(\d{1,3}\)|\d{1,3}[.)])")
+        marker = re.compile(r"(?:\(\d{1,3}\)|\d{1,3}[.)]|[A-Za-z][.)]|[-–—•*])")
         if not all(marker.fullmatch(str(word["text"])) for word in left):
             return False
         if max(float(w["x1"]) for w in left) - min(float(w["x0"]) for w in left) > page_width * 0.07:
@@ -146,9 +146,10 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
         )
 
     def is_parallel(window: list[dict]) -> bool:
-        # A persistent narrow whitespace corridor can separate parallel
-        # columns even if its width is less than 3.5% of the page.
-        # Word-to-word spaces alone are not sufficient evidence.
+        # Compare gaps with the visual font height, not the page width:
+        # a 7-point column gutter in a 600-point page is still meaningful.
+        # Repeated vertical separation and a list-marker guard are required;
+        # a single ordinary gap between words is not enough.
         occupied = sorted((float(w["x0"]), float(w["x1"])) for w in window)
         if len(occupied) < 4:
             return False
@@ -158,8 +159,10 @@ def _has_ambiguous_parallel_columns(words: list[dict], page_width: float) -> boo
                 merged[-1][1] = max(merged[-1][1], x1)
             else:
                 merged.append([x0, x1])
+        typical_word_height = sorted(float(w["bottom"]) - float(w["top"]) for w in window)[len(window) // 2]
+        minimum_corridor = max(3.5, typical_word_height * 0.45)
         for left_region, right_region in zip(merged, merged[1:]):
-            if right_region[0] - left_region[1] < max(8.0, page_width * 0.012):
+            if right_region[0] - left_region[1] < minimum_corridor:
                 continue
             divider = (left_region[1] + right_region[0]) / 2
             left = [w for w in window if float(w["x1"]) <= divider]
