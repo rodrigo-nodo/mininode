@@ -48,3 +48,16 @@ La detección de corredores usa un umbral dependiente de la altura de palabra (`
 ## Quinta revisión independiente - Resolución focalizada
 
 Se agregaron tests completos de listas Unicode/romanas (◦, ▪, (a), IV.) y dos campos independientes repetidos con separación de 3 y 4 puntos, junto a una prueba de una oración corta legítima. El detector de corredores mantiene el umbral calibrado anterior para evitar rechazar páginas normales: **no se redujo globalmente el umbral geométrico**. Se agregó una verificación acotada de dos campos de texto repetidos en al menos tres líneas, con una separación estrecha entre glifos y mismas etiquetas/posición. Así se detectan ejemplos repetitivos adversariales sin confundir una oración corriente aislada con dos columnas. Limitación: no es una garantía general para todos los campos arbitrarios pegados ni para PDFs complejos; cuando la estructura no es distinguible mediante indicios del propio documento, el resultado no equivale a integridad visual verificada.
+
+## Integración estructural - Etapa inicial (PR #321)
+
+El lector comienza a conservar la evidencia estructural de **pdfminer.six + pdfplumber** sin inventar orden semántico:
+- `PdfPage.layout_regions`: candidatos de regiones `LTTextBoxHorizontal`, con texto, página y coordenadas; la fuente se identifica explícitamente como `pdfminer_lttextbox_candidate`.
+- `PdfPage.structure_tags` y `structure_tag_error`: tipos de etiquetas presentes cuando `structure_tree` puede leerse; errores de etiquetas no se presentan como evidencia válida.
+- `PdfTextLine.source_char_indices`: índices a `page.chars` originales, obtenidos con `extract_text_lines(return_chars=True)` de pdfplumber, excluyendo caracteres que ya pertenecen a tablas identificadas. El texto y los espacios reconstruidos continúan siendo derivados.
+- Extracción de líneas realizada por la biblioteca, en lugar de reagrupar palabras manualmente por `top/bottom` redondeado.
+- Las tablas respaldadas por bordes mantienen su representación por filas y celdas. No se activa `find_tables(text)` indiscriminadamente: en las pruebas reales confundió listas y párrafos con tablas.
+
+**Pendiente antes del merge:** reemplazar los detectores históricos de columnas/espacios con una validación general basada en estos candidatos y en procedencia de caracteres; comprobar sus asociaciones y orden con QA independiente. Esta etapa no acredita el problema de fidelidad estructural como resuelto. No se habilita consumo semántico directo sin esa validación.
+
+**Prueba Claro Chile:** sobre el PDF original adjuntado, con pdfplumber 0.11.4 + pdfminer.six 20231228, se identificó una tabla 3×2 (página 3) con una fila vacía y una 5×2 (página 4). Las seis asociaciones no vacías se conservan. La prueba se ejecutó con Python 3.13 en análisis local; las mismas dependencias se comprobaron también con Python 3.11 en GitHub para otras muestras. El PDF original no se publicó en el repositorio.
