@@ -120,7 +120,7 @@ def read_pdf_document(
                 text = "\n".join(line.text for line in lines)
                 if not text.strip():
                     raise PdfReadError("pdf_page_without_text")
-                count += len(text)
+                count += len(text) + (2 if texts else 0)
                 if count > max_characters:
                     raise PdfReadError("pdf_text_too_large")
                 texts.append(text)
