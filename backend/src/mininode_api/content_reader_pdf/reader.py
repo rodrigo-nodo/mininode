@@ -14,7 +14,8 @@ from dataclasses import asdict, dataclass
 from typing import Callable
 
 from mininode_api.web_inspector.fetcher import WebFetcher
-from .structure import PdfLayoutRegion, extract_lines_with_sources, page_structure_candidates
+from .structure import (PdfLayoutRegion, extract_lines_with_sources,
+                        page_structure_candidates, source_coverage_is_unique)
 
 MAX_PDF_BYTES = 2 * 1024 * 1024
 MAX_PDF_PAGES = 50
@@ -86,6 +87,7 @@ class PdfPage:
     layout_regions: tuple[PdfLayoutRegion, ...] = ()
     structure_tags: tuple[str, ...] = ()
     structure_tag_error: str | None = None
+    source_coverage_status: str = "not_checked"
 
 
 @dataclass(frozen=True)
@@ -334,6 +336,8 @@ def _parse_pdf_in_worker(
                 layout_regions, structure_tags, structure_tag_error = page_structure_candidates(
                     page, number,
                 )
+                if not source_coverage_is_unique(chars, lines, tables):
+                    raise PdfReadError("pdf_layout_ambiguous")
 
                 blocks.sort(key=lambda b: (b.bbox[1], b.bbox[0]))
                 text = "\n".join(block.text for block in blocks)
@@ -359,6 +363,7 @@ def _parse_pdf_in_worker(
                     tuple(links), len(page.images), tuple(tables), tuple(blocks),
                     "digital_text_with_images" if page.images else "digital_text",
                     layout_regions, structure_tags, structure_tag_error,
+                    "all_nonwhitespace_glyphs_assigned_once",
                 ))
     except PdfReadError:
         raise
@@ -405,6 +410,7 @@ def _decode_worker_document(value: dict) -> PdfDocument:
             layout_regions=tuple(PdfLayoutRegion(**region) for region in item.get("layout_regions", ())),
             structure_tags=tuple(item.get("structure_tags", ())),
             structure_tag_error=item.get("structure_tag_error"),
+            source_coverage_status=item.get("source_coverage_status", "not_checked"),
         ))
     return PdfDocument(
         requested_url=value["requested_url"], final_url=value["final_url"],
