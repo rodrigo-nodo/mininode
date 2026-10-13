@@ -261,3 +261,25 @@ def test_subprocess_timeout_yields_controlled_error(monkeypatch):
     monkeypatch.setattr(subprocess, "run", timeout)
     with pytest.raises(PdfReadError, match="pdf_processing_timeout"):
         read_pdf_document(make_pdf(("Documento",)))
+
+
+def test_short_parallel_columns_are_rejected():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    for n in range(4):
+        p.drawString(45, 740 - n * 32, "A" + str(n))
+        p.drawString(355, 740 - n * 32, "B" + str(n))
+    p.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
+
+
+def test_vertically_offset_parallel_columns_are_rejected():
+    stream = io.BytesIO()
+    p = canvas.Canvas(stream, pagesize=(600, 800))
+    for n in range(5):
+        p.drawString(40, 740 - n * 36, "Parrafo izquierda numero " + str(n))
+        p.drawString(350, 718 - n * 36, "Parrafo derecha numero " + str(n))
+    p.save()
+    with pytest.raises(PdfReadError, match="pdf_layout_ambiguous"):
+        read_pdf_document(stream.getvalue())
