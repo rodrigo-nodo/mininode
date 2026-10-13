@@ -28,6 +28,6 @@ Procesar PDFs **digitales con texto seleccionable** sin OCR, LLM ni interpretaci
 
 ## QA
 
-Tests deterministas con PDF generado en memoria, dos páginas, orden, hashes, posiciones, enlaces, páginas sin texto, documento mixto, límites, archivo inválido, fake fetcher y seguridad de retorno cerrado. Pipeline CI exclusivo PDF Reader, además de regresión HTML/fetcher.
+Tests deterministas con PDF generado en memoria, dos páginas, orden, hashes, posiciones, enlaces, páginas sin texto, documento mixto, límites, archivo inválido, fake fetcher y seguridad de retorno cerrado. Pipeline CI exclusivo PDF Reader y tests enfocados de seguridad en la descarga, además de regresión HTML. El conjunto general de tests heredados del fetcher no forma parte de este workflow; presentó un fallo de telemetría de red existente fuera del alcance PDF que debe revisarse por separado.
 
-Próxima validación: corpus de PDFs digitales reales con inspección visual independiente, por ejemplo la política PDF de Clínica Santa María, antes de recomendar merge.
+QA público de humo ejecutado automáticamente en PR: política PDF del sitio web de Clínica Santa María (3 páginas), comprobación de título, derechos, fecha y texto seleccionable en todas las páginas, sin extraer datos personales a los logs. **Este QA no demuestra integridad visual total** ni calidad de reconstrucción de tablas/columnas. La validación visual independiente del orden de lectura y tablas sigue pendiente antes de recomendar merge.
