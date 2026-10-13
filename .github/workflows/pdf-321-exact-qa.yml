@@ -1,0 +1,28 @@
+name: PDF 321 Exact Environment Capability QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'automation/content_reader_pdf/qa_exact_env_321.py'
+      - '.github/workflows/pdf-321-exact-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact dependencies
+        run: pip install -r backend/requirements.txt reportlab
+      - name: Evaluate PDF capabilities (no product changes)
+        run: python automation/content_reader_pdf/qa_exact_env_321.py
