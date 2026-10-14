@@ -110,7 +110,7 @@ def test_migration_from_previous_schema_preserves_existing_snapshot(pg_claim):
     url, did, token, owner, other, workspace, foreign, host = pg_claim
     migration_sql = MIGRATION.read_text(encoding="utf-8")
     # The migration runner supplies the transaction boundary in this test.
-    migration_sql = migration_sql.removeprefix("BEGIN;").removesuffix("COMMIT;").strip()
+    migration_sql = migration_sql.replace("\\nBEGIN;\\n", "\\n", 1).rsplit("COMMIT;", 1)[0].strip()
     with psycopg.connect(url) as connection:
         try:
             with connection.cursor() as cursor:
