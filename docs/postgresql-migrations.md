@@ -20,13 +20,22 @@ real de cada base con las cuatro migraciones históricas y sus efectos. El runne
 `20260928_access_a2_1_workspace_sites.sql`,
 `20260928_access_a3_2_privacy_workspace_site.sql` y
 `20261006_a4_billing_core.sql`. No se pueden ejecutar mediante Pre-deploy.
-También bloquea sentencias `DROP TABLE`, `DROP SCHEMA`, `DROP COLUMN` y
-`TRUNCATE` dentro de cualquier migración. Una operación destructiva se gestiona
-fuera de este mecanismo con aprobación específica y respaldo.
+En vez de intentar interpretar SQL con expresiones regulares, Pre-deploy exige
+que el nombre figure en el catálogo revisado `APPROVED_CHECKSUMS` del runner
+y que el SHA-256 del archivo coincida exactamente. Cambios de contenido o archivos
+nuevos requieren modificar el catálogo mediante PR revisado y CI. Esto impide
+que cualquier variante de SQL no autorizado pase simplemente mediante la allowlist.
+El catálogo inicial contiene exclusivamente `20261013_privacy_anonymous_claim.sql`.
+La allowlist de Render es una **segunda condición independiente**, no la fuente
+de aprobación de contenido. Un checksum no convierte SQL destructivo en seguro:
+la revisión humana del SQL es obligatoria antes de catalogarlo.
+Una operación destructiva se gestiona fuera de este mecanismo con aprobación
+específica, respaldo y procedimiento separado.
 No marcar una migración como aplicada sin comprobar su efecto y checksum.
 Cada nueva migración requiere evaluación de seguridad, compatibilidad hacia atrás
-con la versión de backend aún activa y autorización operativa antes de sumar
-su nombre a la lista. No añadir archivos destructivos a la allowlist sin
+con la versión de backend aún activa, incorporación explícita de su hash al catálogo
+en un PR revisado, y autorización operativa por entorno antes de sumar
+su nombre a la allowlist. No añadir archivos destructivos a la allowlist sin
 autorización específica y respaldo/plan de recuperación.
 
 Las garantías de rollback, checksum, idempotencia y dos ejecutores simultáneos
