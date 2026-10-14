@@ -27,9 +27,11 @@ CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     purchase_expires_at TIMESTAMPTZ NOT NULL,
     workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL,
-    claim_token_hash TEXT NULL
+    claim_token_hash TEXT NULL,
+    claimed_by_user_id UUID NULL REFERENCES access.users(id) ON DELETE SET NULL
 );
 ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claim_token_hash TEXT;
+ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claimed_by_user_id UUID NULL REFERENCES access.users(id) ON DELETE SET NULL;
 """
 
 
@@ -173,7 +175,7 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
     token_hash = hashlib.sha256(claim_token.encode()).hexdigest()
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT site_url, claim_token_hash, workspace_site_id,
+            """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id,
                       purchase_expires_at >= CURRENT_TIMESTAMP
                FROM privacy.diagnostic WHERE id = %s FOR UPDATE""",
             (diagnostic_id,),
@@ -181,10 +183,10 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         row = cursor.fetchone()
         if row is None or row[1] is None or not hmac.compare_digest(token_hash, row[1]):
             raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
-        site_url, _, existing_site, eligible = row
+        site_url, _, existing_site, claimed_by, eligible = row
         if existing_site is not None:
             authorized = access.get_authorized_site(user_id, existing_site)
-            if authorized is None:
+            if claimed_by != user_id or authorized is None:
                 raise PrivacyDiagnosticClaimRejectedError("Diagnostic already claimed")
             return existing_site
         if not eligible:
@@ -194,8 +196,8 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         if linked_site is None:
             raise PrivacyDiagnosticClaimRejectedError("Workspace unavailable")
         cursor.execute(
-            """UPDATE privacy.diagnostic SET workspace_site_id = %s
+            """UPDATE privacy.diagnostic SET workspace_site_id = %s, claimed_by_user_id = %s
                WHERE id = %s AND workspace_site_id IS NULL""",
-            (linked_site.id, diagnostic_id),
+            (linked_site.id, user_id, diagnostic_id),
         )
         return linked_site.id
