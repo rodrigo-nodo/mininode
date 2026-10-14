@@ -40,6 +40,7 @@ export const onRequest = async (ctx) => {
   const isAccessProtected = (
     (['access/me', 'access/context'].includes(destPathPublic) && method === 'GET')
     || (destPathPublic === 'access/onboarding' && method === 'POST')
+    || (destPathPublic === 'privacy/diagnostic-claims' && method === 'POST')
     || (/^access\/workspaces\/[0-9a-f-]+\/sites$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/latest-review$/.test(destPathPublic) && method === 'GET')

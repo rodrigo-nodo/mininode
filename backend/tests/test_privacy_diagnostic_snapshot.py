@@ -144,3 +144,87 @@ def test_list_latest_for_workspace_returns_one_row_shape_per_site(monkeypatch):
     assert "d.created_at DESC" in sql
     assert params == (workspace_id,)
     assert [item.workspace_site_id for item in stored] == [site_a, site_b]
+
+
+def test_anonymous_claim_proof_is_hashed_at_rest(monkeypatch):
+    token = "a" * 43
+    executions = fake_connection(monkeypatch, rows=[stored_row()])
+    service.create_diagnostic_snapshot(diagnostic(), claim_token=token)
+    sql, params = executions[0]
+    assert "claim_token_hash" in sql
+    assert token not in str(params)
+    assert len(params[-1]) == 64
+
+
+def test_claim_rejects_invalid_token_without_database_access(monkeypatch):
+    executions = fake_connection(monkeypatch)
+    with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
+        service.claim_anonymous_diagnostic(uuid4(), "short", uuid4(), uuid4())
+    assert executions == []
+
+
+def test_claim_rejects_wrong_proof(monkeypatch):
+    executions = fake_connection(monkeypatch, rows=[("https://example.com/", "0" * 64, None, None, True)])
+    with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
+        service.claim_anonymous_diagnostic(uuid4(), "a" * 43, uuid4(), uuid4())
+    assert "pg_advisory_xact_lock" in executions[0][0]
+    assert not any("UPDATE privacy.diagnostic" in sql for sql, _ in executions)
+
+
+def test_claim_rejects_expired_proof(monkeypatch):
+    import hashlib
+    token = "a" * 43
+    fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, False),
+        (1,),
+    ])
+    with pytest.raises(service.PrivacyDiagnosticPurchaseExpiredError):
+        service.claim_anonymous_diagnostic(uuid4(), token, uuid4(), uuid4())
+
+
+def test_claim_rejects_unauthorized_workspace(monkeypatch):
+    import hashlib
+    token = "a" * 43
+    fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True),
+        None,
+    ])
+    with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
+        service.claim_anonymous_diagnostic(uuid4(), token, uuid4(), uuid4())
+
+
+def test_claim_rejects_other_user_even_in_same_workspace(monkeypatch):
+    import hashlib
+    token = "a" * 43
+    fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), uuid4(), uuid4(), True),
+        (1,),
+    ])
+    with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
+        service.claim_anonymous_diagnostic(uuid4(), token, uuid4(), uuid4())
+
+
+def test_claim_is_idempotent_for_original_owner(monkeypatch):
+    import hashlib
+    token = "a" * 43
+    owner, site = uuid4(), uuid4()
+    fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), site, owner, True),
+        (1,), (1,),
+    ])
+    assert service.claim_anonymous_diagnostic(uuid4(), token, owner, uuid4()) == site
+
+
+def test_claim_associates_new_workspace_site(monkeypatch):
+    import hashlib
+    token = "a" * 43
+    user, workspace, site, workspace_site = uuid4(), uuid4(), uuid4(), uuid4()
+    executions = fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True),
+        (1,), (site,), (workspace_site,), (workspace_site,),
+    ])
+    assert service.claim_anonymous_diagnostic(uuid4(), token, user, workspace) == workspace_site
+    updates = [(sql, params) for sql, params in executions if "UPDATE privacy.diagnostic" in sql]
+    assert len(updates) == 1
+    assert updates[0][1][:2] == (workspace_site, user)
+    assert any("INSERT INTO access.workspace_sites" in sql for sql, _ in executions)
