@@ -61,3 +61,15 @@ def test_modified_reviewed_file_rejected_before_connect(monkeypatch, tmp_path):
     monkeypatch.setattr(runner.psycopg, "connect", unexpected)
     with pytest.raises(ValueError, match="catalog checksum mismatch"):
         runner.migrate("postgresql://placeholder", [name])
+
+@pytest.mark.parametrize("tokens", [
+    ("DROP", "/* comentario */", "TABLE", "access.sites;"),
+    ("DROP", "INDEX", "access.some_index;"),
+    ("ALTER", "TABLE", "access.sites", "DROP", "CONSTRAINT", "some_constraint;"),
+])
+def test_unreviewed_sql_variants_fail_closed(monkeypatch, tmp_path, tokens):
+    monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
+    name = "unreviewed.sql"
+    (tmp_path / name).write_text(" ".join(tokens), encoding="utf-8")
+    with pytest.raises(ValueError, match="not in reviewed catalog"):
+        runner.load_sql(name)
