@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import secrets
 import logging
 from typing import Any
 from uuid import UUID
@@ -65,6 +66,18 @@ class StoredCorrectionPlanResponse(BaseModel):
     created_at: datetime
     plan: dict[str, Any]
     check: dict[str, Any] | None = None
+
+
+class ClaimAnonymousDiagnosticRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    diagnostic_id: UUID
+    workspace_id: UUID
+    claim_token: str = Field(min_length=32, max_length=512)
+
+
+class ClaimedDiagnosticResponse(BaseModel):
+    diagnostic_id: UUID
+    workspace_site_id: UUID
 
 
 class CreateCorrectionPlanOrderRequest(BaseModel):
@@ -507,6 +520,25 @@ def diagnose_workspace_url(
     return {**diagnostic, "workspace_site_id": site.id}
 
 
+@router.post(
+    "/diagnostic-claims",
+    response_model=ClaimedDiagnosticResponse,
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
+def claim_diagnostic(body: ClaimAnonymousDiagnosticRequest, user: access.StoredUser = Depends(require_access_user)):
+    try:
+        site_id = privacy_diagnostic_snapshot.claim_anonymous_diagnostic(
+            body.diagnostic_id, body.claim_token, user.id, body.workspace_id
+        )
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticPurchaseExpiredError:
+        raise HTTPException(status_code=410, detail="El diagnóstico ya no está disponible para activar.") from None
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticClaimRejectedError:
+        raise HTTPException(status_code=409, detail="No se pudo asociar este diagnóstico.") from None
+    except ValueError:
+        raise HTTPException(status_code=422, detail="No se pudo asociar este diagnóstico.") from None
+    return ClaimedDiagnosticResponse(diagnostic_id=body.diagnostic_id, workspace_site_id=site_id)
+
+
 @router.post("/diagnose", dependencies=[Depends(require_api_key)])
 def diagnose_privacy(
     body: PrivacyDiagnosticRequest,
@@ -530,7 +562,8 @@ def diagnose_privacy(
 
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
-            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(diagnostic)
+            claim_token = secrets.token_urlsafe(32)
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(diagnostic, claim_token=claim_token)
         except Exception:
             # The free result remains available when the commercial persistence fails.
             logger.error("Privacy diagnostic snapshot persistence failed")
@@ -539,5 +572,6 @@ def diagnose_privacy(
                 **diagnostic,
                 "diagnostic_id": stored.id,
                 "purchase_expires_at": stored.purchase_expires_at,
+                "claim_token": claim_token,
             }
     return diagnostic
