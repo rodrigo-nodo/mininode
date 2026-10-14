@@ -174,10 +174,13 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
     token_hash = hashlib.sha256(claim_token.encode()).hexdigest()
     with _connection() as connection, connection.cursor() as cursor:
+        # Serialize claims with a transaction-scoped advisory lock, without holding
+        # a diagnostic row lock while Access creates or follows a workspace/site.
+        cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(diagnostic_id),))
         cursor.execute(
             """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id,
                       purchase_expires_at >= CURRENT_TIMESTAMP
-               FROM privacy.diagnostic WHERE id = %s FOR UPDATE""",
+               FROM privacy.diagnostic WHERE id = %s""",
             (diagnostic_id,),
         )
         row = cursor.fetchone()
@@ -197,7 +200,10 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
             raise PrivacyDiagnosticClaimRejectedError("Workspace unavailable")
         cursor.execute(
             """UPDATE privacy.diagnostic SET workspace_site_id = %s, claimed_by_user_id = %s
-               WHERE id = %s AND workspace_site_id IS NULL""",
+               WHERE id = %s AND workspace_site_id IS NULL AND claimed_by_user_id IS NULL
+               RETURNING workspace_site_id""",
             (linked_site.id, user_id, diagnostic_id),
         )
+        if cursor.fetchone() is None:
+            raise PrivacyDiagnosticClaimRejectedError("Diagnostic claim conflict")
         return linked_site.id
