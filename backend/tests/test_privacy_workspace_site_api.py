@@ -365,3 +365,23 @@ def test_workspace_latest_reviews_returns_summary_for_authorized_workspace(monke
         "status": "Puede mejorar",
         "created_at": "2026-10-01T12:00:00+00:00",
     }]
+
+
+def test_claim_endpoint_requires_identity(monkeypatch):
+    client, _ = _client(monkeypatch)
+    response = client.post("/privacy/diagnostic-claims", json={"diagnostic_id": str(uuid4()), "claim_token": "a" * 43})
+    assert response.status_code in (401, 403)
+
+
+def test_claim_endpoint_links_verified_identity(monkeypatch):
+    client, user = _client(monkeypatch)
+    diagnostic_id, site_id = uuid4(), uuid4()
+    calls = []
+    monkeypatch.setattr(privacy_api.privacy_diagnostic_snapshot, "claim_anonymous_diagnostic",
+                        lambda did, token, uid: calls.append((did, token, uid)) or site_id)
+    response = client.post("/privacy/diagnostic-claims",
+                           json={"diagnostic_id": str(diagnostic_id), "claim_token": "a" * 43},
+                           headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 200
+    assert response.json() == {"diagnostic_id": str(diagnostic_id), "workspace_site_id": str(site_id)}
+    assert calls == [(diagnostic_id, "a" * 43, user.id)]
