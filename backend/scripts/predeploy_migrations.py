@@ -17,6 +17,15 @@ MIGRATIONS_DIR = (Path(__file__).resolve().parents[1] / "migrations").resolve()
 NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_\-]*\.sql$")
 # Each PostgreSQL transaction holds this advisory lock until commit/rollback.
 LOCK_ID = 741981024234
+# These files predate the versioned runner and must never run via Pre-deploy.
+# In particular A2.1 contains DROP TABLE; existing database state is unknown.
+BLOCKED_LEGACY = frozenset({
+    "20260928_access_a2_1_workspace_sites.sql",
+    "20260928_access_a3_2_privacy_workspace_site.sql",
+    "20261006_a4_billing_core.sql",
+})
+# Destructive schema changes require a separately approved manual procedure.
+DESTRUCTIVE_SQL = re.compile(r"\b(?:DROP\s+(?:TABLE|SCHEMA|COLUMN|DATABASE)|TRUNCATE\b|ALTER\s+TABLE\s+[^;]*?\s+DROP\b)\s*", re.I | re.S)
 
 def parse_approved(raw: str) -> list[str]:
     if not raw.strip():
@@ -29,6 +38,8 @@ def parse_approved(raw: str) -> list[str]:
     return names
 
 def load_sql(name: str) -> tuple[str, str]:
+    if name in BLOCKED_LEGACY:
+        raise ValueError(f"Legacy migration blocked from Pre-deploy: {name}")
     path = (MIGRATIONS_DIR / name).resolve()
     if path.parent != MIGRATIONS_DIR or not path.is_file():
         raise ValueError(f"Migration file not found in migrations directory: {name}")
@@ -46,6 +57,9 @@ def load_sql(name: str) -> tuple[str, str]:
         sql = "\n".join(lines)
     elif any(line.strip().upper() in ("BEGIN;", "COMMIT;", "ROLLBACK;") for line in lines):
         raise ValueError(f"Unsafe transaction delimiters in {name}")
+    # Fail closed on explicitly destructive SQL; keep this intentionally conservative.
+    if DESTRUCTIVE_SQL.search(sql):
+        raise ValueError(f"Destructive SQL blocked from Pre-deploy: {name}")
     return sql, digest
 
 def migrate(database_url: str, names: list[str]) -> None:
