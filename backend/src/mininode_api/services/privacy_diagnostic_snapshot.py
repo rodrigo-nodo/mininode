@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import hmac
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterator, Mapping
 from uuid import UUID, uuid4
+
+from mininode_api.services import access
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -22,13 +26,19 @@ CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     purchase_expires_at TIMESTAMPTZ NOT NULL,
-    workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL
+    workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL,
+    claim_token_hash TEXT NULL
 );
+ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claim_token_hash TEXT;
 """
 
 
 class PrivacyDiagnosticSnapshotNotFoundError(Exception):
     """No diagnostic snapshot matches the supplied identifier."""
+
+
+class PrivacyDiagnosticClaimRejectedError(Exception):
+    """Invalid claim proof or diagnostic owned by another workspace."""
 
 
 class PrivacyDiagnosticPurchaseExpiredError(Exception):
@@ -64,7 +74,7 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID | None = None) -> StoredPrivacyDiagnostic:
+def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID | None = None, claim_token: str | None = None) -> StoredPrivacyDiagnostic:
     """Persist the completed result unchanged, without inspecting the site again."""
     score = diagnostic.get("score")
     site_url = diagnostic.get("site_url")
@@ -73,18 +83,21 @@ def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID |
     if not isinstance(site_url, str) or not site_url:
         raise ValueError("Diagnostic site_url is required")
 
+    if claim_token is not None and (workspace_site_id is not None or len(claim_token) < 32):
+        raise ValueError("Claim token is only for anonymous diagnostics")
+    claim_hash = hashlib.sha256(claim_token.encode()).hexdigest() if claim_token else None
     diagnostic_id = uuid4()
     snapshot = dict(diagnostic)
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO privacy.diagnostic (
-                id, site_url, diagnostic_snapshot, score, purchase_expires_at, workspace_site_id
-            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s)
+                id, site_url, diagnostic_snapshot, score, purchase_expires_at, workspace_site_id, claim_token_hash
+            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s, %s)
             RETURNING id, site_url, diagnostic_snapshot, score, created_at,
                       purchase_expires_at, workspace_site_id
             """,
-            (diagnostic_id, site_url, Jsonb(snapshot), score, workspace_site_id),
+            (diagnostic_id, site_url, Jsonb(snapshot), score, workspace_site_id, claim_hash),
         )
         return StoredPrivacyDiagnostic(*cursor.fetchone())
 
@@ -151,3 +164,38 @@ def require_purchasable(
     if current_time > diagnostic.purchase_expires_at:
         raise PrivacyDiagnosticPurchaseExpiredError("Diagnostic purchase window expired")
     return diagnostic
+
+
+def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: UUID) -> UUID:
+    """Claim a fresh anonymous review; its row lock serializes competing claims."""
+    if not isinstance(claim_token, str) or not 32 <= len(claim_token) <= 512:
+        raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
+    token_hash = hashlib.sha256(claim_token.encode()).hexdigest()
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT site_url, claim_token_hash, workspace_site_id,
+                      purchase_expires_at >= CURRENT_TIMESTAMP
+               FROM privacy.diagnostic WHERE id = %s FOR UPDATE""",
+            (diagnostic_id,),
+        )
+        row = cursor.fetchone()
+        if row is None or row[1] is None or not hmac.compare_digest(token_hash, row[1]):
+            raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
+        site_url, _, existing_site, eligible = row
+        if existing_site is not None:
+            authorized = access.get_authorized_site(user_id, existing_site)
+            if authorized is None:
+                raise PrivacyDiagnosticClaimRejectedError("Diagnostic already claimed")
+            return existing_site
+        if not eligible:
+            raise PrivacyDiagnosticPurchaseExpiredError("Diagnostic purchase window expired")
+        workspace = access.get_or_create_personal_workspace(user_id)
+        linked_site = access.follow_site(user_id, workspace.id, site_url)
+        if linked_site is None:
+            raise PrivacyDiagnosticClaimRejectedError("Workspace unavailable")
+        cursor.execute(
+            """UPDATE privacy.diagnostic SET workspace_site_id = %s
+               WHERE id = %s AND workspace_site_id IS NULL""",
+            (linked_site.id, diagnostic_id),
+        )
+        return linked_site.id
