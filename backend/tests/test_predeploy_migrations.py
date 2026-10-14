@@ -36,3 +36,15 @@ def test_no_connection_if_file_is_missing(monkeypatch):
     monkeypatch.setattr(runner.psycopg, "connect", unexpected)
     with pytest.raises(ValueError):
         runner.migrate("postgresql://placeholder", ["nonexistent.sql"])
+
+@pytest.mark.parametrize("filename", sorted(runner.BLOCKED_LEGACY))
+def test_historical_migrations_hard_blocked(filename):
+    with pytest.raises(ValueError, match="Legacy migration blocked"):
+        runner.load_sql(filename)
+
+def test_destructive_sql_blocked(monkeypatch, tmp_path):
+    monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
+    for statement in ("DROP TABLE example;", "TRUNCATE example;", "ALTER TABLE example DROP COLUMN id;"):
+        (tmp_path / "test.sql").write_text(statement, encoding="utf-8")
+        with pytest.raises(ValueError, match="Destructive SQL blocked"):
+            runner.load_sql("test.sql")
