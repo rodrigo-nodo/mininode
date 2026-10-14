@@ -159,7 +159,7 @@ def test_anonymous_claim_proof_is_hashed_at_rest(monkeypatch):
 def test_claim_rejects_invalid_token_without_database_access(monkeypatch):
     executions = fake_connection(monkeypatch)
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
-        service.claim_anonymous_diagnostic(uuid4(), "short", uuid4())
+        service.claim_anonymous_diagnostic(uuid4(), "short", uuid4(), uuid4())
     assert executions == []
 
 
