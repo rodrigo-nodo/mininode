@@ -175,7 +175,7 @@ def test_claim_rejects_wrong_proof(monkeypatch):
 def test_claim_rejects_expired_proof(monkeypatch):
     import hashlib
     token = "a" * 43
-    fake_connection(monkeypatch, rows=[("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, False)])
+    fake_connection(monkeypatch, rows=[(None,), ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, False)])
     with pytest.raises(service.PrivacyDiagnosticPurchaseExpiredError):
         service.claim_anonymous_diagnostic(uuid4(), token, uuid4())
 
@@ -183,7 +183,7 @@ def test_claim_rejects_expired_proof(monkeypatch):
 def test_claim_rejects_other_user_even_in_same_workspace(monkeypatch):
     import hashlib
     token = "a" * 43
-    fake_connection(monkeypatch, rows=[("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), uuid4(), uuid4(), True)])
+    fake_connection(monkeypatch, rows=[(None,), ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), uuid4(), uuid4(), True)])
     monkeypatch.setattr(service.access, "get_authorized_site", lambda *args: object())
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
         service.claim_anonymous_diagnostic(uuid4(), token, uuid4())
@@ -193,7 +193,7 @@ def test_claim_is_idempotent_for_original_owner(monkeypatch):
     import hashlib
     token = "a" * 43
     owner, site = uuid4(), uuid4()
-    executions = fake_connection(monkeypatch, rows=[("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), site, owner, True)])
+    executions = fake_connection(monkeypatch, rows=[(None,), ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), site, owner, True)])
     monkeypatch.setattr(service.access, "get_authorized_site", lambda *args: object())
     assert service.claim_anonymous_diagnostic(uuid4(), token, owner) == site
     assert not any("UPDATE privacy.diagnostic" in sql for sql, _ in executions)
@@ -204,7 +204,7 @@ def test_claim_associates_new_workspace_site(monkeypatch):
     from types import SimpleNamespace
     token = "a" * 43
     user, workspace, site = uuid4(), uuid4(), uuid4()
-    executions = fake_connection(monkeypatch, rows=[("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True)])
+    executions = fake_connection(monkeypatch, rows=[(None,), ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True), (site,)])
     monkeypatch.setattr(service.access, "get_or_create_personal_workspace", lambda uid: SimpleNamespace(id=workspace))
     monkeypatch.setattr(service.access, "follow_site", lambda uid, wid, url: SimpleNamespace(id=site))
     assert service.claim_anonymous_diagnostic(uuid4(), token, user) == site
