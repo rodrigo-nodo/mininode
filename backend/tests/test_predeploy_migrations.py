@@ -42,9 +42,22 @@ def test_historical_migrations_hard_blocked(filename):
     with pytest.raises(ValueError, match="Legacy migration blocked"):
         runner.load_sql(filename)
 
-def test_destructive_sql_blocked(monkeypatch, tmp_path):
+def test_unknown_sql_is_rejected_even_if_file_exists(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
-    for statement in ("DROP TABLE example;", "TRUNCATE example;", "ALTER TABLE example DROP COLUMN id;"):
-        (tmp_path / "test.sql").write_text(statement, encoding="utf-8")
-        with pytest.raises(ValueError, match="Destructive SQL blocked"):
-            runner.load_sql("test.sql")
+    (tmp_path / "unknown.sql").write_text("SELECT 1;", encoding="utf-8")
+    with pytest.raises(ValueError, match="not in reviewed catalog"):
+        runner.load_sql("unknown.sql")
+
+def test_known_migration_checksum_matches_catalog():
+    _, checksum = runner.load_sql("20261013_privacy_anonymous_claim.sql")
+    assert checksum == runner.APPROVED_CHECKSUMS["20261013_privacy_anonymous_claim.sql"]
+
+def test_modified_reviewed_file_rejected_before_connect(monkeypatch, tmp_path):
+    monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
+    name = "20261013_privacy_anonymous_claim.sql"
+    (tmp_path / name).write_text("SELECT 2;", encoding="utf-8")
+    def unexpected(*args, **kwargs):
+        raise AssertionError("must not open database")
+    monkeypatch.setattr(runner.psycopg, "connect", unexpected)
+    with pytest.raises(ValueError, match="catalog checksum mismatch"):
+        runner.migrate("postgresql://placeholder", [name])
