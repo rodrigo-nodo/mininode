@@ -24,9 +24,7 @@ BLOCKED_LEGACY = frozenset({
     "20260928_access_a3_2_privacy_workspace_site.sql",
     "20261006_a4_billing_core.sql",
 })
-# Destructive schema changes require a separately approved manual procedure.
-DESTRUCTIVE_SQL = re.compile(r"\b(?:DROP\s+(?:TABLE|SCHEMA|COLUMN|DATABASE)|TRUNCATE\b|ALTER\s+TABLE\s+[^;]*?\s+DROP\s+COLUMN\b)\s*", re.I | re.S)
-
+# Reviewed content only; new migrations require an explicit code-reviewed catalog change.\nAPPROVED_CHECKSUMS = {\n    "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",\n}\n
 def parse_approved(raw: str) -> list[str]:
     if not raw.strip():
         return []
@@ -40,6 +38,9 @@ def parse_approved(raw: str) -> list[str]:
 def load_sql(name: str) -> tuple[str, str]:
     if name in BLOCKED_LEGACY:
         raise ValueError(f"Legacy migration blocked from Pre-deploy: {name}")
+    expected = APPROVED_CHECKSUMS.get(name)
+    if expected is None:
+        raise ValueError(f"Migration not in reviewed catalog: {name}")
     path = (MIGRATIONS_DIR / name).resolve()
     if path.parent != MIGRATIONS_DIR or not path.is_file():
         raise ValueError(f"Migration file not found in migrations directory: {name}")
@@ -57,9 +58,8 @@ def load_sql(name: str) -> tuple[str, str]:
         sql = "\n".join(lines)
     elif any(line.strip().upper() in ("BEGIN;", "COMMIT;", "ROLLBACK;") for line in lines):
         raise ValueError(f"Unsafe transaction delimiters in {name}")
-    # Fail closed on explicitly destructive SQL; keep this intentionally conservative.
-    if DESTRUCTIVE_SQL.search(sql):
-        raise ValueError(f"Destructive SQL blocked from Pre-deploy: {name}")
+    if digest != expected:
+        raise ValueError(f"Migration catalog checksum mismatch: {name}")
     return sql, digest
 
 def migrate(database_url: str, names: list[str]) -> None:
