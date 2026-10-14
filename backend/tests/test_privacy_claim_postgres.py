@@ -118,6 +118,7 @@ def test_migration_from_previous_schema_preserves_existing_snapshot(pg_claim):
                 before = cursor.fetchone()
                 cursor.execute("ALTER TABLE privacy.diagnostic DROP COLUMN claim_token_hash")
                 cursor.execute("ALTER TABLE privacy.diagnostic DROP COLUMN claimed_by_user_id")
+                cursor.execute("ALTER TABLE privacy.diagnostic ADD COLUMN claimed_by_user_id UUID REFERENCES access.users(id) ON DELETE SET NULL")
                 cursor.execute(migration_sql)
                 cursor.execute(migration_sql)
                 cursor.execute("SELECT diagnostic_snapshot, score, site_url FROM privacy.diagnostic WHERE id=%s", (did,))
