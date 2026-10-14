@@ -1,4 +1,5 @@
 """Real PostgreSQL contract tests. Only CI's disposable DATABASE_URL is allowed."""
+import hashlib
 import importlib.util
 import os
 import threading
@@ -20,6 +21,7 @@ def pg(monkeypatch, tmp_path):
     if not url or "mininode_test" not in url:
         pytest.skip("Only disposable mininode_test PostgreSQL is permitted")
     monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
+    monkeypatch.setattr(runner, "APPROVED_CHECKSUMS", {})
     table = "migration_ci_" + uuid.uuid4().hex
     yield url, tmp_path, table
     with psycopg.connect(url, autocommit=True) as conn:
@@ -28,6 +30,7 @@ def pg(monkeypatch, tmp_path):
 
 def sql_file(directory, name, sql):
     (directory / name).write_text(sql, encoding="utf-8")
+    runner.APPROVED_CHECKSUMS.setdefault(name, hashlib.sha256(sql.encode("utf-8")).hexdigest())
     return name
 
 
