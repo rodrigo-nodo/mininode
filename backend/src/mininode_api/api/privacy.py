@@ -71,6 +71,7 @@ class StoredCorrectionPlanResponse(BaseModel):
 class ClaimAnonymousDiagnosticRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     diagnostic_id: UUID
+    workspace_id: UUID
     claim_token: str = Field(min_length=32, max_length=512)
 
 
@@ -527,7 +528,7 @@ def diagnose_workspace_url(
 def claim_diagnostic(body: ClaimAnonymousDiagnosticRequest, user: access.StoredUser = Depends(require_access_user)):
     try:
         site_id = privacy_diagnostic_snapshot.claim_anonymous_diagnostic(
-            body.diagnostic_id, body.claim_token, user.id
+            body.diagnostic_id, body.claim_token, user.id, body.workspace_id
         )
     except privacy_diagnostic_snapshot.PrivacyDiagnosticPurchaseExpiredError:
         raise HTTPException(status_code=410, detail="El diagnóstico ya no está disponible para activar.") from None
