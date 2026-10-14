@@ -104,3 +104,32 @@ def test_concurrent_claim_only_one_owner(pg_claim):
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(attempt, (owner, other)))
     assert sum(value is not None for value in results) == 1
+
+def test_migration_from_previous_schema_preserves_existing_snapshot(pg_claim):
+    """Recreate the old schema inside a rolled-back transaction, then migrate twice."""
+    url, did, token, owner, other, workspace, foreign, host = pg_claim
+    migration_sql = MIGRATION.read_text(encoding="utf-8")
+    # The migration runner supplies the transaction boundary in this test.
+    migration_sql = migration_sql.removeprefix("BEGIN;").removesuffix("COMMIT;").strip()
+    with psycopg.connect(url) as connection:
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT diagnostic_snapshot, score, site_url FROM privacy.diagnostic WHERE id=%s", (did,))
+                before = cursor.fetchone()
+                cursor.execute("ALTER TABLE privacy.diagnostic DROP COLUMN claim_token_hash")
+                cursor.execute("ALTER TABLE privacy.diagnostic DROP COLUMN claimed_by_user_id")
+                cursor.execute(migration_sql)
+                cursor.execute(migration_sql)
+                cursor.execute("SELECT diagnostic_snapshot, score, site_url FROM privacy.diagnostic WHERE id=%s", (did,))
+                assert cursor.fetchone() == before
+                cursor.execute("""
+                    SELECT count(*) FROM pg_constraint c
+                    JOIN pg_attribute a ON a.attrelid=c.conrelid
+                    WHERE c.conrelid='privacy.diagnostic'::regclass
+                      AND c.contype='f' AND c.conkey=ARRAY[a.attnum]::smallint[]
+                      AND a.attname='claimed_by_user_id'
+                """)
+                assert cursor.fetchone()[0] == 1
+        finally:
+            connection.rollback()
+
