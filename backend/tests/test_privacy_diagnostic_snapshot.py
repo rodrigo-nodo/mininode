@@ -164,10 +164,11 @@ def test_claim_rejects_invalid_token_without_database_access(monkeypatch):
 
 
 def test_claim_rejects_wrong_proof(monkeypatch):
-    executions = fake_connection(monkeypatch, rows=[("https://example.com/", "0" * 64, None, None, True)])
+    executions = fake_connection(monkeypatch, rows=[(None,), ("https://example.com/", "0" * 64, None, None, True)])
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
         service.claim_anonymous_diagnostic(uuid4(), "a" * 43, uuid4())
-    assert "FOR UPDATE" in executions[0][0]
+    assert "pg_advisory_xact_lock" in executions[0][0]
+    assert "FOR UPDATE" not in executions[1][0]
     assert not any("UPDATE privacy.diagnostic" in sql for sql, _ in executions)
 
 
