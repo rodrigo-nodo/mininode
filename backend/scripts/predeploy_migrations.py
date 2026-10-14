@@ -24,7 +24,11 @@ BLOCKED_LEGACY = frozenset({
     "20260928_access_a3_2_privacy_workspace_site.sql",
     "20261006_a4_billing_core.sql",
 })
-# Reviewed content only; new migrations require an explicit code-reviewed catalog change.\nAPPROVED_CHECKSUMS = {\n    "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",\n}\n
+# Reviewed content only; new migrations require an explicit code-reviewed catalog change.
+APPROVED_CHECKSUMS = {
+    "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",
+}
+
 def parse_approved(raw: str) -> list[str]:
     if not raw.strip():
         return []
