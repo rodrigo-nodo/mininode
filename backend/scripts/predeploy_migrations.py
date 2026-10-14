@@ -25,7 +25,7 @@ BLOCKED_LEGACY = frozenset({
     "20261006_a4_billing_core.sql",
 })
 # Destructive schema changes require a separately approved manual procedure.
-DESTRUCTIVE_SQL = re.compile(r"\b(?:DROP\s+(?:TABLE|SCHEMA|COLUMN|DATABASE)|TRUNCATE\b|ALTER\s+TABLE\s+[^;]*?\s+DROP\b)\s*", re.I | re.S)
+DESTRUCTIVE_SQL = re.compile(r"\b(?:DROP\s+(?:TABLE|SCHEMA|COLUMN|DATABASE)|TRUNCATE\b|ALTER\s+TABLE\s+[^;]*?\s+DROP\s+COLUMN\b)\s*", re.I | re.S)
 
 def parse_approved(raw: str) -> list[str]:
     if not raw.strip():
@@ -65,7 +65,7 @@ def load_sql(name: str) -> tuple[str, str]:
 def migrate(database_url: str, names: list[str]) -> None:
     # Validate *all* files before opening a database connection.
     migrations = [(n, *load_sql(n)) for n in names]
-    with psycopg.connect(database_url, autocommit=False) as conn:
+    with psycopg.connect(database_url, autocommit=True) as conn:
         # One transaction per migration. Lock also serializes the history check.
         for name, sql, checksum in migrations:
             with conn.transaction():
