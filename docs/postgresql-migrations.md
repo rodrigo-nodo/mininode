@@ -16,14 +16,21 @@ alfabéticamente, por ejemplo `20261013_privacy_anonymous_claim.sql`.
 Es una allowlist **por entorno**, no una invitación a ejecutar todo el directorio.
 
 **Antes de configurar cualquier allowlist**, conciliar manualmente el estado
-real de cada base con las cuatro migraciones históricas y sus efectos. La primera
-implementación NO autoriza ejecutar automáticamente los SQL anteriores,
-especialmente `20260928_access_a2_1_workspace_sites.sql`, que destruye tablas.
+real de cada base con las cuatro migraciones históricas y sus efectos. El runner **bloquea en código**, incluso cuando figuren en la allowlist,
+`20260928_access_a2_1_workspace_sites.sql`,
+`20260928_access_a3_2_privacy_workspace_site.sql` y
+`20261006_a4_billing_core.sql`. No se pueden ejecutar mediante Pre-deploy.
+También bloquea sentencias `DROP TABLE`, `DROP SCHEMA`, `DROP COLUMN` y
+`TRUNCATE` dentro de cualquier migración. Una operación destructiva se gestiona
+fuera de este mecanismo con aprobación específica y respaldo.
 No marcar una migración como aplicada sin comprobar su efecto y checksum.
 Cada nueva migración requiere evaluación de seguridad, compatibilidad hacia atrás
 con la versión de backend aún activa y autorización operativa antes de sumar
 su nombre a la lista. No añadir archivos destructivos a la allowlist sin
 autorización específica y respaldo/plan de recuperación.
+
+Las garantías de rollback, checksum, idempotencia y dos ejecutores simultáneos
+se prueban contra PostgreSQL temporal `mininode_test` en Access CI.
 
 El runner usa `public.schema_migrations` (`filename`, `checksum_sha256`,
 `applied_at`). Verifica el checksum al reencontrar una migración, y falla si
