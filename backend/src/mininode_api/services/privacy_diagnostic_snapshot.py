@@ -11,8 +11,6 @@ from datetime import datetime, timezone
 from typing import Iterator, Mapping
 from uuid import UUID, uuid4
 
-from mininode_api.services import access
-
 import psycopg
 from psycopg.types.json import Jsonb
 
@@ -168,14 +166,14 @@ def require_purchasable(
     return diagnostic
 
 
-def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: UUID) -> UUID:
-    """Claim a fresh anonymous review; its row lock serializes competing claims."""
+def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: UUID, workspace_id: UUID) -> UUID:
+    """Atomically attach an anonymous snapshot to a selected, authorized workspace."""
     if not isinstance(claim_token, str) or not 32 <= len(claim_token) <= 512:
         raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
     token_hash = hashlib.sha256(claim_token.encode()).hexdigest()
     with _connection() as connection, connection.cursor() as cursor:
-        # Serialize claims with a transaction-scoped advisory lock, without holding
-        # a diagnostic row lock while Access creates or follows a workspace/site.
+        # One transaction and one cursor for proof, membership, site and diagnostic.
+        # Serialize competing claims without locking the diagnostic row across other connections.
         cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(diagnostic_id),))
         cursor.execute(
             """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id,
@@ -187,23 +185,53 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         if row is None or row[1] is None or not hmac.compare_digest(token_hash, row[1]):
             raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
         site_url, _, existing_site, claimed_by, eligible = row
+        cursor.execute(
+            """SELECT 1 FROM access.workspace_members
+               WHERE workspace_id = %s AND user_id = %s AND role IN ('owner', 'member')""",
+            (workspace_id, user_id),
+        )
+        if cursor.fetchone() is None:
+            raise PrivacyDiagnosticClaimRejectedError("Workspace unavailable")
         if existing_site is not None:
-            authorized = access.get_authorized_site(user_id, existing_site)
-            if claimed_by != user_id or authorized is None:
+            cursor.execute(
+                "SELECT 1 FROM access.workspace_sites WHERE id = %s AND workspace_id = %s",
+                (existing_site, workspace_id),
+            )
+            if claimed_by != user_id or cursor.fetchone() is None:
                 raise PrivacyDiagnosticClaimRejectedError("Diagnostic already claimed")
             return existing_site
         if not eligible:
             raise PrivacyDiagnosticPurchaseExpiredError("Diagnostic purchase window expired")
-        workspace = access.get_or_create_personal_workspace(user_id)
-        linked_site = access.follow_site(user_id, workspace.id, site_url)
-        if linked_site is None:
-            raise PrivacyDiagnosticClaimRejectedError("Workspace unavailable")
+
+        hostname, canonical_url = _normalize_claim_url(site_url)
+        cursor.execute(
+            """INSERT INTO access.sites (id, hostname, canonical_url)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (hostname) DO UPDATE SET hostname = EXCLUDED.hostname
+               RETURNING id""",
+            (uuid4(), hostname, canonical_url),
+        )
+        site_id = cursor.fetchone()[0]
+        cursor.execute(
+            """INSERT INTO access.workspace_sites (id, workspace_id, site_id)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id
+               RETURNING id""",
+            (uuid4(), workspace_id, site_id),
+        )
+        workspace_site_id = cursor.fetchone()[0]
         cursor.execute(
             """UPDATE privacy.diagnostic SET workspace_site_id = %s, claimed_by_user_id = %s
                WHERE id = %s AND workspace_site_id IS NULL AND claimed_by_user_id IS NULL
                RETURNING workspace_site_id""",
-            (linked_site.id, user_id, diagnostic_id),
+            (workspace_site_id, user_id, diagnostic_id),
         )
         if cursor.fetchone() is None:
             raise PrivacyDiagnosticClaimRejectedError("Diagnostic claim conflict")
-        return linked_site.id
+        return workspace_site_id
+
+
+def _normalize_claim_url(site_url: str) -> tuple[str, str]:
+    # Reuse Access URL normalization, without opening an Access DB connection.
+    from mininode_api.services.access import normalize_site_url
+    return normalize_site_url(site_url)
