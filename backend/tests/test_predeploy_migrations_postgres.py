@@ -52,7 +52,11 @@ def test_real_postgres_atomic_history_idempotence_checksum(pg):
     assert history(url, name) == first
     with psycopg.connect(url) as conn:
         assert conn.execute("SELECT to_regclass(%s)", (f"public.{table}",)).fetchone()[0] == table
-    sql_file(folder, name, f"CREATE TABLE public.{table} (id TEXT PRIMARY KEY);")
+    modified = f"CREATE TABLE public.{table} (id TEXT PRIMARY KEY);"
+    sql_file(folder, name, modified)
+    # The catalog would be updated in a reviewed code change; the database
+    # must still refuse changing the contents of an already applied version.
+    runner.APPROVED_CHECKSUMS[name] = hashlib.sha256(modified.encode("utf-8")).hexdigest()
     with pytest.raises(RuntimeError, match="checksum changed"):
         runner.migrate(url, [name])
     assert history(url, name) == first
