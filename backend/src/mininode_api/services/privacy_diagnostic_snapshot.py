@@ -26,10 +26,10 @@ CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     purchase_expires_at TIMESTAMPTZ NOT NULL,
     workspace_site_id UUID NULL REFERENCES access.workspace_sites(id) ON DELETE SET NULL,
     claim_token_hash TEXT NULL,
-    claimed_by_user_id UUID NULL REFERENCES access.users(id) ON DELETE SET NULL
+    claimed_by_user_id UUID NULL
 );
 ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claim_token_hash TEXT;
-ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claimed_by_user_id UUID NULL REFERENCES access.users(id) ON DELETE SET NULL;
+ALTER TABLE privacy.diagnostic ADD COLUMN IF NOT EXISTS claimed_by_user_id UUID NULL;
 """
 
 
