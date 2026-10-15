@@ -29,6 +29,24 @@ class PrivacyResultStaticTests(unittest.TestCase):
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
 
+    def test_access_auto_saves_pending_diagnostic_after_login(self):
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("if (pending && !pendingWorkspaceChoice) void savePendingDiagnostic();", account)
+        self.assertIn("workspaces.length > 1", account)
+        self.assertIn("Selecciona un espacio para guardar", account)
+        self.assertIn("if (pendingWorkspaceChoice)", account)
+        self.assertIn("void savePendingDiagnostic();", account)
+        self.assertIn("if (claimInFlight) return;", account)
+        self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY);", account)
+        self.assertIn("Reintentar guardado", account)
+
+    def test_commercial_notice_appears_only_inside_conditions(self):
+        intro = HTML.split('class="privacy-offer-details"', 1)[0]
+        self.assertNotIn("Sin renovación automática. El pago en línea", intro)
+        detail = HTML.split('class="privacy-offer-details"', 1)[1].split("</details>", 1)[0]
+        self.assertIn("El pago en línea estará disponible próximamente.", detail)
+        self.assertIn("Sin renovación automática.", detail)
+
     def test_free_anonymous_diagnostic_save_flow(self):
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
         account_html = (FRONTEND_DIR / "access" / "index.html").read_text(encoding="utf-8")
