@@ -247,7 +247,17 @@ function renderHome() {
   workspacePicker.value = active.id;
   setVisible(workspacePickerLabel, workspaces.length > 1);
   privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
-  pendingClaimPanel.hidden = !sessionStorage.getItem(PENDING_CLAIM_KEY);
+  const pending = sessionStorage.getItem(PENDING_CLAIM_KEY);
+  let isActivation = false;
+  try { isActivation = JSON.parse(pending || 'null')?.intent === 'activate'; } catch { /* invalid claim handled on click */ }
+  pendingClaimPanel.hidden = !pending;
+  pendingClaimButton.textContent = isActivation ? 'Guardar y continuar' : 'Guardar diagnóstico';
+  const claimTitle = pendingClaimPanel.querySelector('h2');
+  const claimDescription = pendingClaimPanel.querySelector('p');
+  if (claimTitle) claimTitle.textContent = isActivation ? 'Continuar con Privacy Web' : 'Guardar diagnóstico de Privacy Web';
+  if (claimDescription) claimDescription.textContent = isActivation
+    ? 'Primero conservaremos el diagnóstico en tu espacio. La solicitud de activación se completará en un siguiente paso.'
+    : 'Selecciona el espacio donde quieres conservar el resultado. Es gratis.';
   pendingClaimError.hidden = true;
   renderSites(active);
 
@@ -297,6 +307,11 @@ pendingClaimButton.addEventListener('click', async () => {
       method: 'POST', body: JSON.stringify({ ...claim, workspace_id: activeWorkspaceId }),
     });
     sessionStorage.removeItem(PENDING_CLAIM_KEY);
+    if (claim.intent === 'activate') {
+      window.location.assign('/privacy/?workspace_site_id='
+        + encodeURIComponent(saved.workspace_site_id) + '&view=latest&activation=pending');
+      return;
+    }
     window.location.assign('/privacy/?workspace_site_id='
       + encodeURIComponent(saved.workspace_site_id) + '&view=latest');
   } catch (error) {
