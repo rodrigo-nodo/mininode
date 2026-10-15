@@ -6,7 +6,7 @@
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css?v=297choices">
-  <link rel="stylesheet" href="styles.css?v=294shell1">
+  <link rel="stylesheet" href="styles.css?v=298layout1">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
   <script src="app.js?v=292choices" defer></script>
@@ -97,9 +97,6 @@
               <p class="privacy-price" aria-label="Precio: 9.900 pesos chilenos">$9.900 <span>CLP</span></p>
             </div>
             <p>Accede a todas las mejoras, instrucciones para corregirlas y nuevas revisiones durante un mes.</p>
-          </div>
-          <div class="privacy-next__action">
-            <button class="btn privacy-secondary privacy-choice-button" type="button" id="correction-order-open">Continuar →</button>
             <p class="privacy-order-hint">Sin renovación automática. El pago en línea estará disponible próximamente.</p>
             <details class="privacy-offer-details">
               <summary>Ver qué incluye y condiciones</summary>
@@ -116,6 +113,10 @@
               <p id="correction-order-validity">Vigencia de 1 mes desde la compra. Sin renovación automática.</p>
               <p>La implementación técnica no está incluida.</p>
             </details>
+          </div>
+          <div class="privacy-next__action">
+            <button class="btn privacy-secondary privacy-choice-button" type="button" id="correction-order-open">Continuar →</button>
+
             <form class="privacy-order-form" id="correction-order-form" hidden>
               <label for="correction-order-email">Email</label>
               <input id="correction-order-email" name="email" type="email" maxlength="254" autocomplete="email" required>
