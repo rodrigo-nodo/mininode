@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
-  <link rel="stylesheet" href="../styles.css?v=295saveux2">
+  <link rel="stylesheet" href="../styles.css?v=296compact">
   <link rel="stylesheet" href="styles.css?v=294shell1">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="app.js?v=290saveux2" defer></script>
+  <script src="app.js?v=291compact" defer></script>
   <script src="framework-v0.6.js?v=5" defer></script>
 </head>
 <body>
@@ -87,34 +87,36 @@
       </details>
 
       <div class="privacy-next-steps" id="privacy-next-steps" hidden>
-        <h3>¿Qué quieres hacer ahora?</h3>
-        <p>Ya tienes tu diagnóstico gratuito. Puedes avanzar con las mejoras o conservar el resultado.</p>
+        <h3>Continúa con Privacy Web</h3>
+        <p>Tu diagnóstico inicial está listo. Puedes avanzar con las mejoras o guardar el resultado.</p>
       </div>
       <div class="privacy-help-offer" id="privacy-correction-offer" hidden>
-        <p class="privacy-help-offer__label">Opción principal · Privacy Web activo</p>
-
         <div class="privacy-next">
           <div class="privacy-next__summary">
-            <p class="privacy-next__eyebrow">Recomendado según su diagnóstico</p>
-            <h3>Privacy Web</h3>
-            <p class="privacy-price" aria-label="Precio: 9.900 pesos chilenos">$9.900 CLP</p>
-            <p class="privacy-price-note">Activo por <strong>1 mes</strong></p>
-            <p>Te ayuda a abordar las mejoras detectadas y revisar cómo avanza tu sitio.</p>
-          </div>
-          <div class="privacy-includes">
-            <h4>Incluye</h4>
-            <ul>
-              <li>Todas las mejoras detectadas</li>
-              <li>Instrucciones concretas para cada mejora</li>
-              <li>Cómo comprobar los cambios</li>
-              <li>Comparación antes/después</li>
-              <li>Seguimiento de tus avances</li>
-            </ul>
+            <div class="privacy-offer-heading">
+              <h3>Activar Privacy Web</h3>
+              <p class="privacy-price" aria-label="Precio: 9.900 pesos chilenos">$9.900 <span>CLP</span></p>
+            </div>
+            <p>Todas las mejoras, instrucciones y seguimiento durante un mes.</p>
           </div>
           <div class="privacy-next__action">
-            <button class="btn privacy-secondary" type="button" id="correction-order-open">Activar Privacy Web</button>
-            <p class="privacy-order-availability" id="correction-order-availability">Disponible para activar durante 24 horas después de este diagnóstico.</p>
-            <p id="correction-order-validity">Vigencia de 1 mes desde la compra. Sin renovación automática.</p>
+            <button class="btn privacy-secondary" type="button" id="correction-order-open">Activar Privacy Web →</button>
+            <p class="privacy-order-hint">El pago en línea estará disponible próximamente.</p>
+            <details class="privacy-offer-details">
+              <summary>Ver qué incluye y condiciones</summary>
+              <div class="privacy-includes">
+                <ul>
+                  <li>Todas las mejoras detectadas</li>
+                  <li>Instrucciones concretas para cada mejora</li>
+                  <li>Cómo comprobar los cambios</li>
+                  <li>Comparación antes/después</li>
+                  <li>Seguimiento de tus avances</li>
+                </ul>
+              </div>
+              <p class="privacy-order-availability" id="correction-order-availability">Disponible para activar durante 24 horas después de este diagnóstico.</p>
+              <p id="correction-order-validity">Vigencia de 1 mes desde la compra. Sin renovación automática.</p>
+              <p>La implementación técnica no está incluida.</p>
+            </details>
             <form class="privacy-order-form" id="correction-order-form" hidden>
               <label for="correction-order-email">Email</label>
               <input id="correction-order-email" name="email" type="email" maxlength="254" autocomplete="email" required>
@@ -133,16 +135,15 @@
               <button class="btn privacy-secondary" type="button" id="correction-order-retry">Revisar nuevamente</button>
               <p id="correction-order-expired-validity">Vigencia de 1 mes desde la compra. Sin renovación automática.</p>
             </div>
-            <p>La implementación técnica no está incluida.</p>
           </div>
         </div>
-
         <section class="privacy-save-choice" id="privacy-save-note" hidden>
-          <h3>Guardar diagnóstico <span>Gratis</span></h3>
-          <p>Conserva este resultado en tu espacio Mininode sin contratar Privacy Web.</p>
-          <button type="button" id="privacy-save-diagnostic" class="btn privacy-secondary">Guardar mi diagnóstico</button>
+          <div>
+            <h3>Guardar diagnóstico gratis</h3>
+            <p>Consérvalo en tu cuenta para consultarlo después.</p>
+          </div>
+          <button type="button" id="privacy-save-diagnostic" class="btn privacy-save-link">Guardar →</button>
         </section>
-
         <aside class="privacy-secondary-offer" aria-labelledby="technical-support-title">
           <h3 id="technical-support-title">¿Necesita ayuda para realizar los cambios?</h3>
           <p>Privacy Web indica qué mejorar y cómo comprobarlo.</p>
@@ -150,11 +151,12 @@
           <a href="/contact/?source=privacy&amp;intent=technical-support">Consultar apoyo técnico</a>
         </aside>
       </div>
-
       <section class="privacy-save-choice privacy-save-choice--standalone" id="privacy-save-standalone" hidden>
-        <h3>Guardar diagnóstico <span>Gratis</span></h3>
-        <p>Conserva este resultado en tu espacio Mininode sin pagar.</p>
-        <button type="button" id="privacy-save-standalone-button" class="btn privacy-secondary">Guardar mi diagnóstico</button>
+        <div>
+          <h3>Guardar diagnóstico gratis</h3>
+          <p>Consérvalo en tu cuenta para consultarlo después.</p>
+        </div>
+        <button type="button" id="privacy-save-standalone-button" class="btn privacy-save-link">Guardar →</button>
       </section>
 
       <div class="privacy-no-priorities privacy-help-offer" id="privacy-no-priorities" hidden>
