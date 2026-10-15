@@ -6,6 +6,9 @@ const submitButton = document.querySelector('#privacy-submit');
 const loadingCard = document.querySelector('#privacy-loading');
 const resultCard = document.querySelector('#privacy-result');
 const saveDiagnostic = document.querySelector('#privacy-save-diagnostic');
+const saveStandalone = document.querySelector('#privacy-save-standalone');
+const saveStandaloneButton = document.querySelector('#privacy-save-standalone-button');
+const nextSteps = document.querySelector('#privacy-next-steps');
 const saveDiagnosticNote = document.querySelector('#privacy-save-note');
 const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const analyzedUrl = document.querySelector('#analyzed-url');
@@ -300,6 +303,10 @@ const renderPriorities = (priorities) => {
 
 const resetCommercialState = () => {
   currentDiagnosticId = '';
+  currentClaimToken = '';
+  nextSteps.hidden = true;
+  saveDiagnosticNote.hidden = true;
+  saveStandalone.hidden = true;
   correctionOffer.hidden = true;
   noPrioritiesOffer.hidden = true;
   correctionUnavailable.hidden = true;
@@ -337,6 +344,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   currentClaimToken = typeof diagnostic.claim_token === 'string' ? diagnostic.claim_token : '';
   saveDiagnostic.hidden = !(currentDiagnosticId && currentClaimToken);
   saveDiagnosticNote.hidden = saveDiagnostic.hidden;
+  saveStandalone.hidden = !(currentDiagnosticId && currentClaimToken);
   orderOpenButton.disabled = !currentDiagnosticId;
   orderOpenButton.hidden = false;
   orderForm.hidden = true;
@@ -356,6 +364,10 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   renderCommercialOffer(diagnostic.priorities);
+  const hasOffer = !correctionOffer.hidden;
+  saveDiagnosticNote.hidden = !hasOffer || !(currentDiagnosticId && currentClaimToken);
+  saveStandalone.hidden = hasOffer || !(currentDiagnosticId && currentClaimToken);
+  nextSteps.hidden = !hasOffer && saveStandalone.hidden;
 };
 
 const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
@@ -602,7 +614,7 @@ const resolveWorkspaceForDiagnosis = async () => {
   throw new Error('workspace_selection_required');
 };
 
-saveDiagnostic?.addEventListener('click', () => {
+const prepareDiagnosticSave = () => {
   if (!currentDiagnosticId || !currentClaimToken) return;
   try {
     // Token stays on this origin and is never placed in URL, logs or analytics.
@@ -613,7 +625,9 @@ saveDiagnostic?.addEventListener('click', () => {
   } catch {
     saveDiagnosticNote.textContent = 'No pudimos preparar el guardado en este navegador. Intenta nuevamente.';
   }
-});
+};
+saveDiagnostic?.addEventListener('click', prepareDiagnosticSave);
+saveStandaloneButton?.addEventListener('click', prepareDiagnosticSave);
 
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
