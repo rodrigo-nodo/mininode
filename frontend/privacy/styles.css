@@ -1038,3 +1038,74 @@ body.privacy-modal-open {
 }
 .privacy-save-choice p { margin: 0 0 .9rem; }
 .privacy-save-choice .btn { background: transparent; color: inherit; border: 1px solid currentColor; }
+
+
+/* Compact continuation: one choice, without repeating commercial headings. */
+.privacy-next-steps { margin-top: 24px; }
+.privacy-next-steps h3 { font-size: 1.24rem; }
+#privacy-correction-offer {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+#privacy-correction-offer .privacy-next {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  padding: clamp(16px, 3vw, 22px);
+}
+.privacy-offer-heading {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+}
+.privacy-offer-heading h3 { margin: 0; font-size: 1.12rem; }
+.privacy-offer-heading .privacy-price {
+  font-size: 1.65rem;
+  margin: 0;
+  white-space: nowrap;
+}
+.privacy-offer-heading .privacy-price span {
+  font-size: .65em;
+  font-weight: 700;
+}
+#privacy-correction-offer .privacy-next__summary > p { margin: 4px 0 0; }
+#privacy-correction-offer .privacy-next__action { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+#privacy-correction-offer .privacy-next__action .privacy-order-hint {
+  font-size: .78rem;
+  margin: 0;
+}
+.privacy-offer-details { color: var(--muted); font-size: .88rem; width: 100%; }
+.privacy-offer-details summary { color: var(--privacy-primary-dark); cursor: pointer; font-weight: 700; }
+.privacy-offer-details .privacy-includes { margin-top: 14px; }
+.privacy-offer-details p { margin-top: 8px; }
+#privacy-correction-offer .privacy-save-choice {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 0;
+  padding: 18px 0 0;
+}
+#privacy-correction-offer .privacy-save-choice h3,
+.privacy-save-choice--standalone h3 { font-size: 1rem; }
+#privacy-correction-offer .privacy-save-choice p,
+.privacy-save-choice--standalone p { font-size: .9rem; }
+.privacy-save-link {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--privacy-primary-dark) !important;
+  margin: 0;
+  padding: 9px 0;
+  white-space: nowrap;
+  width: auto;
+}
+.privacy-save-link:hover, .privacy-save-link:focus-visible { text-decoration: underline; }
+.privacy-save-choice--standalone { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.privacy-save-choice--standalone[hidden] { display: none; }
+#privacy-correction-offer .privacy-secondary-offer { margin-top: 24px; }
