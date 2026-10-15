@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="./styles.css?v=287latest1">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="./app.js?v=287latest3" defer></script>
+  <script src="./app.js?v=288claim1" defer></script>
 </head>
 <body class="access-page" data-mininode-auth-ui="clerk">
   <div data-include="../partials/header-nav.html"></div>
@@ -39,6 +39,12 @@
         <select id="workspace-picker"></select>
       </label>
 
+      <section id="pending-claim-panel" class="product-card" hidden>
+        <h2>Guardar diagnóstico de Privacy Web</h2>
+        <p>Selecciona el espacio donde quieres conservar el resultado. Es gratis.</p>
+        <button type="button" id="pending-claim-button" class="access-secondary-button">Guardar diagnóstico</button>
+        <p id="pending-claim-error" role="alert" hidden></p>
+      </section>
       <div class="product-list" aria-label="Productos">
         <article class="product-card">
           <div class="product-card__heading">
