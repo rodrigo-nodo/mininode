@@ -17,6 +17,26 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_free_anonymous_diagnostic_save_flow(self):
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        account_html = (FRONTEND_DIR / "access" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="privacy-save-diagnostic"', HTML)
+        self.assertIn('id="privacy-save-standalone-button"', HTML)
+        self.assertIn('id="privacy-next-steps"', HTML)
+        self.assertIn('¿Qué quieres hacer ahora?', HTML)
+        self.assertIn('nextSteps.hidden = !hasOffer && saveStandalone.hidden;', APP)
+        self.assertIn('id="pending-claim-button"', account_html)
+        self.assertIn("diagnostic.claim_token", APP)
+        self.assertIn("sessionStorage.setItem(PENDING_CLAIM_KEY", APP)
+        self.assertIn("sessionStorage.getItem(PENDING_CLAIM_KEY)", account)
+        self.assertIn("'/api/privacy/diagnostic-claims'", account)
+        self.assertIn("workspace_id: activeWorkspaceId", account)
+        self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY)", account)
+        self.assertIn("'&view=latest'", account)
+        self.assertIn("renderPriorities(diagnostic.priorities)", APP)
+        self.assertIn("renderCommercialOffer(diagnostic.priorities)", APP)
+        self.assertNotIn("payment_confirmed", account)
+
     def test_authenticated_workspace_site_entry_uses_access_identity(self):
         self.assertNotIn('data-clerk-publishable-key="pk_test_', HTML)
         self.assertNotIn('clerk.accounts.dev', HTML)
