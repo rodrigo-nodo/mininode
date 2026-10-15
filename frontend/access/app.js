@@ -70,6 +70,10 @@ const workspacePickerLabel = document.querySelector('#workspace-picker-label');
 const workspacePicker = document.querySelector('#workspace-picker');
 const privacyWebOpen = document.querySelector('#privacy-web-open');
 const siteList = document.querySelector('#site-list');
+const pendingClaimPanel = document.querySelector('#pending-claim-panel');
+const pendingClaimButton = document.querySelector('#pending-claim-button');
+const pendingClaimError = document.querySelector('#pending-claim-error');
+const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const siteEmpty = document.querySelector('#site-empty');
 
 let signInMounted = false;
@@ -243,6 +247,8 @@ function renderHome() {
   workspacePicker.value = active.id;
   setVisible(workspacePickerLabel, workspaces.length > 1);
   privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
+  pendingClaimPanel.hidden = !sessionStorage.getItem(PENDING_CLAIM_KEY);
+  pendingClaimError.hidden = true;
   renderSites(active);
 
   unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);
@@ -275,6 +281,30 @@ async function signOut() {
   showLoading('Cerrando sesión…');
   try { await mininodeAuth.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
 }
+
+pendingClaimButton.addEventListener('click', async () => {
+  const raw = sessionStorage.getItem(PENDING_CLAIM_KEY);
+  if (!raw) { pendingClaimPanel.hidden = true; return; }
+  let claim;
+  try { claim = JSON.parse(raw); } catch { sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; return; }
+  if (typeof claim?.diagnostic_id !== 'string' || typeof claim?.claim_token !== 'string') {
+    sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; return;
+  }
+  pendingClaimButton.disabled = true;
+  pendingClaimError.hidden = true;
+  try {
+    const saved = await api('/api/privacy/diagnostic-claims', {
+      method: 'POST', body: JSON.stringify({ ...claim, workspace_id: activeWorkspaceId }),
+    });
+    sessionStorage.removeItem(PENDING_CLAIM_KEY);
+    window.location.assign('/privacy/?workspace_site_id='
+      + encodeURIComponent(saved.workspace_site_id) + '&view=latest');
+  } catch (error) {
+    pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico.';
+    pendingClaimError.hidden = false;
+    pendingClaimButton.disabled = false;
+  }
+});
 
 workspacePicker.addEventListener('change', () => { activeWorkspaceId = workspacePicker.value; renderHome(); });
 errorSignOutButton.addEventListener('click', signOut);
