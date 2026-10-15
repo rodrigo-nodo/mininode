@@ -1018,3 +1018,23 @@ body.privacy-modal-open {
     width: 100%;
   }
 }
+
+
+/* One decision area: paid activation first, free account save second. */
+.privacy-next-steps { margin-top: 1.75rem; }
+.privacy-next-steps h3 { margin: 0 0 .5rem; }
+.privacy-next-steps p { margin: 0 0 1rem; }
+.privacy-save-choice {
+  margin: 1.25rem 0 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--border, #dbe3e9);
+}
+.privacy-save-choice--standalone { margin-bottom: 1.5rem; }
+.privacy-save-choice h3 { margin: 0 0 .5rem; }
+.privacy-save-choice h3 span {
+  font-size: .75em;
+  font-weight: 600;
+  margin-left: .5rem;
+}
+.privacy-save-choice p { margin: 0 0 .9rem; }
+.privacy-save-choice .btn { background: transparent; color: inherit; border: 1px solid currentColor; }
