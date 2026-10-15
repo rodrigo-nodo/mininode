@@ -17,6 +17,18 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
+        self.assertIn('href="styles.css?v=298layout1"', HTML)
+        self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
+        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 2)
+        self.assertIn("#privacy-correction-offer .privacy-next", CSS)
+        self.assertIn("#privacy-correction-offer .privacy-save-choice", CSS)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
+        self.assertIn("background: var(--privacy-primary)", CSS)
+        self.assertIn("@media (max-width: 620px)", CSS)
+        summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
+        self.assertIn('class="privacy-offer-details"', summary)
+
     def test_free_anonymous_diagnostic_save_flow(self):
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
         account_html = (FRONTEND_DIR / "access" / "index.html").read_text(encoding="utf-8")
