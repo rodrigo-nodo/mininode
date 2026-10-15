@@ -282,4 +282,4 @@ reintentarse en la misma pestaña. La asociación inicial sigue sujeta a la
 ventana temporal del backend, independiente de la conservación de revisiones
 ya guardadas.
 
-La UX de resultado reúne ambas opciones bajo **¿Qué quieres hacer ahora?**: activar Privacy Web (acción comercial principal) y guardar gratis (secundaria); el apoyo técnico queda como alternativa terciaria. Si no hay oferta de pago, guardar gratis sigue disponible cuando existe token de asociación. El guardado no cambia las tres prioridades gratuitas.
+La UX de resultado reúne ambas opciones bajo **Continúa con Privacy Web**: una tarjeta compacta de activación (acción principal), un enlace secundario para guardar gratis, y apoyo técnico terciario. Las prestaciones y condiciones quedan plegadas en **Ver qué incluye y condiciones**; se informa que el pago en línea aún no está disponible. Si no hay oferta de pago, guardar gratis sigue disponible cuando existe token de asociación. El guardado no cambia las tres prioridades gratuitas.
