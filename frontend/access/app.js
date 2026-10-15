@@ -83,6 +83,8 @@ let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 let latestReviewsRequestId = 0;
+let claimInFlight = false;
+let pendingWorkspaceChoice = false;
 
 let mininodeAuth = null;
 
@@ -249,20 +251,22 @@ function renderHome() {
   privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
   const pending = sessionStorage.getItem(PENDING_CLAIM_KEY);
   let isActivation = false;
-  try { isActivation = JSON.parse(pending || 'null')?.intent === 'activate'; } catch { /* invalid claim handled on click */ }
+  try { isActivation = JSON.parse(pending || 'null')?.intent === 'activate'; } catch { /* handled on save attempt */ }
   pendingClaimPanel.hidden = !pending;
-  pendingClaimButton.textContent = isActivation ? 'Guardar y continuar' : 'Guardar diagnóstico';
+  pendingClaimButton.hidden = true;
+  pendingWorkspaceChoice = Boolean(pending && workspaces.length > 1);
   const claimTitle = pendingClaimPanel.querySelector('h2');
   const claimDescription = pendingClaimPanel.querySelector('p');
-  if (claimTitle) claimTitle.textContent = isActivation ? 'Continuar con Privacy Web' : 'Guardar diagnóstico de Privacy Web';
-  if (claimDescription) claimDescription.textContent = isActivation
-    ? 'Primero conservaremos el diagnóstico en tu espacio. La solicitud de activación se completará en un siguiente paso.'
-    : 'Selecciona el espacio donde quieres conservar el resultado. Es gratis.';
+  if (claimTitle) claimTitle.textContent = pendingWorkspaceChoice ? 'Elige dónde guardar el diagnóstico' : 'Guardando tu diagnóstico…';
+  if (claimDescription) claimDescription.textContent = pendingWorkspaceChoice
+    ? 'Selecciona un espacio para continuar. Guardaremos el diagnóstico automáticamente.'
+    : isActivation ? 'Conservaremos el diagnóstico y continuaremos con Privacy Web.' : 'Conservaremos el resultado en tu espacio.';
   pendingClaimError.hidden = true;
   renderSites(active);
 
   unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);
   void loadLatestReviews(active);
+  if (pending && !pendingWorkspaceChoice) void savePendingDiagnostic();
 }
 
 async function syncAuthState(session) {
@@ -292,15 +296,18 @@ async function signOut() {
   try { await mininodeAuth.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
 }
 
-pendingClaimButton.addEventListener('click', async () => {
+async function savePendingDiagnostic() {
+  if (claimInFlight) return;
+  claimInFlight = true;
   const raw = sessionStorage.getItem(PENDING_CLAIM_KEY);
-  if (!raw) { pendingClaimPanel.hidden = true; return; }
+  if (!raw) { pendingClaimPanel.hidden = true; claimInFlight = false; return; }
   let claim;
-  try { claim = JSON.parse(raw); } catch { sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; return; }
+  try { claim = JSON.parse(raw); } catch { sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; claimInFlight = false; return; }
   if (typeof claim?.diagnostic_id !== 'string' || typeof claim?.claim_token !== 'string') {
     sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; return;
   }
-  pendingClaimButton.disabled = true;
+  pendingClaimPanel.hidden = false;
+  pendingClaimButton.hidden = true;
   pendingClaimError.hidden = true;
   try {
     const saved = await api('/api/privacy/diagnostic-claims', {
@@ -317,11 +324,23 @@ pendingClaimButton.addEventListener('click', async () => {
   } catch (error) {
     pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico.';
     pendingClaimError.hidden = false;
-    pendingClaimButton.disabled = false;
+    pendingClaimButton.hidden = false;
+    pendingClaimButton.textContent = 'Reintentar guardado';
+  } finally {
+    claimInFlight = false;
   }
-});
+}
+pendingClaimButton.addEventListener('click', () => { void savePendingDiagnostic(); });
 
-workspacePicker.addEventListener('change', () => { activeWorkspaceId = workspacePicker.value; renderHome(); });
+workspacePicker.addEventListener('change', () => {
+  activeWorkspaceId = workspacePicker.value;
+  if (pendingWorkspaceChoice) {
+    pendingWorkspaceChoice = false;
+    void savePendingDiagnostic();
+    return;
+  }
+  renderHome();
+});
 errorSignOutButton.addEventListener('click', signOut);
 retryButton.addEventListener('click', () => {
   lastResolvedSessionId = null;
