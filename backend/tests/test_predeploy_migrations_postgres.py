@@ -98,3 +98,76 @@ def test_real_postgres_two_concurrent_runners_apply_once(pg):
     assert len(history(url, name)) == 1
     with psycopg.connect(url) as conn:
         assert conn.execute(f"SELECT COUNT(*) FROM public.{table}").fetchone()[0] == 1
+
+def test_workspace_site_fk_dedup_preserves_canonical_and_rejects_mismatch(pg):
+    url, _, _ = pg
+    schema = "fk_ci_" + uuid.uuid4().hex
+    source = (SCRIPT.parents[1] / "migrations" / "20261015_privacy_workspace_site_fk_dedup.sql").read_text()
+    sql = source.replace("privacy.diagnostic", f"{schema}.diagnostic")
+    with psycopg.connect(url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE SCHEMA {schema}")
+            cur.execute(f"CREATE TABLE {schema}.sites (id uuid PRIMARY KEY)")
+            cur.execute(f"CREATE TABLE {schema}.diagnostic (workspace_site_id uuid)")
+            cur.execute(f"""ALTER TABLE {schema}.diagnostic
+                ADD CONSTRAINT privacy_diagnostic_workspace_site_fk
+                FOREIGN KEY (workspace_site_id) REFERENCES {schema}.sites(id) ON DELETE SET NULL""")
+            cur.execute(f"""ALTER TABLE {schema}.diagnostic
+                ADD CONSTRAINT diagnostic_workspace_site_id_fkey
+                FOREIGN KEY (workspace_site_id) REFERENCES {schema}.sites(id) ON DELETE SET NULL""")
+            cur.execute(sql)
+            cur.execute(sql)  # idempotent without a second drop
+            names = [r[0] for r in cur.execute(
+                "SELECT conname FROM pg_constraint WHERE conrelid=%s::regclass AND contype='f'",
+                (f"{schema}.diagnostic",),
+            )]
+            assert names == ["privacy_diagnostic_workspace_site_fk"]
+        conn.rollback()  # disposable test objects never persisted
+
+    with psycopg.connect(url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE SCHEMA {schema}")
+            cur.execute(f"CREATE TABLE {schema}.sites (id uuid PRIMARY KEY)")
+            cur.execute(f"CREATE TABLE {schema}.diagnostic (workspace_site_id uuid)")
+            cur.execute(f"""ALTER TABLE {schema}.diagnostic
+                ADD CONSTRAINT privacy_diagnostic_workspace_site_fk
+                FOREIGN KEY (workspace_site_id) REFERENCES {schema}.sites(id) ON DELETE SET NULL""")
+            cur.execute(f"""ALTER TABLE {schema}.diagnostic
+                ADD CONSTRAINT diagnostic_workspace_site_id_fkey
+                FOREIGN KEY (workspace_site_id) REFERENCES {schema}.sites(id) ON DELETE CASCADE""")
+            with pytest.raises(psycopg.errors.RaiseException, match="definitions differ"):
+                cur.execute(sql)
+        conn.rollback()
+
+
+@pytest.mark.parametrize("canonical_present", [False, True], ids=["canonical_missing", "redundant_missing"])
+def test_workspace_site_fk_dedup_missing_constraint_cases(pg, canonical_present):
+    url, _, _ = pg
+    schema = "fk_ci_" + uuid.uuid4().hex
+    source = (SCRIPT.parents[1] / "migrations" / "20261015_privacy_workspace_site_fk_dedup.sql").read_text()
+    sql = source.replace("privacy.diagnostic", f"{schema}.diagnostic")
+    with psycopg.connect(url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE SCHEMA {schema}")
+            cur.execute(f"CREATE TABLE {schema}.sites (id uuid PRIMARY KEY)")
+            cur.execute(f"CREATE TABLE {schema}.diagnostic (workspace_site_id uuid)")
+            constraint = "privacy_diagnostic_workspace_site_fk" if canonical_present else "diagnostic_workspace_site_id_fkey"
+            cur.execute(f"""ALTER TABLE {schema}.diagnostic
+                ADD CONSTRAINT {constraint}
+                FOREIGN KEY (workspace_site_id) REFERENCES {schema}.sites(id) ON DELETE SET NULL""")
+            if canonical_present:
+                cur.execute(sql)
+                cur.execute(sql)
+                actual = [row[0] for row in cur.execute(
+                    "SELECT conname FROM pg_constraint WHERE conrelid=%s::regclass AND contype='f'",
+                    (f"{schema}.diagnostic",),
+                )]
+                assert actual == ["privacy_diagnostic_workspace_site_fk"]
+            else:
+                with pytest.raises(psycopg.errors.RaiseException, match="Canonical workspace-site FK missing"):
+                    cur.execute(sql)
+                conn.rollback()
+                with psycopg.connect(url) as check:
+                    assert check.execute("SELECT to_regclass(%s)", (f"{schema}.diagnostic",)).fetchone()[0] is None
+                return
+        conn.rollback()
