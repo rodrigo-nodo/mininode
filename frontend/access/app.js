@@ -247,6 +247,14 @@ function renderHome() {
     workspacePicker.append(option);
   });
   workspacePicker.value = active.id;
+  if (sessionStorage.getItem(PENDING_CLAIM_KEY) && workspaces.length > 1) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Selecciona un espacio para guardar';
+    placeholder.disabled = true;
+    workspacePicker.prepend(placeholder);
+    workspacePicker.value = '';
+  }
   setVisible(workspacePickerLabel, workspaces.length > 1);
   privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
   const pending = sessionStorage.getItem(PENDING_CLAIM_KEY);
@@ -304,7 +312,7 @@ async function savePendingDiagnostic() {
   let claim;
   try { claim = JSON.parse(raw); } catch { sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; claimInFlight = false; return; }
   if (typeof claim?.diagnostic_id !== 'string' || typeof claim?.claim_token !== 'string') {
-    sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; return;
+    sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; claimInFlight = false; return;
   }
   pendingClaimPanel.hidden = false;
   pendingClaimButton.hidden = true;
@@ -333,6 +341,7 @@ async function savePendingDiagnostic() {
 pendingClaimButton.addEventListener('click', () => { void savePendingDiagnostic(); });
 
 workspacePicker.addEventListener('change', () => {
+  if (!workspacePicker.value) return;
   activeWorkspaceId = workspacePicker.value;
   if (pendingWorkspaceChoice) {
     pendingWorkspaceChoice = false;
