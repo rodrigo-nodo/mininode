@@ -74,3 +74,23 @@ retiro por separado cuando Pre-deploy esté validado en ambos entornos.
 El archivo `render.yaml` corresponde a una configuración antigua de servicio Free;
 no modificarlo ni asumir que representa el estado efectivo actual de Render.
 Este PR no cambia servicios, credenciales, planes, permisos ni bases.
+
+
+## Reconciliación de FK duplicada de Privacy Web
+`20261015_privacy_workspace_site_fk_dedup.sql` conserva la FK canónica
+`privacy_diagnostic_workspace_site_fk` y elimina únicamente la FK redundante
+`diagnostic_workspace_site_id_fkey` sobre `privacy.diagnostic.workspace_site_id`.
+Antes de eliminarla exige que coincidan columnas, tabla y columnas de destino,
+acciones ON DELETE/UPDATE, política MATCH, deferrability y validación; aborta
+si falta la FK canónica o si las definiciones difieren. Es idempotente. No borra
+filas ni columnas y no altera la FK de `claimed_by_user_id`.
+
+Causa histórica: el `CREATE TABLE IF NOT EXISTS` en el inicializador genera
+una FK con nombre automático cuando crea la tabla; A3.2 agregó después la
+FK canónica. En tablas existentes, el inicializador no recrea la duplicada.
+La migración A3.2 histórica permanece bloqueada por el runner.
+
+Esta nueva migración solo queda **catalogada en código**. La habilitación
+mediante `MIGRATION_APPROVED_FILES` en DEV exige revisión de CI, inspección
+previa del estado de ambas FK y autorización explícita de la operación de DDL.
+No habilitar ni ejecutar en PROD como parte de este PR.
