@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
-  <link rel="stylesheet" href="../styles.css?v=294shell1">
+  <link rel="stylesheet" href="../styles.css?v=295saveux2">
   <link rel="stylesheet" href="styles.css?v=294shell1">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="app.js?v=288expired1" defer></script>
+  <script src="app.js?v=290saveux2" defer></script>
   <script src="framework-v0.6.js?v=5" defer></script>
 </head>
 <body>
@@ -86,10 +86,12 @@
         <div class="privacy-controls" id="diagnostic-controls"></div>
       </details>
 
+      <div class="privacy-next-steps" id="privacy-next-steps" hidden>
+        <h3>¿Qué quieres hacer ahora?</h3>
+        <p>Ya tienes tu diagnóstico gratuito. Puedes avanzar con las mejoras o conservar el resultado.</p>
+      </div>
       <div class="privacy-help-offer" id="privacy-correction-offer" hidden>
-        <p class="privacy-help-offer__label">Ayuda opcional</p>
-        <h3>¿Desea avanzar con estas mejoras?</h3>
-        <p class="privacy-upgrade-note">Se han identificado aspectos de su sitio que pueden mejorar.</p>
+        <p class="privacy-help-offer__label">Opción principal · Privacy Web activo</p>
 
         <div class="privacy-next">
           <div class="privacy-next__summary">
@@ -135,6 +137,12 @@
           </div>
         </div>
 
+        <section class="privacy-save-choice" id="privacy-save-note" hidden>
+          <h3>Guardar diagnóstico <span>Gratis</span></h3>
+          <p>Conserva este resultado en tu espacio Mininode sin contratar Privacy Web.</p>
+          <button type="button" id="privacy-save-diagnostic" class="btn privacy-secondary">Guardar mi diagnóstico</button>
+        </section>
+
         <aside class="privacy-secondary-offer" aria-labelledby="technical-support-title">
           <h3 id="technical-support-title">¿Necesita ayuda para realizar los cambios?</h3>
           <p>Privacy Web indica qué mejorar y cómo comprobarlo.</p>
@@ -142,6 +150,12 @@
           <a href="/contact/?source=privacy&amp;intent=technical-support">Consultar apoyo técnico</a>
         </aside>
       </div>
+
+      <section class="privacy-save-choice privacy-save-choice--standalone" id="privacy-save-standalone" hidden>
+        <h3>Guardar diagnóstico <span>Gratis</span></h3>
+        <p>Conserva este resultado en tu espacio Mininode sin pagar.</p>
+        <button type="button" id="privacy-save-standalone-button" class="btn privacy-secondary">Guardar mi diagnóstico</button>
+      </section>
 
       <div class="privacy-no-priorities privacy-help-offer" id="privacy-no-priorities" hidden>
         <h3>Su sitio está bien preparado en los puntos revisados</h3>
