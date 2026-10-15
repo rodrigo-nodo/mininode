@@ -283,3 +283,5 @@ ventana temporal del backend, independiente de la conservación de revisiones
 ya guardadas.
 
 La UX de resultado reúne ambas opciones bajo **Continúa con Privacy Web**: una tarjeta compacta de activación (acción principal), un enlace secundario para guardar gratis, y apoyo técnico terciario. Las prestaciones y condiciones quedan plegadas en **Ver qué incluye y condiciones**; se informa que el pago en línea aún no está disponible. Si no hay oferta de pago, guardar gratis sigue disponible cuando existe token de asociación. El guardado no cambia las tres prioridades gratuitas.
+
+La elección de continuación del diagnóstico ofrece **Activar Privacy Web** y **Guardar diagnóstico gratis** con acciones equivalentes. Ambas pasan por Access y guardan el snapshot en el workspace elegido; la intención (`save`/`activate`) se mantiene junto con el token temporal solo en `sessionStorage`. La solicitud comercial autenticada y la reactivación de una revisión guardada son trabajo posterior: mientras tanto, la interfaz informa que aún no están disponibles y no afirma que se haya comprado ni activado el producto.
