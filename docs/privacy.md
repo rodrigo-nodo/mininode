@@ -263,3 +263,21 @@ Cuando un diagnóstico autenticado queda vinculado a un `workspace_site`, su sna
 La cuenta muestra únicamente el snapshot más reciente por sitio: score, estado y fecha. **Ver resultado** abre ese snapshot ya almacenado; no ejecuta una nueva inspección. Una nueva revisión solo ocurre cuando el usuario inicia explícitamente otro diagnóstico.
 
 Esto no habilita historial completo ni modifica entitlement, vigencia o Billing.
+
+## Guardar un diagnóstico anónimo en una cuenta gratuita
+Al terminar el diagnóstico anónimo, Privacy Web muestra las mismas tres
+prioridades gratuitas y ofrece **Guardar mi diagnóstico**, sin obligar al
+visitante a registrarse o contratar. El navegador conserva temporalmente
+`diagnostic_id` y `claim_token` en `sessionStorage`, sin incluir la prueba
+en la URL. Tras autenticarse con Access/Clerk, el usuario elige su workspace
+y confirma el guardado. Si no tiene workspace, Access crea uno mediante el
+onboarding existente. El frontend llama a `POST /privacy/diagnostic-claims`,
+borra el pendiente tras éxito y abre la última revisión guardada.
+
+Cada diagnóstico queda asociado a un solo workspace; varios workspaces pueden
+mantener revisiones independientes del mismo hostname. Guardar no habilita
+funcionalidades de pago ni amplía el contenido gratuito. El token pendiente
+no se persiste entre sesiones de navegador; si falla el guardado, puede
+reintentarse en la misma pestaña. La asociación inicial sigue sujeta a la
+ventana temporal del backend, independiente de la conservación de revisiones
+ya guardadas.
