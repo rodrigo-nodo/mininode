@@ -232,6 +232,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("sin desbloquear las demás mejoras ni incluir nuevas revisiones.", HTML)
         self.assertIn("continueWithDiagnostic('activate')", APP)
         self.assertIn("continueWithDiagnostic('save')", APP)
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
         self.assertIn("claim.intent === 'activate'", account)
         self.assertEqual(HTML.count("Vigencia de 1 mes desde la compra. Sin renovación automática."), 2)
         self.assertIn('id="correction-order-validity"', HTML)
