@@ -1109,3 +1109,44 @@ body.privacy-modal-open {
 .privacy-save-choice--standalone { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .privacy-save-choice--standalone[hidden] { display: none; }
 #privacy-correction-offer .privacy-secondary-offer { margin-top: 24px; }
+
+
+/* Two equal continuation choices: horizontal on wide screens, stacked on mobile. */
+#privacy-correction-offer .privacy-next {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+}
+#privacy-correction-offer .privacy-next__summary { min-width: 0; }
+#privacy-correction-offer .privacy-next__action { align-items: flex-end; }
+#privacy-correction-offer .privacy-save-choice,
+.privacy-save-choice--standalone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 12px;
+}
+#privacy-correction-offer .privacy-save-choice[hidden],
+.privacy-save-choice--standalone[hidden] { display: none; }
+.privacy-choice-button {
+  width: 148px !important;
+  min-height: 44px;
+  text-align: center;
+  margin: 0;
+}
+#privacy-correction-offer .privacy-save-choice h3,
+.privacy-save-choice--standalone h3 { margin-top: 0; }
+#privacy-correction-offer .privacy-save-choice p,
+.privacy-save-choice--standalone p { margin-bottom: 0; }
+@media (max-width: 620px) {
+  #privacy-correction-offer .privacy-next,
+  #privacy-correction-offer .privacy-save-choice,
+  .privacy-save-choice--standalone { grid-template-columns: 1fr; }
+  #privacy-correction-offer .privacy-next__action { align-items: stretch; }
+  .privacy-choice-button { width: 100% !important; }
+}
