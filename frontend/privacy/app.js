@@ -609,6 +609,10 @@ const resolveWorkspaceForDiagnosis = async () => {
 };
 
 const continueWithDiagnostic = (intent) => {
+  if (intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId) {
+    setRequestError('Tu diagnóstico está guardado. La activación desde la cuenta estará disponible próximamente.');
+    return;
+  }
   if (!currentDiagnosticId || !currentClaimToken) return;
   try {
     // Carry the selected intent with the one-time claim; never place proof in URLs.
@@ -679,6 +683,9 @@ const initializeAuthenticatedSite = async () => {
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;
+      if (privacyQuery.get('activation') === 'pending') {
+        setRequestError('Tu diagnóstico se guardó correctamente. La solicitud de activación desde la cuenta estará disponible próximamente.');
+      }
     }
   } catch (error) {
     reportFlowError('authenticated_site_init_failed', error);
