@@ -281,3 +281,5 @@ no se persiste entre sesiones de navegador; si falla el guardado, puede
 reintentarse en la misma pestaña. La asociación inicial sigue sujeta a la
 ventana temporal del backend, independiente de la conservación de revisiones
 ya guardadas.
+
+La UX de resultado reúne ambas opciones bajo **¿Qué quieres hacer ahora?**: activar Privacy Web (acción comercial principal) y guardar gratis (secundaria); el apoyo técnico queda como alternativa terciaria. Si no hay oferta de pago, guardar gratis sigue disponible cuando existe token de asociación. El guardado no cambia las tres prioridades gratuitas.
