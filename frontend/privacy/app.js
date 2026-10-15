@@ -514,12 +514,6 @@ urlInput.addEventListener('input', () => {
   }
 });
 
-orderOpenButton?.addEventListener('click', () => {
-  orderOpenButton.hidden = true;
-  orderForm.hidden = false;
-  orderEmail.focus();
-});
-
 orderForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const diagnosticId = currentDiagnosticId;
@@ -614,20 +608,27 @@ const resolveWorkspaceForDiagnosis = async () => {
   throw new Error('workspace_selection_required');
 };
 
-const prepareDiagnosticSave = () => {
+const continueWithDiagnostic = (intent) => {
+  if (intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId) {
+    setRequestError('Tu diagnóstico está guardado. La activación desde la cuenta estará disponible próximamente.');
+    return;
+  }
   if (!currentDiagnosticId || !currentClaimToken) return;
   try {
-    // Token stays on this origin and is never placed in URL, logs or analytics.
+    // Carry the selected intent with the one-time claim; never place proof in URLs.
     sessionStorage.setItem(PENDING_CLAIM_KEY, JSON.stringify({
-      diagnostic_id: currentDiagnosticId, claim_token: currentClaimToken,
+      diagnostic_id: currentDiagnosticId,
+      claim_token: currentClaimToken,
+      intent,
     }));
     window.location.assign('/access/');
   } catch {
-    saveDiagnosticNote.textContent = 'No pudimos preparar el guardado en este navegador. Intenta nuevamente.';
+    setRequestError('No pudimos preparar el acceso en este navegador. Intenta nuevamente.');
   }
 };
-saveDiagnostic?.addEventListener('click', prepareDiagnosticSave);
-saveStandaloneButton?.addEventListener('click', prepareDiagnosticSave);
+orderOpenButton?.addEventListener('click', () => continueWithDiagnostic('activate'));
+saveDiagnostic?.addEventListener('click', () => continueWithDiagnostic('save'));
+saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('save'));
 
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
@@ -682,6 +683,9 @@ const initializeAuthenticatedSite = async () => {
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;
+      if (privacyQuery.get('activation') === 'pending') {
+        setRequestError('Tu diagnóstico se guardó correctamente. La solicitud de activación desde la cuenta estará disponible próximamente.');
+      }
     }
   } catch (error) {
     reportFlowError('authenticated_site_init_failed', error);
