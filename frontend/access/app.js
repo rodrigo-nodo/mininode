@@ -317,6 +317,9 @@ async function savePendingDiagnostic() {
   pendingClaimPanel.hidden = false;
   pendingClaimButton.hidden = true;
   pendingClaimError.hidden = true;
+  workspacePicker.disabled = true;
+  const claimTitle = pendingClaimPanel.querySelector('h2');
+  if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';
   try {
     const saved = await api('/api/privacy/diagnostic-claims', {
       method: 'POST', body: JSON.stringify({ ...claim, workspace_id: activeWorkspaceId }),
@@ -334,7 +337,9 @@ async function savePendingDiagnostic() {
     pendingClaimError.hidden = false;
     pendingClaimButton.hidden = false;
     pendingClaimButton.textContent = 'Reintentar guardado';
+    if (claimTitle) claimTitle.textContent = 'No pudimos guardar el diagnóstico';
   } finally {
+    workspacePicker.disabled = false;
     claimInFlight = false;
   }
 }
@@ -343,7 +348,7 @@ pendingClaimButton.addEventListener('click', () => { void savePendingDiagnostic(
 workspacePicker.addEventListener('change', () => {
   if (!workspacePicker.value) return;
   activeWorkspaceId = workspacePicker.value;
-  if (pendingWorkspaceChoice) {
+  if (sessionStorage.getItem(PENDING_CLAIM_KEY)) {
     pendingWorkspaceChoice = false;
     void savePendingDiagnostic();
     return;
