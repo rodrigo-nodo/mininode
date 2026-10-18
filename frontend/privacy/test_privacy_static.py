@@ -34,9 +34,12 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("if (pending && !pendingWorkspaceChoice) void savePendingDiagnostic();", account)
         self.assertIn("workspaces.length > 1", account)
         self.assertIn("Selecciona un espacio para guardar", account)
-        self.assertIn("if (pendingWorkspaceChoice)", account)
+        self.assertIn("if (sessionStorage.getItem(PENDING_CLAIM_KEY))", account)
         self.assertIn("void savePendingDiagnostic();", account)
         self.assertIn("if (claimInFlight) return;", account)
+        self.assertIn("workspacePicker.disabled = true;", account)
+        self.assertIn("workspacePicker.disabled = false;", account)
+        self.assertIn("if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';", account)
         self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY);", account)
         self.assertIn("Reintentar guardado", account)
 
