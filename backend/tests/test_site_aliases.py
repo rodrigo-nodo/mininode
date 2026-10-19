@@ -91,3 +91,66 @@ def test_all_association_entrypoints_use_same_resolver():
     assert "resolve_existing_site(cursor, hostname)" in inspect.getsource(
         privacy_diagnostic_snapshot.claim_anonymous_diagnostic
     )
+
+
+def test_auto_registration_is_guarded_and_does_not_merge_existing_sites(monkeypatch):
+    from mininode_api.services import site_aliases
+    from types import SimpleNamespace
+
+    site_id = uuid4()
+    class DbCursor:
+        def __init__(self, requested=None, counterpart=(site_id, "www.example.com")):
+            self.requested = requested
+            self.counterpart = counterpart
+            self.last = ""
+            self.params = None
+            self.inserted = []
+        def execute(self, sql, params=None):
+            self.last, self.params = sql, params
+            if "INSERT INTO access.site_aliases" in sql:
+                self.inserted.append(params)
+        def fetchone(self):
+            if "to_regclass" in self.last: return ("access.site_aliases",)
+            if "SELECT id FROM access.sites" in self.last: return None
+            if "INSERT INTO access.site_aliases" in self.last: return (site_id,)
+            return (None,)
+    cur = DbCursor()
+    def resolve(cursor, host):
+        return cur.requested if host == "example.com" else cur.counterpart
+    monkeypatch.setattr(site_aliases, "resolve_existing_site", resolve)
+    verified = lambda host: SimpleNamespace(
+        equivalent=True, requested_hostname=host, counterpart_hostname="www.example.com")
+    assert site_aliases.register_verified_www_alias(cur, "example.com", verifier=verified)
+    assert len(cur.inserted) == 1 and cur.inserted[0][1:3] == (site_id, "example.com")
+
+    cur2 = DbCursor(requested=(uuid4(), "example.com"))
+    cur = cur2
+    assert not site_aliases.register_verified_www_alias(cur, "example.com", verifier=verified)
+    assert not cur.inserted
+
+
+def test_auto_registration_rejects_missing_or_invalid_evidence(monkeypatch):
+    from mininode_api.services import site_aliases
+    from types import SimpleNamespace
+    def fake_resolve(_cursor, hostname):
+        return None if hostname == "example.com" else (uuid4(), "www.example.com")
+    monkeypatch.setattr(site_aliases, "resolve_existing_site", fake_resolve)
+    class Cursor:
+        def __init__(self, ready=True):
+            self.query = ""
+            self.ready = ready
+        def execute(self, sql, params=None): self.query = sql
+        def fetchone(self): return ("access.site_aliases" if self.ready else None,)
+    cur = Cursor()
+    evidence = lambda host: SimpleNamespace(equivalent=False, requested_hostname=host, counterpart_hostname="www.example.com")
+    assert not site_aliases.register_verified_www_alias(cur, "example.com", verifier=evidence)
+    assert not site_aliases.register_verified_www_alias(Cursor(False), "example.com", verifier=lambda _: (_ for _ in ()).throw(AssertionError("network")))
+    assert not site_aliases.register_verified_www_alias(Cursor(), "shop.example.com", verifier=lambda _: (_ for _ in ()).throw(AssertionError("network")))
+
+
+def test_both_association_paths_attempt_registration():
+    import inspect
+    from mininode_api.services import access, privacy_diagnostic_snapshot
+    for method in (access.follow_site, privacy_diagnostic_snapshot.claim_anonymous_diagnostic):
+        body = inspect.getsource(method)
+        assert "register_verified_www_alias(cursor, hostname)" in body
