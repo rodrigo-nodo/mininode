@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
@@ -7,6 +8,14 @@ const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const coreAuth = await readFile(new URL('../assets/js/core-auth.js', import.meta.url), 'utf8');
+
+test('access script URL fingerprints its current contents to prevent stale claim payloads', () => {
+  const header = `blob ${Buffer.byteLength(app, 'utf8')}\0`;
+  const blobSha = createHash('sha1').update(header).update(app).digest('hex').slice(0, 12);
+  assert.ok(html.includes(`./app.js?v=${blobSha}`), 'Access HTML must reference the current JS blob');
+  assert.match(app, /No pudimos validar los datos del diagnóstico/);
+  assert.doesNotMatch(app, /JSON\.stringify\(\{ \.\.\.claim, workspace_id:/);
+});
 
 test('loads identity runtime only from shared MininodeAuth', () => {
   assert.doesNotMatch(html, /clerk\.accounts\.dev/);
