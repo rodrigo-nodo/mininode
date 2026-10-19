@@ -10,6 +10,7 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.services import privacy_diagnostic_snapshot as service  # noqa: E402
+from mininode_api.services import site_aliases  # noqa: E402
 
 
 def fake_connection(monkeypatch, *, rows=()):
@@ -172,6 +173,7 @@ def test_claim_rejects_wrong_proof(monkeypatch):
 
 
 def test_free_claim_does_not_check_purchase_expiry(monkeypatch):
+    monkeypatch.setattr(site_aliases, "resolve_existing_site", lambda cursor, hostname: None)
     import hashlib
     token = "a" * 43
     user, workspace, site, workspace_site = uuid4(), uuid4(), uuid4(), uuid4()
@@ -219,6 +221,7 @@ def test_claim_is_idempotent_for_original_owner(monkeypatch):
 
 
 def test_claim_associates_new_workspace_site(monkeypatch):
+    monkeypatch.setattr(site_aliases, "resolve_existing_site", lambda cursor, hostname: None)
     import hashlib
     token = "a" * 43
     user, workspace, site, workspace_site = uuid4(), uuid4(), uuid4(), uuid4()

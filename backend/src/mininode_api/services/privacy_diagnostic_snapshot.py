@@ -202,14 +202,19 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         # Free account saving is independent of the commercial purchase window.
         # Proof remains single-claim and workspace-authorized even after 24 hours.
         hostname, canonical_url = _normalize_claim_url(site_url)
-        cursor.execute(
-            """INSERT INTO access.sites (id, hostname, canonical_url)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (hostname) DO UPDATE SET hostname = EXCLUDED.hostname
-               RETURNING id""",
-            (uuid4(), hostname, canonical_url),
-        )
-        site_id = cursor.fetchone()[0]
+        from mininode_api.services.site_aliases import resolve_existing_site
+        existing = resolve_existing_site(cursor, hostname)
+        if existing is not None:
+            site_id = existing[0]
+        else:
+            cursor.execute(
+                """INSERT INTO access.sites (id, hostname, canonical_url)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (hostname) DO UPDATE SET hostname = EXCLUDED.hostname
+                   RETURNING id""",
+                (uuid4(), hostname, canonical_url),
+            )
+            site_id = cursor.fetchone()[0]
         cursor.execute(
             """INSERT INTO access.workspace_sites (id, workspace_id, site_id)
                VALUES (%s, %s, %s)
