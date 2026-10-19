@@ -64,16 +64,16 @@ class PrivacyResultStaticTests(unittest.TestCase):
         # Prevent reintroducing '...claim': intent is browser state, not a backend field.
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
         request = re.search(
-            r"api\\('/api/privacy/diagnostic-claims',\\s*\\{.*?JSON\\.stringify\\(\\{(.*?)\\}\\)",
+            r"api\('/api/privacy/diagnostic-claims',\s*\{.*?JSON\.stringify\(\{(.*?)\}\)",
             account, re.S,
         )
         self.assertIsNotNone(request)
-        frontend_fields = set(re.findall(r"^\\s*(\\w+)\\s*:", request.group(1), re.M))
+        frontend_fields = set(re.findall(r"^\s*(\w+)\s*:", request.group(1), re.M))
         api_source = (FRONTEND_DIR.parent / "backend" / "src" / "mininode_api" / "api" / "privacy.py").read_text(encoding="utf-8")
         model = api_source.split("class ClaimAnonymousDiagnosticRequest(BaseModel):", 1)[1].split(
             "class ClaimedDiagnosticResponse(BaseModel):", 1
         )[0]
-        backend_fields = set(re.findall(r"^    (\\w+):", model, re.M))
+        backend_fields = set(re.findall(r"^    (\w+):", model, re.M))
         self.assertEqual(frontend_fields, {"diagnostic_id", "workspace_id", "claim_token"})
         self.assertEqual(frontend_fields, backend_fields)
         self.assertIn('ConfigDict(extra="forbid")', model)
