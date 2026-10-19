@@ -1227,3 +1227,41 @@ body.privacy-modal-open {
 @media (max-width: 620px) {
   .privacy-activation-notice { max-width: none; text-align: left; }
 }
+
+
+/* Saved result is the same decision-row component, with a different state and destination. */
+#privacy-correction-offer .privacy-saved-choice,
+.privacy-saved-choice--standalone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 148px;
+  align-items: center;
+  column-gap: 24px;
+}
+.privacy-saved-choice__summary { min-width: 0; }
+#privacy-correction-offer .privacy-saved-choice .btn.privacy-choice-button,
+.privacy-saved-choice--standalone .btn.privacy-choice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 148px;
+  min-height: 44px;
+  padding: 9px 12px;
+  background: var(--privacy-primary);
+  border: 1px solid var(--privacy-primary);
+  color: #fff;
+  text-decoration: none;
+}
+#privacy-correction-offer .privacy-saved-choice .btn.privacy-choice-button:hover,
+#privacy-correction-offer .privacy-saved-choice .btn.privacy-choice-button:focus-visible,
+.privacy-saved-choice--standalone .btn.privacy-choice-button:hover,
+.privacy-saved-choice--standalone .btn.privacy-choice-button:focus-visible {
+  background: var(--privacy-primary-dark);
+  border-color: var(--privacy-primary-dark);
+  color: #fff;
+}
+@media (max-width: 620px) {
+  #privacy-correction-offer .privacy-saved-choice,
+  .privacy-saved-choice--standalone { grid-template-columns: minmax(0, 1fr); row-gap: 16px; }
+  #privacy-correction-offer .privacy-saved-choice .btn.privacy-choice-button,
+  .privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }
+}

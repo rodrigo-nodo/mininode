@@ -140,6 +140,9 @@ async function api(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401) throw new Error('Tu sesión ya no puede validarse. Cierra la sesión y vuelve a acceder.');
     if (response.status === 503) throw new Error('El servicio de acceso está temporalmente no disponible.');
+    if (path === '/api/privacy/diagnostic-claims' && response.status === 422) {
+      throw new Error('No pudimos validar los datos del diagnóstico. Puedes reintentarlo o realizar una nueva revisión.');
+    }
     const body = await response.json().catch(() => ({}));
     throw new Error(typeof body.detail === 'string' ? body.detail : 'No pudimos completar la solicitud.');
   }
@@ -321,8 +324,14 @@ async function savePendingDiagnostic() {
   const claimTitle = pendingClaimPanel.querySelector('h2');
   if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';
   try {
+    // The API accepts exactly three fields; intent stays client-side for navigation.
     const saved = await api('/api/privacy/diagnostic-claims', {
-      method: 'POST', body: JSON.stringify({ ...claim, workspace_id: activeWorkspaceId }),
+      method: 'POST',
+      body: JSON.stringify({
+        diagnostic_id: claim.diagnostic_id,
+        claim_token: claim.claim_token,
+        workspace_id: activeWorkspaceId,
+      }),
     });
     sessionStorage.removeItem(PENDING_CLAIM_KEY);
     if (claim.intent === 'activate') {
@@ -333,7 +342,7 @@ async function savePendingDiagnostic() {
     window.location.assign('/privacy/?workspace_site_id='
       + encodeURIComponent(saved.workspace_site_id) + '&view=latest');
   } catch (error) {
-    pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico.';
+    pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico. Reintenta el guardado.';
     pendingClaimError.hidden = false;
     pendingClaimButton.hidden = false;
     pendingClaimButton.textContent = 'Reintentar guardado';

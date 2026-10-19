@@ -696,12 +696,14 @@ const initializeAuthenticatedSite = async () => {
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
       const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
-      if (Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now() && !correctionOffer.hidden) {
+      const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();
+      if (purchaseExpired && !correctionOffer.hidden) {
         showExpiredCommercialState(latestDiagnostic.created_at);
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;
-      if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden) {
+      // An old saved snapshot may still be viewed, but cannot start a new purchase.
+      if (privacyQuery.get('activation') === 'pending' && !purchaseExpired && !correctionOffer.hidden) {
         activationNotice.hidden = false;
       }
     }

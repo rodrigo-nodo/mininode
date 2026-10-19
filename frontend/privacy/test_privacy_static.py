@@ -18,9 +18,9 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 class PrivacyResultStaticTests(unittest.TestCase):
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=299savedstate"', HTML)
+        self.assertIn('href="styles.css?v=300savedrow"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
-        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 2)
+        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
         self.assertIn("#privacy-correction-offer .privacy-save-choice", CSS)
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
@@ -59,6 +59,38 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';", account)
         self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY);", account)
         self.assertIn("Reintentar guardado", account)
+
+    def test_free_claim_payload_exactly_matches_forbidden_extra_backend_contract(self):
+        # Prevent reintroducing '...claim': intent is browser state, not a backend field.
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        request = re.search(
+            r"api\('/api/privacy/diagnostic-claims',\s*\{.*?JSON\.stringify\(\{(.*?)\}\)",
+            account, re.S,
+        )
+        self.assertIsNotNone(request)
+        frontend_fields = set(re.findall(r"^\s*(\w+)\s*:", request.group(1), re.M))
+        api_source = (FRONTEND_DIR.parent / "backend" / "src" / "mininode_api" / "api" / "privacy.py").read_text(encoding="utf-8")
+        model = api_source.split("class ClaimAnonymousDiagnosticRequest(BaseModel):", 1)[1].split(
+            "class ClaimedDiagnosticResponse(BaseModel):", 1
+        )[0]
+        backend_fields = set(re.findall(r"^    (\w+):", model, re.M))
+        self.assertEqual(frontend_fields, {"diagnostic_id", "workspace_id", "claim_token"})
+        self.assertEqual(frontend_fields, backend_fields)
+        self.assertIn('ConfigDict(extra="forbid")', model)
+        self.assertIn("if (claim.intent === 'activate')", account)
+
+    def test_saved_result_has_same_row_and_cta_as_free_save(self):
+        self.assertEqual(HTML.count('class="privacy-saved-choice__summary"'), 2)
+        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button" href="/access/"'), 2)
+        self.assertEqual(HTML.count('Mis sitios →'), 2)
+        self.assertIn("#privacy-correction-offer .privacy-saved-choice", CSS)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
+        self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
+
+    def test_past_purchase_deadline_cannot_show_pending_activation(self):
+        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
+        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
 
     def test_commercial_notice_appears_only_inside_conditions(self):
         intro = HTML.split('class="privacy-offer-details"', 1)[0]
