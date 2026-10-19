@@ -232,7 +232,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "../styles.css?v=294shell1" in access
     assert "./styles.css?v=000c8b6808c2" in access
     from hashlib import sha1
-    app_bytes = (FRONTEND / "access/app.js").read_bytes()
+    app_bytes = (ROOT / "access/app.js").read_bytes()
     app_blob = sha1(f"blob {len(app_bytes)}\\0".encode() + app_bytes).hexdigest()[:12]
     assert f"./app.js?v={app_blob}" in access
 
