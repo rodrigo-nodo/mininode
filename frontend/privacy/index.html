@@ -6,10 +6,10 @@
   <title>Privacy Web — Diagnóstico inicial de privacidad</title>
   <meta name="description" content="Conoce el nivel de preparación de tu sitio web frente a la protección de datos en menos de un minuto.">
   <link rel="stylesheet" href="../styles.css?v=297choices">
-  <link rel="stylesheet" href="styles.css?v=298layout1">
+  <link rel="stylesheet" href="styles.css?v=299savedstate">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="app.js?v=293autosave" defer></script>
+  <script src="app.js?v=294savedstate" defer></script>
   <script src="framework-v0.6.js?v=5" defer></script>
 </head>
 <body>
@@ -116,6 +116,7 @@
           </div>
           <div class="privacy-next__action">
             <button class="btn privacy-secondary privacy-choice-button" type="button" id="correction-order-open">Continuar →</button>
+            <p class="privacy-activation-notice" id="privacy-activation-notice" role="status" hidden>Tu diagnóstico está guardado. Estamos preparando el paso para solicitar la activación de Privacy Web.</p>
 
             <form class="privacy-order-form" id="correction-order-form" hidden>
               <label for="correction-order-email">Email</label>
@@ -144,6 +145,11 @@
           </div>
           <button type="button" id="privacy-save-diagnostic" class="btn privacy-secondary privacy-choice-button">Continuar →</button>
         </section>
+        <section class="privacy-saved-choice" id="privacy-saved-note" role="status" hidden>
+          <h3>✓ Diagnóstico guardado</h3>
+          <p>Este resultado ya está en tu espacio Mininode. Puedes consultarlo después sin contratar Privacy Web.</p>
+          <a href="/access/">Ver en mi cuenta →</a>
+        </section>
         <aside class="privacy-secondary-offer" aria-labelledby="technical-support-title">
           <h3 id="technical-support-title">¿Necesita ayuda para realizar los cambios?</h3>
           <p>Privacy Web indica qué mejorar y cómo comprobarlo.</p>
@@ -157,6 +163,12 @@
           <p>Consérvalo en tu cuenta para consultarlo después.</p>
         </div>
         <button type="button" id="privacy-save-standalone-button" class="btn privacy-save-link">Guardar →</button>
+      </section>
+
+      <section class="privacy-saved-choice privacy-saved-choice--standalone" id="privacy-saved-standalone" role="status" hidden>
+        <h3>✓ Diagnóstico guardado</h3>
+        <p>Este resultado ya está en tu espacio Mininode. Puedes consultarlo después sin contratar Privacy Web.</p>
+        <a href="/access/">Ver en mi cuenta →</a>
       </section>
 
       <div class="privacy-no-priorities privacy-help-offer" id="privacy-no-priorities" hidden>
