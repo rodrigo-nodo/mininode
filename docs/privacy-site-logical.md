@@ -25,3 +25,8 @@ No se crean aliases automáticamente, no se hacen solicitudes HTTP, no se modifi
 La migración queda catalogada con checksum revisado, pero **no se ejecuta** mientras Render no incluya explícitamente el nombre en `MIGRATION_APPROVED_FILES`. Revisar dependencias y estado DEV antes de permitir la DDL. No activar en PROD sin autorización.
 
 Siguiente PR: verificación/registro seguro de equivalencias, integración en `follow_site`, diagnósticos e interfaz, con tests de colisión entre hostnames principales y aliases. Evitar unir datos o conceder derechos entre workspaces.
+
+## Etapa A.2 - Asociación de aliases existentes
+`follow_site` y el guardado de diagnósticos anónimos consultan el mismo resolver **en su propia transacción**. Si el hostname coincide con un alias ya verificado, ambos reutilizan el `site_id` y, dentro del workspace, el `workspace_site_id` existente. De esta manera la ficha, último score e historial se consolidan sin modificar sus tablas o cálculos.
+
+Hasta que la migración esté aprobada/aplicada en cada entorno, el resolver usa sólo `access.sites` y mantiene el comportamiento anterior. Ninguna escritura registra nuevos aliases. Sigue pendiente detectar redirecciones públicas de manera SSRF-safe, registrar evidencias y solicitar confirmación cuando corresponda; esa fase no debe inferir equivalencias de contenido similar.
