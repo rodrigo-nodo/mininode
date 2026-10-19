@@ -10,11 +10,11 @@ const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const coreAuth = await readFile(new URL('../assets/js/core-auth.js', import.meta.url), 'utf8');
 
 test('access script URL fingerprints its current contents to prevent stale claim payloads', () => {
-  const header = `blob ${Buffer.byteLength(app, 'utf8')}\\0`;
+  const header = `blob ${Buffer.byteLength(app, 'utf8')}\0`;
   const blobSha = createHash('sha1').update(header).update(app).digest('hex').slice(0, 12);
   assert.ok(html.includes(`./app.js?v=${blobSha}`), 'Access HTML must reference the current JS blob');
   assert.match(app, /No pudimos validar los datos del diagnóstico/);
-  assert.doesNotMatch(app, /JSON\\.stringify\\(\\{ \\.\\.\\.claim, workspace_id:/);
+  assert.doesNotMatch(app, /JSON\.stringify\(\{ \.\.\.claim, workspace_id:/);
 });
 
 test('loads identity runtime only from shared MininodeAuth', () => {
