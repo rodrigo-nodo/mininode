@@ -87,6 +87,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
         self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
 
+    def test_past_purchase_deadline_cannot_show_pending_activation(self):
+        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
+        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
+
     def test_commercial_notice_appears_only_inside_conditions(self):
         intro = HTML.split('class="privacy-offer-details"', 1)[0]
         self.assertNotIn("Sin renovación automática. El pago en línea", intro)
