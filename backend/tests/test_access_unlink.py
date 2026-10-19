@@ -60,3 +60,55 @@ def test_reassociation_clears_detached_flag():
     assert "detached_at = NULL" in inspect.getsource(access.follow_site)
     assert "ws.detached_at IS NULL" in inspect.getsource(access.get_authorized_site)
     assert "ws.detached_at IS NULL" in inspect.getsource(access.list_authorized_context)
+
+
+def test_unlink_persists_snapshots_and_does_not_touch_other_workspace():
+    import os
+    import psycopg
+    from mininode_api.services import billing, privacy_diagnostic_snapshot as snapshots
+
+    url = os.environ.get("DATABASE_URL", "")
+    if "mininode_test" not in url:
+        pytest.skip("Real database mutation tests require disposable mininode_test")
+
+    access.initialize_database()
+    snapshots.initialize_database()
+    billing.initialize_database()
+    user_a, user_b, workspace_a, workspace_b, site_id = [uuid4() for _ in range(5)]
+    ws_a, ws_b = uuid4(), uuid4()
+    with psycopg.connect(url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO access.users (id,email) VALUES (%s,%s),(%s,%s)",
+                        (user_a, f"{user_a}@example.test", user_b, f"{user_b}@example.test"))
+            cur.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'A'),(%s,'B')",
+                        (workspace_a, workspace_b))
+            cur.execute("INSERT INTO access.workspace_members (workspace_id,user_id,role) VALUES (%s,%s,'owner'),(%s,%s,'owner')",
+                        (workspace_a,user_a,workspace_b,user_b))
+            cur.execute("INSERT INTO access.sites(id,hostname) VALUES (%s,%s)",
+                        (site_id, f"unlink-{site_id}.example"))
+            cur.execute("INSERT INTO access.workspace_sites(id,workspace_id,site_id) VALUES (%s,%s,%s),(%s,%s,%s)",
+                        (ws_a,workspace_a,site_id,ws_b,workspace_b,site_id))
+    diagnostic = snapshots.create_diagnostic_snapshot(
+        {"site_url": f"https://unlink-{site_id}.example/", "score": 44},
+        workspace_site_id=ws_a,
+    )
+    try:
+        assert access.unlink_workspace_site(user_b, workspace_a, ws_a) is False
+        assert access.unlink_workspace_site(user_a, workspace_a, ws_a) is True
+        assert access.unlink_workspace_site(user_a, workspace_a, ws_a) is False
+        assert access.get_authorized_site(user_a, ws_a) is None
+        assert access.get_authorized_site(user_b, ws_b) is not None
+        assert snapshots.get_diagnostic_snapshot(diagnostic.id).workspace_site_id == ws_a
+        assert all(s.id != ws_a for w in access.list_authorized_context(user_a) for s in w.sites)
+        assert snapshots.list_latest_for_workspace(workspace_a) == ()
+        with psycopg.connect(url) as conn:
+            row = conn.execute("SELECT detached_at FROM access.workspace_sites WHERE id = %s", (ws_a,)).fetchone()
+            assert row[0] is not None
+    finally:
+        with psycopg.connect(url) as conn:
+            conn.execute("DELETE FROM privacy.diagnostic WHERE id = %s", (diagnostic.id,))
+            conn.execute("DELETE FROM access.workspace_sites WHERE id IN (%s,%s)", (ws_a,ws_b))
+            conn.execute("DELETE FROM access.sites WHERE id = %s", (site_id,))
+            conn.execute("DELETE FROM access.workspace_members WHERE workspace_id IN (%s,%s)", (workspace_a,workspace_b))
+            conn.execute("DELETE FROM access.workspaces WHERE id IN (%s,%s)", (workspace_a,workspace_b))
+            conn.execute("DELETE FROM access.users WHERE id IN (%s,%s)", (user_a,user_b))
