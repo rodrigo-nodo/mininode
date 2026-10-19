@@ -28,6 +28,7 @@ BLOCKED_LEGACY = frozenset({
 APPROVED_CHECKSUMS = {
     "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",
     "20261015_privacy_workspace_site_fk_dedup.sql": "695f22d5bfb1a5f9c8164e17240859bb0504d0b6f1bb222f737d4b99a354594f",
+    "20261019_access_site_aliases.sql": "de803551492c86420c6d3121749a2402a1c281df2e89004dc60e1579a4576f0b",
 }
 
 def parse_approved(raw: str) -> list[str]:
