@@ -12,6 +12,8 @@ const nextSteps = document.querySelector('#privacy-next-steps');
 const saveDiagnosticNote = document.querySelector('#privacy-save-note');
 const savedDiagnosticNote = document.querySelector('#privacy-saved-note');
 const savedStandaloneNote = document.querySelector('#privacy-saved-standalone');
+const savedNoteDescription = document.querySelector('#privacy-saved-note-description');
+const savedStandaloneDescription = document.querySelector('#privacy-saved-standalone-description');
 const activationNotice = document.querySelector('#privacy-activation-notice');
 const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const analyzedUrl = document.querySelector('#analyzed-url');
@@ -353,6 +355,18 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   const savedSiteId = typeof diagnostic.workspace_site_id === 'string' ? diagnostic.workspace_site_id.trim() : '';
   currentPersistedWorkspaceSiteId = currentDiagnosticId ? (savedSiteId || authenticatedWorkspaceSiteId) : '';
   const isSaved = Boolean(currentPersistedWorkspaceSiteId);
+  // Display the exact saved review's hostname; do not silently collapse apex and www.
+  let reviewHostname = '';
+  try {
+    reviewHostname = new URL(diagnostic.site_url || websiteUrl).hostname;
+  } catch {
+    // A malformed URL must not expose raw, unvalidated text in this confirmation.
+  }
+  const savedReviewDescription = reviewHostname
+    ? `La última revisión de ${reviewHostname} está disponible en tu espacio Mininode.`
+    : 'La última revisión de este sitio está disponible en tu espacio Mininode.';
+  savedNoteDescription.textContent = savedReviewDescription;
+  savedStandaloneDescription.textContent = savedReviewDescription;
   const canClaim = Boolean(currentDiagnosticId && currentClaimToken && !isSaved);
   saveDiagnostic.hidden = !canClaim;
   saveDiagnosticNote.hidden = !canClaim;
