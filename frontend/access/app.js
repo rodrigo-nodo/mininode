@@ -150,6 +150,7 @@ async function api(path, options = {}) {
     const body = await response.json().catch(() => ({}));
     throw new Error(typeof body.detail === 'string' ? body.detail : 'No pudimos completar la solicitud.');
   }
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -225,6 +226,24 @@ function renderSites(workspace, reviews = []) {
       row.append(main);
     }
 
+    const unlink = document.createElement('button');
+    unlink.type = 'button';
+    unlink.className = 'site-unlink';
+    unlink.textContent = 'Desvincular';
+    unlink.setAttribute('aria-label', `Desvincular ${site.hostname}`);
+    unlink.addEventListener('click', async () => {
+      if (!window.confirm(`¿Desvincular ${site.hostname} de este espacio? Los diagnósticos se conservan.`)) return;
+      unlink.disabled = true;
+      try {
+        await api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/sites/${encodeURIComponent(site.id)}`, { method: 'DELETE' });
+        context = await api('/api/access/context');
+        renderHome();
+      } catch (error) {
+        unlink.disabled = false;
+        window.alert(error instanceof Error ? error.message : 'No pudimos desvincular el sitio.');
+      }
+    });
+    row.append(unlink);
     siteList.append(row);
   });
   setVisible(siteEmpty, sites.length === 0);
