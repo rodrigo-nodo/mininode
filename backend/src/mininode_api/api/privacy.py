@@ -530,8 +530,6 @@ def claim_diagnostic(body: ClaimAnonymousDiagnosticRequest, user: access.StoredU
         site_id = privacy_diagnostic_snapshot.claim_anonymous_diagnostic(
             body.diagnostic_id, body.claim_token, user.id, body.workspace_id
         )
-    except privacy_diagnostic_snapshot.PrivacyDiagnosticPurchaseExpiredError:
-        raise HTTPException(status_code=410, detail="El diagnóstico ya no está disponible para activar.") from None
     except privacy_diagnostic_snapshot.PrivacyDiagnosticClaimRejectedError:
         raise HTTPException(status_code=409, detail="No se pudo asociar este diagnóstico.") from None
     except ValueError:
