@@ -30,3 +30,8 @@ Siguiente PR: verificación/registro seguro de equivalencias, integración en `f
 `follow_site` y el guardado de diagnósticos anónimos consultan el mismo resolver **en su propia transacción**. Si el hostname coincide con un alias ya verificado, ambos reutilizan el `site_id` y, dentro del workspace, el `workspace_site_id` existente. De esta manera la ficha, último score e historial se consolidan sin modificar sus tablas o cálculos.
 
 Hasta que la migración esté aprobada/aplicada en cada entorno, el resolver usa sólo `access.sites` y mantiene el comportamiento anterior. Ninguna escritura registra nuevos aliases. Sigue pendiente detectar redirecciones públicas de manera SSRF-safe, registrar evidencias y solicitar confirmación cuando corresponda; esa fase no debe inferir equivalencias de contenido similar.
+
+## Etapa A.3 - Evidencia de redirección apex/www
+`services/site_equivalence.py` inspecciona pasivamente las dos direcciones HTTPS y requiere que ambas terminen en el mismo hostname, con una redirección real y respuestas válidas. Reutiliza el cliente de transporte con IP fijada, validación de DNS/destino, límite de redirecciones y tiempos del inspector. No infiere equivalencia por contenido parecido, no soporta agrupación implícita de subdominios de aplicaciones y rechaza evidencias incompletas.
+
+Este paso detecta evidencia; todavía **no registra aliases, no fusiona sites preexistentes y no cambia la asociación del usuario**. La unión automática debe quedar protegida por restricciones contra colisiones con hostnames principales y entre workspaces; una declaración de usuario tampoco otorga prestaciones.
