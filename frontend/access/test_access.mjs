@@ -308,3 +308,11 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /Ver resultado →/);
   assert.match(app, /site-review-meta/);
 });
+
+test('unlink UI confirms before DELETE, and keeps the existing saved diagnosis links', () => {
+  assert.match(app, /window\.confirm\(/);
+  assert.match(app, /method: 'DELETE'/);
+  assert.match(app, /\/api\/access\/context/);
+  assert.match(app, /response\.status === 204/);
+  assert.match(app, /site\.hostname/);
+});
