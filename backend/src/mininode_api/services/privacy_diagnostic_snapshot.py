@@ -204,6 +204,10 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         hostname, canonical_url = _normalize_claim_url(site_url)
         from mininode_api.services.site_aliases import resolve_existing_site
         existing = resolve_existing_site(cursor, hostname)
+        if existing is None:
+            from mininode_api.services.site_aliases import register_verified_www_alias
+            if register_verified_www_alias(cursor, hostname):
+                existing = resolve_existing_site(cursor, hostname)
         if existing is not None:
             site_id = existing[0]
         else:
