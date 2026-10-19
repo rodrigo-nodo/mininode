@@ -68,6 +68,25 @@ def test_claim_atomic_and_snapshot_unchanged(pg_claim):
         assert stored == original and site_id == linked and claimant == owner
 
 
+
+def test_expired_purchase_does_not_block_free_claim(pg_claim):
+    url, did, token, owner, other, workspace, foreign, host = pg_claim
+    with psycopg.connect(url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE privacy.diagnostic SET purchase_expires_at = CURRENT_TIMESTAMP - INTERVAL '1 hour' WHERE id = %s",
+            (did,),
+        )
+    expired = snapshot.get_diagnostic_snapshot(did)
+    with pytest.raises(snapshot.PrivacyDiagnosticPurchaseExpiredError):
+        snapshot.require_purchasable(expired)
+
+    linked = snapshot.claim_anonymous_diagnostic(did, token, owner, workspace)
+    assert linked == snapshot.claim_anonymous_diagnostic(did, token, owner, workspace)
+    with pytest.raises(snapshot.PrivacyDiagnosticClaimRejectedError):
+        snapshot.claim_anonymous_diagnostic(did, token, other, foreign)
+    assert snapshot.get_diagnostic_snapshot(did).workspace_site_id == linked
+
+
 def test_claim_rolls_back_site_on_update_failure(pg_claim):
     url, did, token, owner, other, workspace, foreign, host = pg_claim
     # Database trigger simulates failure after both Access inserts, before diagnostic update.
