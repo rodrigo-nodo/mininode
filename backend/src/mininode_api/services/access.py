@@ -316,18 +316,23 @@ def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | No
         if cursor.fetchone() is None:
             return None
 
-        site_id = uuid4()
-        cursor.execute(
-            """
-            INSERT INTO access.sites (id, hostname, canonical_url)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (hostname) DO UPDATE
-            SET hostname = EXCLUDED.hostname
-            RETURNING id, hostname
-            """,
-            (site_id, hostname, canonical_url),
-        )
-        site_id, stored_hostname = cursor.fetchone()
+        from mininode_api.services.site_aliases import resolve_existing_site
+        existing = resolve_existing_site(cursor, hostname)
+        if existing is not None:
+            site_id, stored_hostname = existing
+        else:
+            site_id = uuid4()
+            cursor.execute(
+                """
+                INSERT INTO access.sites (id, hostname, canonical_url)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (hostname) DO UPDATE
+                SET hostname = EXCLUDED.hostname
+                RETURNING id, hostname
+                """,
+                (site_id, hostname, canonical_url),
+            )
+            site_id, stored_hostname = cursor.fetchone()
 
         workspace_site_id = uuid4()
         cursor.execute(
