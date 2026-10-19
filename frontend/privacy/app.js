@@ -10,6 +10,9 @@ const saveStandalone = document.querySelector('#privacy-save-standalone');
 const saveStandaloneButton = document.querySelector('#privacy-save-standalone-button');
 const nextSteps = document.querySelector('#privacy-next-steps');
 const saveDiagnosticNote = document.querySelector('#privacy-save-note');
+const savedDiagnosticNote = document.querySelector('#privacy-saved-note');
+const savedStandaloneNote = document.querySelector('#privacy-saved-standalone');
+const activationNotice = document.querySelector('#privacy-activation-notice');
 const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const analyzedUrl = document.querySelector('#analyzed-url');
 const privacyScore = document.querySelector('#privacy-score');
@@ -46,6 +49,7 @@ let lastFocusedElement = null;
 let isDiagnosing = false;
 let currentDiagnosticId = '';
 let currentClaimToken = '';
+let currentPersistedWorkspaceSiteId = '';
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
@@ -304,6 +308,10 @@ const renderPriorities = (priorities) => {
 const resetCommercialState = () => {
   currentDiagnosticId = '';
   currentClaimToken = '';
+  currentPersistedWorkspaceSiteId = '';
+  activationNotice.hidden = true;
+  savedDiagnosticNote.hidden = true;
+  savedStandaloneNote.hidden = true;
   nextSteps.hidden = true;
   saveDiagnosticNote.hidden = true;
   saveStandalone.hidden = true;
@@ -342,10 +350,17 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   analyzedUrl.textContent = websiteUrl;
   currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id.trim() : '';
   currentClaimToken = typeof diagnostic.claim_token === 'string' ? diagnostic.claim_token : '';
-  saveDiagnostic.hidden = !(currentDiagnosticId && currentClaimToken);
-  saveDiagnosticNote.hidden = saveDiagnostic.hidden;
-  saveStandalone.hidden = !(currentDiagnosticId && currentClaimToken);
-  orderOpenButton.disabled = !currentDiagnosticId;
+  const savedSiteId = typeof diagnostic.workspace_site_id === 'string' ? diagnostic.workspace_site_id.trim() : '';
+  currentPersistedWorkspaceSiteId = currentDiagnosticId ? (savedSiteId || authenticatedWorkspaceSiteId) : '';
+  const isSaved = Boolean(currentPersistedWorkspaceSiteId);
+  const canClaim = Boolean(currentDiagnosticId && currentClaimToken && !isSaved);
+  saveDiagnostic.hidden = !canClaim;
+  saveDiagnosticNote.hidden = !canClaim;
+  saveStandalone.hidden = !canClaim;
+  savedDiagnosticNote.hidden = !isSaved;
+  savedStandaloneNote.hidden = !isSaved;
+  activationNotice.hidden = true;
+  orderOpenButton.disabled = !currentDiagnosticId || (!currentClaimToken && !isSaved);
   orderOpenButton.hidden = false;
   orderForm.hidden = true;
   orderSuccess.hidden = true;
@@ -365,9 +380,11 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   renderPriorities(diagnostic.priorities);
   renderCommercialOffer(diagnostic.priorities);
   const hasOffer = !correctionOffer.hidden;
-  saveDiagnosticNote.hidden = !hasOffer || !(currentDiagnosticId && currentClaimToken);
-  saveStandalone.hidden = hasOffer || !(currentDiagnosticId && currentClaimToken);
-  nextSteps.hidden = !hasOffer && saveStandalone.hidden;
+  saveDiagnosticNote.hidden = !hasOffer || !canClaim;
+  saveStandalone.hidden = hasOffer || !canClaim;
+  savedDiagnosticNote.hidden = !hasOffer || !isSaved;
+  savedStandaloneNote.hidden = hasOffer || !isSaved;
+  nextSteps.hidden = !hasOffer && saveStandalone.hidden && savedStandaloneNote.hidden;
 };
 
 const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
@@ -609,8 +626,9 @@ const resolveWorkspaceForDiagnosis = async () => {
 };
 
 const continueWithDiagnostic = (intent) => {
-  if (intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId) {
-    setRequestError('Tu diagnóstico está guardado. La activación desde la cuenta estará disponible próximamente.');
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId) {
+    // The commercial request is not implemented yet; keep the CTA and state its next step.
+    activationNotice.hidden = false;
     return;
   }
   if (!currentDiagnosticId || !currentClaimToken) return;
@@ -683,8 +701,8 @@ const initializeAuthenticatedSite = async () => {
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;
-      if (privacyQuery.get('activation') === 'pending') {
-        setRequestError('Tu diagnóstico se guardó correctamente. La solicitud de activación desde la cuenta estará disponible próximamente.');
+      if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden) {
+        activationNotice.hidden = false;
       }
     }
   } catch (error) {
