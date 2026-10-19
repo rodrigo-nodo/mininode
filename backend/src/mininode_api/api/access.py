@@ -137,3 +137,20 @@ def access_context(
             for workspace in workspaces
         ]
     )
+
+
+@router.delete("/workspaces/{workspace_id}/sites/{workspace_site_id}", status_code=204)
+def access_unlink_site(
+    workspace_id: UUID,
+    workspace_site_id: UUID,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    try:
+        found = access.unlink_workspace_site(user.id, workspace_id, workspace_site_id)
+    except access.ActiveSiteCannotBeUnlinked:
+        raise HTTPException(status_code=409, detail="Este sitio tiene una contratación o compra pendiente y no puede desvincularse.")
+    except Exception:
+        logger.exception("Access site unlink failed")
+        raise HTTPException(status_code=503, detail="El servicio de acceso no está disponible.")
+    if not found:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado")
