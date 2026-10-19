@@ -1203,3 +1203,27 @@ body.privacy-modal-open {
   #privacy-correction-offer .privacy-save-choice .btn.privacy-choice-button,
   .privacy-save-choice--standalone .btn.privacy-choice-button { width: 100%; }
 }
+
+
+/* Authenticated result: the free save decision has already been completed. */
+.privacy-saved-choice {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-top: 12px;
+  padding: clamp(16px, 3vw, 22px);
+}
+.privacy-saved-choice[hidden],
+.privacy-activation-notice[hidden] { display: none !important; }
+.privacy-saved-choice h3 { font-size: 1rem; margin: 0 0 6px; }
+.privacy-saved-choice p { color: var(--muted); font-size: .9rem; margin: 0 0 8px; }
+.privacy-saved-choice a { color: var(--privacy-primary-dark); font-weight: 700; }
+.privacy-activation-notice {
+  color: var(--fg);
+  font-size: .9rem;
+  margin: 10px 0 0;
+  max-width: 37ch;
+  text-align: right;
+}
+@media (max-width: 620px) {
+  .privacy-activation-notice { max-width: none; text-align: left; }
+}

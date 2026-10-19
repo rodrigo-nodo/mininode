@@ -18,7 +18,7 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 class PrivacyResultStaticTests(unittest.TestCase):
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=298layout1"', HTML)
+        self.assertIn('href="styles.css?v=299savedstate"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 2)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -28,6 +28,23 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", CSS)
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
+
+    def test_saved_and_anonymous_result_states_are_distinct(self):
+        # A workspace-linked review is already saved even though it has no claim token.
+        self.assertIn('id="privacy-saved-note"', HTML)
+        self.assertIn('id="privacy-saved-standalone"', HTML)
+        self.assertIn('id="privacy-activation-notice"', HTML)
+        self.assertIn("const isSaved = Boolean(currentPersistedWorkspaceSiteId);", APP)
+        self.assertIn("const canClaim = Boolean(currentDiagnosticId && currentClaimToken && !isSaved);", APP)
+        self.assertIn("savedSiteId || authenticatedWorkspaceSiteId", APP)
+        self.assertIn("saveDiagnosticNote.hidden = !hasOffer || !canClaim;", APP)
+        self.assertIn("savedDiagnosticNote.hidden = !hasOffer || !isSaved;", APP)
+        self.assertIn("savedStandaloneNote.hidden = hasOffer || !isSaved;", APP)
+        self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
+        self.assertIn("activationNotice.hidden = false;", APP)
+        self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
+        self.assertIn("privacy-saved-choice[hidden]", CSS)
 
     def test_access_auto_saves_pending_diagnostic_after_login(self):
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
@@ -61,7 +78,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('Guardar diagnóstico gratis', HTML)
         self.assertIn('El pago en línea estará disponible próximamente.', HTML)
         self.assertNotIn('Opción principal · Privacy Web activo', HTML)
-        self.assertIn('nextSteps.hidden = !hasOffer && saveStandalone.hidden;', APP)
+        self.assertIn('nextSteps.hidden = !hasOffer && saveStandalone.hidden && savedStandaloneNote.hidden;', APP)
         self.assertIn('id="pending-claim-button"', account_html)
         self.assertIn("diagnostic.claim_token", APP)
         self.assertIn("sessionStorage.setItem(PENDING_CLAIM_KEY", APP)
