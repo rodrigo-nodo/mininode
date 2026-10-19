@@ -29,6 +29,16 @@ class PrivacyResultStaticTests(unittest.TestCase):
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
 
+    def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
+        self.assertIn('app.js?v=2739bb4e161b', HTML)
+        self.assertIn('id="privacy-saved-note-description"', HTML)
+        self.assertIn('id="privacy-saved-standalone-description"', HTML)
+        self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
+        self.assertIn("new URL(diagnostic.site_url || websiteUrl).hostname", APP)
+        self.assertIn("La última revisión de ${reviewHostname} está disponible en tu espacio Mininode.", APP)
+        self.assertIn("savedNoteDescription.textContent = savedReviewDescription;", APP)
+        self.assertIn("savedStandaloneDescription.textContent = savedReviewDescription;", APP)
+
     def test_saved_and_anonymous_result_states_are_distinct(self):
         # A workspace-linked review is already saved even though it has no claim token.
         self.assertIn('id="privacy-saved-note"', HTML)
