@@ -73,6 +73,9 @@ const siteList = document.querySelector('#site-list');
 const pendingClaimPanel = document.querySelector('#pending-claim-panel');
 const pendingClaimButton = document.querySelector('#pending-claim-button');
 const pendingClaimError = document.querySelector('#pending-claim-error');
+const claimSuccessPanel = document.querySelector('#claim-success');
+const claimSuccessDescription = document.querySelector('#claim-success-description');
+const claimSuccessResult = document.querySelector('#claim-success-result');
 const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const siteEmpty = document.querySelector('#site-empty');
 
@@ -108,6 +111,7 @@ function showLoading(message = 'Preparando acceso…') {
 
 function showSignedOut() {
   lastResolvedSessionId = null; context = { workspaces: [] }; activeWorkspaceId = '';
+  claimSuccessPanel.hidden = true;
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
   setVisible(home, false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
@@ -307,6 +311,15 @@ async function signOut() {
   try { await mininodeAuth.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
 }
 
+function showSavedDiagnosticConfirmation(workspaceSiteId, hostname = '') {
+  pendingClaimPanel.hidden = true;
+  claimSuccessPanel.hidden = false;
+  claimSuccessDescription.textContent = hostname
+    ? `El diagnóstico de ${hostname} está disponible en Mis sitios.`
+    : 'Tu diagnóstico está disponible en Mi espacio, dentro de Mis sitios.';
+  claimSuccessResult.href = `/privacy/?workspace_site_id=${encodeURIComponent(workspaceSiteId)}&view=latest`;
+}
+
 async function savePendingDiagnostic() {
   if (claimInFlight) return;
   claimInFlight = true;
@@ -339,8 +352,23 @@ async function savePendingDiagnostic() {
         + encodeURIComponent(saved.workspace_site_id) + '&view=latest&activation=pending');
       return;
     }
-    window.location.assign('/privacy/?workspace_site_id='
-      + encodeURIComponent(saved.workspace_site_id) + '&view=latest');
+
+    // Free save ends in Mi espacio, not back in the diagnostic.
+    showSavedDiagnosticConfirmation(saved.workspace_site_id);
+    try {
+      const updatedContext = await api('/api/access/context');
+      const savedWorkspace = (Array.isArray(updatedContext.workspaces) ? updatedContext.workspaces : [])
+        .find((workspace) => workspace.id === activeWorkspaceId);
+      if (!savedWorkspace) throw new Error('Saved workspace unavailable in account refresh');
+      context = updatedContext;
+      renderHome();
+      const site = (Array.isArray(savedWorkspace.sites) ? savedWorkspace.sites : [])
+        .find((item) => item.id === saved.workspace_site_id);
+      showSavedDiagnosticConfirmation(saved.workspace_site_id, site?.hostname || '');
+    } catch {
+      // The claim is already committed. Never report a refresh failure as a failed save.
+      claimSuccessDescription.textContent = 'El diagnóstico se guardó. Si aún no aparece en Mis sitios, recarga la cuenta o selecciona Ver resultado.';
+    }
   } catch (error) {
     pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico. Reintenta el guardado.';
     pendingClaimError.hidden = false;
