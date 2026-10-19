@@ -275,7 +275,7 @@ y el guardado comienza sin una segunda confirmación. Si no tiene workspace,
 Access crea uno mediante el onboarding existente. El frontend llama a
 `POST /privacy/diagnostic-claims` con solo `diagnostic_id`, `claim_token`
 y `workspace_id` (la intención `save`/`activate` permanece exclusivamente
-en el navegador), borra el pendiente tras éxito y abre la última revisión guardada.
+en el navegador). Tras un guardado gratuito exitoso, elimina el pendiente, permanece en **Mi espacio**, actualiza **Mis sitios** y muestra «Diagnóstico guardado correctamente» con enlace al resultado. Si falla la actualización de la lista, la confirmación y el enlace siguen disponibles; no se informa un falso error de guardado. Cuando el usuario eligió **Activar Privacy Web**, se conserva el recorrido de activación tras guardar el snapshot.
 
 Cada diagnóstico queda asociado a un solo workspace; varios workspaces pueden
 mantener revisiones independientes del mismo hostname. Guardar no habilita

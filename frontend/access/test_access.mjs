@@ -17,6 +17,96 @@ test('access script URL fingerprints its current contents to prevent stale claim
   assert.doesNotMatch(app, /JSON\.stringify\(\{ \.\.\.claim, workspace_id:/);
 });
 
+
+function freeClaimHarness(intent, { claimFails = false, refreshFails = false } = {}) {
+  const key = 'mininode.privacy.pending_claim.v1';
+  const values = new Map([[key, JSON.stringify({ diagnostic_id: 'diag-1', claim_token: 'proof', intent })]]);
+  const pendingClaimPanel = { hidden: true, querySelector: () => ({ textContent: '' }) };
+  const pendingClaimError = { textContent: '', hidden: true };
+  const pendingClaimButton = { hidden: true, textContent: '' };
+  const claimSuccessPanel = { hidden: true };
+  const claimSuccessDescription = { textContent: '' };
+  const claimSuccessResult = { href: '' };
+  const workspacePicker = { disabled: false };
+  const seen = { requests: [], redirects: [], homeRenders: 0 };
+  const context = {
+    claimInFlight: false,
+    pendingClaimPanel, pendingClaimError, pendingClaimButton,
+    claimSuccessPanel, claimSuccessDescription, claimSuccessResult, workspacePicker,
+    PENDING_CLAIM_KEY: key, activeWorkspaceId: 'workspace-1',
+    sessionStorage: {
+      getItem: (k) => values.get(k) ?? null,
+      removeItem: (k) => values.delete(k),
+    },
+    window: { location: { assign: (url) => seen.redirects.push(url) } },
+    renderHome() { seen.homeRenders += 1; },
+    async api(path, options) {
+      seen.requests.push({ path, body: options?.body && JSON.parse(options.body) });
+      if (path === '/api/privacy/diagnostic-claims') {
+        if (claimFails) throw new Error('No pudimos guardar');
+        return { diagnostic_id: 'diag-1', workspace_site_id: 'site-1' };
+      }
+      if (path === '/api/access/context') {
+        if (refreshFails) throw new Error('Refresh failed');
+        return { workspaces: [{ id: 'workspace-1', sites: [{ id: 'site-1', hostname: 'gurbana.cl' }] }] };
+      }
+      throw new Error('Unexpected route ' + path);
+    },
+  };
+  const start = app.indexOf('function showSavedDiagnosticConfirmation(');
+  const end = app.indexOf("pendingClaimButton.addEventListener('click'", start);
+  assert.ok(start >= 0 && end > start);
+  vm.runInNewContext(app.slice(start, end) + '\nglobalThis.runClaim = savePendingDiagnostic;', context);
+  return { context, values, seen };
+}
+
+test('free claim completes inside Mi espacio, refreshes Mis sitios and exposes the saved review', async () => {
+  const { context, values, seen } = freeClaimHarness('save');
+  await context.runClaim();
+
+  assert.deepEqual(seen.redirects, []);
+  assert.equal(values.has('mininode.privacy.pending_claim.v1'), false);
+  assert.equal(context.pendingClaimPanel.hidden, true);
+  assert.equal(context.claimSuccessPanel.hidden, false);
+  assert.match(context.claimSuccessDescription.textContent, /gurbana\.cl/);
+  assert.equal(context.claimSuccessResult.href, '/privacy/?workspace_site_id=site-1&view=latest');
+  assert.equal(seen.homeRenders, 1);
+  assert.equal(context.context.workspaces[0].sites[0].hostname, 'gurbana.cl');
+  assert.deepEqual(seen.requests.map(x => x.path), ['/api/privacy/diagnostic-claims', '/api/access/context']);
+  assert.deepEqual(seen.requests[0].body, { diagnostic_id: 'diag-1', claim_token: 'proof', workspace_id: 'workspace-1' });
+});
+
+test('activate intent still continues to commercial handoff without showing free-save confirmation', async () => {
+  const { context, seen } = freeClaimHarness('activate');
+  await context.runClaim();
+
+  assert.deepEqual(seen.redirects, ['/privacy/?workspace_site_id=site-1&view=latest&activation=pending']);
+  assert.equal(context.claimSuccessPanel.hidden, true);
+  assert.deepEqual(seen.requests.map(x => x.path), ['/api/privacy/diagnostic-claims']);
+});
+
+test('successful free claim remains successful when refreshing Mis sitios fails', async () => {
+  const { context, seen, values } = freeClaimHarness('save', { refreshFails: true });
+  await context.runClaim();
+
+  assert.equal(context.claimSuccessPanel.hidden, false);
+  assert.equal(context.pendingClaimError.hidden, true);
+  assert.equal(values.size, 0);
+  assert.match(context.claimSuccessDescription.textContent, /se guardó/);
+  assert.deepEqual(seen.redirects, []);
+});
+
+test('failed free claim preserves pending proof and offers retry without claiming success', async () => {
+  const { context, values, seen } = freeClaimHarness('save', { claimFails: true });
+  await context.runClaim();
+
+  assert.equal(values.has('mininode.privacy.pending_claim.v1'), true);
+  assert.equal(context.claimSuccessPanel.hidden, true);
+  assert.equal(context.pendingClaimError.hidden, false);
+  assert.equal(context.pendingClaimButton.textContent, 'Reintentar guardado');
+  assert.deepEqual(seen.redirects, []);
+});
+
 test('loads identity runtime only from shared MininodeAuth', () => {
   assert.doesNotMatch(html, /clerk\.accounts\.dev/);
   assert.doesNotMatch(html, /data-clerk-publishable-key="pk_(?:test|live)_/);
