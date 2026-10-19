@@ -176,15 +176,14 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         # Serialize competing claims without locking the diagnostic row across other connections.
         cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(diagnostic_id),))
         cursor.execute(
-            """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id,
-                      purchase_expires_at >= CURRENT_TIMESTAMP
+            """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id
                FROM privacy.diagnostic WHERE id = %s""",
             (diagnostic_id,),
         )
         row = cursor.fetchone()
         if row is None or row[1] is None or not hmac.compare_digest(token_hash, row[1]):
             raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
-        site_url, _, existing_site, claimed_by, eligible = row
+        site_url, _, existing_site, claimed_by = row
         cursor.execute(
             """SELECT 1 FROM access.workspace_members
                WHERE workspace_id = %s AND user_id = %s AND role IN ('owner', 'member')""",
@@ -200,9 +199,8 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
             if claimed_by != user_id or cursor.fetchone() is None:
                 raise PrivacyDiagnosticClaimRejectedError("Diagnostic already claimed")
             return existing_site
-        if not eligible:
-            raise PrivacyDiagnosticPurchaseExpiredError("Diagnostic purchase window expired")
-
+        # Free account saving is independent of the commercial purchase window.
+        # Proof remains single-claim and workspace-authorized even after 24 hours.
         hostname, canonical_url = _normalize_claim_url(site_url)
         cursor.execute(
             """INSERT INTO access.sites (id, hostname, canonical_url)
