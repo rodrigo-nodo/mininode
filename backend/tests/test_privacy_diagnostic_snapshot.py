@@ -173,6 +173,7 @@ def test_claim_rejects_wrong_proof(monkeypatch):
 
 
 def test_free_claim_does_not_check_purchase_expiry(monkeypatch):
+    monkeypatch.setattr(site_aliases, "register_verified_www_alias", lambda cursor, hostname: False)
     monkeypatch.setattr(site_aliases, "resolve_existing_site", lambda cursor, hostname: None)
     import hashlib
     token = "a" * 43
@@ -221,6 +222,7 @@ def test_claim_is_idempotent_for_original_owner(monkeypatch):
 
 
 def test_claim_associates_new_workspace_site(monkeypatch):
+    monkeypatch.setattr(site_aliases, "register_verified_www_alias", lambda cursor, hostname: False)
     monkeypatch.setattr(site_aliases, "resolve_existing_site", lambda cursor, hostname: None)
     import hashlib
     token = "a" * 43

@@ -318,6 +318,10 @@ def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | No
 
         from mininode_api.services.site_aliases import resolve_existing_site
         existing = resolve_existing_site(cursor, hostname)
+        if existing is None:
+            from mininode_api.services.site_aliases import register_verified_www_alias
+            if register_verified_www_alias(cursor, hostname):
+                existing = resolve_existing_site(cursor, hostname)
         if existing is not None:
             site_id, stored_hostname = existing
         else:
