@@ -40,3 +40,12 @@ Este paso detecta evidencia; todavía **no registra aliases, no fusiona sites pr
 Al asociar una URL en un workspace autorizado o guardar un diagnóstico anónimo con prueba de titularidad del diagnóstico, si el hostname no está registrado y existe su par raíz/www en `access.sites`, el backend verifica en tiempo real la redirección usando el inspector público protegido. Con evidencia positiva, inserta solo el hostname libre como alias del site existente. La escritura es transaccional, utiliza bloqueo advisory por par de hostnames y `ON CONFLICT DO NOTHING`.
 
 No fusiona fichas ya existentes ni mueve aliases asignados; si ambos hostnames ya tienen `site_id` distintos se conservan independientes para revisión posterior. Sin contraparte previamente registrada o sin evidencia no hace consultas de equivalencia ni fuerza la agrupación. El mismo workspace reutiliza su `workspace_site_id` y sus diagnósticos conservan URL y snapshot individuales. No se extiende una contratación a hostnames ajenos al sitio lógico verificado. No se alteran Billing, scoring o controles.
+
+## Etapa A.5 - Desvincular sitio en un workspace
+Se añade `access.workspace_sites.detached_at` mediante migración aditiva. Desvincular marca **esa asociación** como inactiva en una transacción autorizada y la omite del contexto, acceso al sitio y últimos diagnósticos del workspace. No elimina snapshots, `access.sites`, aliases, ni derechos de otros workspaces.
+
+El backend bloquea desvincular si hay entitlements activos o compras pendientes/pagadas; los errores 404/409 se comunican en frontend. Asociar de nuevo el mismo sitio restaura la relación existente y su historial, no crea una nueva identidad.
+
+**Condición de despliegue:** aplicar primero `20261019_access_workspace_site_unlink.sql` en DEV con Pre-deploy antes de habilitar este código (el bootstrap crea la columna solo en instalaciones nuevas). No habilitar en PROD sin revisión y autorización de migración propia.
+
+**Límite del experimento gurbana:** desvincular `www.gurbana.cl` y diagnosticarlo nuevamente puede restaurar el mismo sitio global preexistente. Desvincular no fusiona identidades existentes; esa conciliación requiere una tarea separada.
