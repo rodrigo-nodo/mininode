@@ -230,7 +230,7 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=286account1" in access
     assert "../styles.css?v=294shell1" in access
-    assert "./styles.css?v=000c8b6808c" in access
+    assert "./styles.css?v=000c8b6808c2" in access
     assert "./app.js?v=e8e82dc999ac" in access
 
 
