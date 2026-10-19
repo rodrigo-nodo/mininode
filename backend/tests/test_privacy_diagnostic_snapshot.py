@@ -223,7 +223,7 @@ def test_claim_associates_new_workspace_site(monkeypatch):
     token = "a" * 43
     user, workspace, site, workspace_site = uuid4(), uuid4(), uuid4(), uuid4()
     executions = fake_connection(monkeypatch, rows=[
-        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True),
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None),
         (1,), (site,), (workspace_site,), (workspace_site,),
     ])
     assert service.claim_anonymous_diagnostic(uuid4(), token, user, workspace) == workspace_site
