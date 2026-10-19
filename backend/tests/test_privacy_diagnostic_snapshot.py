@@ -164,29 +164,32 @@ def test_claim_rejects_invalid_token_without_database_access(monkeypatch):
 
 
 def test_claim_rejects_wrong_proof(monkeypatch):
-    executions = fake_connection(monkeypatch, rows=[("https://example.com/", "0" * 64, None, None, True)])
+    executions = fake_connection(monkeypatch, rows=[("https://example.com/", "0" * 64, None, None)])
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
         service.claim_anonymous_diagnostic(uuid4(), "a" * 43, uuid4(), uuid4())
     assert "pg_advisory_xact_lock" in executions[0][0]
     assert not any("UPDATE privacy.diagnostic" in sql for sql, _ in executions)
 
 
-def test_claim_rejects_expired_proof(monkeypatch):
+def test_free_claim_does_not_check_purchase_expiry(monkeypatch):
     import hashlib
     token = "a" * 43
-    fake_connection(monkeypatch, rows=[
-        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, False),
-        (1,),
+    user, workspace, site, workspace_site = uuid4(), uuid4(), uuid4(), uuid4()
+    executions = fake_connection(monkeypatch, rows=[
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None),
+        (1,), (site,), (workspace_site,), (workspace_site,),
     ])
-    with pytest.raises(service.PrivacyDiagnosticPurchaseExpiredError):
-        service.claim_anonymous_diagnostic(uuid4(), token, uuid4(), uuid4())
+    assert service.claim_anonymous_diagnostic(uuid4(), token, user, workspace) == workspace_site
+    assert not any("purchase_expires_at" in sql for sql, _ in executions)
+
+
 
 
 def test_claim_rejects_unauthorized_workspace(monkeypatch):
     import hashlib
     token = "a" * 43
     fake_connection(monkeypatch, rows=[
-        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None, True),
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), None, None),
         None,
     ])
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
@@ -197,7 +200,7 @@ def test_claim_rejects_other_user_even_in_same_workspace(monkeypatch):
     import hashlib
     token = "a" * 43
     fake_connection(monkeypatch, rows=[
-        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), uuid4(), uuid4(), True),
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), uuid4(), uuid4()),
         (1,),
     ])
     with pytest.raises(service.PrivacyDiagnosticClaimRejectedError):
@@ -209,7 +212,7 @@ def test_claim_is_idempotent_for_original_owner(monkeypatch):
     token = "a" * 43
     owner, site = uuid4(), uuid4()
     fake_connection(monkeypatch, rows=[
-        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), site, owner, True),
+        ("https://example.com/", hashlib.sha256(token.encode()).hexdigest(), site, owner),
         (1,), (1,),
     ])
     assert service.claim_anonymous_diagnostic(uuid4(), token, owner, uuid4()) == site
