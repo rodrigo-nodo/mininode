@@ -338,3 +338,24 @@ test('site grouping review queue forwards only authenticated GET and POST', asyn
   await assertRejected(route + '/approve', 'POST');
   await assertRejected(route.replace(workspace, 'foreign'), 'POST');
 });
+
+
+test('operator review routes only forward strict authenticated read and decisions', async () => {
+  const review = 'df608838-4efc-44e5-8d9c-c1eef6bbb940';
+  const route = '/api/access/operator/site-group-reviews';
+  const decide = `${route}/${review}/decision`;
+  for (const [url, method] of [[route, 'GET'], [decide, 'POST']]) {
+    const response = await request(url, method, {
+      withoutApiKey: true, headers: { Authorization: 'Bearer operator-session' },
+    });
+    assert.equal(response.response.status, 200);
+    assert.equal(response.calls.length, 1);
+    assert.equal(response.calls[0].init.headers.get('Authorization'), 'Bearer operator-session');
+    assert.equal(response.calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  for (const method of ['POST', 'PATCH', 'DELETE']) await assertRejected(route, method);
+  for (const method of ['GET', 'PATCH', 'DELETE']) await assertRejected(decide, method);
+  await assertRejected(decide + '/extra', 'POST');
+  await assertRejected(route + '/all/decision', 'POST');
+  await assertRejected('/api/access/operator/members', 'GET');
+});

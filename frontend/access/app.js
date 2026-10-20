@@ -209,8 +209,15 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
       .map((review) => [review.workspace_site_id, review]),
   );
 
-  const pendingSiteIds = new Set((Array.isArray(groupReviews) ? groupReviews : [])
+  const reviewItems = Array.isArray(groupReviews) ? groupReviews : [];
+  const pendingSiteIds = new Set(reviewItems
     .filter((item) => item.status === 'pending')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  const approvedSiteIds = new Set(reviewItems
+    .filter((item) => item.status === 'approved')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  const rejectedSiteIds = new Set(reviewItems
+    .filter((item) => item.status === 'rejected')
     .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
   selectedSiteReviewIds = new Set([...selectedSiteReviewIds].filter((id) => sites.some((site) => site.id === id)));
 
@@ -241,11 +248,12 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
     }
     main.append(link);
 
-    if (pendingSiteIds.has(site.id)) {
-      const pending = document.createElement('p');
-      pending.className = 'site-review-meta';
-      pending.textContent = 'Agrupación pendiente de validación';
-      main.append(pending);
+    if (pendingSiteIds.has(site.id) || approvedSiteIds.has(site.id) || rejectedSiteIds.has(site.id)) {
+      const state = document.createElement('p');
+      state.className = 'site-review-meta';
+      state.textContent = pendingSiteIds.has(site.id) ? 'Agrupación pendiente de validación'
+        : approvedSiteIds.has(site.id) ? 'Agrupación aprobada' : 'Agrupación rechazada';
+      main.append(state);
     }
 
     const review = reviewsBySite.get(site.id);

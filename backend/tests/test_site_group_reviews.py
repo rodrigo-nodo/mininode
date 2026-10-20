@@ -1,12 +1,15 @@
 """Workspace-safe operator review requests without any identity or billing mutations."""
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import psycopg
 import pytest
 
-from mininode_api.services import access, billing, site_group_reviews as reviews
+from mininode_api.services import (access, billing, privacy_correction_plan,
+    privacy_correction_plan_order, privacy_diagnostic_snapshot,
+    site_group_operator as operator, site_group_reviews as reviews)
 
 
 @pytest.fixture
@@ -20,6 +23,13 @@ def workspace_pair():
            "20261020_access_site_group_review_requests.sql").read_text()
     with psycopg.connect(url) as db:
         db.execute(sql)
+        for name in ("20261019_access_site_aliases.sql",
+                     "20261020_access_site_reconciliations.sql",
+                     "20261020_access_site_group_operator.sql"):
+            db.execute((Path(__file__).resolve().parents[1] / "migrations" / name).read_text())
+    privacy_diagnostic_snapshot.initialize_database()
+    privacy_correction_plan.initialize_database()
+    privacy_correction_plan_order.initialize_database()
 
     user, other, workspace, foreign_workspace = (uuid4() for _ in range(4))
     first_site, second_site, foreign_site = (uuid4() for _ in range(3))
@@ -54,13 +64,28 @@ def workspace_pair():
              second_link, workspace, second_site,
              foreign_link, foreign_workspace, foreign_site),
         )
-    yield dict(
+    tracked = dict(
         url=url, user=user, other=other, workspace=workspace,
         foreign_workspace=foreign_workspace, first=first_link,
         second=second_link, foreign=foreign_link,
         site_ids=[first_site, second_site, foreign_site],
+        legacy_diagnostics=[], legacy_orders=[],
     )
+    yield tracked
     with psycopg.connect(url) as db:
+        # The historical order FKs must be removed BEFORE their diagnostic rows.
+        db.execute("DELETE FROM privacy.correction_plan_order WHERE id = ANY(%s)",
+                   (tracked["legacy_orders"],))
+        db.execute("DELETE FROM privacy.diagnostic WHERE id = ANY(%s)",
+                   (tracked["legacy_diagnostics"],))
+        db.execute("DELETE FROM billing.orders WHERE workspace_site_id IN (%s,%s,%s)",
+                   (first_link, second_link, foreign_link))
+        db.execute("DELETE FROM access.site_group_operator_merges WHERE workspace_id=%s", (workspace,))
+        db.execute("DELETE FROM access.site_aliases WHERE site_id = ANY(%s)", ([first_site, second_site, foreign_site],))
+        db.execute("DELETE FROM privacy.diagnostic WHERE workspace_site_id IN (%s,%s,%s)",
+                   (first_link, second_link, foreign_link))
+        db.execute("DELETE FROM access.entitlements WHERE workspace_site_id IN (%s,%s,%s)",
+                   (first_link, second_link, foreign_link))
         db.execute("DELETE FROM access.site_group_review_requests WHERE workspace_id=%s", (workspace,))
         db.execute("DELETE FROM access.workspace_sites WHERE id IN (%s,%s,%s)",
                    (first_link, second_link, foreign_link))
@@ -184,3 +209,318 @@ def test_database_rejects_cross_workspace_review_even_if_service_is_bypassed(wor
             "SELECT COUNT(*) FROM access.site_group_review_requests WHERE workspace_id=%s",
             (p["workspace"],),
         ).fetchone()[0] == 0
+
+
+def _prepare_operator_pair(pair):
+    """Use a uniquely named apex/www pair and persist source evidence."""
+    apex = "group-" + pair["first"].hex + ".cl"
+    alias = "www." + apex
+    with psycopg.connect(pair["url"]) as db:
+        db.execute("UPDATE access.sites SET hostname=%s WHERE id=%s",
+                   (apex, pair["site_ids"][0]))
+        db.execute("UPDATE access.sites SET hostname=%s WHERE id=%s",
+                   (alias, pair["site_ids"][1]))
+    return apex, alias
+
+
+def test_operator_approval_moves_only_noncommercial_history_and_keeps_audit(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a, b: (alias, apex))
+    diagnostic_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(id,site_url,requested_url,diagnostic_snapshot,
+                    score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,%s,'{}'::jsonb,72,NOW() + INTERVAL '1 day',%s)
+        """, (diagnostic_id, "https://" + apex, "https://" + alias, p["second"]))
+    result = operator.decide(request.id, p["user"], "approved", "Redirección HTTPS verificada")
+    assert result["status"] == "approved" and result["moved_diagnostics"] == 1
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute(
+            "SELECT workspace_site_id FROM privacy.diagnostic WHERE id=%s",
+            (diagnostic_id,),
+        ).fetchone()[0] == p["first"]
+        assert db.execute(
+            "SELECT detached_at IS NOT NULL FROM access.workspace_sites WHERE id=%s",
+            (p["second"],),
+        ).fetchone()[0] is True
+        assert db.execute(
+            "SELECT site_id FROM access.site_aliases WHERE hostname=%s",
+            (alias,),
+        ).fetchone()[0] == p["site_ids"][0]
+        assert db.execute(
+            "SELECT source_site_snapshot->>'hostname' FROM access.site_group_operator_merges WHERE review_id=%s",
+            (request.id,),
+        ).fetchone()[0] == alias
+        assert db.execute(
+            "SELECT status,reviewed_by_user_id FROM access.site_group_review_requests WHERE id=%s",
+            (request.id,),
+        ).fetchone() == ("approved", p["user"])
+    assert access.follow_site(p["user"], p["workspace"], "https://" + alias).id == p["first"]
+    assert [r.status for r in reviews.list_review_requests(p["user"], p["workspace"])] == ["approved"]
+    with pytest.raises(operator.OperatorConflict):
+        operator.decide(request.id, p["user"], "approved", "Second approval")
+
+
+def test_operator_reject_audits_without_merging(workspace_pair, monkeypatch):
+    p = workspace_pair
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a, b: (_ for _ in ()).throw(AssertionError("unexpected probe")))
+    result = operator.decide(request.id, p["user"], "rejected", "No corresponde")
+    assert result == {"id": request.id, "status": "rejected", "moved_diagnostics": 0}
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute("SELECT count(*) FROM access.site_group_operator_merges WHERE review_id=%s",
+                          (request.id,)).fetchone()[0] == 0
+        assert db.execute("SELECT count(*) FROM access.workspace_sites WHERE workspace_id=%s AND detached_at IS NULL",
+                          (p["workspace"],)).fetchone()[0] == 2
+
+
+def test_operator_rejects_commercial_pair_without_side_effects(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a, b: (alias, apex))
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO access.entitlements (id,workspace_site_id,product_code,
+                    active_from,active_until,status,source)
+            VALUES (%s,%s,'privacy_web',NOW(),NOW()+INTERVAL '1 month','active','test')
+        """, (uuid4(), p["second"]))
+    with pytest.raises(operator.OperatorConflict, match="entitlements"):
+        operator.decide(request.id, p["user"], "approved", "Verificado, pero contratado")
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute("SELECT status FROM access.site_group_review_requests WHERE id=%s",
+                          (request.id,)).fetchone()[0] == "pending"
+        assert db.execute("SELECT count(*) FROM access.site_group_operator_merges WHERE review_id=%s",
+                          (request.id,)).fetchone()[0] == 0
+
+
+def test_operator_fails_closed_without_proven_redirect(workspace_pair, monkeypatch):
+    p = workspace_pair
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: None)
+    with pytest.raises(operator.OperatorConflict, match="evidencia"):
+        operator.decide(request.id, p["user"], "approved", "Sin prueba")
+    assert reviews.list_review_requests(p["user"], p["workspace"])[0].status == "pending"
+
+
+def test_operator_notification_requires_configuration_and_is_idempotent(workspace_pair, monkeypatch):
+    p = workspace_pair
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    assert operator.notify_pending(request.id) is False
+    monkeypatch.setenv("RESEND_API_KEY", "test-only")
+    monkeypatch.setenv("MININODE_CONTACT_EMAIL", "contacto@example.test")
+    monkeypatch.setenv("MININODE_REVIEW_FROM_EMAIL", "notifications@example.test")
+    sent = []
+    class Response:
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    monkeypatch.setattr(operator, "urlopen", lambda req, timeout: sent.append(req) or Response())
+    assert operator.notify_pending(request.id) is True
+    assert operator.notify_pending(request.id) is False
+    assert len(sent) == 1
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute("SELECT notification_sent_at IS NOT NULL FROM access.site_group_review_requests WHERE id=%s",
+                          (request.id,)).fetchone()[0] is True
+
+
+def _legacy_order(pair, *, diagnostic_site=None, stored_site_url=None,
+                  requested_url=None, order_url=None):
+    """Persist a genuine historical order; all IDs are tracked for cleanup."""
+    diagnostic_id, order_id = uuid4(), uuid4()
+    inspected = stored_site_url or "https://unrelated.example"
+    with psycopg.connect(pair["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(
+                id, site_url, requested_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id)
+            VALUES (%s,%s,%s,'{}'::jsonb,65,NOW()+INTERVAL '1 day',%s)
+        """, (diagnostic_id, inspected, requested_url, diagnostic_site))
+        db.execute("""
+            INSERT INTO privacy.correction_plan_order(
+                id, diagnostic_id, site_url, email, product_code,
+                amount, currency, status)
+            VALUES (%s,%s,%s,'historical@example.test','PRIVACY_CORRECTION_PLAN',
+                    9900,'CLP','pending_payment')
+        """, (order_id, diagnostic_id, order_url or inspected))
+    pair["legacy_diagnostics"].append(diagnostic_id)
+    pair["legacy_orders"].append(order_id)
+    return diagnostic_id, order_id
+
+
+def _assert_unmodified(pair, review, diagnostic_id=None):
+    with psycopg.connect(pair["url"]) as db:
+        assert db.execute(
+            "SELECT status,reviewed_at FROM access.site_group_review_requests WHERE id=%s",
+            (review.id,),
+        ).fetchone() == ("pending", None)
+        assert db.execute(
+            "SELECT COUNT(*) FROM access.site_group_operator_merges WHERE review_id=%s",
+            (review.id,),
+        ).fetchone()[0] == 0
+        assert db.execute(
+            "SELECT COUNT(*) FROM access.site_aliases WHERE site_id=%s",
+            (pair["site_ids"][0],),
+        ).fetchone()[0] == 0
+        assert db.execute(
+            "SELECT detached_at FROM access.workspace_sites WHERE id=%s",
+            (pair["second"],),
+        ).fetchone()[0] is None
+        if diagnostic_id is not None:
+            assert db.execute(
+                "SELECT workspace_site_id FROM privacy.diagnostic WHERE id=%s",
+                (diagnostic_id,),
+            ).fetchone()[0] == pair["second"]
+
+
+def test_historical_order_by_diagnostic_id_blocks_even_with_unrelated_urls(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diagnostic_id, _ = _legacy_order(p, diagnostic_site=p["second"],
+                                      stored_site_url="https://completely-different.example",
+                                      order_url="http://legacy-other.example/order")
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diagnostic_id)
+
+
+@pytest.mark.parametrize("variant", ["HTTPS://WWW.{alias}:443/path?x=1",
+                                     "http://WWW.{alias}./home"])
+def test_anonymous_historical_orders_block_format_variations(workspace_pair, monkeypatch, variant):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    _legacy_order(p, stored_site_url="https://unrelated.example",
+                  order_url=variant.format(alias=alias.replace("www.", "")))
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)
+
+
+def test_ambiguous_legacy_commercial_url_is_fail_closed(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    _legacy_order(p, order_url="invalid hostname with spaces")
+    with pytest.raises(operator.OperatorConflict, match="URL ambigua"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)
+
+
+def test_concurrent_commercial_write_prevents_approval_and_is_detected_after_commit(workspace_pair, monkeypatch):
+    """Two real PostgreSQL connections: a ROW EXCLUSIVE writer wins, operator fails closed."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diagnostic_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(
+                id, site_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,65,NOW()+INTERVAL '1 day',%s)
+        """, (diagnostic_id, "https://" + alias, p["second"]))
+    # The real Billing insert takes ROW EXCLUSIVE; approval's SHARE NOWAIT
+    # cannot pass while that transaction remains uncommitted.
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("""
+            INSERT INTO billing.orders(
+                id, workspace_site_id, diagnostic_id, product_code,
+                amount, currency, status)
+            VALUES (%s,%s,%s,'privacy_web',9900,'CLP','pending')
+        """, (uuid4(), p["second"], diagnostic_id))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(operator.decide, request.id, p["user"], "approved",
+                                 "Redirección comprobada")
+            with pytest.raises(operator.OperatorConflict, match="concurrente"):
+                future.result(timeout=8)
+        _assert_unmodified(p, request, diagnostic_id)
+    with pytest.raises(operator.OperatorConflict, match="órdenes"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diagnostic_id)
+
+
+def test_concurrent_billing_site_lock_cannot_deadlock_operator(workspace_pair, monkeypatch):
+    """Reproduce billing.create_order's order: site FOR UPDATE, then orders INSERT."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("SELECT id FROM access.workspace_sites WHERE id=%s FOR UPDATE",
+                       (p["second"],))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(operator.decide, request.id, p["user"], "approved",
+                                 "Redirección comprobada")
+            with pytest.raises(operator.OperatorConflict, match="modificados"):
+                future.result(timeout=8)
+    _assert_unmodified(p, request)
+
+
+def test_real_billing_create_order_serializes_against_operator(workspace_pair, monkeypatch):
+    """Use production Billing API on a separate connection during operator approval."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diag_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,
+                    score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,72,NOW()+INTERVAL '1 day',%s)
+        """, (diag_id, "https://" + alias, p["second"]))
+    with psycopg.connect(p["url"]) as writer:
+        # Exactly the row lock that the real billing.create_order acquires.
+        writer.execute("SELECT id FROM access.workspace_sites WHERE id=%s FOR UPDATE",
+                       (p["second"],))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(billing.create_order, p["user"], p["second"], diag_id)
+            with pytest.raises(operator.OperatorConflict, match="modificados"):
+                operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+            # Release the row lock so the authentic Billing operation can finish.
+            writer.commit()
+            order = future.result(timeout=8)
+            assert order.workspace_site_id == p["second"]
+    with pytest.raises(operator.OperatorConflict, match="órdenes"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diag_id)
+
+
+def test_concurrent_legacy_order_write_prevents_operator_approval(workspace_pair, monkeypatch):
+    """The legacy flow writes the same guarded order table even without workspace links."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diag_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,
+                    score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,72,NOW()+INTERVAL '1 day',NULL)
+        """, (diag_id, "https://" + alias))
+    p["legacy_diagnostics"].append(diag_id)
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("""
+            INSERT INTO privacy.correction_plan_order (
+                id,diagnostic_id,site_url,email,product_code,amount,currency,status)
+            VALUES (%s,%s,%s,'historical@example.test','PRIVACY_CORRECTION_PLAN',
+                    9900,'CLP','pending_payment')
+        """, (order_id := uuid4(), diag_id, "https://" + alias))
+        p["legacy_orders"].append(order_id)
+        with pytest.raises(operator.OperatorConflict, match="concurrente"):
+            operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+        writer.commit()
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)

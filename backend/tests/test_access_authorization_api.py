@@ -12,7 +12,7 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.main import create_app  # noqa: E402
-from mininode_api.services import access, access_identity, site_group_reviews  # noqa: E402
+from mininode_api.services import access, access_identity, site_group_reviews, site_group_operator  # noqa: E402
 
 
 @pytest.fixture
@@ -451,3 +451,46 @@ def test_site_group_review_endpoint_is_authenticated_workspace_scoped(client, mo
     other_url = f"/access/workspaces/{uuid4()}/site-group-reviews"
     assert client.post(other_url, json=body, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
     assert client.get(other_url, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
+
+
+def test_operator_api_is_fail_closed_and_resolves_only_verified_operator(client, monkeypatch):
+    _verified_user(monkeypatch)
+    review_id = uuid4()
+    headers = {"Cf-Access-Jwt-Assertion": "signed-token"}
+    url = "/access/operator/site-group-reviews"
+    decision_url = f"{url}/{review_id}/decision"
+    body = {"decision": "rejected", "note": "No hay redirección estable"}
+    calls = []
+    monkeypatch.setattr(site_group_operator, "list_operator_reviews",
+                        lambda: calls.append("list") or [])
+    monkeypatch.setattr(site_group_operator, "decide",
+                        lambda rid, uid, decision, note:
+                        calls.append(("decide", rid, uid, decision, note))
+                        or {"id": rid, "status": decision, "moved_diagnostics": 0})
+    monkeypatch.delenv("MININODE_REVIEW_OPERATOR_EMAILS", raising=False)
+    assert client.get(url).status_code == 401
+    assert client.get(url, headers=headers).status_code == 403
+    assert client.post(decision_url, json=body, headers=headers).status_code == 403
+    assert calls == []
+    monkeypatch.setenv("MININODE_REVIEW_OPERATOR_EMAILS", "other@example.test,PERSON@example.com")
+    allowed = client.get(url, headers=headers)
+    assert allowed.status_code == 200 and allowed.json() == {"reviews": []}
+    decided = client.post(decision_url, json=body, headers=headers)
+    assert decided.status_code == 200 and decided.json()["status"] == "rejected"
+    assert len(calls) == 2
+    assert calls[1][1] == review_id
+
+
+def test_operator_api_handles_conflicts_without_leaking_data(client, monkeypatch):
+    _verified_user(monkeypatch)
+    monkeypatch.setenv("MININODE_REVIEW_OPERATOR_EMAILS", "person@example.com")
+    monkeypatch.setattr(site_group_operator, "decide",
+                        lambda *args: (_ for _ in ()).throw(
+                            site_group_operator.OperatorConflict("Pago existente")
+                        ))
+    review_id = uuid4()
+    res = client.post(f"/access/operator/site-group-reviews/{review_id}/decision",
+                      json={"decision": "approved", "note": "Evidencia comprobada"},
+                      headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert res.status_code == 409
+    assert res.json()["detail"] == "Pago existente"

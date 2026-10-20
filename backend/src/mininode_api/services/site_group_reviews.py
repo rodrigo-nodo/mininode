@@ -77,7 +77,9 @@ def create_review_request(
                      requested_at = CURRENT_TIMESTAMP,
                      invalidated_at = NULL,
                      review_note = NULL,
-                     reviewed_at = NULL
+                     reviewed_at = NULL,
+                     reviewed_by_user_id = NULL,
+                     notification_sent_at = NULL
                WHERE access.site_group_review_requests.status = 'invalidated'""",
             (uuid4(), workspace_id, first, second, user_id),
         )
@@ -105,12 +107,12 @@ def list_review_requests(user_id: UUID, workspace_id: UUID) -> tuple[SiteGroupRe
                JOIN access.workspace_sites s1
                  ON s1.id = r.first_workspace_site_id
                 AND s1.workspace_id = r.workspace_id
-                AND s1.detached_at IS NULL
                JOIN access.workspace_sites s2
                  ON s2.id = r.second_workspace_site_id
                 AND s2.workspace_id = r.workspace_id
-                AND s2.detached_at IS NULL
                WHERE r.workspace_id = %s
+                 AND ((s1.detached_at IS NULL AND s2.detached_at IS NULL)
+                      OR r.status = 'approved')
                ORDER BY r.requested_at DESC, r.id DESC""",
             (workspace_id,),
         )
