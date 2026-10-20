@@ -32,6 +32,7 @@ APPROVED_CHECKSUMS = {
     "20261019_access_workspace_site_unlink.sql": "022ac4498e2589a5907c8bbb73f8dd4ce1853569924c26a052c4ca82ef128823",
     "20261020_access_site_reconciliations.sql": "ef14698ffdcbb8831ee2d80700a635b7dc47276271aeef4f1eda0ae4336c5ad7",
     "20261020_privacy_requested_url.sql": "c3631156262ae8453895c406b09e193a91fabc2bdc863a1e65a89b5b5e1bd923",
+    "20261020_access_site_group_review_requests.sql": "69c89a4ff858ed81a460eaf76fd3b5016f657957fa1b0c46f0d034c13eccfc93",
 }
 
 def parse_approved(raw: str) -> list[str]:
