@@ -44,8 +44,8 @@ No fusiona fichas ya existentes ni mueve aliases asignados; si ambos hostnames y
 ## Etapa A.5 - Desvincular sitio en un workspace
 Se añade `access.workspace_sites.detached_at` mediante migración aditiva. Desvincular marca **esa asociación** como inactiva en una transacción autorizada y la omite del contexto, acceso al sitio y últimos diagnósticos del workspace. No elimina snapshots, `access.sites`, aliases, ni derechos de otros workspaces.
 
-El backend bloquea desvincular si hay entitlements activos o compras pendientes/pagadas; los errores 404/409 se comunican en frontend. Asociar de nuevo el mismo sitio restaura la relación existente y su historial, no crea una nueva identidad.
+El backend bloquea desvincular si hay entitlements vigentes o compras pendientes. Compras pagadas cuyo período ya expiró no bloquean la operación. Billing impide crear nuevas órdenes sobre sitios desvinculados (serializado por bloqueo de fila); los errores 404/409 se comunican en frontend. Asociar de nuevo el mismo sitio, incluso desde un nuevo guardado gratuito, restaura la relación existente y su historial, no crea una nueva identidad.
 
-**Condición de despliegue:** aplicar primero `20261019_access_workspace_site_unlink.sql` en DEV con Pre-deploy antes de habilitar este código (el bootstrap crea la columna solo en instalaciones nuevas). No habilitar en PROD sin revisión y autorización de migración propia.
+**Condición de despliegue:** DEV tiene autodeploy al merge; NO mergear este PR mientras la allowlist y el despliegue coordinado no estén listos. Deshabilitar temporalmente autodeploy antes de merge, luego lanzar un único despliegue controlado con el commit fusionado y la migración allowlisted en Pre-deploy, comprobando sus logs y el funcionamiento. El bootstrap crea la columna solo en instalaciones nuevas; para BD existente se exige migración previa. No habilitar en PROD sin revisión y autorización de migración propia.
 
 **Límite del experimento gurbana:** desvincular `www.gurbana.cl` y diagnosticarlo nuevamente puede restaurar el mismo sitio global preexistente. Desvincular no fusiona identidades existentes; esa conciliación requiere una tarea separada.
