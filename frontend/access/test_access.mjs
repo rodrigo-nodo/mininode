@@ -349,3 +349,145 @@ test('site grouping request is explicit, pending and does not merge existing acc
   assert.match(app, /Por ahora siguen independientes/);
   assert.doesNotMatch(app, /site-group-reviews.*entitlements/);
 });
+
+
+function groupingHarness({ response = { status: 'pending' }, reject = false, deferred = false } = {}) {
+  const makeElement = (tag = 'div') => ({
+    tag, hidden: false, disabled: false, checked: false, textContent: '',
+    children: [], listeners: new Map(),
+    append(...items) { this.children.push(...items); },
+    replaceChildren(...items) { this.children = [...items]; },
+    setAttribute(name, value) { (this.attributes ||= {})[name] = value; },
+    addEventListener(type, fn) { this.listeners.set(type, fn); },
+  });
+  const siteList = makeElement();
+  const siteReviewButton = makeElement('button');
+  const siteReviewNotice = makeElement('p');
+  const workspacePicker = makeElement('select');
+  const siteEmpty = makeElement();
+  const seen = { requests: [], loads: [], renders: 0 };
+  let resolveRequest;
+  const promise = new Promise((resolve) => { resolveRequest = resolve; });
+  const api = (path, options) => {
+    seen.requests.push({ path, method: options.method, body: JSON.parse(options.body) });
+    if (reject) return Promise.reject(new Error('La revisión de sitios no está disponible.'));
+    return deferred ? promise : Promise.resolve(response);
+  };
+  const workspaceOne = {
+    id: 'w1',
+    sites: [
+      { id: 's1', hostname: 'example.cl' },
+      { id: 's2', hostname: 'www.example.cl' },
+      { id: 's3', hostname: 'other.example' },
+    ],
+  };
+  const workspaceTwo = {
+    id: 'w2', sites: [{ id: 's4', hostname: 'outside.example' }],
+  };
+  const sandbox = {
+    siteList, siteReviewButton, siteReviewNotice, workspacePicker, siteEmpty,
+    document: { createElement: makeElement },
+    window: { confirm: () => true, alert: () => {} },
+    api, context: { workspaces: [workspaceOne, workspaceTwo] },
+    activeWorkspaceId: 'w1',
+    sessionStorage: { getItem: () => null },
+    PENDING_CLAIM_KEY: 'none',
+    renderHome() { seen.renders++; },
+    loadLatestReviews(workspace) { seen.loads.push(workspace.id); },
+    formatReviewDate() { return ''; },
+    encodeURIComponent, console, Set, Map, Array,
+  };
+  const renderBegin = app.indexOf('function updateSiteReviewButton(');
+  const renderEnd = app.indexOf('async function loadLatestReviews(', renderBegin);
+  const eventBegin = app.indexOf("siteReviewButton.addEventListener('click'");
+  const eventEnd = app.indexOf("errorSignOutButton.addEventListener('click'", eventBegin);
+  assert.ok(renderBegin >= 0 && renderEnd > renderBegin && eventBegin >= 0 && eventEnd > eventBegin);
+  const code = [
+    'let selectedSiteReviewIds = new Set();',
+    app.slice(renderBegin, renderEnd),
+    app.slice(eventBegin, eventEnd),
+    'globalThis.render = renderSites;',
+    'globalThis.selectionCount = () => selectedSiteReviewIds.size;',
+  ].join('\n');
+  vm.runInNewContext(code, sandbox);
+  const checkbox = (row) => row.children[0].children.find((node) => node.tag === 'input');
+  return {
+    sandbox, seen, workspaceOne, workspaceTwo, siteList, siteReviewButton,
+    siteReviewNotice, workspacePicker, checkbox, resolveRequest,
+    select(rowIndex, checked) {
+      const node = checkbox(siteList.children[rowIndex]);
+      assert.ok(node, 'row must offer a selection checkbox');
+      node.checked = checked;
+      node.listeners.get('change')();
+    },
+  };
+}
+
+test('grouping action requires exactly two site selections and preserves all cards', () => {
+  const h = groupingHarness();
+  h.sandbox.render(h.workspaceOne, []);
+  assert.equal(h.siteList.children.length, 3);
+  assert.equal(h.siteReviewButton.disabled, true);
+  h.select(0, true);
+  assert.equal(h.siteReviewButton.disabled, true);
+  h.select(1, true);
+  assert.equal(h.siteReviewButton.disabled, false);
+  h.select(2, true);
+  assert.equal(h.siteReviewButton.disabled, true);
+  h.select(2, false);
+  assert.equal(h.siteReviewButton.disabled, false);
+  h.select(0, false);
+  assert.equal(h.siteReviewButton.disabled, true);
+});
+
+test('successful and repeated pending requests show status without merging cards', async () => {
+  const h = groupingHarness();
+  h.sandbox.render(h.workspaceOne);
+  h.select(0, true); h.select(1, true);
+  await h.siteReviewButton.listeners.get('click')();
+  assert.equal(h.seen.requests.length, 1);
+  assert.equal(h.seen.requests[0].path, '/api/access/workspaces/w1/site-group-reviews');
+  assert.deepEqual(h.seen.requests[0].body,
+    { first_workspace_site_id: 's1', second_workspace_site_id: 's2' });
+  assert.match(h.siteReviewNotice.textContent, /Solicitud recibida/);
+  assert.equal(h.siteList.children.length, 3);
+
+  h.sandbox.render(h.workspaceOne, [], [{
+    first_workspace_site_id: 's1', second_workspace_site_id: 's2', status: 'pending',
+  }]);
+  const labels = h.siteList.children[0].children[0].children.map((el) => el.textContent);
+  assert.ok(labels.includes('Agrupación pendiente de validación'));
+  h.select(0, true); h.select(1, true);
+  await h.siteReviewButton.listeners.get('click')();
+  assert.equal(h.seen.requests.length, 2);
+  assert.match(h.siteReviewNotice.textContent, /Solicitud recibida/);
+  assert.equal(h.siteList.children.length, 3);
+});
+
+test('503 before migration leaves user selection available to retry', async () => {
+  const h = groupingHarness({ reject: true });
+  h.sandbox.render(h.workspaceOne);
+  h.select(0, true); h.select(1, true);
+  await h.siteReviewButton.listeners.get('click')();
+  assert.match(h.siteReviewNotice.textContent, /no está disponible/);
+  assert.equal(h.siteReviewButton.disabled, false);
+  assert.equal(h.sandbox.selectionCount(), 2);
+});
+
+test('workspace switch during review submission discards stale success', async () => {
+  const h = groupingHarness({ deferred: true });
+  h.sandbox.render(h.workspaceOne);
+  h.select(0, true); h.select(1, true);
+  const pending = h.siteReviewButton.listeners.get('click')();
+  assert.equal(h.seen.requests.length, 1);
+  h.workspacePicker.value = 'w2';
+  h.workspacePicker.listeners.get('change')();
+  assert.equal(h.sandbox.activeWorkspaceId, 'w2');
+  assert.equal(h.sandbox.selectionCount(), 0);
+  assert.equal(h.siteReviewNotice.textContent, '');
+  assert.equal(h.seen.renders, 1);
+  h.resolveRequest({ status: 'pending' });
+  await pending;
+  assert.deepEqual(h.seen.loads, []);
+  assert.equal(h.siteReviewNotice.textContent, '');
+});
