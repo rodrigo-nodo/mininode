@@ -149,7 +149,8 @@ def _historical_host(value: str | None) -> str | None:
         parsed = urlsplit(raw if "://" in raw else "https://" + raw)
         if not parsed.hostname:
             return None
-        return parsed.hostname.rstrip(".").lower().encode("idna").decode("ascii")
+        hostname = parsed.hostname.rstrip(".").lower().encode("idna").decode("ascii")
+        return access.normalize_site_url(hostname)[0]
     except (ValueError, UnicodeError):
         return None
 
