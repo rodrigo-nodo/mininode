@@ -67,12 +67,14 @@ def reconcile_existing_www(
         )
         cursor.execute(
             """SELECT source_site_id, target_site_id, source_workspace_site_id,
-                      target_workspace_site_id, moved_diagnostics
+                      target_workspace_site_id, moved_diagnostics, workspace_id
                FROM access.site_reconciliations WHERE source_hostname = %s""",
             (alias,),
         )
         old = cursor.fetchone()
         if old is not None:
+            if old[5] != workspace_id:
+                raise ReconciliationBlocked("Reconciliation belongs to another workspace")
             cursor.execute("SELECT id FROM access.sites WHERE hostname = %s", (primary,))
             target = cursor.fetchone()
             if target is None or target[0] != old[1]:
