@@ -6,6 +6,7 @@ import vm from 'node:vm';
 
 const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+const styles = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
 const root = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const coreAuth = await readFile(new URL('../assets/js/core-auth.js', import.meta.url), 'utf8');
 
@@ -298,6 +299,22 @@ test('formats latest review date with Chile time', () => {
   assert.match(app, /hour: '2-digit'/);
   assert.match(app, /minute: '2-digit'/);
   assert.match(app, /hour12: false/);
+});
+
+test('site rows keep result and unlink actions aligned on desktop and reflow on mobile', () => {
+  const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
+  const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
+  assert.ok(html.includes(`./styles.css?v=${stylesheetSha}`), 'Access HTML must refresh cached CSS');
+  assert.match(styles, /\.site-row \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 132px 94px;/);
+  assert.match(styles, /\.site-review-link \{ grid-column: 2; justify-self: start;/);
+  assert.match(styles, /\.site-unlink \{ grid-column: 3; justify-self: end;/);
+  const mobile = styles.slice(styles.indexOf('@media (max-width: 640px)'));
+  assert.match(mobile, /\.site-row \{ grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(mobile, /\.site-row__main \{ grid-column: 1 \/ -1; \}/);
+  assert.match(mobile, /\.site-review-link \{ grid-column: 1; \}/);
+  assert.match(mobile, /\.site-unlink \{ grid-column: 2; \}/);
+  assert.match(app, /row\.append\(main, resultLink\)/);
+  assert.match(app, /row\.append\(unlink\)/);
 });
 
 test('account shows the latest Privacy Web review for each site', () => {
