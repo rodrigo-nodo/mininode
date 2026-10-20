@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import psycopg
 import pytest
+from psycopg.types.json import Jsonb
 
 from mininode_api.services import access, billing
 from mininode_api.services import privacy_diagnostic_snapshot as snapshots
@@ -95,6 +96,20 @@ def run(pair, *, apply=False, verifier=None):
 
 
 def test_dry_run_does_not_write_and_apply_preserves_history(pair):
+    with psycopg.connect(pair["url"]) as db:
+        original_site = db.execute(
+            "SELECT to_jsonb(s) FROM access.sites s WHERE id = %s",
+            (pair["source_site"],),
+        ).fetchone()[0]
+        original_link = db.execute(
+            "SELECT to_jsonb(ws) FROM access.workspace_sites ws WHERE id = %s",
+            (pair["source_ws"],),
+        ).fetchone()[0]
+        original_diagnostics = db.execute(
+            """SELECT id, site_url, score, created_at, diagnostic_snapshot, workspace_site_id
+               FROM privacy.diagnostic WHERE id = ANY(%s) ORDER BY id""",
+            (list(pair["diagnostic_ids"]),),
+        ).fetchall()
     dry = run(pair)
     assert dry.status == "ready"
     assert dry.diagnostics == 1
@@ -127,10 +142,24 @@ def test_dry_run_does_not_write_and_apply_preserves_history(pair):
         assert db.execute(
             "SELECT site_id,verification_method FROM access.site_aliases WHERE hostname = %s", (pair["alias"],)
         ).fetchone() == (pair["primary_site"], "stable_redirect")
-        assert db.execute(
-            "SELECT source_site_id,moved_diagnostics FROM access.site_reconciliations WHERE source_hostname = %s",
+        audit = db.execute(
+            """SELECT source_site_id, moved_diagnostics,
+                      source_site_snapshot, source_workspace_site_snapshot
+               FROM access.site_reconciliations WHERE source_hostname = %s""",
             (pair["alias"],),
-        ).fetchone() == (pair["source_site"], 1)
+        ).fetchone()
+        assert audit[:2] == (pair["source_site"], 1)
+        assert audit[2] == original_site
+        assert audit[3] == original_link
+        assert set(("id", "hostname", "canonical_url", "created_at", "updated_at")) <= set(audit[2])
+        assert set(("id", "site_id", "workspace_id", "created_at", "updated_at", "detached_at")) <= set(audit[3])
+        after_diagnostics = db.execute(
+            """SELECT id, site_url, score, created_at, diagnostic_snapshot, workspace_site_id
+               FROM privacy.diagnostic WHERE id = ANY(%s) ORDER BY id""",
+            (list(pair["diagnostic_ids"]),),
+        ).fetchall()
+        assert [r[:5] for r in after_diagnostics] == [r[:5] for r in original_diagnostics]
+        assert all(r[5] == pair["primary_ws"] for r in after_diagnostics)
         assert site_aliases.resolve_existing_site(db.cursor(), pair["alias"]) == (pair["primary_site"], pair["root"])
 
     assert run(pair).status == "already_reconciled"
@@ -227,10 +256,12 @@ def test_ledger_target_dependency_blocks_source_deletion(pair):
             """INSERT INTO access.site_reconciliations
                (source_site_id,source_hostname,target_site_id,workspace_id,
                 source_workspace_site_id,target_workspace_site_id,
+                source_site_snapshot,source_workspace_site_snapshot,
                 moved_diagnostics,evidence_method)
-               VALUES (%s,%s,%s,%s,%s,%s,0,'stable_redirect')""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,0,'stable_redirect')""",
             (uuid4(), "already-reconciled-" + pair["root"],
-             pair["source_site"], pair["workspace"], uuid4(), pair["source_ws"]),
+             pair["source_site"], pair["workspace"], uuid4(), pair["source_ws"],
+             Jsonb({"id": str(pair["source_site"])}), Jsonb({"id": str(pair["source_ws"])})),
         )
     try:
         with pytest.raises(merge.ReconciliationBlocked, match="historical reconciliation target"):
@@ -239,3 +270,43 @@ def test_ledger_target_dependency_blocks_source_deletion(pair):
         with psycopg.connect(pair["url"]) as db:
             db.execute("DELETE FROM access.site_reconciliations WHERE source_hostname=%s",
                        ("already-reconciled-" + pair["root"],))
+
+
+@pytest.mark.parametrize("on_delete", ["CASCADE", "SET NULL"])
+def test_unexpected_workspace_site_fk_blocks_without_losing_references(pair, on_delete):
+    """The source link must never be removed if a new consumer appears."""
+    table = "reconcile_unknown_fk_" + uuid4().hex
+    with psycopg.connect(pair["url"]) as db:
+        db.execute(
+            f"""CREATE TABLE public.{table} (
+                  id INTEGER PRIMARY KEY,
+                  workspace_site_id UUID REFERENCES access.workspace_sites(id)
+                    ON DELETE {on_delete}
+                )"""
+        )
+        db.execute(
+            f"INSERT INTO public.{table} (id, workspace_site_id) VALUES (1, %s)",
+            (pair["source_ws"],),
+        )
+    try:
+        with pytest.raises(merge.ReconciliationBlocked, match="Unexpected dependencies reference access.workspace_sites"):
+            run(pair, apply=True)
+        with psycopg.connect(pair["url"]) as db:
+            assert db.execute(
+                f"SELECT workspace_site_id FROM public.{table} WHERE id = 1"
+            ).fetchone() == (pair["source_ws"],)
+            assert db.execute(
+                "SELECT id FROM access.workspace_sites WHERE id = %s",
+                (pair["source_ws"],),
+            ).fetchone() == (pair["source_ws"],)
+            assert db.execute(
+                "SELECT workspace_site_id FROM privacy.diagnostic WHERE id = %s",
+                (pair["diagnostic_ids"][1],),
+            ).fetchone() == (pair["source_ws"],)
+            assert db.execute(
+                "SELECT count(*) FROM access.site_reconciliations WHERE source_site_id = %s",
+                (pair["source_site"],),
+            ).fetchone()[0] == 0
+    finally:
+        with psycopg.connect(pair["url"]) as db:
+            db.execute(f"DROP TABLE IF EXISTS public.{table}")
