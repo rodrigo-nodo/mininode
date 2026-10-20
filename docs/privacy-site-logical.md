@@ -53,3 +53,19 @@ El backend bloquea desvincular si hay entitlements vigentes o compras pendientes
 ## Corrección DEV - Transporte de desvinculación
 
 La acción web «Desvincular» utiliza `POST /access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink`, autenticada y restringida en el proxy Cloudflare, como alternativa al DELETE original conservado para compatibilidad. Ambas rutas invocan exactamente el mismo servicio transaccional y responden 204 al éxito. El frontend diferencia problemas al obtener token, fallos de conexión y fallos de refresco posteriores al éxito: si la desvinculación tuvo éxito pero el contexto no se actualizó, no se informa como operación fallida. Este cambio no requiere migración adicional ni modifica scoring o Billing.
+
+## Etapa A.6 - Conciliación controlada de dos identidades preexistentes
+
+Se añade un servicio interno y un script de operador, **sin endpoint público ni ejecución automática**. Por defecto solo presenta el plan: `python scripts/reconcile_existing_www.py --workspace-id UUID --primary ejemplo.cl --alias www.ejemplo.cl`. El modo `--apply` requiere una confirmación literal `--confirm UUID:ejemplo.cl:www.ejemplo.cl`; el script rechaza bases distintas de DEV o `mininode_test`. **Ningún dato real de DEV se reconcilia por instalar el código ni por ejecutar la migración aditiva.**
+
+Condiciones obligatorias (fail closed):
+- Dos filas principales existentes, `raíz` y `www` normalizados, redirección HTTPS estable comprobada mediante el inspector pasivo con protección SSRF.
+- Exactamente un `workspace_site` por identidad, ambos exclusivos del mismo workspace; principal activo y secundario ya desvinculado; sin `company_id`.
+- Ninguna compra u entitlement en cualquiera de los dos sitios, **incluso histórico**; ninguna relación de alias dependiente de la identidad secundaria ni hostname alias ocupado.
+- Sin relaciones foráneas desconocidas contra `access.sites` **ni `access.workspace_sites`**; se comprueban tablas y columnas de las dependencias conocidas. Se rechazan nuevas referencias, incluso `ON DELETE CASCADE` o `ON DELETE SET NULL`, antes de cualquier eliminación. Bloqueo transaccional por par raíz/www compartido con la asociación de sitios para impedir carreras.
+
+Tras **aprobación operativa específica** y una segunda verificación en la misma transacción, se reasignan únicamente los diagnósticos del `workspace_site` secundario al principal (sin modificar URL inspeccionada, score, contenido ni fecha), se retira la asociación e identidad global secundarias ya vacías, se registra `www` como alias verificado del principal y se registra el ID/hostname original, destino, workspace, IDs de asociación, **copias JSONB completas de las dos filas originales** (incluyendo `canonical_url`, `created_at`, `updated_at`, `detached_at`), cantidad de revisiones y método de evidencia en `access.site_reconciliations`, antes de eliminar dichas filas.
+
+Se eliminan dos filas **estructurales** obsoletas (`workspace_sites` secundario y `sites` secundario) solo luego de trasladar las referencias admitidas. Sus identificadores y metadatos originales completos quedan preservados en el registro de conciliación; los snapshots de diagnósticos, fechas, scores y evidencias permanecen intactos. Cualquier excepción provoca rollback completo. El resolver sigue la identidad principal, y la consulta de última revisión ya existente obtiene el score más reciente.
+
+La migración `20261020_access_site_reconciliations.sql` solo crea la tabla de trazabilidad y está catalogada con checksum. Debe ejecutarse **de forma coordinada** en DEV, no en PROD. Auto-Deploy DEV continúa desactivado. La futura aplicación concreta para `gurbana.cl` requiere primero dry-run comprobable en DEV y autorización adicional; no modificar datos reales ni habilitar despliegue PROD en esta etapa.

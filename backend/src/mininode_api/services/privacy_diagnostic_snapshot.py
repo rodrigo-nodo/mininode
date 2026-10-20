@@ -202,7 +202,8 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         # Free account saving is independent of the commercial purchase window.
         # Proof remains single-claim and workspace-authorized even after 24 hours.
         hostname, canonical_url = _normalize_claim_url(site_url)
-        from mininode_api.services.site_aliases import resolve_existing_site
+        from mininode_api.services.site_aliases import lock_www_pair, resolve_existing_site
+        lock_www_pair(cursor, hostname)
         existing = resolve_existing_site(cursor, hostname)
         if existing is None:
             from mininode_api.services.site_aliases import register_verified_www_alias
