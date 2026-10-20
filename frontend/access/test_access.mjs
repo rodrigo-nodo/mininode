@@ -395,6 +395,7 @@ function groupingHarness({ response = { status: 'pending' }, reject = false, def
     renderHome() { seen.renders++; },
     loadLatestReviews(workspace) { seen.loads.push(workspace.id); },
     formatReviewDate() { return ''; },
+    setVisible(element, visible) { element.hidden = !visible; },
     encodeURIComponent, console, Set, Map, Array,
   };
   const renderBegin = app.indexOf('function updateSiteReviewButton(');
