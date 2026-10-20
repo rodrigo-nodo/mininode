@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from psycopg.types.json import Jsonb
+
 from mininode_api.services import access
 from mininode_api.services.site_equivalence import inspect_www_equivalence
 
@@ -143,6 +145,42 @@ def reconcile_existing_www(
         if cursor.fetchone()[0]:
             raise ReconciliationBlocked("Secondary site is a historical reconciliation target")
 
+        # Inspect ALL foreign keys referencing the association we will remove.
+        # Only known columns may reference its ID. A new FK with CASCADE or
+        # SET NULL must be noticed here rather than silently changing data.
+        cursor.execute(
+            """SELECT c.conrelid::regclass::text, a.attname,
+                      array_length(c.conkey, 1), ref_att.attname
+               FROM pg_constraint AS c
+               LEFT JOIN pg_attribute AS a
+                 ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+               LEFT JOIN pg_attribute AS ref_att
+                 ON ref_att.attrelid = c.confrelid AND ref_att.attnum = c.confkey[1]
+               WHERE c.contype = 'f'
+                 AND c.confrelid = 'access.workspace_sites'::regclass"""
+        )
+        permitted = {
+            ("privacy.diagnostic", "workspace_site_id"),
+            ("access.entitlements", "workspace_site_id"),
+            ("billing.orders", "workspace_site_id"),
+            ("access.site_reconciliations", "target_workspace_site_id"),
+        }
+        fk_dependencies = cursor.fetchall()
+        if any(
+            (table, column) not in permitted or key_columns != 1 or referenced_column != "id"
+            for table, column, key_columns, referenced_column in fk_dependencies
+        ):
+            raise ReconciliationBlocked("Unexpected dependencies reference access.workspace_sites")
+        cursor.execute(
+            """SELECT EXISTS (
+                 SELECT 1 FROM access.site_reconciliations
+                 WHERE target_workspace_site_id = %s
+               )""",
+            (source_link[0],),
+        )
+        if cursor.fetchone()[0]:
+            raise ReconciliationBlocked("Secondary association is a historical reconciliation target")
+
         cursor.execute(
             """SELECT EXISTS (
                  SELECT 1 FROM access.entitlements e
@@ -180,6 +218,35 @@ def reconcile_existing_www(
         if not apply:
             return result
 
+        # Record complete source rows before structural deletion, including
+        # canonical URL, creation/update times and detachment timestamp.
+        # All statements share one transaction; any later error rolls back
+        # both history rewiring and the audit entry.
+        cursor.execute(
+            "SELECT to_jsonb(s) FROM access.sites AS s WHERE id = %s",
+            (source_id,),
+        )
+        original_site = cursor.fetchone()
+        cursor.execute(
+            "SELECT to_jsonb(ws) FROM access.workspace_sites AS ws WHERE id = %s",
+            (source_link[0],),
+        )
+        original_association = cursor.fetchone()
+        if original_site is None or original_association is None:
+            raise ReconciliationBlocked("Source metadata disappeared during reconciliation")
+        cursor.execute(
+            """INSERT INTO access.site_reconciliations
+               (source_site_id, source_hostname, target_site_id, workspace_id,
+                source_workspace_site_id, target_workspace_site_id,
+                source_site_snapshot, source_workspace_site_snapshot,
+                moved_diagnostics, evidence_method)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'stable_redirect')""",
+            (
+                source_id, alias, target_id, workspace_id,
+                source_link[0], primary_link[0],
+                Jsonb(original_site[0]), Jsonb(original_association[0]), count,
+            ),
+        )
         cursor.execute(
             """UPDATE privacy.diagnostic SET workspace_site_id = %s
                WHERE workspace_site_id = %s""",
@@ -198,13 +265,5 @@ def reconcile_existing_www(
                  (id, site_id, hostname, verification_method)
                VALUES (gen_random_uuid(), %s, %s, 'stable_redirect')""",
             (target_id, alias),
-        )
-        cursor.execute(
-            """INSERT INTO access.site_reconciliations
-               (source_site_id, source_hostname, target_site_id, workspace_id,
-                source_workspace_site_id, target_workspace_site_id,
-                moved_diagnostics, evidence_method)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, 'stable_redirect')""",
-            (source_id, alias, target_id, workspace_id, source_link[0], primary_link[0], count),
         )
         return result
