@@ -134,13 +134,23 @@ function showError(message) {
 }
 
 async function api(path, options = {}) {
-  const token = await mininodeAuth.getToken();
+  let token;
+  try {
+    token = await mininodeAuth.getToken();
+  } catch {
+    throw new Error('No pudimos renovar tu sesión. Recarga la página y vuelve a intentarlo.');
+  }
   if (!token) throw new Error('Tu sesión ya no está disponible. Vuelve a acceder.');
 
-  const response = await fetch(path, {
-    ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...(options.headers || {}) },
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+    });
+  } catch {
+    throw new Error('No pudimos conectar con Mininode. Revisa tu conexión e inténtalo nuevamente.');
+  }
   if (!response.ok) {
     if (response.status === 401) throw new Error('Tu sesión ya no puede validarse. Cierra la sesión y vuelve a acceder.');
     if (response.status === 503) throw new Error('El servicio de acceso está temporalmente no disponible.');
@@ -235,12 +245,18 @@ function renderSites(workspace, reviews = []) {
       if (!window.confirm(`¿Desvincular ${site.hostname} de este espacio? Los diagnósticos se conservan.`)) return;
       unlink.disabled = true;
       try {
-        await api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/sites/${encodeURIComponent(site.id)}`, { method: 'DELETE' });
-        context = await api('/api/access/context');
-        renderHome();
+        await api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/sites/${encodeURIComponent(site.id)}/unlink`, { method: 'POST' });
       } catch (error) {
         unlink.disabled = false;
         window.alert(error instanceof Error ? error.message : 'No pudimos desvincular el sitio.');
+        return;
+      }
+      try {
+        context = await api('/api/access/context');
+        renderHome();
+      } catch {
+        unlink.disabled = false;
+        window.alert('El sitio fue desvinculado, pero no pudimos actualizar la lista. Recarga la página.');
       }
     });
     row.append(unlink);

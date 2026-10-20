@@ -299,3 +299,24 @@ test('only DELETE on exact authorized workspace-site path is proxied with bearer
   await assertRejected(path + '/other', 'DELETE');
   await assertRejected('/api/access/workspaces/' + workspace + '/sites/', 'DELETE');
 });
+
+test('accepts only POST on protected unlink action and forwards Clerk bearer', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const site = 'cc285ffb-ab8a-4c5e-b333-76b9f7af224f';
+  const route = `/api/access/workspaces/${workspace}/sites/${site}/unlink`;
+  const response = await request(route, 'POST', {
+    withoutApiKey: true,
+    upstreamStatus: 204,
+    headers: { Authorization: 'Bearer valid-clerk-session' },
+  });
+  assert.equal(response.response.status, 204);
+  assert.equal(response.json, null);
+  assert.equal(response.calls.length, 1);
+  assert.equal(response.calls[0].url, `https://backend.example/access/workspaces/${workspace}/sites/${site}/unlink`);
+  assert.equal(response.calls[0].init.method, 'POST');
+  assert.equal(response.calls[0].init.headers.get('Authorization'), 'Bearer valid-clerk-session');
+  assert.equal(response.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['GET', 'PATCH', 'DELETE', 'PUT']) await assertRejected(route, method);
+  await assertRejected(route + '/anything', 'POST');
+  await assertRejected(route.replace('/unlink', '/other'), 'POST');
+});
