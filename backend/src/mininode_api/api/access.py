@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from mininode_api.core.access_auth import require_access_user
-from mininode_api.services import access
+from mininode_api.services import access, site_group_reviews
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,22 @@ class AccessFollowSiteResponse(BaseModel):
     id: UUID
     site_id: UUID
     hostname: str
+
+
+class SiteGroupReviewRequest(BaseModel):
+    first_workspace_site_id: UUID
+    second_workspace_site_id: UUID
+
+
+class SiteGroupReviewResponse(BaseModel):
+    id: UUID
+    first_workspace_site_id: UUID
+    second_workspace_site_id: UUID
+    status: str
+
+
+class SiteGroupReviewListResponse(BaseModel):
+    reviews: list[SiteGroupReviewResponse]
 
 
 class AccessOnboardingResponse(BaseModel):
@@ -102,6 +118,54 @@ def access_follow_site(
     if site is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
     return AccessFollowSiteResponse(id=site.id, site_id=site.site_id, hostname=site.hostname)
+
+
+@router.post(
+    "/workspaces/{workspace_id}/site-group-reviews",
+    response_model=SiteGroupReviewResponse,
+)
+def access_request_site_group_review(
+    workspace_id: UUID,
+    body: SiteGroupReviewRequest,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    try:
+        review = site_group_reviews.create_review_request(
+            user.id, workspace_id,
+            body.first_workspace_site_id, body.second_workspace_site_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except site_group_reviews.ReviewQueueUnavailable:
+        raise HTTPException(status_code=503, detail="La revisión de sitios no está disponible.") from None
+    except Exception:
+        logger.exception("Access site review submission failed")
+        raise HTTPException(status_code=503, detail="No pudimos solicitar la revisión.") from None
+    if review is None:
+        raise HTTPException(status_code=404, detail="Sitios no encontrados en este espacio.")
+    return SiteGroupReviewResponse(**vars(review))
+
+
+@router.get(
+    "/workspaces/{workspace_id}/site-group-reviews",
+    response_model=SiteGroupReviewListResponse,
+)
+def access_list_site_group_reviews(
+    workspace_id: UUID,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    try:
+        reviews = site_group_reviews.list_review_requests(user.id, workspace_id)
+    except site_group_reviews.ReviewQueueUnavailable:
+        raise HTTPException(status_code=503, detail="La revisión de sitios no está disponible.") from None
+    except Exception:
+        logger.exception("Access site review lookup failed")
+        raise HTTPException(status_code=503, detail="No pudimos consultar las revisiones.") from None
+    if reviews is None:
+        raise HTTPException(status_code=404, detail="Espacio no encontrado.")
+    return SiteGroupReviewListResponse(
+        reviews=[SiteGroupReviewResponse(**vars(item)) for item in reviews],
+    )
 
 
 @router.get("/context", response_model=AccessContextResponse)
