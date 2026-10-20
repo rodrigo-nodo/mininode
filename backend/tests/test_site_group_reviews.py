@@ -1,12 +1,15 @@
 """Workspace-safe operator review requests without any identity or billing mutations."""
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import psycopg
 import pytest
 
-from mininode_api.services import access, billing, privacy_diagnostic_snapshot, site_group_operator as operator, site_group_reviews as reviews
+from mininode_api.services import (access, billing, privacy_correction_plan,
+    privacy_correction_plan_order, privacy_diagnostic_snapshot,
+    site_group_operator as operator, site_group_reviews as reviews)
 
 
 @pytest.fixture
@@ -25,6 +28,8 @@ def workspace_pair():
                      "20261020_access_site_group_operator.sql"):
             db.execute((Path(__file__).resolve().parents[1] / "migrations" / name).read_text())
     privacy_diagnostic_snapshot.initialize_database()
+    privacy_correction_plan.initialize_database()
+    privacy_correction_plan_order.initialize_database()
 
     user, other, workspace, foreign_workspace = (uuid4() for _ in range(4))
     first_site, second_site, foreign_site = (uuid4() for _ in range(3))
@@ -59,13 +64,22 @@ def workspace_pair():
              second_link, workspace, second_site,
              foreign_link, foreign_workspace, foreign_site),
         )
-    yield dict(
+    tracked = dict(
         url=url, user=user, other=other, workspace=workspace,
         foreign_workspace=foreign_workspace, first=first_link,
         second=second_link, foreign=foreign_link,
         site_ids=[first_site, second_site, foreign_site],
+        legacy_diagnostics=[], legacy_orders=[],
     )
+    yield tracked
     with psycopg.connect(url) as db:
+        # The historical order FKs must be removed BEFORE their diagnostic rows.
+        db.execute("DELETE FROM privacy.correction_plan_order WHERE id = ANY(%s)",
+                   (tracked["legacy_orders"],))
+        db.execute("DELETE FROM privacy.diagnostic WHERE id = ANY(%s)",
+                   (tracked["legacy_diagnostics"],))
+        db.execute("DELETE FROM billing.orders WHERE workspace_site_id IN (%s,%s,%s)",
+                   (first_link, second_link, foreign_link))
         db.execute("DELETE FROM access.site_group_operator_merges WHERE workspace_id=%s", (workspace,))
         db.execute("DELETE FROM access.site_aliases WHERE site_id = ANY(%s)", ([first_site, second_site, foreign_site],))
         db.execute("DELETE FROM privacy.diagnostic WHERE workspace_site_id IN (%s,%s,%s)",
@@ -312,3 +326,141 @@ def test_operator_notification_requires_configuration_and_is_idempotent(workspac
     with psycopg.connect(p["url"]) as db:
         assert db.execute("SELECT notification_sent_at IS NOT NULL FROM access.site_group_review_requests WHERE id=%s",
                           (request.id,)).fetchone()[0] is True
+
+
+def _legacy_order(pair, *, diagnostic_site=None, stored_site_url=None,
+                  requested_url=None, order_url=None):
+    """Persist a genuine historical order; all IDs are tracked for cleanup."""
+    diagnostic_id, order_id = uuid4(), uuid4()
+    inspected = stored_site_url or "https://unrelated.example"
+    with psycopg.connect(pair["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(
+                id, site_url, requested_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id)
+            VALUES (%s,%s,%s,'{}'::jsonb,65,NOW()+INTERVAL '1 day',%s)
+        """, (diagnostic_id, inspected, requested_url, diagnostic_site))
+        db.execute("""
+            INSERT INTO privacy.correction_plan_order(
+                id, diagnostic_id, site_url, email, product_code,
+                amount, currency, status)
+            VALUES (%s,%s,%s,'historical@example.test','PRIVACY_CORRECTION_PLAN',
+                    9900,'CLP','pending_payment')
+        """, (order_id, diagnostic_id, order_url or inspected))
+    pair["legacy_diagnostics"].append(diagnostic_id)
+    pair["legacy_orders"].append(order_id)
+    return diagnostic_id, order_id
+
+
+def _assert_unmodified(pair, review, diagnostic_id=None):
+    with psycopg.connect(pair["url"]) as db:
+        assert db.execute(
+            "SELECT status,reviewed_at FROM access.site_group_review_requests WHERE id=%s",
+            (review.id,),
+        ).fetchone() == ("pending", None)
+        assert db.execute(
+            "SELECT COUNT(*) FROM access.site_group_operator_merges WHERE review_id=%s",
+            (review.id,),
+        ).fetchone()[0] == 0
+        assert db.execute(
+            "SELECT COUNT(*) FROM access.site_aliases WHERE site_id=%s",
+            (pair["site_ids"][0],),
+        ).fetchone()[0] == 0
+        assert db.execute(
+            "SELECT detached_at FROM access.workspace_sites WHERE id=%s",
+            (pair["second"],),
+        ).fetchone()[0] is None
+        if diagnostic_id is not None:
+            assert db.execute(
+                "SELECT workspace_site_id FROM privacy.diagnostic WHERE id=%s",
+                (diagnostic_id,),
+            ).fetchone()[0] == pair["second"]
+
+
+def test_historical_order_by_diagnostic_id_blocks_even_with_unrelated_urls(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diagnostic_id, _ = _legacy_order(p, diagnostic_site=p["second"],
+                                      stored_site_url="https://completely-different.example",
+                                      order_url="http://legacy-other.example/order")
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diagnostic_id)
+
+
+@pytest.mark.parametrize("variant", ["HTTPS://WWW.{alias}:443/path?x=1",
+                                     "http://WWW.{alias}./home"])
+def test_anonymous_historical_orders_block_format_variations(workspace_pair, monkeypatch, variant):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    _legacy_order(p, stored_site_url="https://unrelated.example",
+                  order_url=variant.format(alias=alias.replace("www.", "")))
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)
+
+
+def test_ambiguous_legacy_commercial_url_is_fail_closed(workspace_pair, monkeypatch):
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    _legacy_order(p, order_url="invalid hostname with spaces")
+    with pytest.raises(operator.OperatorConflict, match="URL ambigua"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)
+
+
+def test_concurrent_commercial_write_prevents_approval_and_is_detected_after_commit(workspace_pair, monkeypatch):
+    """Two real PostgreSQL connections: a ROW EXCLUSIVE writer wins, operator fails closed."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diagnostic_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(
+                id, site_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,65,NOW()+INTERVAL '1 day',%s)
+        """, (diagnostic_id, "https://" + alias, p["second"]))
+    # The real Billing insert takes ROW EXCLUSIVE; approval's SHARE NOWAIT
+    # cannot pass while that transaction remains uncommitted.
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("""
+            INSERT INTO billing.orders(
+                id, workspace_site_id, diagnostic_id, product_code,
+                amount, currency, status)
+            VALUES (%s,%s,%s,'privacy_web',9900,'CLP','pending')
+        """, (uuid4(), p["second"], diagnostic_id))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(operator.decide, request.id, p["user"], "approved",
+                                 "Redirección comprobada")
+            with pytest.raises(operator.OperatorConflict, match="concurrente"):
+                future.result(timeout=8)
+        _assert_unmodified(p, request, diagnostic_id)
+    with pytest.raises(operator.OperatorConflict, match="órdenes"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diagnostic_id)
+
+
+def test_concurrent_billing_site_lock_cannot_deadlock_operator(workspace_pair, monkeypatch):
+    """Reproduce billing.create_order's order: site FOR UPDATE, then orders INSERT."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("SELECT id FROM access.workspace_sites WHERE id=%s FOR UPDATE",
+                       (p["second"],))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(operator.decide, request.id, p["user"], "approved",
+                                 "Redirección comprobada")
+            with pytest.raises(operator.OperatorConflict, match="modificados"):
+                future.result(timeout=8)
+    _assert_unmodified(p, request)
