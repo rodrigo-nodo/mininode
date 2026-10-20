@@ -1,0 +1,15 @@
+.operator-main { max-width: 820px; margin: 48px auto 72px; padding: 0 20px; }
+.operator-kicker { color: var(--color-muted); font-size: var(--text-sm); }
+.operator-main h1 { margin-bottom: 12px; }
+.operator-main > p { line-height: 1.55; }
+.operator-reviews { display: grid; gap: 16px; margin: 22px 0; }
+.operator-review { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 22px; }
+.operator-review h2 { font-size: 1.05rem; overflow-wrap: anywhere; margin: 0 0 8px; }
+.operator-review p { color: var(--color-muted); font-size: var(--text-sm); margin: 8px 0; }
+.operator-review label { display: grid; gap: 7px; font-weight: 600; margin: 14px 0; }
+.operator-review textarea { width: 100%; min-height: 80px; font: inherit; box-sizing: border-box; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); padding: 9px; border-radius: var(--radius-md); }
+.operator-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.operator-actions button { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); cursor: pointer; padding: 9px 16px; border-radius: var(--radius-md); font: inherit; font-weight: 600; }
+.operator-actions button:disabled { opacity: .5; cursor: wait; }
+.operator-review__error { color: #a13030 !important; }
+@media (max-width: 600px) { .operator-main { margin-top: 20px; } .operator-review { padding: 16px; } }
