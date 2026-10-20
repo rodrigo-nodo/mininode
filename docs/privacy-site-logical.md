@@ -15,7 +15,7 @@ No se crean aliases automáticamente, no se hacen solicitudes HTTP, no se modifi
 ## Reglas aprobadas para la fase siguiente
 - HTTP/HTTPS del mismo hostname: equivalencia de dirección; no son dos hostnames.
 - Dominio raíz y `www`: agrupar automáticamente sólo con redirección estable verificada.
-- Dos dominios distintos redirigidos: sugerir y pedir confirmación, con verificación técnica.
+- Dos dominios distintos con redirección pública HTTPS efectivamente comprobada durante el diagnóstico: reutilizar automáticamente la identidad de la HOME final; casos sin evidencia, independientes por defecto o pendientes de revisión solicitada.
 - Contenido parecido sin redirección: mantener separados.
 - Subdominios de aplicaciones o tiendas: independientes por defecto.
 - Una declaración del usuario no basta para ampliar prestaciones pagadas.
@@ -88,3 +88,15 @@ Los dos flujos que crean una relación de sitio tras un diagnóstico exitoso usa
 `requested_url` sigue guardando el origen ingresado por el usuario, sin ruta, query, fragmento ni credenciales, y `site_url` sigue siendo la URL efectivamente inspeccionada. No se modifican historiales, diagnósticos previos, scoring, snapshots, controles, Billing ni entitlements. No se fusionan dos identidades `access.sites` preexistentes: el resolver de alias continúa rechazando colisiones y exigiendo redirección verificada.
 
 El inspector solo permite redirecciones dentro de un mismo hostname o su variante raíz/`www`. Las redirecciones entre dominios diferentes (`.cl` → `.com`) quedan **fuera de esta etapa**, para una decisión e implementación separadas. No hay cambios de esquema ni migraciones en esta etapa.
+
+## Etapa A.9 - Redirecciones entre dominios y revisión de fichas existentes (DEV)
+
+Al diagnosticar una URL, el inspector mantiene el límite normal de navegación dentro del mismo hostname/raíz-`www`. Únicamente si una redirección desde la HOME es bloqueada por salir de ese límite, se permite una segunda inspección **de verificación**, mediante GET público, con IP fijada, revalidación DNS/SSRF en cada salto, máximo de redirecciones, tiempo total compartido y destino final HTTPS/200. Antes de obtener evidencia positiva, una redirección a IP privada, respuesta inválida o error técnico conserva el rechazo existente. El contenido de la comprobación no se emplea para puntuar: Privacy Web vuelve a inspeccionar normalmente la HOME de destino, incluido `robots.txt`. No se siguen dominios cruzados desde páginas descubiertas, formularios, enlaces ni recursos adicionales.
+
+Si la HOME final validada difiere del origen, las nuevas revisiones se asocian por `site_url` como en A.8; `requested_url` conserva el origen original normalizado. Este mecanismo **no inserta aliases permanentes de dominios diferentes ni fusiona identidades antiguas**. La asociación directa por `/access/workspaces/{id}/sites` sigue usando sus reglas actuales.
+
+Si existen dos fichas separadas, el usuario puede seleccionar exactamente dos y solicitar revisión. Se crea una solicitud idempotente con estado `pending` en `access.site_group_review_requests`, vinculada a su workspace y usuario autorizado. La interfaz muestra «Agrupación pendiente de validación» pero las fichas, sus historiales, `site_id`, `workspace_site_id`, órdenes y entitlements **permanecen separados**. La cola se consulta únicamente mediante rutas autenticadas y filtradas por workspace, nunca por el frontend público sin sesión. No existe endpoint de aprobación/fusión ni concesión comercial automática; solo un operador podrá resolver las solicitudes tras la futura etapa de reglas comerciales.
+
+**Despliegue:** migración aditiva `20261020_access_site_group_review_requests.sql`, con checksum catalogado, que requiere autorización explícita en `MIGRATION_APPROVED_FILES` para DEV y pre-deploy coordinado. No ejecutar la DDL en PROD ni activar auto-deploy automáticamente. La ausencia de la tabla produce una respuesta 503 controlada al solicitar revisión, sin interferir con los diagnósticos existentes. Al cambiar la interfaz, confirmar también el Cloudflare Branch Preview asociado al último commit.
+
+**Fuera de alcance:** conciliación de fichas existentes, permisos entre workspaces, pagos compartidos, entitlements por agrupación y decisión administrativa final; se tratarán en el PR 3, sin inferir que una solicitud pendiente es una aprobación.
