@@ -320,3 +320,21 @@ test('accepts only POST on protected unlink action and forwards Clerk bearer', a
   await assertRejected(route + '/anything', 'POST');
   await assertRejected(route.replace('/unlink', '/other'), 'POST');
 });
+
+
+test('site grouping review queue forwards only authenticated GET and POST', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const route = `/api/access/workspaces/${workspace}/site-group-reviews`;
+  for (const method of ['GET', 'POST']) {
+    const result = await request(route, method, {
+      withoutApiKey: true, headers: { Authorization: 'Bearer protected-session' },
+    });
+    assert.equal(result.response.status, 200);
+    assert.equal(result.calls.length, 1);
+    assert.equal(result.calls[0].init.headers.get('Authorization'), 'Bearer protected-session');
+    assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  for (const method of ['PATCH', 'DELETE', 'PUT']) await assertRejected(route, method);
+  await assertRejected(route + '/approve', 'POST');
+  await assertRejected(route.replace(workspace, 'foreign'), 'POST');
+});
