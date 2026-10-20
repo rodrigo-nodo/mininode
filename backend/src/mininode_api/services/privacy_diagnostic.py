@@ -153,7 +153,7 @@ def _follow_verified_public_home_redirect(fetcher: WebFetcher, source: str, resu
     The opt-in probe still validates every hop with the pinned-IP SSRF guard,
     fixed redirect budget and shared deadline. A successful public HTTPS HOME
     is then inspected normally (including destination robots policy).
-    Unproven redirects and private targets keep the original controlled error.
+    Unproven, alternating, HTTP or private targets keep the original controlled error.
     """
     page = result.pages[0] if result.pages else None
     if not (
@@ -165,19 +165,37 @@ def _follow_verified_public_home_redirect(fetcher: WebFetcher, source: str, resu
     initial_host = urlsplit(source).hostname
     if not initial_host:
         return result
-    probe = fetcher._fetch_page(
-        source, initial_host, deadline=deadline, allow_public_cross_domain_redirects=True
-    )
-    final = urlsplit(probe.final_url or "")
-    if (
-        probe.error or probe.status_code != 200 or probe.redirect_count == 0
-        or final.scheme != "https" or not final.hostname
-        or final.hostname == initial_host
-    ):
+    # Two independent source observations must converge on the same final HOME.
+    # This proves only *this diagnosis*, not permanent cross-domain ownership.
+    destinations = []
+    for _ in range(2):
+        probe = fetcher._fetch_page(
+            source, initial_host, deadline=deadline,
+            allow_public_cross_domain_redirects=True,
+        )
+        final = urlsplit(probe.final_url or "")
+        if (
+            probe.error or probe.status_code != 200 or probe.redirect_count == 0
+            or final.scheme != "https" or not final.hostname
+            or final.hostname == initial_host
+        ):
+            return result
+        destinations.append(probe.final_url)
+    if destinations[0] != destinations[1]:
         return result
+
     # Never reuse probe content for Privacy controls: ordinary HOME inspection
     # must pass the destination's robots policy and same-site restrictions.
-    return fetcher.fetch(probe.final_url, [probe.final_url], deadline=deadline)
+    inspected = fetcher.fetch(destinations[0], [destinations[0]], deadline=deadline)
+    inspected_page = inspected.pages[0] if inspected.pages else None
+    if (
+        inspected.pages_fetched != 1 or not inspected_page
+        or inspected_page.error
+        or inspected_page.status_code != 200
+        or inspected_page.final_url != destinations[0]
+    ):
+        return result
+    return inspected
 
 
 def _result_map(diagnostic: dict) -> dict[str, str]:
