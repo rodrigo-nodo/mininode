@@ -79,6 +79,13 @@ def reconcile_existing_www(
             target = cursor.fetchone()
             if target is None or target[0] != old[1]:
                 raise ReconciliationBlocked("Previously reconciled target identity has changed")
+            cursor.execute("SELECT id FROM access.sites WHERE hostname = %s", (alias,))
+            if cursor.fetchone() is not None:
+                raise ReconciliationBlocked("Previously reconciled source hostname was recreated")
+            cursor.execute("SELECT site_id FROM access.site_aliases WHERE hostname = %s", (alias,))
+            alias_record = cursor.fetchone()
+            if alias_record is None or alias_record[0] != old[1]:
+                raise ReconciliationBlocked("Previously reconciled alias no longer resolves to its target")
             return ReconciliationResult("already_reconciled", workspace_id, old[1], old[0], old[3], old[2], old[4])
 
         cursor.execute(
