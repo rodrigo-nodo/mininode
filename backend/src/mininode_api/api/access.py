@@ -139,6 +139,7 @@ def access_context(
     )
 
 
+@router.post("/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink", status_code=204)
 @router.delete("/workspaces/{workspace_id}/sites/{workspace_site_id}", status_code=204)
 def access_unlink_site(
     workspace_id: UUID,
