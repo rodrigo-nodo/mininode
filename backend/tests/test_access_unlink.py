@@ -49,7 +49,7 @@ def test_unlink_never_deletes_workspace_sites_or_snapshots():
     sql = inspect.getsource(access.unlink_workspace_site)
     assert "FOR UPDATE OF ws" in sql
     assert "ws.workspace_id = %s" in sql and "wm.user_id = %s" in sql
-    assert "status IN ('pending', 'paid')" in sql
+    assert "status = 'pending'" in sql
     assert "active_until" in sql
     assert "SET detached_at = CURRENT_TIMESTAMP" in sql
     assert "DELETE FROM" not in sql
@@ -101,6 +101,15 @@ def test_unlink_persists_snapshots_and_does_not_touch_other_workspace():
         assert snapshots.get_diagnostic_snapshot(diagnostic.id).workspace_site_id == ws_a
         assert all(s.id != ws_a for w in access.list_authorized_context(user_a) for s in w.sites)
         assert snapshots.list_latest_for_workspace(workspace_a) == ()
+        # Detached sites must not be able to create new orders via Billing.
+        with pytest.raises(ValueError, match="Site or eligible diagnostic not found"):
+            billing.create_order(user_a, ws_a, diagnostic.id)
+        # Original link and immutable evidence are recovered by following again.
+        relinked = access.follow_site(user_a, workspace_a, f"https://unlink-{site_id}.example/")
+        assert relinked.id == ws_a
+        assert snapshots.get_latest_for_workspace_site(ws_a).id == diagnostic.id
+        assert access.get_authorized_site(user_a, ws_a) is not None
+        assert access.unlink_workspace_site(user_a, workspace_a, ws_a) is True
         with psycopg.connect(url) as conn:
             row = conn.execute("SELECT detached_at FROM access.workspace_sites WHERE id = %s", (ws_a,)).fetchone()
             assert row[0] is not None
@@ -112,3 +121,55 @@ def test_unlink_persists_snapshots_and_does_not_touch_other_workspace():
             conn.execute("DELETE FROM access.workspace_members WHERE workspace_id IN (%s,%s)", (workspace_a,workspace_b))
             conn.execute("DELETE FROM access.workspaces WHERE id IN (%s,%s)", (workspace_a,workspace_b))
             conn.execute("DELETE FROM access.users WHERE id IN (%s,%s)", (user_a,user_b))
+
+
+def test_pending_order_blocks_unlink_but_expired_paid_order_does_not():
+    import os
+    import psycopg
+    from mininode_api.services import billing, privacy_diagnostic_snapshot as snapshots
+    url = os.environ.get("DATABASE_URL", "")
+    if "mininode_test" not in url:
+        pytest.skip("Disposable PostgreSQL required")
+
+    access.initialize_database()
+    snapshots.initialize_database()
+    billing.initialize_database()
+    user, workspace, site, ws = (uuid4() for _ in range(4))
+    with psycopg.connect(url) as conn:
+        conn.execute("INSERT INTO access.users (id,email) VALUES (%s,%s)",
+                     (user, f"{user}@example.test"))
+        conn.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'Billing unlink')", (workspace,))
+        conn.execute("INSERT INTO access.workspace_members (workspace_id,user_id,role) VALUES (%s,%s,'owner')",
+                     (workspace,user))
+        conn.execute("INSERT INTO access.sites (id,hostname) VALUES (%s,%s)",
+                     (site,f"unlink-{site}.example"))
+        conn.execute("INSERT INTO access.workspace_sites (id,workspace_id,site_id) VALUES (%s,%s,%s)",
+                     (ws,workspace,site))
+    diagnostic = snapshots.create_diagnostic_snapshot(
+        {"site_url":f"https://unlink-{site}.example/","score":50},
+        workspace_site_id=ws,
+    )
+    order = billing.create_order(user, ws, diagnostic.id)
+    try:
+        with pytest.raises(access.ActiveSiteCannotBeUnlinked):
+            access.unlink_workspace_site(user,workspace,ws)
+        with psycopg.connect(url) as conn:
+            conn.execute("""UPDATE billing.orders SET status='paid', paid_at=CURRENT_TIMESTAMP
+                         WHERE id=%s""", (order.id,))
+            # Historical paid order: its corresponding paid period has expired.
+            conn.execute("""INSERT INTO access.entitlements
+                         (id,workspace_site_id,product_code,active_from,active_until,status,source,source_id)
+                         VALUES (%s,%s,'privacy_web',CURRENT_TIMESTAMP - INTERVAL '60 days',
+                                 CURRENT_TIMESTAMP - INTERVAL '30 days','active','payment',%s)""",
+                         (uuid4(),ws,str(order.id)))
+        assert access.unlink_workspace_site(user,workspace,ws) is True
+    finally:
+        with psycopg.connect(url) as conn:
+            conn.execute("DELETE FROM access.entitlements WHERE workspace_site_id=%s", (ws,))
+            conn.execute("DELETE FROM billing.orders WHERE id=%s", (order.id,))
+            conn.execute("DELETE FROM privacy.diagnostic WHERE id=%s", (diagnostic.id,))
+            conn.execute("DELETE FROM access.workspace_sites WHERE id=%s", (ws,))
+            conn.execute("DELETE FROM access.sites WHERE id=%s", (site,))
+            conn.execute("DELETE FROM access.workspace_members WHERE workspace_id=%s", (workspace,))
+            conn.execute("DELETE FROM access.workspaces WHERE id=%s", (workspace,))
+            conn.execute("DELETE FROM access.users WHERE id=%s", (user,))
