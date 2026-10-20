@@ -272,6 +272,7 @@ class WebFetcher:
         *,
         accept_plain_text: bool = False,
         deadline: float | None = None,
+        allow_public_cross_domain_redirects: bool = False,
     ) -> FetchPageResult:
         started = time.monotonic()
         deadline = deadline if deadline is not None else started + self._inspection_budget
@@ -284,7 +285,12 @@ class WebFetcher:
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
-                if not same_site_hostname(urlsplit(current_url).hostname, allowed_hostname):
+                # Opt-in is reserved for a redirect-only HOME verification: every
+                # hop still has strict DNS/SSRF checks and IP-pinned GET transport.
+                # Ordinary inspection (including discovered pages) stays same-site.
+                if not allow_public_cross_domain_redirects and not same_site_hostname(
+                    urlsplit(current_url).hostname, allowed_hostname
+                ):
                     raise UnsafeTargetError("Redirect leaves the initial hostname")
                 # Every attempt is pinned to one deterministic member of this
                 # single, fully validated DNS answer set. No DNS lookup occurs
