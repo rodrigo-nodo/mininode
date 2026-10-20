@@ -233,8 +233,10 @@ def decide(review_id: UUID, reviewer: UUID, decision: str, note: str) -> dict:
                     SELECT 1 FROM privacy.correction_plan_order o
                     JOIN privacy.diagnostic d ON d.id=o.diagnostic_id
                     WHERE d.workspace_site_id IN (%s,%s)
+                       OR lower(split_part(split_part(o.site_url, '://', 2), '/', 1))
+                           IN (%s,%s)
                 )
-            """, (source[0], target[0]))
+            """, (source[0], target[0], source_hostname, target_hostname))
             if cur.fetchone()[0]:
                 raise OperatorConflict("Hay planes u órdenes previas: requiere revisión comercial.")
         cur.execute("""
@@ -243,6 +245,21 @@ def decide(review_id: UUID, reviewer: UUID, decision: str, note: str) -> dict:
         """, (source[1], target[1], source[1]))
         if cur.fetchone()[0]:
             raise OperatorConflict("Las identidades participan de una agrupación anterior.")
+        cur.execute("""
+            SELECT EXISTS(
+                SELECT 1 FROM access.site_reconciliations
+                WHERE target_site_id IN (%s,%s)
+                   OR target_workspace_site_id IN (%s,%s)
+            ) OR EXISTS(
+                SELECT 1 FROM access.site_group_review_requests
+                WHERE id != %s AND status = 'pending'
+                  AND (first_workspace_site_id IN (%s,%s)
+                       OR second_workspace_site_id IN (%s,%s))
+            )
+        """, (source[1], target[1], source[0], target[0],
+              review_id, source[0], target[0], source[0], target[0]))
+        if cur.fetchone()[0]:
+            raise OperatorConflict("Existen conciliaciones o solicitudes relacionadas pendientes.")
         cur.execute("SELECT to_jsonb(s) FROM access.sites s WHERE id=%s", (source[1],))
         source_snapshot = cur.fetchone()[0]
         cur.execute("SELECT to_jsonb(ws) FROM access.workspace_sites ws WHERE id=%s", (source[0],))
