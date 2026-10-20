@@ -160,7 +160,11 @@ def access_request_site_group_review(
         raise HTTPException(status_code=404, detail="Sitios no encontrados en este espacio.")
     # The request is committed independently of external mail delivery.
     # Duplicate submissions do not resend a successful notification.
-    site_group_operator.notify_pending(review.id)
+    try:
+        site_group_operator.notify_pending(review.id)
+    except Exception:
+        # Mail cannot undo an already committed request. Retry on submission.
+        logger.warning("Review request persisted; operator email not delivered")
     return SiteGroupReviewResponse(**vars(review))
 
 
