@@ -85,7 +85,7 @@ def notify_pending(review_id: UUID) -> bool:
         "subject": "[Mininode] Nueva solicitud de agrupación",
         "text": (f"Solicitaron revisar la agrupación de {row[2]} y {row[3]}.\n"
                  "Revisa la solicitud desde el panel privado:\n"
-                 "https://dev.mininode.io/operator/site-reviews/\n"),
+                 os.getenv("MININODE_REVIEW_PANEL_URL", "https://dev.mininode.io/operator/site-reviews/") + "\\n"),
     }).encode("utf-8")
     request = Request("https://api.resend.com/emails", data=payload, method="POST",
                       headers={"Authorization": "Bearer " + key,
