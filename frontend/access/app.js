@@ -70,6 +70,8 @@ const workspacePickerLabel = document.querySelector('#workspace-picker-label');
 const workspacePicker = document.querySelector('#workspace-picker');
 const privacyWebOpen = document.querySelector('#privacy-web-open');
 const siteList = document.querySelector('#site-list');
+const siteReviewButton = document.querySelector('#site-review-request');
+const siteReviewNotice = document.querySelector('#site-review-notice');
 const pendingClaimPanel = document.querySelector('#pending-claim-panel');
 const pendingClaimButton = document.querySelector('#pending-claim-button');
 const pendingClaimError = document.querySelector('#pending-claim-error');
@@ -88,6 +90,7 @@ let activeWorkspaceId = '';
 let latestReviewsRequestId = 0;
 let claimInFlight = false;
 let pendingWorkspaceChoice = false;
+let selectedSiteReviewIds = new Set();
 
 let mininodeAuth = null;
 
@@ -192,7 +195,12 @@ function formatReviewDate(value) {
   }).format(date);
 }
 
-function renderSites(workspace, reviews = []) {
+function updateSiteReviewButton(siteCount) {
+  siteReviewButton.hidden = siteCount < 2;
+  siteReviewButton.disabled = selectedSiteReviewIds.size !== 2;
+}
+
+function renderSites(workspace, reviews = [], groupReviews = []) {
   siteList.replaceChildren();
   const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
   const reviewsBySite = new Map(
@@ -200,6 +208,11 @@ function renderSites(workspace, reviews = []) {
       .filter((review) => review?.workspace_site_id)
       .map((review) => [review.workspace_site_id, review]),
   );
+
+  const pendingSiteIds = new Set((Array.isArray(groupReviews) ? groupReviews : [])
+    .filter((item) => item.status === 'pending')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  selectedSiteReviewIds = new Set([...selectedSiteReviewIds].filter((id) => sites.some((site) => site.id === id)));
 
   sites.forEach((site) => {
     const row = document.createElement('div');
@@ -213,7 +226,27 @@ function renderSites(workspace, reviews = []) {
     link.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}`;
     link.textContent = site.hostname;
     link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+    if (sites.length > 1) {
+      const select = document.createElement('input');
+      select.type = 'checkbox';
+      select.className = 'site-group-checkbox';
+      select.checked = selectedSiteReviewIds.has(site.id);
+      select.setAttribute('aria-label', `Seleccionar ${site.hostname} para revisión de agrupación`);
+      select.addEventListener('change', () => {
+        if (select.checked) selectedSiteReviewIds.add(site.id);
+        else selectedSiteReviewIds.delete(site.id);
+        updateSiteReviewButton(sites.length);
+      });
+      main.append(select);
+    }
     main.append(link);
+
+    if (pendingSiteIds.has(site.id)) {
+      const pending = document.createElement('p');
+      pending.className = 'site-review-meta';
+      pending.textContent = 'Agrupación pendiente de validación';
+      main.append(pending);
+    }
 
     const review = reviewsBySite.get(site.id);
     if (review && Number.isFinite(review.score)) {
@@ -263,17 +296,21 @@ function renderSites(workspace, reviews = []) {
     siteList.append(row);
   });
   setVisible(siteEmpty, sites.length === 0);
+  updateSiteReviewButton(sites.length);
 }
 
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
-  try {
-    const payload = await api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`);
-    if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
-    renderSites(workspace, Array.isArray(payload.reviews) ? payload.reviews : []);
-  } catch {
-    // Account remains usable even if review summaries are temporarily unavailable.
-  }
+  const [latest, grouping] = await Promise.allSettled([
+    api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`),
+    api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/site-group-reviews`),
+  ]);
+  if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+  renderSites(
+    workspace,
+    latest.status === 'fulfilled' && Array.isArray(latest.value.reviews) ? latest.value.reviews : [],
+    grouping.status === 'fulfilled' && Array.isArray(grouping.value.reviews) ? grouping.value.reviews : [],
+  );
 }
 
 function renderHome() {
@@ -417,9 +454,41 @@ async function savePendingDiagnostic() {
 }
 pendingClaimButton.addEventListener('click', () => { void savePendingDiagnostic(); });
 
+siteReviewButton.addEventListener('click', async () => {
+  if (selectedSiteReviewIds.size !== 2 || !activeWorkspaceId) return;
+  const workspaceId = activeWorkspaceId;
+  const [first, second] = [...selectedSiteReviewIds];
+  siteReviewButton.disabled = true;
+  siteReviewNotice.textContent = 'Enviando solicitud…';
+  try {
+    const result = await api(`/api/access/workspaces/${encodeURIComponent(workspaceId)}/site-group-reviews`, {
+      method: 'POST',
+      body: JSON.stringify({
+        first_workspace_site_id: first,
+        second_workspace_site_id: second,
+      }),
+    });
+    if (activeWorkspaceId !== workspaceId) return;
+    siteReviewNotice.textContent = result.status === 'pending'
+      ? 'Solicitud recibida. Validaremos si estos sitios pueden agruparse. Por ahora siguen independientes.'
+      : 'Esta solicitud ya fue revisada. Los sitios siguen independientes.';
+    selectedSiteReviewIds.clear();
+    const workspace = context.workspaces.find((item) => item.id === workspaceId);
+    if (workspace) void loadLatestReviews(workspace);
+  } catch (error) {
+    if (activeWorkspaceId === workspaceId) {
+      siteReviewNotice.textContent = error instanceof Error ? error.message : 'No pudimos enviar la solicitud.';
+      const workspace = context.workspaces.find((item) => item.id === workspaceId);
+      updateSiteReviewButton(Array.isArray(workspace?.sites) ? workspace.sites.length : 0);
+    }
+  }
+});
+
 workspacePicker.addEventListener('change', () => {
   if (!workspacePicker.value) return;
   activeWorkspaceId = workspacePicker.value;
+  selectedSiteReviewIds.clear();
+  siteReviewNotice.textContent = '';
   if (sessionStorage.getItem(PENDING_CLAIM_KEY)) {
     pendingWorkspaceChoice = false;
     void savePendingDiagnostic();
