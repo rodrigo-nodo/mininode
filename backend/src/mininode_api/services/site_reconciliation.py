@@ -124,10 +124,17 @@ def reconcile_existing_www(
             """SELECT conrelid::regclass::text FROM pg_constraint
                WHERE contype = 'f' AND confrelid = 'access.sites'::regclass
                  AND conrelid NOT IN ('access.workspace_sites'::regclass,
-                                      'access.site_aliases'::regclass)"""
+                                      'access.site_aliases'::regclass,
+                                      'access.site_reconciliations'::regclass)"""
         )
         if cursor.fetchall():
             raise ReconciliationBlocked("Unexpected dependencies reference access.sites")
+        cursor.execute(
+            "SELECT count(*) FROM access.site_reconciliations WHERE target_site_id = %s",
+            (source_id,),
+        )
+        if cursor.fetchone()[0]:
+            raise ReconciliationBlocked("Secondary site is a historical reconciliation target")
 
         cursor.execute(
             """SELECT EXISTS (
