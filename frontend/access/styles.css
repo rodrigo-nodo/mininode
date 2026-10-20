@@ -79,3 +79,8 @@
   .site-review-link { grid-column: 1; }
   .site-unlink { grid-column: 2; }
 }
+
+.site-group-checkbox { margin: 0 10px 0 0; width: 16px; height: 16px; vertical-align: middle; accent-color: var(--color-primary); cursor: pointer; }
+.site-review-controls { margin-top: 12px; display: grid; gap: 8px; justify-items: start; }
+.site-review-controls button:disabled { opacity: .55; cursor: not-allowed; }
+.site-review-controls p { margin: 0; font-size: var(--text-sm); color: var(--color-muted); }

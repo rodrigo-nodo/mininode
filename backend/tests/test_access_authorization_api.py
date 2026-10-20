@@ -12,7 +12,7 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.main import create_app  # noqa: E402
-from mininode_api.services import access, access_identity  # noqa: E402
+from mininode_api.services import access, access_identity, site_group_reviews  # noqa: E402
 
 
 @pytest.fixture
@@ -420,3 +420,34 @@ def test_follow_site_is_idempotent_and_isolated_on_real_postgres():
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+
+def test_site_group_review_endpoint_is_authenticated_workspace_scoped(client, monkeypatch):
+    owner = _verified_user(monkeypatch)
+    workspace, first, second = uuid4(), uuid4(), uuid4()
+    review = site_group_reviews.SiteGroupReview(uuid4(), min(first, second), max(first, second), "pending")
+    calls = []
+
+    def create(uid, wid, left, right):
+        calls.append((uid, wid, left, right))
+        return review if uid == owner and wid == workspace else None
+
+    monkeypatch.setattr(site_group_reviews, "create_review_request", create)
+    monkeypatch.setattr(
+        site_group_reviews, "list_review_requests",
+        lambda uid, wid: (review,) if uid == owner and wid == workspace else None,
+    )
+    url = f"/access/workspaces/{workspace}/site-group-reviews"
+    body = {"first_workspace_site_id": str(first), "second_workspace_site_id": str(second)}
+    assert client.post(url, json=body).status_code in (401, 403)
+    saved = client.post(url, json=body, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert saved.status_code == 200
+    assert saved.json()["status"] == "pending"
+    assert calls == [(owner, workspace, first, second)]
+    listed = client.get(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert listed.status_code == 200
+    assert listed.json()["reviews"] == [saved.json()]
+
+    other_url = f"/access/workspaces/{uuid4()}/site-group-reviews"
+    assert client.post(other_url, json=body, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
+    assert client.get(other_url, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404

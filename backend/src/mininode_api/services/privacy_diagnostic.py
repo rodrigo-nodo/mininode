@@ -147,6 +147,57 @@ def _home_failure(result: InspectionFetchResult) -> None:
     raise PrivacyInspectionError("inspection_failed", diagnostic=diagnostic)
 
 
+def _follow_verified_public_home_redirect(fetcher: WebFetcher, source: str, result: InspectionFetchResult, deadline: float) -> InspectionFetchResult:
+    """Retry only a redirect rejected for leaving the source hostname.
+
+    The opt-in probe still validates every hop with the pinned-IP SSRF guard,
+    fixed redirect budget and shared deadline. A successful public HTTPS HOME
+    is then inspected normally (including destination robots policy).
+    Unproven, alternating, HTTP or private targets keep the original controlled error.
+    """
+    page = result.pages[0] if result.pages else None
+    if not (
+        page and page.error and page.error.code == "blocked_by_ssrf"
+        and page.ssrf_rejection_reason == "redirect_hostname_not_allowed"
+        and page.redirect_count > 0
+    ):
+        return result
+    initial_host = urlsplit(source).hostname
+    if not initial_host:
+        return result
+    # Two independent source observations must converge on the same final HOME.
+    # This proves only *this diagnosis*, not permanent cross-domain ownership.
+    destinations = []
+    for _ in range(2):
+        probe = fetcher._fetch_page(
+            source, initial_host, deadline=deadline,
+            allow_public_cross_domain_redirects=True,
+        )
+        final = urlsplit(probe.final_url or "")
+        if (
+            probe.error or probe.status_code != 200 or probe.redirect_count == 0
+            or final.scheme != "https" or not final.hostname
+            or final.hostname == initial_host
+        ):
+            return result
+        destinations.append(probe.final_url)
+    if destinations[0] != destinations[1]:
+        return result
+
+    # Never reuse probe content for Privacy controls: ordinary HOME inspection
+    # must pass the destination's robots policy and same-site restrictions.
+    inspected = fetcher.fetch(destinations[0], [destinations[0]], deadline=deadline)
+    inspected_page = inspected.pages[0] if inspected.pages else None
+    if (
+        inspected.pages_fetched != 1 or not inspected_page
+        or inspected_page.error
+        or inspected_page.status_code != 200
+        or inspected_page.final_url != destinations[0]
+    ):
+        return result
+    return inspected
+
+
 def _result_map(diagnostic: dict) -> dict[str, str]:
     return {item["control_code"]: item["result"] for item in diagnostic["controls"]}
 
@@ -210,6 +261,9 @@ def diagnose_privacy_url(
 
     with factory(inspection_budget=INSPECTION_BUDGET_SECONDS) as fetcher:
         home_result = fetcher.fetch(target_url, [target_url], deadline=deadline)
+        home_result = _follow_verified_public_home_redirect(
+            fetcher, target_url, home_result, deadline
+        )
         if home_result.pages_fetched != 1 or not home_result.pages:
             _home_failure(home_result)
         home_page = home_result.pages[0]

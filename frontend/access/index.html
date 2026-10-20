@@ -6,10 +6,10 @@
   <title>Accede a tu cuenta | Mininode</title>
   <meta name="description" content="Accede a tu cuenta Mininode.">
   <link rel="stylesheet" href="../styles.css?v=294shell1">
-  <link rel="stylesheet" href="./styles.css?v=72240d9f3a4e">
+  <link rel="stylesheet" href="./styles.css?v=0477e9d9b7b9">
   <script src="../assets/js/core-head.js?v=286account1" defer></script>
   <script src="../include.js?v=282c" defer></script>
-  <script src="./app.js?v=5f4b615f6743" defer></script>
+  <script src="./app.js?v=ddf03bfabdc4" defer></script>
 </head>
 <body class="access-page" data-mininode-auth-ui="clerk">
   <div data-include="../partials/header-nav.html"></div>
@@ -66,6 +66,10 @@
             <h3>Mis sitios</h3>
             <div id="site-list" class="site-list"></div>
             <p id="site-empty" class="resource-empty">Aún no has realizado revisiones.</p>
+            <div class="site-review-controls">
+              <button type="button" id="site-review-request" class="access-secondary-button" disabled hidden>Solicitar revisión de agrupación</button>
+              <p id="site-review-notice" role="status" aria-live="polite"></p>
+            </div>
           </div>
         </article>
 
