@@ -447,7 +447,11 @@ class ActiveSiteCannotBeUnlinked(Exception):
 
 
 def unlink_workspace_site(user_id: UUID, workspace_id: UUID, workspace_site_id: UUID) -> bool:
-    """Hide a workspace link while retaining snapshots, orders and other workspaces."""
+    """Hide a workspace link while retaining snapshots, orders and other workspaces.
+
+    Pending orders or currently active entitlements prevent unlink; historical
+    paid orders whose entitlement has expired remain archived and do not block.
+    """
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """SELECT ws.id FROM access.workspace_sites ws
@@ -467,7 +471,7 @@ def unlink_workspace_site(user_id: UUID, workspace_id: UUID, workspace_site_id: 
                     AND (active_until IS NULL OR active_until > CURRENT_TIMESTAMP)
                ) OR EXISTS (
                  SELECT 1 FROM billing.orders
-                  WHERE workspace_site_id = %s AND status IN ('pending', 'paid')
+                  WHERE workspace_site_id = %s AND status = 'pending'
                )""",
             (workspace_site_id, workspace_site_id),
         )
