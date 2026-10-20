@@ -222,7 +222,7 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         cursor.execute(
             """INSERT INTO access.workspace_sites (id, workspace_id, site_id)
                VALUES (%s, %s, %s)
-               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id
+               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id, detached_at = NULL
                RETURNING id""",
             (uuid4(), workspace_id, site_id),
         )
