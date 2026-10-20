@@ -230,8 +230,10 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=286account1" in access
     assert "../styles.css?v=294shell1" in access
-    assert "./styles.css?v=000c8b6808c2" in access
     from hashlib import sha1
+    css_bytes = (ROOT / "access/styles.css").read_bytes()
+    css_blob = sha1(f"blob {len(css_bytes)}".encode() + bytes([0]) + css_bytes).hexdigest()[:12]
+    assert f"./styles.css?v={css_blob}" in access
     app_bytes = (ROOT / "access/app.js").read_bytes()
     app_blob = sha1(f"blob {len(app_bytes)}".encode() + bytes([0]) + app_bytes).hexdigest()[:12]
     assert f"./app.js?v={app_blob}" in access
