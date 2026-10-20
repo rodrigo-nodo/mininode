@@ -939,3 +939,43 @@ def test_unexpected_error_is_sanitized(monkeypatch):
     assert response.status_code == 500
     assert response.json()["error"] == "internal_error"
     assert "division" not in response.text.lower()
+
+
+def test_public_cross_domain_redirect_is_inspected_at_verified_destination(monkeypatch):
+    source = "https://example.cl/"
+    destination = "https://example.com/"
+    blocked = failed_page(source, "blocked_by_ssrf")
+    blocked.final_url = destination
+    blocked.redirect_count = 1
+    blocked.ssrf_rejection_reason = "redirect_hostname_not_allowed"
+    client, fake = client_with(monkeypatch, {
+        source: blocked,
+        destination: page(destination, "<title>Empresa</title>"),
+    })
+    probes = []
+
+    def probe(url, hostname, *, deadline=None, allow_public_cross_domain_redirects=False):
+        probes.append((url, hostname, allow_public_cross_domain_redirects))
+        return page(destination, "<title>Empresa</title>")
+
+    fake._fetch_page = probe
+    fake.pages[destination].redirect_count = 1
+    response = client.post("/privacy/diagnose", json={"url": source})
+    assert response.status_code == 200
+    assert response.json()["site_url"] == destination
+    assert fake.target_calls[:2] == [source, destination]
+    assert probes == [(source, "example.cl", True)]
+
+
+def test_unsafe_redirect_is_not_retried_as_cross_domain_equivalence(monkeypatch):
+    source = "https://example.cl/"
+    blocked = failed_page(source, "blocked_by_ssrf")
+    blocked.redirect_count = 1
+    blocked.ssrf_rejection_reason = "non_public_address"
+    client, fake = client_with(monkeypatch, {source: blocked})
+    fake._fetch_page = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("Unsafe URL must never be probed again")
+    )
+    response = client.post("/privacy/diagnose", json={"url": source})
+    assert response.status_code == 400
+    assert response.json()["error"] == "unsafe_target"
