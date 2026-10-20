@@ -79,3 +79,12 @@ def test_unreviewed_sql_variants_fail_closed(monkeypatch, tmp_path, tokens):
     (tmp_path / name).write_text(" ".join(tokens), encoding="utf-8")
     with pytest.raises(ValueError, match="not in reviewed catalog"):
         runner.load_sql(name)
+
+
+def test_site_group_review_queue_migration_is_reviewed_and_additive():
+    sql, checksum = runner.load_sql("20261020_access_site_group_review_requests.sql")
+    assert checksum == runner.APPROVED_CHECKSUMS["20261020_access_site_group_review_requests.sql"]
+    assert "CREATE TABLE IF NOT EXISTS access.site_group_review_requests" in sql
+    assert "REFERENCES access.workspace_sites(id) ON DELETE RESTRICT" in sql
+    assert "UNIQUE (workspace_id, first_workspace_site_id, second_workspace_site_id)" in sql
+    assert "DROP TABLE" not in sql and "UPDATE access.sites" not in sql
