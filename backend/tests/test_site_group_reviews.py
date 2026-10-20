@@ -21,6 +21,7 @@ def workspace_pair():
     with psycopg.connect(url) as db:
         db.execute(sql)
         for name in ("20261019_access_site_aliases.sql",
+                     "20261020_access_site_reconciliations.sql",
                      "20261020_access_site_group_operator.sql"):
             db.execute((Path(__file__).resolve().parents[1] / "migrations" / name).read_text())
     privacy_diagnostic_snapshot.initialize_database()
