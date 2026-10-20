@@ -285,6 +285,13 @@ class WebFetcher:
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
+                # For cross-domain identity evidence, a downgrade on any redirect
+                # hop is not trusted, even if the final page later uses HTTPS.
+                if (
+                    allow_public_cross_domain_redirects and redirects > 0
+                    and urlsplit(current_url).scheme != "https"
+                ):
+                    raise UnsafeTargetError("Redirect verification requires HTTPS")
                 # Opt-in is reserved for a redirect-only HOME verification: every
                 # hop still has strict DNS/SSRF checks and IP-pinned GET transport.
                 # Ordinary inspection (including discovered pages) stays same-site.
