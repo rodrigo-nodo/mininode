@@ -337,3 +337,15 @@ test('unlink UI confirms before protected POST and preserves distinct success vs
   assert.match(app, /No pudimos conectar con Mininode/);
   assert.match(app, /site\.hostname/);
 });
+
+
+test('site grouping request is explicit, pending and does not merge existing account cards', () => {
+  assert.match(html, /id="site-review-request"/);
+  assert.match(html, /id="site-review-notice"/);
+  assert.match(app, /selectedSiteReviewIds\.size !== 2/);
+  assert.match(app, /siteReviewButton\.addEventListener\('click'/);
+  assert.match(app, /site-group-reviews/);
+  assert.match(app, /Agrupación pendiente de validación/);
+  assert.match(app, /Por ahora siguen independientes/);
+  assert.doesNotMatch(app, /site-group-reviews.*entitlements/);
+});
