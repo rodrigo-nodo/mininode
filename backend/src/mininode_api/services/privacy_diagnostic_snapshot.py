@@ -148,7 +148,7 @@ def list_latest_for_workspace(workspace_id: UUID) -> tuple[StoredPrivacyDiagnost
                    d.purchase_expires_at, d.workspace_site_id
             FROM privacy.diagnostic AS d
             JOIN access.workspace_sites AS ws ON ws.id = d.workspace_site_id
-            WHERE ws.workspace_id = %s
+            WHERE ws.workspace_id = %s AND ws.detached_at IS NULL
             ORDER BY d.workspace_site_id, d.created_at DESC, d.id DESC
             """,
             (workspace_id,),
@@ -222,7 +222,7 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         cursor.execute(
             """INSERT INTO access.workspace_sites (id, workspace_id, site_id)
                VALUES (%s, %s, %s)
-               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id
+               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id, detached_at = NULL
                RETURNING id""",
             (uuid4(), workspace_id, site_id),
         )

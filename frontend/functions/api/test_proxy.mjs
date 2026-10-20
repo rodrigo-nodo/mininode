@@ -12,8 +12,8 @@ async function request(path, method = 'GET', options = {}) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     calls.push({ url, init });
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
+    return new Response(options.upstreamStatus === 204 ? null : JSON.stringify({ ok: true }), {
+      status: options.upstreamStatus || 200,
       headers: { 'Content-Type': 'application/json' },
     });
   };
@@ -30,7 +30,7 @@ async function request(path, method = 'GET', options = {}) {
     };
     if (Object.hasOwn(options, 'params')) context.params = options.params;
     const response = await onRequest(context);
-    return { response, json: await response.json(), calls };
+    return { response, json: response.status === 204 ? null : await response.json(), calls };
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -277,4 +277,25 @@ test('forwards Clerk bearer token to latest Privacy review reads', async () => {
 
   await assertRejected(`/api/privacy/workspace-sites/${siteId}/latest-review`, 'POST');
   await assertRejected(`/api/privacy/workspaces/${workspaceId}/latest-reviews`, 'POST');
+});
+
+test('only DELETE on exact authorized workspace-site path is proxied with bearer and empty 204', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const site = 'cc285ffb-ab8a-4c5e-b333-76b9f7af224f';
+  const path = `/api/access/workspaces/${workspace}/sites/${site}`;
+  const result = await request(path, 'DELETE', {
+    withoutApiKey: true,
+    upstreamStatus: 204,
+    headers: { Authorization: 'Bearer session-token' },
+  });
+  assert.equal(result.response.status, 204);
+  assert.equal(await result.response.text(), '');
+  assert.equal(result.calls.length, 1);
+  assert.equal(result.calls[0].init.method, 'DELETE');
+  assert.equal(result.calls[0].url, `https://backend.example/access/workspaces/${workspace}/sites/${site}`);
+  assert.equal(result.calls[0].init.headers.get('Authorization'), 'Bearer session-token');
+  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['GET', 'POST', 'PATCH']) await assertRejected(path, method);
+  await assertRejected(path + '/other', 'DELETE');
+  await assertRejected('/api/access/workspaces/' + workspace + '/sites/', 'DELETE');
 });

@@ -42,6 +42,7 @@ export const onRequest = async (ctx) => {
     || (destPathPublic === 'access/onboarding' && method === 'POST')
     || (destPathPublic === 'privacy/diagnostic-claims' && method === 'POST')
     || (/^access\/workspaces\/[0-9a-f-]+\/sites$/.test(destPathPublic) && method === 'POST')
+    || (/^access\/workspaces\/[0-9a-f-]+\/sites\/[0-9a-f-]+$/.test(destPathPublic) && method === 'DELETE')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/latest-review$/.test(destPathPublic) && method === 'GET')
     || (/^privacy\/workspaces\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
@@ -130,7 +131,7 @@ export const onRequest = async (ctx) => {
     outHeaders.set('Access-Control-Allow-Origin', '*');
 
     // Pasa tal cual la respuesta del backend (incluido el detalle de 4xx/5xx)
-    return new Response(upstreamBody, { status: upstream.status, headers: outHeaders });
+    return new Response(upstream.status === 204 ? null : upstreamBody, { status: upstream.status, headers: outHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Proxy error', detail: String(e) }), {
       status: 502,

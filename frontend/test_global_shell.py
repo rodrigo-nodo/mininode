@@ -231,7 +231,10 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "core-head.js?v=286account1" in access
     assert "../styles.css?v=294shell1" in access
     assert "./styles.css?v=000c8b6808c2" in access
-    assert "./app.js?v=e8e82dc999ac" in access
+    from hashlib import sha1
+    app_bytes = (ROOT / "access/app.js").read_bytes()
+    app_blob = sha1(f"blob {len(app_bytes)}".encode() + bytes([0]) + app_bytes).hexdigest()[:12]
+    assert f"./app.js?v={app_blob}" in access
 
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():

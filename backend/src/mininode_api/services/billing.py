@@ -67,8 +67,10 @@ def create_order(user_id: UUID, workspace_site_id: UUID, diagnostic_id: UUID) ->
                 SELECT 1 FROM access.workspace_sites ws
                 JOIN access.workspace_members wm ON wm.workspace_id = ws.workspace_id
                 JOIN privacy.diagnostic d ON d.workspace_site_id = ws.id
-                WHERE ws.id = %s AND wm.user_id = %s AND wm.role IN ('owner','member')
+                WHERE ws.id = %s AND ws.detached_at IS NULL
+                  AND wm.user_id = %s AND wm.role IN ('owner','member')
                   AND d.id = %s AND d.purchase_expires_at >= CURRENT_TIMESTAMP
+                FOR UPDATE OF ws
             """, (workspace_site_id, user_id, diagnostic_id))
             if cur.fetchone() is None:
                 raise ValueError("Site or eligible diagnostic not found")
