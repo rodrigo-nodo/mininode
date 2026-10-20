@@ -36,9 +36,12 @@ def list_operator_reviews() -> list[dict]:
     with access._connection() as db, db.cursor() as cur:
         cur.execute("""
             SELECT r.id, r.workspace_id, w.name, r.status, r.requested_at,
-                   r.reviewed_at, r.review_note, a.hostname, b.hostname,
+                   r.reviewed_at, r.review_note,
+                   CASE WHEN a.id=merges.source_site_id THEN merges.source_hostname ELSE a.hostname END,
+                   CASE WHEN b.id=merges.source_site_id THEN merges.source_hostname ELSE b.hostname END,
                    r.first_workspace_site_id, r.second_workspace_site_id
             FROM access.site_group_review_requests r
+            LEFT JOIN access.site_group_operator_merges merges ON merges.review_id = r.id
             JOIN access.workspaces w ON w.id = r.workspace_id
             JOIN access.workspace_sites x ON x.id = r.first_workspace_site_id
             JOIN access.workspace_sites y ON y.id = r.second_workspace_site_id
