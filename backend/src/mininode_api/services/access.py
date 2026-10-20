@@ -317,7 +317,8 @@ def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | No
         if cursor.fetchone() is None:
             return None
 
-        from mininode_api.services.site_aliases import resolve_existing_site
+        from mininode_api.services.site_aliases import lock_www_pair, resolve_existing_site
+        lock_www_pair(cursor, hostname)
         existing = resolve_existing_site(cursor, hostname)
         if existing is None:
             from mininode_api.services.site_aliases import register_verified_www_alias
