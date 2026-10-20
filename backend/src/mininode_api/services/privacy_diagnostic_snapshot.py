@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterator, Mapping
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID, uuid4
 
 import psycopg
@@ -20,6 +21,7 @@ CREATE SCHEMA IF NOT EXISTS privacy;
 CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     id UUID PRIMARY KEY,
     site_url TEXT NOT NULL,
+    requested_url TEXT NULL,
     diagnostic_snapshot JSONB NOT NULL,
     score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,8 +76,38 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID | None = None, claim_token: str | None = None) -> StoredPrivacyDiagnostic:
-    """Persist the completed result unchanged, without inspecting the site again."""
+def normalize_requested_url(value: str | None) -> str | None:
+    """Store only the input origin: never persist credentials, path, query or fragment.
+
+    The origin preserves whether the user supplied the apex or www hostname.
+    No URL lookup or network request is performed; the inspector validates the
+    actual target before calling persistence.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("requested_url must be a string")
+    try:
+        parsed = urlsplit(value.strip())
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname
+        port = parsed.port
+        if scheme not in {"http", "https"} or not hostname:
+            raise ValueError("Invalid requested_url")
+        hostname = hostname.rstrip(".").lower().encode("idna").decode("ascii")
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError("Invalid requested_url") from exc
+    authority = f"[{hostname}]" if ":" in hostname else hostname
+    if port is not None and (scheme, port) not in {("http", 80), ("https", 443)}:
+        authority = f"{authority}:{port}"
+    return urlunsplit((scheme, authority, "/", "", ""))
+
+
+def create_diagnostic_snapshot(
+    diagnostic: Mapping, *, workspace_site_id: UUID | None = None,
+    claim_token: str | None = None, requested_url: str | None = None,
+) -> StoredPrivacyDiagnostic:
+    """Persist completed evidence intact, tracking the sanitized input separately."""
     score = diagnostic.get("score")
     site_url = diagnostic.get("site_url")
     if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
@@ -86,18 +118,20 @@ def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID |
     if claim_token is not None and (workspace_site_id is not None or len(claim_token) < 32):
         raise ValueError("Claim token is only for anonymous diagnostics")
     claim_hash = hashlib.sha256(claim_token.encode()).hexdigest() if claim_token else None
+    safe_requested_url = normalize_requested_url(requested_url)
     diagnostic_id = uuid4()
     snapshot = dict(diagnostic)
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO privacy.diagnostic (
-                id, site_url, diagnostic_snapshot, score, purchase_expires_at, workspace_site_id, claim_token_hash
-            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s, %s)
+                id, site_url, requested_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id, claim_token_hash
+            ) VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s, %s)
             RETURNING id, site_url, diagnostic_snapshot, score, created_at,
                       purchase_expires_at, workspace_site_id
             """,
-            (diagnostic_id, site_url, Jsonb(snapshot), score, workspace_site_id, claim_hash),
+            (diagnostic_id, site_url, safe_requested_url, Jsonb(snapshot), score, workspace_site_id, claim_hash),
         )
         return StoredPrivacyDiagnostic(*cursor.fetchone())
 

@@ -69,3 +69,14 @@ Tras **aprobación operativa específica** y una segunda verificación en la mis
 Se eliminan dos filas **estructurales** obsoletas (`workspace_sites` secundario y `sites` secundario) solo luego de trasladar las referencias admitidas. Sus identificadores y metadatos originales completos quedan preservados en el registro de conciliación; los snapshots de diagnósticos, fechas, scores y evidencias permanecen intactos. Cualquier excepción provoca rollback completo. El resolver sigue la identidad principal, y la consulta de última revisión ya existente obtiene el score más reciente.
 
 La migración `20261020_access_site_reconciliations.sql` solo crea la tabla de trazabilidad y está catalogada con checksum. Debe ejecutarse **de forma coordinada** en DEV, no en PROD. Auto-Deploy DEV continúa desactivado. La futura aplicación concreta para `gurbana.cl` requiere primero dry-run comprobable en DEV y autorización adicional; no modificar datos reales ni habilitar despliegue PROD en esta etapa.
+
+## Etapa A.7 - Trazabilidad de URL solicitada (Privacy Web)
+
+Cada diagnóstico nuevo conserva de forma independiente en `privacy.diagnostic`:
+
+- `requested_url` (**columna nullable nueva**): origen normalizado de la URL entregada para inspección (`scheme://host[:port]/`). Permite distinguir `www` de la raíz. Se excluyen usuario/contraseña, ruta, query y fragmento para evitar registrar tokens o datos sensibles.
+- `site_url` (**sin cambios**): URL HOME final inspeccionada después de redirecciones. Continúa determinando la identidad de sitio en el guardado anónimo y las asociaciones actuales.
+
+`requested_url` se registra en los diagnósticos anónimos, por URL dentro del workspace y sobre una ficha previamente guardada (en este caso corresponde a la URL almacenada desde la que se inicia la inspección). Los diagnósticos anteriores quedan con `requested_url = NULL`, sin reconstrucción inferida. El contenido `diagnostic_snapshot`, score, control de compra, API pública de resultados y algoritmo de agrupación/alias permanecen iguales.
+
+La migración `20261020_privacy_requested_url.sql` es aditiva e idempotente; se incorpora al catálogo de checksums del Pre-deploy, pero requiere autorización explícita en `MIGRATION_APPROVED_FILES` **solo en Render DEV** antes de ejecutar el nuevo backend. No autoriza despliegue en PROD, merge automático ni nuevas conciliaciones.

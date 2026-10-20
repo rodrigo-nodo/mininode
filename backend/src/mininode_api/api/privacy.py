@@ -432,7 +432,7 @@ def diagnose_workspace_site(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
-                diagnostic, workspace_site_id=workspace_site_id
+                diagnostic, workspace_site_id=workspace_site_id, requested_url=target_url
             )
         except Exception:
             logger.error("Authenticated Privacy diagnostic snapshot persistence failed")
@@ -507,7 +507,7 @@ def diagnose_workspace_url(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
-                diagnostic, workspace_site_id=site.id
+                diagnostic, workspace_site_id=site.id, requested_url=body.url
             )
         except Exception:
             logger.error("Workspace Privacy diagnostic snapshot persistence failed")
@@ -561,7 +561,9 @@ def diagnose_privacy(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             claim_token = secrets.token_urlsafe(32)
-            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(diagnostic, claim_token=claim_token)
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+                diagnostic, claim_token=claim_token, requested_url=body.url
+            )
         except Exception:
             # The free result remains available when the commercial persistence fails.
             logger.error("Privacy diagnostic snapshot persistence failed")

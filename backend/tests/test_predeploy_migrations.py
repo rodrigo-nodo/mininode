@@ -52,6 +52,12 @@ def test_known_migration_checksum_matches_catalog():
     _, checksum = runner.load_sql("20261013_privacy_anonymous_claim.sql")
     assert checksum == runner.APPROVED_CHECKSUMS["20261013_privacy_anonymous_claim.sql"]
 
+def test_requested_url_migration_checksum_matches_catalog():
+    sql, checksum = runner.load_sql("20261020_privacy_requested_url.sql")
+    assert checksum == runner.APPROVED_CHECKSUMS["20261020_privacy_requested_url.sql"]
+    assert "ADD COLUMN IF NOT EXISTS requested_url TEXT NULL" in sql
+
+
 def test_modified_reviewed_file_rejected_before_connect(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "MIGRATIONS_DIR", tmp_path)
     name = "20261013_privacy_anonymous_claim.sql"

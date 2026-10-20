@@ -73,8 +73,8 @@ def test_authenticated_diagnosis_uses_stored_url_and_links_snapshot(monkeypatch)
     stored_id = uuid4()
     persisted = []
 
-    def store(result, *, workspace_site_id=None):
-        persisted.append((result, workspace_site_id))
+    def store(result, *, workspace_site_id=None, requested_url=None):
+        persisted.append((result, workspace_site_id, requested_url))
         return SimpleNamespace(
             id=stored_id,
             purchase_expires_at="2026-09-30T00:00:00Z",
@@ -94,7 +94,7 @@ def test_authenticated_diagnosis_uses_stored_url_and_links_snapshot(monkeypatch)
 
     assert response.status_code == 200
     assert inspected == ["https://stored.example"]
-    assert persisted == [(diagnostic, workspace_site_id)]
+    assert persisted == [(diagnostic, workspace_site_id, "https://stored.example")]
     assert response.json()["diagnostic_id"] == str(stored_id)
 
 
@@ -157,8 +157,8 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
     stored_id = uuid4()
     persisted = []
 
-    def store(result, *, workspace_site_id=None):
-        persisted.append((result, workspace_site_id))
+    def store(result, *, workspace_site_id=None, requested_url=None):
+        persisted.append((result, workspace_site_id, requested_url))
         return SimpleNamespace(id=stored_id, purchase_expires_at="2026-10-02T00:00:00Z")
 
     monkeypatch.setattr(
@@ -176,7 +176,7 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
     assert response.status_code == 200
     assert events[0] == ("diagnose", "https://example.com/path")
     assert events[1] == ("follow", user.id, workspace_id, "https://example.com/path")
-    assert persisted[0][1] == workspace_site_id
+    assert persisted[0][1:] == (workspace_site_id, "https://example.com/path")
     assert response.json()["workspace_site_id"] == str(workspace_site_id)
     assert response.json()["diagnostic_id"] == str(stored_id)
 
@@ -388,3 +388,34 @@ def test_claim_endpoint_links_verified_identity_and_explicit_workspace(monkeypat
     assert response.status_code == 200
     assert response.json() == {"diagnostic_id": str(diagnostic_id), "workspace_site_id": str(site_id)}
     assert calls == [(diagnostic_id, "a" * 43, user.id, workspace_id)]
+
+
+def test_public_diagnosis_records_original_input_not_redirect_destination(monkeypatch):
+    """Anonymous submissions retain provenance without altering the result contract."""
+    inspected = []
+    final = {"site_url": "https://rust-lang.org/", "score": 89}
+    monkeypatch.setattr(
+        privacy_api, "diagnose_privacy_url",
+        lambda url: inspected.append(url) or final,
+    )
+    captured = []
+    def store(result, *, claim_token=None, requested_url=None):
+        captured.append((result, requested_url, claim_token))
+        return SimpleNamespace(id=uuid4(), purchase_expires_at="2026-10-21T00:00:00Z")
+    monkeypatch.setattr(
+        privacy_api.privacy_diagnostic_snapshot, "create_diagnostic_snapshot", store,
+    )
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(privacy_diagnostic_snapshot_ready=True))
+    )
+    entered = "https://www.rust-lang.org/?session=private"
+    result = privacy_api.diagnose_privacy(
+        privacy_api.PrivacyDiagnosticRequest(url=entered), request, None,
+    )
+    assert inspected == [entered]
+    assert captured[0][0] == final
+    assert captured[0][1] == entered
+    assert captured[0][2] and len(captured[0][2]) >= 32
+    assert result["site_url"] == "https://rust-lang.org/"
+    assert "requested_url" not in result
+    assert "requested_url" not in final
