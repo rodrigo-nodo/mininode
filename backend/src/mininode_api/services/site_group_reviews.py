@@ -43,6 +43,9 @@ def create_review_request(
 ) -> SiteGroupReview | None:
     """Idempotent request for two *existing active* sites in one authorized workspace.
 
+    An invalidated request is reopened only on an explicit new request after
+    relinking; re-linking itself cannot restore a stale pending request.
+
     None means the user/workspace pair is unavailable; no public merging or
     automatic commercial decisions are possible through this endpoint.
     """
@@ -68,7 +71,14 @@ def create_review_request(
                   second_workspace_site_id, requested_by_user_id)
                VALUES (%s, %s, %s, %s, %s)
                ON CONFLICT (workspace_id, first_workspace_site_id,
-                            second_workspace_site_id) DO NOTHING""",
+                            second_workspace_site_id) DO UPDATE
+                 SET status = 'pending',
+                     requested_by_user_id = EXCLUDED.requested_by_user_id,
+                     requested_at = CURRENT_TIMESTAMP,
+                     invalidated_at = NULL,
+                     review_note = NULL,
+                     reviewed_at = NULL
+               WHERE access.site_group_review_requests.status = 'invalidated'""",
             (uuid4(), workspace_id, first, second, user_id),
         )
         cursor.execute(
