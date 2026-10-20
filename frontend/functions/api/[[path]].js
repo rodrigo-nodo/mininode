@@ -42,6 +42,7 @@ export const onRequest = async (ctx) => {
     || (destPathPublic === 'access/onboarding' && method === 'POST')
     || (destPathPublic === 'privacy/diagnostic-claims' && method === 'POST')
     || (/^access\/workspaces\/[0-9a-f-]+\/sites$/.test(destPathPublic) && method === 'POST')
+    || (/^access\/workspaces\/[0-9a-f-]+\/site-group-reviews$/.test(destPathPublic) && ['GET', 'POST'].includes(method))
     || (/^access\/workspaces\/[0-9a-f-]+\/sites\/[0-9a-f-]+$/.test(destPathPublic) && method === 'DELETE')
     || (/^access\/workspaces\/[0-9a-f-]+\/sites\/[0-9a-f-]+\/unlink$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
