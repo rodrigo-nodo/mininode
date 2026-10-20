@@ -10,6 +10,8 @@ import logging
 import os
 from datetime import datetime
 from urllib.parse import urlsplit
+
+from psycopg.errors import LockNotAvailable
 from urllib.request import Request, urlopen
 from uuid import UUID
 
@@ -134,6 +136,53 @@ def _stable_redirect(host_a: str, host_b: str) -> tuple[str, str] | None:
     return possible[0] if len(possible) == 1 else None
 
 
+def _historical_host(value: str | None) -> str | None:
+    """Interpret historical URLs without assuming today's input format.
+
+    These snapshots can predate Access normalization (case, trailing dot, ports
+    or non-standard scheme). Unknown forms fail closed during reconciliation.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        raw = value.strip()
+        parsed = urlsplit(raw if "://" in raw else "https://" + raw)
+        if not parsed.hostname:
+            return None
+        return parsed.hostname.rstrip(".").lower().encode("idna").decode("ascii")
+    except (ValueError, UnicodeError):
+        return None
+
+
+def _require_no_legacy_orders(cur, workspace_sites: tuple[UUID, UUID],
+                              hostnames: frozenset[str]) -> None:
+    """Check immutable order->diagnostic IDs first, then historical URL forms.
+
+    Legacy anonymous orders may have no workspace_site_id at all; matching only
+    against the workspace link would silently miss them. Any unparseable legacy
+    URL is an ambiguity and requires manual commercial review.
+    """
+    if cur.execute("SELECT to_regclass('privacy.correction_plan_order')").fetchone()[0] is None:
+        return
+    cur.execute("""
+        SELECT d.workspace_site_id, o.site_url, d.site_url, d.requested_url
+        FROM privacy.correction_plan_order AS o
+        JOIN privacy.diagnostic AS d ON d.id = o.diagnostic_id
+    """)
+    linked_ids = set(workspace_sites)
+    for linked_site, ordered_url, inspected_url, requested_url in cur:
+        if linked_site in linked_ids:
+            raise OperatorConflict("Hay una orden histórica vinculada al diagnóstico del sitio.")
+        for value in (ordered_url, inspected_url, requested_url):
+            if value is None:
+                continue
+            host = _historical_host(value)
+            if host is None:
+                raise OperatorConflict("Una orden histórica tiene una URL ambigua; requiere revisión comercial.")
+            if host in hostnames:
+                raise OperatorConflict("Hay una orden histórica asociada al hostname del sitio.")
+
+
 def decide(review_id: UUID, reviewer: UUID, decision: str, note: str) -> dict:
     if decision not in ("approved", "rejected"):
         raise ValueError("Decisión inválida.")
@@ -181,19 +230,34 @@ def decide(review_id: UUID, reviewer: UUID, decision: str, note: str) -> dict:
             return {"id": review_id, "status": "rejected", "moved_diagnostics": 0}
 
         source_hostname, target_hostname = direction
+        # All writers to these relations obtain a ROW EXCLUSIVE table lock.
+        # SHARE NOWAIT is incompatible with concurrent INSERT/UPDATE/DELETE.
+        # Acquire *before* locking sites to avoid deadlocks with Billing,
+        # which locks the site before inserting an order/entitlement. Locks
+        # last only for the remaining short transaction; network GET is done.
+        try:
+            cur.execute("LOCK TABLE billing.orders, access.entitlements IN SHARE MODE NOWAIT")
+            cur.execute("SELECT to_regclass('privacy.correction_plan_order')")
+            if cur.fetchone()[0] is not None:
+                cur.execute("LOCK TABLE privacy.correction_plan_order IN SHARE MODE NOWAIT")
+        except LockNotAvailable as exc:
+            raise OperatorConflict("Hay una operación comercial concurrente. Reintenta.") from exc
         # Reuse the existing apex/www advisory lock when applicable.
         for hostname in (source_hostname, target_hostname):
             access_hostname = hostname.removeprefix("www.")
             if access_hostname.count(".") == 1:
                 cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                             ("site-alias-www:" + access_hostname,))
-        cur.execute("""
-            SELECT ws.id, ws.site_id, ws.workspace_id, ws.company_id, ws.detached_at,
-                   s.hostname
-            FROM access.workspace_sites ws JOIN access.sites s ON s.id=ws.site_id
-            WHERE ws.id IN (%s,%s) ORDER BY ws.id FOR UPDATE OF ws,s
-        """, (first, second))
-        rows = cur.fetchall()
+        try:
+            cur.execute("""
+                SELECT ws.id, ws.site_id, ws.workspace_id, ws.company_id, ws.detached_at,
+                       s.hostname
+                FROM access.workspace_sites ws JOIN access.sites s ON s.id=ws.site_id
+                WHERE ws.id IN (%s,%s) ORDER BY ws.id FOR UPDATE OF ws,s NOWAIT
+            """, (first, second))
+            rows = cur.fetchall()
+        except LockNotAvailable as exc:
+            raise OperatorConflict("Los sitios están siendo modificados. Reintenta.") from exc
         if len(rows) != 2 or {item[5] for item in rows} != {source_hostname, target_hostname}:
             raise OperatorConflict("Las identidades de los sitios cambiaron.")
         if any(item[2] != workspace or item[3] is not None or item[4] is not None for item in rows):
@@ -219,26 +283,21 @@ def decide(review_id: UUID, reviewer: UUID, decision: str, note: str) -> dict:
             raise OperatorConflict("Existen aliases que impiden agrupar el origen.")
         cur.execute("""
             SELECT EXISTS(
-                SELECT 1 FROM access.entitlements WHERE workspace_site_id IN (%s,%s)
+                SELECT 1 FROM access.entitlements
+                WHERE workspace_site_id IN (%s,%s)
             ) OR EXISTS(
-                SELECT 1 FROM billing.orders WHERE workspace_site_id IN (%s,%s)
+                SELECT 1 FROM billing.orders AS o
+                LEFT JOIN privacy.diagnostic AS d ON d.id = o.diagnostic_id
+                WHERE o.workspace_site_id IN (%s,%s)
+                   OR d.workspace_site_id IN (%s,%s)
             )
-        """, (source[0], target[0], source[0], target[0]))
+        """, (source[0], target[0], source[0], target[0],
+              source[0], target[0]))
         if cur.fetchone()[0]:
             raise OperatorConflict("Existen entitlements u órdenes: requiere revisión comercial independiente.")
-        cur.execute("SELECT to_regclass('privacy.correction_plan_order')")
-        if cur.fetchone()[0] is not None:
-            cur.execute("""
-                SELECT EXISTS(
-                    SELECT 1 FROM privacy.correction_plan_order o
-                    JOIN privacy.diagnostic d ON d.id=o.diagnostic_id
-                    WHERE d.workspace_site_id IN (%s,%s)
-                       OR lower(split_part(split_part(o.site_url, '://', 2), '/', 1))
-                           IN (%s,%s)
-                )
-            """, (source[0], target[0], source_hostname, target_hostname))
-            if cur.fetchone()[0]:
-                raise OperatorConflict("Hay planes u órdenes previas: requiere revisión comercial.")
+        _require_no_legacy_orders(
+            cur, (source[0], target[0]), frozenset((source_hostname, target_hostname))
+        )
         cur.execute("""
             SELECT count(*) FROM access.site_group_operator_merges
             WHERE source_site_id IN (%s,%s) OR target_site_id=%s
