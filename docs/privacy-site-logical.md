@@ -75,8 +75,16 @@ La migración `20261020_access_site_reconciliations.sql` solo crea la tabla de t
 Cada diagnóstico nuevo conserva de forma independiente en `privacy.diagnostic`:
 
 - `requested_url` (**columna nullable nueva**): origen normalizado de la URL entregada para inspección (`scheme://host[:port]/`). Permite distinguir `www` de la raíz. Se excluyen usuario/contraseña, ruta, query y fragmento para evitar registrar tokens o datos sensibles.
-- `site_url` (**sin cambios**): URL HOME final inspeccionada después de redirecciones. Continúa determinando la identidad de sitio en el guardado anónimo y las asociaciones actuales.
+- `site_url` (**sin cambios**): URL HOME final inspeccionada después de redirecciones. Determina la identidad de sitio en el guardado anónimo; la asociación por URL dentro del workspace se unifica con este criterio en la etapa A.8.
 
 `requested_url` se registra en los diagnósticos anónimos, por URL dentro del workspace y sobre una ficha previamente guardada (en este caso corresponde a la URL almacenada desde la que se inicia la inspección). Los diagnósticos anteriores quedan con `requested_url = NULL`, sin reconstrucción inferida. El contenido `diagnostic_snapshot`, score, control de compra, API pública de resultados y algoritmo de agrupación/alias permanecen iguales.
 
 La migración `20261020_privacy_requested_url.sql` es aditiva e idempotente; se incorpora al catálogo de checksums del Pre-deploy, pero requiere autorización explícita en `MIGRATION_APPROVED_FILES` **solo en Render DEV** antes de ejecutar el nuevo backend. No autoriza despliegue en PROD, merge automático ni nuevas conciliaciones.
+
+## Etapa A.8 - Consistencia de identidad por URL final (DEV)
+
+Los dos flujos que crean una relación de sitio tras un diagnóstico exitoso usan el mismo criterio de identidad: el `site_url` (HOME final inspeccionada). Antes, `/privacy/workspaces/{workspace_id}/diagnose` utilizaba `body.url` al llamar a `access.follow_site`, mientras el guardado anónimo (`claim_anonymous_diagnostic`) ya utilizaba `site_url`. El diagnóstico por ficha existente (`/privacy/workspace-sites/{id}/diagnose`) conserva su asociación explícita: no puede trasladar la ficha a otra identidad por redirección.
+
+`requested_url` sigue guardando el origen ingresado por el usuario, sin ruta, query, fragmento ni credenciales, y `site_url` sigue siendo la URL efectivamente inspeccionada. No se modifican historiales, diagnósticos previos, scoring, snapshots, controles, Billing ni entitlements. No se fusionan dos identidades `access.sites` preexistentes: el resolver de alias continúa rechazando colisiones y exigiendo redirección verificada.
+
+El inspector solo permite redirecciones dentro de un mismo hostname o su variante raíz/`www`. Las redirecciones entre dominios diferentes (`.cl` → `.com`) quedan **fuera de esta etapa**, para una decisión e implementación separadas. No hay cambios de esquema ni migraciones en esta etapa.
