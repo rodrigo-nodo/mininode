@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from mininode_api.core.access_auth import require_access_user
-from mininode_api.services import access, site_group_reviews
+from mininode_api.services import access, site_group_reviews, site_group_operator
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,21 @@ class SiteGroupReviewResponse(BaseModel):
 
 class SiteGroupReviewListResponse(BaseModel):
     reviews: list[SiteGroupReviewResponse]
+
+
+class SiteGroupDecisionRequest(BaseModel):
+    decision: str
+    note: str
+
+
+class SiteGroupDecisionResponse(BaseModel):
+    id: UUID
+    status: str
+    moved_diagnostics: int
+
+
+class SiteGroupOperatorListResponse(BaseModel):
+    reviews: list[dict]
 
 
 class AccessOnboardingResponse(BaseModel):
@@ -143,6 +158,9 @@ def access_request_site_group_review(
         raise HTTPException(status_code=503, detail="No pudimos solicitar la revisión.") from None
     if review is None:
         raise HTTPException(status_code=404, detail="Sitios no encontrados en este espacio.")
+    # The request is committed independently of external mail delivery.
+    # Duplicate submissions do not resend a successful notification.
+    site_group_operator.notify_pending(review.id)
     return SiteGroupReviewResponse(**vars(review))
 
 
@@ -166,6 +184,46 @@ def access_list_site_group_reviews(
     return SiteGroupReviewListResponse(
         reviews=[SiteGroupReviewResponse(**vars(item)) for item in reviews],
     )
+
+
+def _require_review_operator(user: access.StoredUser) -> None:
+    if not site_group_operator.is_operator(user.email):
+        raise HTTPException(status_code=403, detail="Operador no autorizado.")
+
+
+@router.get("/operator/site-group-reviews", response_model=SiteGroupOperatorListResponse)
+def access_operator_site_group_reviews(
+    user: access.StoredUser = Depends(require_access_user),
+):
+    _require_review_operator(user)
+    try:
+        return {"reviews": site_group_operator.list_operator_reviews()}
+    except Exception:
+        logger.exception("Operator review lookup failed")
+        raise HTTPException(status_code=503, detail="No pudimos cargar las solicitudes.") from None
+
+
+@router.post(
+    "/operator/site-group-reviews/{review_id}/decision",
+    response_model=SiteGroupDecisionResponse,
+)
+def access_operator_decide_site_group_review(
+    review_id: UUID,
+    body: SiteGroupDecisionRequest,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    _require_review_operator(user)
+    try:
+        return site_group_operator.decide(review_id, user.id, body.decision, body.note)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada.") from None
+    except site_group_operator.OperatorConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except Exception:
+        logger.exception("Operator review decision failed")
+        raise HTTPException(status_code=503, detail="No pudimos resolver la solicitud.") from None
 
 
 @router.get("/context", response_model=AccessContextResponse)
