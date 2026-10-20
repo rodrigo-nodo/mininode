@@ -59,6 +59,7 @@ def test_initialization_defines_immutable_minimal_diagnostic_table(monkeypatch):
     assert "CREATE TABLE IF NOT EXISTS privacy.diagnostic" in sql
     assert "id UUID PRIMARY KEY" in sql
     assert "site_url TEXT NOT NULL" in sql and "site_url TEXT UNIQUE" not in sql
+    assert "requested_url TEXT NULL" in sql
     assert "diagnostic_snapshot JSONB NOT NULL" in sql
     assert "score BETWEEN 0 AND 100" in sql
     assert "purchase_expires_at TIMESTAMPTZ NOT NULL" in sql
@@ -77,11 +78,45 @@ def test_create_stores_snapshot_intact_with_backend_24_hour_expiration(monkeypat
     assert "CURRENT_TIMESTAMP + INTERVAL '24 hours'" in sql
     assert isinstance(params[0], UUID)
     assert params[1] == snapshot["site_url"]
-    assert params[2].obj == snapshot
-    assert params[3] == 42
-    assert params[4] is None
+    assert params[2] is None  # Legacy/internal callers remain supported.
+    assert params[3].obj == snapshot
+    assert params[4] == 42
+    assert params[5] is None
     assert stored.diagnostic_snapshot == snapshot
     assert stored.purchase_expires_at - stored.created_at == timedelta(hours=24)
+
+
+@pytest.mark.parametrize(("entered", "expected"), [
+    ("https://WWW.Rust-Lang.Org/path?session=private#fragment", "https://www.rust-lang.org/"),
+    ("  HTTP://Apache.Org/secret/path?token=private  ", "http://apache.org/"),
+    ("https://user:password@example.com/private?key=topsecret", "https://example.com/"),
+    ("https://example.com:443/secret", "https://example.com/"),
+    ("https://example.com:8443/secret", "https://example.com:8443/"),
+])
+def test_requested_url_preserves_origin_but_not_sensitive_url_parts(entered, expected):
+    assert service.normalize_requested_url(entered) == expected
+
+
+@pytest.mark.parametrize("entered", [
+    "not-a-url", "/path-only", "ftp://example.com/", "https://", "https://example.com:invalid/"
+])
+def test_requested_url_rejects_unusable_origin(entered):
+    with pytest.raises(ValueError, match="Invalid requested_url"):
+        service.normalize_requested_url(entered)
+
+
+def test_create_persists_requested_origin_without_changing_snapshot(monkeypatch):
+    snapshot = diagnostic()
+    executions = fake_connection(monkeypatch, rows=[stored_row(snapshot)])
+    service.create_diagnostic_snapshot(
+        snapshot, requested_url="https://www.example.com/private?token=secret#frag",
+    )
+    sql, params = executions[0]
+    assert "requested_url" in sql
+    assert params[2] == "https://www.example.com/"
+    assert params[3].obj == snapshot
+    assert "requested_url" not in snapshot
+    assert "secret" not in str(params)
 
 
 def test_get_returns_snapshot_without_recalculation(monkeypatch):
