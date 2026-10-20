@@ -99,7 +99,10 @@ def test_dry_run_does_not_write_and_apply_preserves_history(pair):
     assert dry.status == "ready"
     assert dry.diagnostics == 1
     with psycopg.connect(pair["url"]) as db:
-        assert db.execute("SELECT count(*) FROM access.site_reconciliations").fetchone()[0] >= 0
+        assert db.execute(
+            "SELECT count(*) FROM access.site_reconciliations WHERE source_site_id = %s",
+            (pair["source_site"],),
+        ).fetchone()[0] == 0
         assert db.execute("SELECT site_id FROM access.workspace_sites WHERE id = %s", (pair["source_ws"],)).fetchone()[0] == pair["source_site"]
         assert db.execute("SELECT count(*) FROM access.site_aliases WHERE hostname = %s", (pair["alias"],)).fetchone()[0] == 0
 
@@ -132,6 +135,8 @@ def test_dry_run_does_not_write_and_apply_preserves_history(pair):
 
     assert run(pair).status == "already_reconciled"
     assert run(pair, apply=True).status == "already_reconciled"
+    with pytest.raises(merge.ReconciliationBlocked, match="another workspace"):
+        merge.reconcile_existing_www(uuid4(), pair["root"], pair["alias"], verifier=stable(pair))
     assert len(snapshots.list_latest_for_workspace(pair["workspace"])) == 1
     assert snapshots.get_latest_for_workspace_site(pair["primary_ws"]).score in (47, 48)
 
@@ -205,3 +210,32 @@ def test_catalog_digest_is_correct():
     sql, digest = runner.load_sql("20261020_access_site_reconciliations.sql")
     assert digest == runner.APPROVED_CHECKSUMS["20261020_access_site_reconciliations.sql"]
     assert "CREATE TABLE IF NOT EXISTS access.site_reconciliations" in sql
+
+
+def test_pending_order_blocks_pair(pair):
+    order = billing.create_order(pair["user"], pair["primary_ws"], pair["diagnostic_ids"][0])
+    with pytest.raises(merge.ReconciliationBlocked, match="Commercial"):
+        run(pair, apply=True)
+    with psycopg.connect(pair["url"]) as db:
+        assert db.execute("SELECT count(*) FROM billing.orders WHERE id=%s", (order.id,)).fetchone()[0] == 1
+        assert db.execute("SELECT count(*) FROM access.sites WHERE id=%s", (pair["source_site"],)).fetchone()[0] == 1
+
+
+def test_ledger_target_dependency_blocks_source_deletion(pair):
+    with psycopg.connect(pair["url"]) as db:
+        db.execute(
+            """INSERT INTO access.site_reconciliations
+               (source_site_id,source_hostname,target_site_id,workspace_id,
+                source_workspace_site_id,target_workspace_site_id,
+                moved_diagnostics,evidence_method)
+               VALUES (%s,%s,%s,%s,%s,%s,0,'stable_redirect')""",
+            (uuid4(), "already-reconciled-" + pair["root"],
+             pair["source_site"], pair["workspace"], uuid4(), pair["source_ws"]),
+        )
+    try:
+        with pytest.raises(merge.ReconciliationBlocked, match="historical reconciliation target"):
+            run(pair, apply=True)
+    finally:
+        with psycopg.connect(pair["url"]) as db:
+            db.execute("DELETE FROM access.site_reconciliations WHERE source_hostname=%s",
+                       ("already-reconciled-" + pair["root"],))
