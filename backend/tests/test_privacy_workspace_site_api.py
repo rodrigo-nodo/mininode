@@ -73,8 +73,8 @@ def test_authenticated_diagnosis_uses_stored_url_and_links_snapshot(monkeypatch)
     stored_id = uuid4()
     persisted = []
 
-    def store(result, *, workspace_site_id=None):
-        persisted.append((result, workspace_site_id))
+    def store(result, *, workspace_site_id=None, requested_url=None):
+        persisted.append((result, workspace_site_id, requested_url))
         return SimpleNamespace(
             id=stored_id,
             purchase_expires_at="2026-09-30T00:00:00Z",
@@ -94,7 +94,7 @@ def test_authenticated_diagnosis_uses_stored_url_and_links_snapshot(monkeypatch)
 
     assert response.status_code == 200
     assert inspected == ["https://stored.example"]
-    assert persisted == [(diagnostic, workspace_site_id)]
+    assert persisted == [(diagnostic, workspace_site_id, "https://stored.example")]
     assert response.json()["diagnostic_id"] == str(stored_id)
 
 
@@ -157,8 +157,8 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
     stored_id = uuid4()
     persisted = []
 
-    def store(result, *, workspace_site_id=None):
-        persisted.append((result, workspace_site_id))
+    def store(result, *, workspace_site_id=None, requested_url=None):
+        persisted.append((result, workspace_site_id, requested_url))
         return SimpleNamespace(id=stored_id, purchase_expires_at="2026-10-02T00:00:00Z")
 
     monkeypatch.setattr(
@@ -176,7 +176,7 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
     assert response.status_code == 200
     assert events[0] == ("diagnose", "https://example.com/path")
     assert events[1] == ("follow", user.id, workspace_id, "https://example.com/path")
-    assert persisted[0][1] == workspace_site_id
+    assert persisted[0][1:] == (workspace_site_id, "https://example.com/path")
     assert response.json()["workspace_site_id"] == str(workspace_site_id)
     assert response.json()["diagnostic_id"] == str(stored_id)
 
