@@ -464,3 +464,63 @@ def test_concurrent_billing_site_lock_cannot_deadlock_operator(workspace_pair, m
             with pytest.raises(operator.OperatorConflict, match="modificados"):
                 future.result(timeout=8)
     _assert_unmodified(p, request)
+
+
+def test_real_billing_create_order_serializes_against_operator(workspace_pair, monkeypatch):
+    """Use production Billing API on a separate connection during operator approval."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diag_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,
+                    score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,72,NOW()+INTERVAL '1 day',%s)
+        """, (diag_id, "https://" + alias, p["second"]))
+    with psycopg.connect(p["url"]) as writer:
+        # Exactly the row lock that the real billing.create_order acquires.
+        writer.execute("SELECT id FROM access.workspace_sites WHERE id=%s FOR UPDATE",
+                       (p["second"],))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(billing.create_order, p["user"], p["second"], diag_id)
+            with pytest.raises(operator.OperatorConflict, match="modificados"):
+                operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+            # Release the row lock so the authentic Billing operation can finish.
+            writer.commit()
+            order = future.result(timeout=8)
+            assert order.workspace_site_id == p["second"]
+    with pytest.raises(operator.OperatorConflict, match="órdenes"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request, diag_id)
+
+
+def test_concurrent_legacy_order_write_prevents_operator_approval(workspace_pair, monkeypatch):
+    """The legacy flow writes the same guarded order table even without workspace links."""
+    p = workspace_pair
+    apex, alias = _prepare_operator_pair(p)
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setattr(operator, "_stable_redirect", lambda a,b: (alias, apex))
+    diag_id = uuid4()
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""
+            INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,
+                    score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,72,NOW()+INTERVAL '1 day',NULL)
+        """, (diag_id, "https://" + alias))
+    p["legacy_diagnostics"].append(diag_id)
+    with psycopg.connect(p["url"]) as writer:
+        writer.execute("""
+            INSERT INTO privacy.correction_plan_order (
+                id,diagnostic_id,site_url,email,product_code,amount,currency,status)
+            VALUES (%s,%s,%s,'historical@example.test','PRIVACY_CORRECTION_PLAN',
+                    9900,'CLP','pending_payment')
+        """, (order_id := uuid4(), diag_id, "https://" + alias))
+        p["legacy_orders"].append(order_id)
+        with pytest.raises(operator.OperatorConflict, match="concurrente"):
+            operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+        writer.commit()
+    with pytest.raises(operator.OperatorConflict, match="orden histórica"):
+        operator.decide(request.id, p["user"], "approved", "Redirección comprobada")
+    _assert_unmodified(p, request)
