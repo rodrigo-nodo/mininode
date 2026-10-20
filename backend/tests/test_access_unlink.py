@@ -33,6 +33,26 @@ def test_unlink_endpoint_authorized_and_not_found(client, monkeypatch):
     assert http.delete(f"/access/workspaces/{workspace}/sites/{site}", headers={"Cf-Access-Jwt-Assertion": "valid"}).status_code == 404
 
 
+
+def test_unlink_post_action_reuses_authorized_unlink_contract(client, monkeypatch):
+    http, uid = client
+    workspace, site = uuid4(), uuid4()
+    url = f"/access/workspaces/{workspace}/sites/{site}/unlink"
+    assert http.post(url).status_code == 401
+    calls = []
+    monkeypatch.setattr(access, "unlink_workspace_site", lambda user, ws, sid: calls.append((user, ws, sid)) or True)
+    response = http.post(url, headers={"Cf-Access-Jwt-Assertion": "valid"})
+    assert response.status_code == 204
+    assert response.content == b""
+    assert calls == [(uid, workspace, site)]
+    monkeypatch.setattr(access, "unlink_workspace_site", lambda *args: False)
+    assert http.post(url, headers={"Cf-Access-Jwt-Assertion": "valid"}).status_code == 404
+    def blocked(*args):
+        raise access.ActiveSiteCannotBeUnlinked()
+    monkeypatch.setattr(access, "unlink_workspace_site", blocked)
+    assert http.post(url, headers={"Cf-Access-Jwt-Assertion": "valid"}).status_code == 409
+
+
 def test_unlink_requires_identity_and_blocks_active_contract(client, monkeypatch):
     http, _ = client
     url = f"/access/workspaces/{uuid4()}/sites/{uuid4()}"
