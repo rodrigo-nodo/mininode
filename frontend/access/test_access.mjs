@@ -309,10 +309,14 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /site-review-meta/);
 });
 
-test('unlink UI confirms before DELETE, and keeps the existing saved diagnosis links', () => {
+test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {
   assert.match(app, /window\.confirm\(/);
-  assert.match(app, /method: 'DELETE'/);
+  assert.match(app, /\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/unlink/);
+  assert.match(app, /method: 'POST'/);
   assert.match(app, /\/api\/access\/context/);
   assert.match(app, /response\.status === 204/);
+  assert.match(app, /El sitio fue desvinculado, pero no pudimos actualizar la lista/);
+  assert.match(app, /No pudimos renovar tu sesión/);
+  assert.match(app, /No pudimos conectar con Mininode/);
   assert.match(app, /site\.hostname/);
 });
