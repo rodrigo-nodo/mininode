@@ -49,3 +49,7 @@ El backend bloquea desvincular si hay entitlements vigentes o compras pendientes
 **Condición de despliegue:** DEV tiene autodeploy al merge; NO mergear este PR mientras la allowlist y el despliegue coordinado no estén listos. Deshabilitar temporalmente autodeploy antes de merge, luego lanzar un único despliegue controlado con el commit fusionado y la migración allowlisted en Pre-deploy, comprobando sus logs y el funcionamiento. El bootstrap crea la columna solo en instalaciones nuevas; para BD existente se exige migración previa. No habilitar en PROD sin revisión y autorización de migración propia.
 
 **Límite del experimento gurbana:** desvincular `www.gurbana.cl` y diagnosticarlo nuevamente puede restaurar el mismo sitio global preexistente. Desvincular no fusiona identidades existentes; esa conciliación requiere una tarea separada.
+
+## Corrección DEV - Transporte de desvinculación
+
+La acción web «Desvincular» utiliza `POST /access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink`, autenticada y restringida en el proxy Cloudflare, como alternativa al DELETE original conservado para compatibilidad. Ambas rutas invocan exactamente el mismo servicio transaccional y responden 204 al éxito. El frontend diferencia problemas al obtener token, fallos de conexión y fallos de refresco posteriores al éxito: si la desvinculación tuvo éxito pero el contexto no se actualizó, no se informa como operación fallida. Este cambio no requiere migración adicional ni modifica scoring o Billing.
