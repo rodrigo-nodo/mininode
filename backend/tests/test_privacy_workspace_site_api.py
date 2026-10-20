@@ -388,3 +388,34 @@ def test_claim_endpoint_links_verified_identity_and_explicit_workspace(monkeypat
     assert response.status_code == 200
     assert response.json() == {"diagnostic_id": str(diagnostic_id), "workspace_site_id": str(site_id)}
     assert calls == [(diagnostic_id, "a" * 43, user.id, workspace_id)]
+
+
+def test_public_diagnosis_records_original_input_not_redirect_destination(monkeypatch):
+    """Anonymous submissions retain provenance without altering the result contract."""
+    inspected = []
+    final = {"site_url": "https://rust-lang.org/", "score": 89}
+    monkeypatch.setattr(
+        privacy_api, "diagnose_privacy_url",
+        lambda url: inspected.append(url) or final,
+    )
+    captured = []
+    def store(result, *, claim_token=None, requested_url=None):
+        captured.append((result, requested_url, claim_token))
+        return SimpleNamespace(id=uuid4(), purchase_expires_at="2026-10-21T00:00:00Z")
+    monkeypatch.setattr(
+        privacy_api.privacy_diagnostic_snapshot, "create_diagnostic_snapshot", store,
+    )
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(privacy_diagnostic_snapshot_ready=True))
+    )
+    entered = "https://www.rust-lang.org/?session=private"
+    result = privacy_api.diagnose_privacy(
+        privacy_api.PrivacyDiagnosticRequest(url=entered), request, None,
+    )
+    assert inspected == [entered]
+    assert captured[0][0] == final
+    assert captured[0][1] == entered
+    assert captured[0][2] and len(captured[0][2]) >= 32
+    assert result["site_url"] == "https://rust-lang.org/"
+    assert "requested_url" not in result
+    assert "requested_url" not in final
