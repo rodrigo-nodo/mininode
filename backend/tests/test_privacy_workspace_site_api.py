@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
@@ -115,7 +116,14 @@ def test_workspace_url_diagnosis_rejects_foreign_workspace_before_inspection(mon
     assert calls == []
 
 
-def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapshot(monkeypatch):
+@pytest.mark.parametrize(("entered_url", "final_url"), [
+    ("https://example.com/path", "https://example.com/"),
+    ("https://www.example.com/private?token=secret", "https://example.com/"),
+    ("http://www.example.com/", "https://example.com/"),
+])
+def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapshot(
+    monkeypatch, entered_url, final_url
+):
     client, user = _client(monkeypatch)
     workspace_id = uuid4()
     workspace_site_id = uuid4()
@@ -134,7 +142,7 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
     )
     monkeypatch.setattr(access, "normalize_site_url", lambda url: ("example.com", "https://example.com"))
     events = []
-    diagnostic = {"site_url": "https://example.com/", "score": 91}
+    diagnostic = {"site_url": final_url, "score": 91}
     monkeypatch.setattr(
         privacy_api,
         "diagnose_privacy_url",
@@ -169,14 +177,15 @@ def test_workspace_url_diagnosis_associates_site_after_success_and_links_snapsho
 
     response = client.post(
         f"/privacy/workspaces/{workspace_id}/diagnose",
-        json={"url": "https://example.com/path"},
+        json={"url": entered_url},
         headers={"Cf-Access-Jwt-Assertion": "signed-token"},
     )
 
     assert response.status_code == 200
-    assert events[0] == ("diagnose", "https://example.com/path")
-    assert events[1] == ("follow", user.id, workspace_id, "https://example.com/path")
-    assert persisted[0][1:] == (workspace_site_id, "https://example.com/path")
+    assert events[0] == ("diagnose", entered_url)
+    # Anonymous claims already associate by site_url; authenticated flow must match.
+    assert events[1] == ("follow", user.id, workspace_id, final_url)
+    assert persisted[0][1:] == (workspace_site_id, entered_url)
     assert response.json()["workspace_site_id"] == str(workspace_site_id)
     assert response.json()["diagnostic_id"] == str(stored_id)
 

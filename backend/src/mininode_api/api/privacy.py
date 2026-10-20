@@ -488,7 +488,9 @@ def diagnose_workspace_url(
         )
 
     try:
-        site = access.follow_site(user.id, workspace_id, body.url)
+        # Associate by inspected HOME, exactly as anonymous diagnostic claims do.
+        # Keep the user-entered origin independently in requested_url below.
+        site = access.follow_site(user.id, workspace_id, diagnostic["site_url"])
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
