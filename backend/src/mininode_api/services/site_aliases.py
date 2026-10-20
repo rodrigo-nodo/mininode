@@ -97,3 +97,17 @@ def register_verified_www_alias(cursor, hostname: str, *, verifier=None) -> bool
     )
     result = cursor.fetchone()
     return result is not None and result[0] == other[0]
+
+
+def lock_www_pair(cursor, hostname: str) -> None:
+    """Serialize association and reconciliation for supported apex/www pairs.
+
+    No DNS lookup, alias insertion or association decision is made here.
+    """
+    apex = hostname.removeprefix("www.")
+    if hostname.startswith("www.www.") or apex.count(".") != 1:
+        return
+    cursor.execute(
+        "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+        ("site-alias-www:" + apex,),
+    )
