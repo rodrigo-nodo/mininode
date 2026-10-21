@@ -309,14 +309,16 @@ def test_operator_fails_closed_without_proven_redirect(workspace_pair, monkeypat
 def test_operator_notification_requires_configuration_and_is_idempotent(workspace_pair, monkeypatch):
     p = workspace_pair
     request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
-    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    monkeypatch.delenv("CLOUDFLARE_EMAIL_API_TOKEN", raising=False)
     assert operator.notify_pending(request.id) is False
-    monkeypatch.setenv("RESEND_API_KEY", "test-only")
+    monkeypatch.setenv("CLOUDFLARE_EMAIL_API_TOKEN", "test-only")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "test-account")
     monkeypatch.setenv("MININODE_CONTACT_EMAIL", "contacto@example.test")
     monkeypatch.setenv("MININODE_REVIEW_FROM_EMAIL", "notifications@example.test")
     sent = []
     class Response:
         status = 200
+        def read(self): return b'{"success":true,"result":{"delivered":["contacto@example.test"]}}'
         def __enter__(self): return self
         def __exit__(self, *args): pass
     monkeypatch.setattr(operator, "urlopen", lambda req, timeout: sent.append(req) or Response())
