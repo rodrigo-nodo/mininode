@@ -446,7 +446,7 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
 class ActiveSiteCannotBeUnlinked(Exception):
     """A commercial entitlement or order still protects this site."""
 
-    def __init__(self, reason: str):
+    def __init__(self, reason: str = "commercial_block"):
         self.reason = reason
         super().__init__(reason)
 
