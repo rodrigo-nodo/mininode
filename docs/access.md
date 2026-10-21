@@ -480,3 +480,19 @@ GitHub `production` y el secret `PRODUCTION_DATABASE_URL`; DEV usa el environmen
 nombre exacto de un archivo en `backend/migrations` y una confirmación propia del
 entorno. El workflow DEV ejecuta la migración contra el contenido de la rama permanente
 `dev`; no reutiliza credenciales ni confirmaciones de producción.
+
+## Mininode Admin - Base administrativa
+
+La entrada canónica de administración interna es `/admin/`. En esta primera etapa
+incluye exclusivamente Privacy Web y reutiliza la interfaz y los contratos existentes
+de revisión de agrupaciones. La ruta anterior `/operator/site-reviews/` redirige a
+`/admin/` para mantener una única entrada visible.
+
+El acceso a datos y decisiones continúa protegido **en backend** por la identidad
+verificada y la lista `MININODE_REVIEW_OPERATOR_EMAILS`; el rol `owner` o
+`member` de un workspace no otorga privilegios administrativos globales.
+El frontend no contiene correos autorizados, secretos ni decisiones de permisos.
+
+La gestión de accesos gratuitos por sitio corresponde a PW-02 y **no** está
+implementada en esta base. No se modifican Billing, entitlements ni las reglas de
+agrupación.
