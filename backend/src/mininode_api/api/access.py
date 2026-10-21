@@ -274,8 +274,17 @@ def access_unlink_site(
 ):
     try:
         found = access.unlink_workspace_site(user.id, workspace_id, workspace_site_id)
-    except access.ActiveSiteCannotBeUnlinked:
-        raise HTTPException(status_code=409, detail="Este sitio tiene una contratación o compra pendiente y no puede desvincularse.")
+    except access.ActiveSiteCannotBeUnlinked as exc:
+        detail = (
+            "Este sitio tiene un servicio activo. Podrá desvincularse cuando finalice su vigencia."
+            if exc.reason == "active_entitlement"
+            else (
+                "Este sitio tiene una compra pendiente. Podrá desvincularse cuando se resuelva."
+                if exc.reason == "pending_order"
+                else "Este sitio tiene un servicio activo o una compra pendiente y no puede desvincularse."
+            )
+        )
+        raise HTTPException(status_code=409, detail=detail)
     except Exception:
         logger.exception("Access site unlink failed")
         raise HTTPException(status_code=503, detail="El servicio de acceso no está disponible.")

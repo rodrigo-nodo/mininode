@@ -446,6 +446,10 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
 class ActiveSiteCannotBeUnlinked(Exception):
     """A commercial entitlement or order still protects this site."""
 
+    def __init__(self, reason: str = "commercial_block"):
+        self.reason = reason
+        super().__init__(reason)
+
 
 def unlink_workspace_site(user_id: UUID, workspace_id: UUID, workspace_site_id: UUID) -> bool:
     """Hide a workspace link while retaining snapshots, orders and other workspaces.
@@ -465,19 +469,24 @@ def unlink_workspace_site(user_id: UUID, workspace_id: UUID, workspace_site_id: 
         if cursor.fetchone() is None:
             return False
         cursor.execute(
-            """SELECT EXISTS (
-                 SELECT 1 FROM access.entitlements
-                  WHERE workspace_site_id = %s AND status = 'active'
-                    AND active_from <= CURRENT_TIMESTAMP
-                    AND (active_until IS NULL OR active_until > CURRENT_TIMESTAMP)
-               ) OR EXISTS (
-                 SELECT 1 FROM billing.orders
-                  WHERE workspace_site_id = %s AND status = 'pending'
-               )""",
+            """SELECT
+                EXISTS (
+                    SELECT 1 FROM access.entitlements
+                    WHERE workspace_site_id = %s AND status = 'active'
+                      AND active_from <= CURRENT_TIMESTAMP
+                      AND (active_until IS NULL OR active_until > CURRENT_TIMESTAMP)
+                ),
+                EXISTS (
+                    SELECT 1 FROM billing.orders
+                    WHERE workspace_site_id = %s AND status = 'pending'
+                )""",
             (workspace_site_id, workspace_site_id),
         )
-        if cursor.fetchone()[0]:
-            raise ActiveSiteCannotBeUnlinked()
+        has_active_entitlement, has_pending_order = cursor.fetchone()
+        if has_active_entitlement:
+            raise ActiveSiteCannotBeUnlinked("active_entitlement")
+        if has_pending_order:
+            raise ActiveSiteCannotBeUnlinked("pending_order")
         cursor.execute(
             """UPDATE access.workspace_sites
                SET detached_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP

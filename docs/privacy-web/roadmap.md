@@ -27,7 +27,7 @@ Este documento identifica trabajo futuro; la existencia de código parcial no eq
 
 | ID | Actividad | Estado |
 |---|---|---|
-| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | Pendiente |
+| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | Validación |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | Pendiente |
 | PW-03 | Retirar el flujo comercial antiguo de órdenes/activaciones, sus endpoints, servicios, tests y documentación; preparar migración controlada | Pendiente |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | Pendiente |
@@ -114,8 +114,10 @@ Privacy Data; certificación legal; auditoría integral; modificación automáti
 
 ## 10. Flujo de implementación
 
-`dev` → rama enfocada → PR hacia `dev` → CI del último commit → **Cloudflare Branch Preview estable de esa rama** → validación del Product Owner → merge autorizado a `dev`.
+`dev` → rama enfocada → PR hacia `dev` → revisión de código y CI del último commit → **merge autorizado a `dev`** → confirmación del despliegue actualizado en **https://dev.mininode.io** → **validación funcional y UX del Product Owner**.
 
-Cuando corresponda publicar: `dev` → PR hacia `main` → CI y validación → merge autorizado.
+El Product Owner valida Privacy Web exclusivamente en `dev.mininode.io`; no se le solicitará validar en Branch Previews individuales. Si la validación detecta problemas, se corregirán en un nuevo PR hacia `dev` antes de cerrar la actividad. El merge técnico a `dev` no equivale a validación funcional ni a cierre de la actividad.
 
-El Branch Preview debe corresponder al último commit del PR; no se usará como referencia principal una URL puntual de despliegue por commit. La fuente de verdad para producción es `main`. No mergear sin autorización explícita.
+Cuando corresponda publicar: `dev` → PR hacia `main` → revisión de código y CI → autorización de merge → comprobación de despliegue y validación de producción.
+
+La fuente de verdad para producción es `main`. Nunca mergear sin autorización explícita.

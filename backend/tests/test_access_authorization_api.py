@@ -494,3 +494,141 @@ def test_operator_api_handles_conflicts_without_leaking_data(client, monkeypatch
                       headers={"Cf-Access-Jwt-Assertion": "signed-token"})
     assert res.status_code == 409
     assert res.json()["detail"] == "Pago existente"
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        ("active_entitlement", "servicio activo"),
+        ("pending_order", "compra pendiente"),
+    ],
+)
+def test_unlink_site_explains_commercial_block(client, monkeypatch, reason, expected):
+    _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    monkeypatch.setattr(
+        access,
+        "unlink_workspace_site",
+        lambda *_args: (_ for _ in ()).throw(access.ActiveSiteCannotBeUnlinked(reason)),
+    )
+    response = client.post(
+        f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink",
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
+    )
+    assert response.status_code == 409
+    assert expected in response.json()["detail"]
+
+
+def test_unlink_site_requires_auth_and_preserves_not_found(client, monkeypatch):
+    user_id = _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    calls = []
+
+    def unlink(uid, wid, sid):
+        calls.append((uid, wid, sid))
+        return False
+
+    monkeypatch.setattr(access, "unlink_workspace_site", unlink)
+    url = f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink"
+    assert client.post(url).status_code in (401, 403)
+    assert calls == []
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 404
+    assert calls == [(user_id, workspace_id, workspace_site_id)]
+
+
+def test_unlink_site_success_has_no_response_body(client, monkeypatch):
+    _verified_user(monkeypatch)
+    monkeypatch.setattr(access, "unlink_workspace_site", lambda *_args: True)
+    url = f"/access/workspaces/{uuid4()}/sites/{uuid4()}/unlink"
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_unlink_service_soft_detaches_without_deleting_history(monkeypatch):
+    user_id, workspace_id, workspace_site_id = uuid4(), uuid4(), uuid4()
+
+    class Cursor:
+        def __init__(self):
+            self.statements = []
+            self.answers = iter([(workspace_site_id,), (False, False)])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, statement, params):
+            self.statements.append((statement, params))
+
+        def fetchone(self):
+            return next(self.answers)
+
+    cursor = Cursor()
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self):
+            return cursor
+
+    monkeypatch.setattr(access, "_connection", lambda: Connection())
+    assert access.unlink_workspace_site(user_id, workspace_id, workspace_site_id) is True
+    sql = "\n".join(statement for statement, _params in cursor.statements)
+    assert "wm.user_id = %s" in sql
+    assert "ws.workspace_id = %s" in sql
+    assert "FOR UPDATE OF ws" in sql
+    assert "UPDATE access.workspace_sites" in sql
+    assert "SET detached_at = CURRENT_TIMESTAMP" in sql
+    assert "DELETE" not in sql
+    assert cursor.statements[-1][1] == (workspace_site_id,)
+
+
+@pytest.mark.parametrize(
+    ("active", "pending", "reason"),
+    [(True, False, "active_entitlement"), (False, True, "pending_order"),
+     (True, True, "active_entitlement")],
+)
+def test_unlink_service_blocks_protected_sites(monkeypatch, active, pending, reason):
+    workspace_site_id = uuid4()
+
+    class Cursor:
+        def __init__(self):
+            self.statements = []
+            self.answers = iter([(workspace_site_id,), (active, pending)])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, statement, params):
+            self.statements.append(statement)
+
+        def fetchone(self):
+            return next(self.answers)
+
+    cursor = Cursor()
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self):
+            return cursor
+
+    monkeypatch.setattr(access, "_connection", lambda: Connection())
+    with pytest.raises(access.ActiveSiteCannotBeUnlinked) as error:
+        access.unlink_workspace_site(uuid4(), uuid4(), workspace_site_id)
+    assert error.value.reason == reason
+    assert not any("UPDATE access.workspace_sites" in sql for sql in cursor.statements)
