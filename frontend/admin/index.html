@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Mininode Admin</title>
+  <meta name="description" content="Administración interna de Mininode.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../operator/site-reviews/styles.css">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="../assets/js/core-head.js" defer></script>
+  <script src="../include.js" defer></script>
+  <script src="../operator/site-reviews/app.js" defer></script>
+</head>
+<body>
+  <div data-include="../partials/header-nav.html"></div>
+  <main class="operator-main" aria-labelledby="admin-title">
+    <p class="operator-kicker">Administración interna</p>
+    <h1 id="admin-title">Mininode Admin</h1>
+    <p>Operaciones administrativas de Mininode.</p>
+    <section aria-labelledby="privacy-admin-title">
+      <h2 id="privacy-admin-title" class="admin-product">Privacy Web</h2>
+      <section aria-labelledby="group-title">
+        <h3 id="group-title">Solicitudes de agrupación</h3>
+        <p>Revisa las solicitudes y registra una decisión. La agrupación requiere evidencia pública y no transfiere derechos comerciales.</p>
+        <p id="operator-status" role="status" aria-live="polite">Verificando acceso…</p>
+        <div id="operator-reviews" class="operator-reviews"></div>
+      </section>
+    </section>
+    <a href="/access/">Volver a Mi espacio</a>
+  </main>
+  <div data-include="../partials/footer.html"></div>
+</body>
+</html>
