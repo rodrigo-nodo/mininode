@@ -494,3 +494,53 @@ def test_operator_api_handles_conflicts_without_leaking_data(client, monkeypatch
                       headers={"Cf-Access-Jwt-Assertion": "signed-token"})
     assert res.status_code == 409
     assert res.json()["detail"] == "Pago existente"
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        ("active_entitlement", "servicio activo"),
+        ("pending_order", "compra pendiente"),
+    ],
+)
+def test_unlink_site_explains_commercial_block(client, monkeypatch, reason, expected):
+    _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    monkeypatch.setattr(
+        access,
+        "unlink_workspace_site",
+        lambda *_args: (_ for _ in ()).throw(access.ActiveSiteCannotBeUnlinked(reason)),
+    )
+    response = client.post(
+        f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink",
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
+    )
+    assert response.status_code == 409
+    assert expected in response.json()["detail"]
+
+
+def test_unlink_site_requires_auth_and_preserves_not_found(client, monkeypatch):
+    user_id = _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    calls = []
+
+    def unlink(uid, wid, sid):
+        calls.append((uid, wid, sid))
+        return False
+
+    monkeypatch.setattr(access, "unlink_workspace_site", unlink)
+    url = f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink"
+    assert client.post(url).status_code in (401, 403)
+    assert calls == []
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 404
+    assert calls == [(user_id, workspace_id, workspace_site_id)]
+
+
+def test_unlink_site_success_has_no_response_body(client, monkeypatch):
+    _verified_user(monkeypatch)
+    monkeypatch.setattr(access, "unlink_workspace_site", lambda *_args: True)
+    url = f"/access/workspaces/{uuid4()}/sites/{uuid4()}/unlink"
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 204
+    assert response.content == b""
