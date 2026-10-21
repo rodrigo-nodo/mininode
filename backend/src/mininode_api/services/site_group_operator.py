@@ -105,7 +105,25 @@ def notify_pending(review_id: UUID) -> bool:
                 logger.warning("Review notification not confirmed delivered")
                 return False
     except HTTPError as exc:
-        logger.warning("Review notification HTTP rejected (status=%s; credentials omitted)", exc.code)
+        # Never log raw provider responses, headers, addresses, or credentials.
+        provider_codes = []
+        response_format = "non-json"
+        try:
+            parsed = json.loads(exc.read(4096))
+            if isinstance(parsed, dict):
+                response_format = "json"
+                errors = parsed.get("errors")
+                if isinstance(errors, list):
+                    provider_codes = [
+                        item["code"] for item in errors
+                        if isinstance(item, dict) and type(item.get("code")) is int
+                    ][:10]
+        except (ValueError, TypeError, OSError):
+            pass
+        logger.warning(
+            "Review notification HTTP rejected (status=%s; provider_codes=%s; response_format=%s; credentials omitted)",
+            exc.code, provider_codes, response_format,
+        )
         return False
     except (URLError, TimeoutError, OSError) as exc:
         logger.warning("Review notification transport failed (type=%s; credentials omitted)", type(exc).__name__)
