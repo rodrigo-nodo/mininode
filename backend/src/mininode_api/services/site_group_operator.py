@@ -10,6 +10,7 @@ import logging
 import os
 from datetime import datetime
 from urllib.parse import urlsplit
+from urllib.error import HTTPError, URLError
 
 from psycopg.errors import LockNotAvailable
 from urllib.request import Request, urlopen
@@ -84,7 +85,7 @@ def notify_pending(review_id: UUID) -> bool:
     if not row or row[1] != "pending" or row[4] is not None:
         return False
     payload = json.dumps({
-        "from": sender, "to": [destination],
+        "from": sender, "to": destination,
         "subject": "[Mininode] Nueva solicitud de agrupación",
         "text": (f"Solicitaron revisar la agrupación de {row[2]} y {row[3]}.\n"
                  "Revisa la solicitud desde el panel privado:\n"
@@ -103,8 +104,14 @@ def notify_pending(review_id: UUID) -> bool:
                     or destination not in delivery.get("result", {}).get("delivered", [])):
                 logger.warning("Review notification not confirmed delivered")
                 return False
-    except Exception:
-        logger.warning("Review notification delivery failed (credentials omitted)")
+    except HTTPError as exc:
+        logger.warning("Review notification HTTP rejected (status=%s; credentials omitted)", exc.code)
+        return False
+    except (URLError, TimeoutError, OSError) as exc:
+        logger.warning("Review notification transport failed (type=%s; credentials omitted)", type(exc).__name__)
+        return False
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.warning("Review notification response invalid (type=%s; credentials omitted)", type(exc).__name__)
         return False
     with access._connection() as db:
         db.execute("""
