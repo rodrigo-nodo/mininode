@@ -1,5 +1,7 @@
 """Workspace-safe operator review requests without any identity or billing mutations."""
 import os
+import json
+from urllib.error import HTTPError
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
@@ -325,10 +327,31 @@ def test_operator_notification_requires_configuration_and_is_idempotent(workspac
     assert operator.notify_pending(request.id) is True
     assert operator.notify_pending(request.id) is False
     assert len(sent) == 1
+    assert json.loads(sent[0].data)["to"] == "contacto@example.test"
     with psycopg.connect(p["url"]) as db:
         assert db.execute("SELECT notification_sent_at IS NOT NULL FROM access.site_group_review_requests WHERE id=%s",
                           (request.id,)).fetchone()[0] is True
 
+
+
+def test_operator_notification_http_rejection_is_safe_and_retryable(workspace_pair, monkeypatch, caplog):
+    p = workspace_pair
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setenv("CLOUDFLARE_EMAIL_API_TOKEN", "test-only")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("MININODE_CONTACT_EMAIL", "contacto@example.test")
+    monkeypatch.setenv("MININODE_REVIEW_FROM_EMAIL", "notifications@example.test")
+
+    def rejected(req, timeout):
+        raise HTTPError(req.full_url, 400, "rejected", {}, None)
+
+    monkeypatch.setattr(operator, "urlopen", rejected)
+    assert operator.notify_pending(request.id) is False
+    assert "status=400" in caplog.text
+    assert "test-only" not in caplog.text
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute("SELECT notification_sent_at FROM access.site_group_review_requests WHERE id=%s",
+                          (request.id,)).fetchone()[0] is None
 
 def _legacy_order(pair, *, diagnostic_site=None, stored_site_url=None,
                   requested_url=None, order_url=None):
