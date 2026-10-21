@@ -278,7 +278,11 @@ def access_unlink_site(
         detail = (
             "Este sitio tiene un servicio activo. Podrá desvincularse cuando finalice su vigencia."
             if exc.reason == "active_entitlement"
-            else "Este sitio tiene una compra pendiente. Podrá desvincularse cuando se resuelva."
+            else (
+                "Este sitio tiene una compra pendiente. Podrá desvincularse cuando se resuelva."
+                if exc.reason == "pending_order"
+                else "Este sitio tiene un servicio activo o una compra pendiente y no puede desvincularse."
+            )
         )
         raise HTTPException(status_code=409, detail=detail)
     except Exception:
