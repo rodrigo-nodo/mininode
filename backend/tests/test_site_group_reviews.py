@@ -334,6 +334,44 @@ def test_operator_notification_requires_configuration_and_is_idempotent(workspac
 
 
 
+
+@pytest.mark.parametrize(
+    ("body", "expected_codes", "expected_format"),
+    [
+        (b'{"errors":[{"code":10105,"message":"private detail"},{"code":10203}]}', "[10105, 10203]", "json"),
+        (b"<html>blocked</html>", "[]", "non-json"),
+        (b'{"errors":[{"code":"invalid"},{"message":"secret"}]}', "[]", "json"),
+    ],
+)
+def test_operator_notification_logs_only_numeric_provider_codes(
+    workspace_pair, monkeypatch, caplog, body, expected_codes, expected_format,
+):
+    from io import BytesIO
+
+    p = workspace_pair
+    request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
+    monkeypatch.setenv("CLOUDFLARE_EMAIL_API_TOKEN", "secret-test-token")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("MININODE_CONTACT_EMAIL", "contacto@example.test")
+    monkeypatch.setenv("MININODE_REVIEW_FROM_EMAIL", "notifications@example.test")
+
+    def rejected(req, timeout):
+        raise HTTPError(req.full_url, 403, "forbidden", {}, BytesIO(body))
+
+    monkeypatch.setattr(operator, "urlopen", rejected)
+    assert operator.notify_pending(request.id) is False
+    assert "status=403" in caplog.text
+    assert f"provider_codes={expected_codes}" in caplog.text
+    assert f"response_format={expected_format}" in caplog.text
+    assert "secret-test-token" not in caplog.text
+    assert "private detail" not in caplog.text
+    assert "contacto@example.test" not in caplog.text
+    with psycopg.connect(p["url"]) as db:
+        assert db.execute(
+            "SELECT notification_sent_at FROM access.site_group_review_requests WHERE id=%s",
+            (request.id,),
+        ).fetchone()[0] is None
+
 def test_operator_notification_http_rejection_is_safe_and_retryable(workspace_pair, monkeypatch, caplog):
     p = workspace_pair
     request = reviews.create_review_request(p["user"], p["workspace"], p["first"], p["second"])
