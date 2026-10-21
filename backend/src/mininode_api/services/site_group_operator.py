@@ -59,15 +59,16 @@ def list_operator_reviews() -> list[dict]:
 
 
 def notify_pending(review_id: UUID) -> bool:
-    """Best-effort Resend notification, no message if already sent or unconfigured.
+    """Best-effort Cloudflare notification, no message if already sent or unconfigured.
 
     Requests remain persisted when mail is unavailable. A subsequent submission
     retries undelivered mail; no provider credential is persisted or logged.
     """
-    key = os.getenv("RESEND_API_KEY", "")
+    key = os.getenv("CLOUDFLARE_EMAIL_API_TOKEN", "").strip()
+    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
     destination = os.getenv("MININODE_CONTACT_EMAIL", "").strip()
     sender = os.getenv("MININODE_REVIEW_FROM_EMAIL", "").strip()
-    if not key or not destination or not sender:
+    if not key or not account_id or not destination or not sender:
         logger.warning("Review notification not configured")
         return False
     with access._connection() as db, db.cursor() as cur:
@@ -89,12 +90,18 @@ def notify_pending(review_id: UUID) -> bool:
                  "Revisa la solicitud desde el panel privado:\n"
                  + os.getenv("MININODE_REVIEW_PANEL_URL", "https://dev.mininode.io/operator/site-reviews/") + "\n"),
     }).encode("utf-8")
-    request = Request("https://api.resend.com/emails", data=payload, method="POST",
+    request = Request(f"https://api.cloudflare.com/client/v4/accounts/{account_id}/email/sending/send",
+                      data=payload, method="POST",
                       headers={"Authorization": "Bearer " + key,
                                "Content-Type": "application/json"})
     try:
         with urlopen(request, timeout=8) as response:
             if not 200 <= response.status < 300:
+                return False
+            delivery = json.load(response)
+            if (delivery.get("success") is not True
+                    or destination not in delivery.get("result", {}).get("delivered", [])):
+                logger.warning("Review notification not confirmed delivered")
                 return False
     except Exception:
         logger.warning("Review notification delivery failed (credentials omitted)")
