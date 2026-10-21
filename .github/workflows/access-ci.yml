@@ -62,6 +62,7 @@ on:
       - 'frontend/legal/**'
       - 'frontend/access/**'
       - 'frontend/operator/site-reviews/**'
+      - 'frontend/admin/**'
       - 'frontend/privacy/**'
       - 'frontend/partials/**'
       - 'frontend/test_head_common.py'
@@ -113,7 +114,7 @@ jobs:
         run: node --test frontend/functions/api/test_proxy.mjs
 
       - name: Run Access client UI tests
-        run: node --test frontend/access/test_access.mjs frontend/access/test_clerk_config.mjs frontend/operator/site-reviews/test_operator.mjs
+        run: node --test frontend/access/test_access.mjs frontend/access/test_clerk_config.mjs frontend/operator/site-reviews/test_operator.mjs frontend/admin/test_admin.mjs
 
       - name: Run Privacy Web static tests
         run: pytest -q frontend/privacy/test_privacy_static.py
