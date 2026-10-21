@@ -12,6 +12,9 @@ test('Mininode Admin is the single Privacy Web admin entry and reuses secured gr
   assert.match(html, /noindex,nofollow/);
   assert.match(html, /id="operator-status"/);
   assert.match(html, /id="operator-reviews"/);
+  assert.match(html, /id="admin-operations" hidden/);
+  assert.match(operator, /if \(adminOperations\) adminOperations\.hidden = false/);
+  assert.match(operator, /Acceso restringido/);
   assert.match(html, /operator\/site-reviews\/app\.js/);
   assert.match(operator, /auth\.getToken\(\)/);
   assert.match(operator, /\/api\/access\/operator\/site-group-reviews/);
