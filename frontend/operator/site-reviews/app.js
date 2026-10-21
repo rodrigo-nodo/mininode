@@ -2,6 +2,7 @@
    Do not store operator roles, tokens, or authorization decisions in the browser. */
 const statusNode = document.querySelector('#operator-status');
 const listNode = document.querySelector('#operator-reviews');
+const adminOperations = document.querySelector('#admin-operations');
 let auth;
 
 function waitForAuth() {
@@ -24,7 +25,7 @@ async function request(path, options = {}) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 403) throw new Error('Tu cuenta no tiene permisos de operador.');
+    if (response.status === 403) throw new Error('Acceso restringido. Esta cuenta no tiene autorización administrativa.');
     throw new Error(typeof body.detail === 'string' ? body.detail : 'No pudimos completar la solicitud.');
   }
   return body;
@@ -114,6 +115,7 @@ window.addEventListener('load', async () => {
       return;
     }
     await loadReviews();
+    if (adminOperations) adminOperations.hidden = false;
   } catch (error) {
     statusNode.textContent = error instanceof Error ? error.message : 'No pudimos verificar tu acceso.';
   }
