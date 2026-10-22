@@ -44,6 +44,7 @@ export const onRequest = async (ctx) => {
     || (/^access\/workspaces\/[0-9a-f-]+\/sites$/.test(destPathPublic) && method === 'POST')
     || (/^access\/workspaces\/[0-9a-f-]+\/site-group-reviews$/.test(destPathPublic) && ['GET', 'POST'].includes(method))
     || (destPathPublic === 'access/operator/site-group-reviews' && method === 'GET')
+    || (destPathPublic === 'access/operator/grants/overview' && method === 'GET')
     || (destPathPublic === 'access/operator/grant-sites' && method === 'GET')
     || (/^access\/operator\/grant-sites\/[0-9a-f-]+$/.test(destPathPublic) && method === 'GET')
     || (destPathPublic === 'access/operator/grants' && method === 'POST')
