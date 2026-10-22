@@ -3,6 +3,7 @@ const grantForm = document.querySelector('#grant-search-form');
 const grantResults = document.querySelector('#grant-sites');
 const grantStatus = document.querySelector('#grant-status');
 const grantSearch = document.querySelector('#grant-search');
+const displayedGrantSites = new Map();
 
 async function grantApi(path, options = {}) {
   const auth = window.MininodeAuth;
@@ -55,7 +56,7 @@ async function showGrantSite(site, container) {
   heading.textContent = site.hostname;
   const workspace = document.createElement('p');
   workspace.className = 'admin-grants__workspace';
-  workspace.textContent = 'Espacio: ' + site.workspace + ' · ' + site.id;
+  workspace.textContent = 'Espacio: ' + site.workspace;
   const history = document.createElement('div');
   history.className = 'admin-grants__history';
 
@@ -72,7 +73,11 @@ async function showGrantSite(site, container) {
       record.className = 'admin-grants__period';
       const summary = document.createElement('p');
       const origin = item.source === 'internal_grant' ? 'Cortesía' : 'Acceso pagado';
-      summary.textContent = origin + ' · ' + item.status + ' · ' +
+      const state = item.status === 'revoked' ? 'Revocada' :
+        item.status !== 'active' ? item.status :
+        new Date(item.active_from) > new Date() ? 'Programada' :
+        item.active_until && new Date(item.active_until) <= new Date() ? 'Vencida' : 'Vigente';
+      summary.textContent = origin + ' · ' + state + ' · ' +
         grantDate(item.active_from) + ' → ' + grantDate(item.active_until) +
         (item.last_reason ? ' · ' + item.last_reason : '');
       record.append(summary);
@@ -165,7 +170,6 @@ grantForm.addEventListener('submit', async event => {
   event.preventDefault();
   const button = grantForm.querySelector('button');
   button.disabled = true;
-  grantResults.replaceChildren();
   grantStatus.textContent = 'Buscando sitios…';
   try {
     const data = await grantApi('/api/access/operator/grant-sites?q=' + encodeURIComponent(normalizeGrantSearch(grantSearch.value)));
@@ -173,12 +177,19 @@ grantForm.addEventListener('submit', async event => {
       grantStatus.textContent = 'No hay sitios asociados a espacios para ese dominio.';
       return;
     }
-    grantStatus.textContent = data.sites.length + ' sitio(s) encontrado(s). Selecciona el espacio correcto.';
+    grantStatus.textContent = data.sites.length + ' sitio(s) encontrado(s). Se conservan los sitios consultados en esta sesión.';
     for (const site of data.sites) {
-      const container = document.createElement('article');
-      container.className = 'operator-review admin-grants__site';
-      grantResults.append(container);
-      await showGrantSite(site, container);
+      let container = displayedGrantSites.get(site.id);
+      if (!container) {
+        container = document.createElement('article');
+        container.className = 'operator-review admin-grants__site';
+        displayedGrantSites.set(site.id, container);
+        grantResults.prepend(container);
+        await showGrantSite(site, container);
+      } else {
+        // Bring the selected site into view without discarding previously loaded sites.
+        grantResults.prepend(container);
+      }
     }
   } catch (error) {
     grantStatus.textContent = error.message;
