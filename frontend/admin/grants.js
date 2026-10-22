@@ -291,12 +291,12 @@ grantForm.addEventListener('submit', async event => {
 });
 
 // Do not read operator-only data before the existing admin access gate opens.
-const adminOperations = document.querySelector('#admin-operations');
+const grantAdminOperations = document.querySelector('#admin-operations');
 function startGrantOverview() {
-  if (overviewStarted || adminOperations.hidden) return;
+  if (overviewStarted || grantAdminOperations.hidden) return;
   overviewStarted = true;
   loadGrantOverview();
 }
 const grantGateObserver = new MutationObserver(startGrantOverview);
-grantGateObserver.observe(adminOperations, { attributes: true, attributeFilter: ['hidden'] });
+grantGateObserver.observe(grantAdminOperations, { attributes: true, attributeFilter: ['hidden'] });
 startGrantOverview();
