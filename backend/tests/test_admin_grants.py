@@ -115,7 +115,7 @@ def test_postgres_paid_then_free_continuity_and_future_limit():
     order = billing.create_order(operator, site, diagnostic)
     paid_id = billing.payment_confirmed(
         order.id, provider="test", provider_order_id="pw02-first",
-        verified_paid_at=now + timedelta(hours=1))
+        verified_paid_at=now - timedelta(minutes=1))
     grant_id = admin_grants.grant(site, operator, "Cortesía posterior", days=9)
     rows = _periods(db, site)
     assert [row[0] for row in rows] == [paid_id, grant_id]
