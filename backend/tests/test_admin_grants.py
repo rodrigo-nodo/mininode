@@ -215,7 +215,8 @@ def test_admin_courtesy_overview_returns_counts_and_all_sources_remain_separate(
     assert len(rows) == 1
     assert rows[0][1] == site
     assert rows[0][7] == "active"
-    assert rows[0][4] == f'{operator}@example.com'\n    assert rows[0][8] == "Cortesía para panel"
+    assert rows[0][4] == f'{operator}@example.com'
+    assert rows[0][8] == "Cortesía para panel"
     admin_grants.revoke(rows[0][0], operator, "Cerrada para prueba")
     totals, rows = admin_grants.list_admin_courtesies()
     assert totals == (0, 0, 1)
