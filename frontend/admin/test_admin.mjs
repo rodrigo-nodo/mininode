@@ -112,3 +112,10 @@ test('PW-02 distinguishes blocked and processing button cursors', () => {
   assert.match(grants, /submit\.dataset\.processing = 'true'/);
   assert.match(grants, /delete submit\.dataset\.processing/);
 });
+
+
+test('PW-02 local CSS version is aligned with the disabled cursor fix', () => {
+  assert.match(html, /href="\.\/styles\.css\?v=pw02cursor374"/);
+  assert.match(styles, /\.admin-grants__form \.btn:disabled \{ cursor: not-allowed; \}/);
+  assert.doesNotMatch(html, /href="\.\/styles\.css\?v=pw02order372"/);
+});
