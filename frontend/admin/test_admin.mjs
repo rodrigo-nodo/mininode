@@ -104,3 +104,11 @@ test('PW-02 orders sites and disables extensions for future reservations', () =>
   assert.match(grants, /if \(submit\.disabled\) return/);
   assert.match(grants, /if \(conflict\) await refresh\(\)/);
 });
+
+
+test('PW-02 distinguishes blocked and processing button cursors', () => {
+  assert.match(styles, /\.admin-grants__form \.btn:disabled \{ cursor: not-allowed; \}/);
+  assert.match(styles, /\.admin-grants__form \.btn\[data-processing="true"\]:disabled \{ cursor: progress; \}/);
+  assert.match(grants, /submit\.dataset\.processing = 'true'/);
+  assert.match(grants, /delete submit\.dataset\.processing/);
+});
