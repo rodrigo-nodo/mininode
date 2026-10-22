@@ -100,7 +100,16 @@ def _seed():
 
 def _prepared():
     db, operator, site, diagnostic, now = _seed()
-    admin_grants.initialize_database()
+    # Test fixture installs the reviewed migration explicitly, not via FastAPI startup.
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "scripts" / "predeploy_migrations.py"
+    spec = importlib.util.spec_from_file_location("pw02_migrator", path)
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    sql, _ = runner.load_sql("20261022_access_entitlement_admin_events.sql")
+    with psycopg.connect(db) as conn:
+        conn.execute(sql)
     return db, operator, site, diagnostic, now
 
 
@@ -248,3 +257,22 @@ def test_operator_search_exposes_workspace_owner_email_without_changing_grant_ta
     assert len(matches) == 1
     assert matches[0][0] == site
     assert matches[0][3] == f"{operator}@example.com"
+
+
+def test_postgres_pw02_migration_is_idempotent_with_existing_events():
+    db, operator, site, _, _ = _prepared()
+    eid = admin_grants.grant(site, operator, "Evento histórico conservado")
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "scripts" / "predeploy_migrations.py"
+    spec = importlib.util.spec_from_file_location("pw02_migrator_repeat", path)
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    sql, _ = runner.load_sql("20261022_access_entitlement_admin_events.sql")
+    with psycopg.connect(db) as conn:
+        conn.execute(sql)
+        events = conn.execute(
+            "SELECT action, reason FROM access.entitlement_admin_events WHERE entitlement_id=%s",
+            (eid,),
+        ).fetchall()
+    assert events == [("granted", "Evento histórico conservado")]
