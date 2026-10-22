@@ -1,3 +1,18 @@
 .admin-product { border-top: 1px solid var(--color-border); margin: 28px 0 18px; padding-top: 22px; font-size: 1.2rem; }
 .operator-main h3 { margin: 12px 0 8px; font-size: 1.05rem; }
 .operator-main section > p { color: var(--color-muted); line-height: 1.55; }
+
+.admin-grants { margin: 20px 0 32px; }
+.admin-grants__search { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin: 18px 0 12px; }
+.admin-grants__field { display: grid; gap: 7px; font-weight: 600; min-width: 0; }
+.admin-grants__search .admin-grants__field { flex: 1 1 260px; }
+.admin-grants__field input { box-sizing: border-box; width: 100%; min-height: 42px; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 9px 12px; background: var(--color-bg); color: var(--color-text); font: inherit; }
+.admin-grants__status { color: var(--color-muted); font-size: var(--text-sm); margin: 12px 0; }
+.admin-grants__site h4 { margin: 0 0 8px; overflow-wrap: anywhere; }
+.admin-grants__workspace { overflow-wrap: anywhere; }
+.admin-grants__form { display: grid; gap: 12px; margin: 18px 0; }
+.admin-grants__history { border-top: 1px solid var(--color-border); padding-top: 12px; }
+.admin-grants__period { border-bottom: 1px solid var(--color-border); padding: 10px 0 14px; }
+.admin-grants__period p { overflow-wrap: anywhere; }
+.admin-grants__period .operator-actions { margin-top: 10px; }
+@media (max-width: 600px) { .admin-grants__search { display: grid; } }
