@@ -61,8 +61,8 @@ test('PW-02 spacing uses page composition while keeping global button styles', a
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
   assert.match(styles, /\.admin-grants__form \.admin-grants__field/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02dashboard369/);
-  assert.match(html, /styles\.css\?v=pw02dashboard369/);
+  assert.match(html, /grants\.js\?v=pw02owners369/);
+  assert.match(html, /styles\.css\?v=pw02owners369/);
 });
 
 test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
@@ -78,4 +78,11 @@ test('PW-02 dashboard has operator-gated persistent overview and selected site d
   assert.match(grants, /Las fechas definitivas las determina el servidor/);
   assert.match(styles, /\.admin-page \.operator-main \{ max-width: 1160px/);
   assert.match(styles, /@media \(max-width: 760px\)/);
+});
+
+test('PW-02 identifies owner email in overview, site selection and confirmation', () => {
+  assert.match(html, /Titular \(email\)/);
+  assert.match(grants, /item\.owner_emails/);
+  assert.match(grants, /site\.owner_emails/);
+  assert.match(grants, /Titular:/);
 });
