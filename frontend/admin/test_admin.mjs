@@ -61,8 +61,8 @@ test('PW-02 spacing uses page composition while keeping global button styles', a
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
   assert.match(styles, /\.admin-grants__form \.admin-grants__field/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02order372/);
-  assert.match(html, /styles\.css\?v=pw02order372/);
+  assert.match(html, /grants\.js\?v=pw02cursor373/);
+  assert.match(html, /styles\.css\?v=pw02cursor373/);
 });
 
 test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
@@ -103,4 +103,12 @@ test('PW-02 orders sites and disables extensions for future reservations', () =>
   assert.match(grants, /grantNotice\.textContent = scheduled/);
   assert.match(grants, /if \(submit\.disabled\) return/);
   assert.match(grants, /if \(conflict\) await refresh\(\)/);
+});
+
+
+test('PW-02 distinguishes blocked and processing button cursors', () => {
+  assert.match(styles, /\.admin-grants__form \.btn:disabled \{ cursor: not-allowed; \}/);
+  assert.match(styles, /\.admin-grants__form \.btn\[data-processing="true"\]:disabled \{ cursor: progress; \}/);
+  assert.match(grants, /submit\.dataset\.processing = 'true'/);
+  assert.match(grants, /delete submit\.dataset\.processing/);
 });
