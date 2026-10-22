@@ -496,3 +496,24 @@ El frontend no contiene correos autorizados, secretos ni decisiones de permisos.
 La gestión de accesos gratuitos por sitio corresponde a PW-02 y **no** está
 implementada en esta base. No se modifican Billing, entitlements ni las reglas de
 agrupación.
+
+## PW-02 - Cortesías administrativas Privacy Web
+
+Mininode Admin (/admin/) permite a operadores autorizados buscar un dominio y distinguir
+sus vínculos privados por workspace antes de conceder acceso. Las operaciones usan
+la misma autorización de operador que las solicitudes de agrupación, validada en backend.
+
+Las cortesías son entitlements del producto `privacy_web` con `source=internal_grant`;
+no crean órdenes de Billing. Duración predeterminada: 30 días, editable entre 1 y 365
+días. La fecha de inicio se coloca al finalizar el período activo si lo hubiera;
+se admite como máximo un período futuro. No hay renovación automática.
+
+Los eventos de concesión y revocación se registran en
+`access.entitlement_admin_events` con operador, fecha y motivo. La revocación
+marca `status=revoked` sin borrar el entitlement ni la auditoría. Las lecturas
+de derechos activos ya excluyen períodos revocados o vencidos.
+
+Billing también comprueba los períodos futuros sin distinguir el origen: una compra
+confirmada comienza al finalizar el período activo (gratuito o pagado), sin
+superposición; no se permite comprar otro período cuando ya hay uno futuro reservado.
+La duración pagada es un mes calendario mediante `add_calendar_month`.

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from mininode_api.core.access_auth import require_access_user
-from mininode_api.services import access, site_group_reviews, site_group_operator
+from mininode_api.services import access, site_group_reviews, site_group_operator, admin_grants
 
 logger = logging.getLogger(__name__)
 
@@ -290,3 +290,66 @@ def access_unlink_site(
         raise HTTPException(status_code=503, detail="El servicio de acceso no está disponible.")
     if not found:
         raise HTTPException(status_code=404, detail="Sitio no encontrado")
+
+class AdminGrantRequest(BaseModel):
+    workspace_site_id: UUID
+    days: int = 30
+    reason: str
+
+class AdminRevokeRequest(BaseModel):
+    reason: str
+
+@router.get("/operator/grant-sites")
+def operator_grant_sites(q: str, user: access.StoredUser = Depends(require_access_user)):
+    _require_review_operator(user)
+    try:
+        return {"sites": [{"id": str(a), "workspace": b, "hostname": c} for a,b,c in admin_grants.search_sites(q)]}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except Exception:
+        logger.exception("Admin grant site lookup failed")
+        raise HTTPException(status_code=503, detail="No pudimos buscar sitios.") from None
+
+@router.get("/operator/grant-sites/{workspace_site_id}")
+def operator_grant_history(workspace_site_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    _require_review_operator(user)
+    try:
+        rows = admin_grants.list_grants(workspace_site_id)
+        return {"entitlements": [{"id": str(a), "active_from": b, "active_until": c, "status": d, "source": e, "last_reason": f} for a,b,c,d,e,f in rows]}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except Exception:
+        logger.exception("Admin grant history failed")
+        raise HTTPException(status_code=503, detail="No pudimos consultar las vigencias.") from None
+
+@router.post("/operator/grants", status_code=201)
+def operator_create_grant(body: AdminGrantRequest, user: access.StoredUser = Depends(require_access_user)):
+    _require_review_operator(user)
+    try:
+        eid = admin_grants.grant(body.workspace_site_id, user.id, body.reason, body.days)
+        return {"id": str(eid)}
+    except admin_grants.GrantConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except Exception:
+        logger.exception("Admin grant creation failed")
+        raise HTTPException(status_code=503, detail="No pudimos habilitar el acceso.") from None
+
+@router.post("/operator/grants/{entitlement_id}/revoke")
+def operator_revoke_grant(entitlement_id: UUID, body: AdminRevokeRequest, user: access.StoredUser = Depends(require_access_user)):
+    _require_review_operator(user)
+    try:
+        admin_grants.revoke(entitlement_id, user.id, body.reason)
+        return {"status": "revoked"}
+    except admin_grants.GrantConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except Exception:
+        logger.exception("Admin grant revocation failed")
+        raise HTTPException(status_code=503, detail="No pudimos revocar el acceso.") from None
