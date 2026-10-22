@@ -121,3 +121,34 @@ def revoke(entitlement_id: UUID, operator_id: UUID, reason: str):
                 (id,entitlement_id,operator_user_id,action,reason)
                 VALUES (%s,%s,%s,'revoked',%s)
             """, (uuid4(), entitlement_id, operator_id, reason))
+
+
+def list_admin_courtesies(limit: int = 100):
+    """Read-only operator dashboard: all counts and latest grant records, including revoked."""
+    with billing._connect() as conn:
+        totals = conn.execute("""
+            SELECT
+              count(*) FILTER (WHERE status = 'active'
+                AND active_from <= CURRENT_TIMESTAMP
+                AND (active_until IS NULL OR active_until > CURRENT_TIMESTAMP)),
+              count(*) FILTER (WHERE status = 'active'
+                AND active_from > CURRENT_TIMESTAMP),
+              count(*) FILTER (WHERE status <> 'active'
+                OR (active_until IS NOT NULL AND active_until <= CURRENT_TIMESTAMP))
+            FROM access.entitlements
+            WHERE source = 'internal_grant' AND product_code = %s
+        """, (billing.PRODUCT,)).fetchone()
+        rows = conn.execute("""
+            SELECT e.id, ws.id, s.hostname, w.name,
+                   e.active_from, e.active_until, e.status,
+                   (SELECT ev.reason FROM access.entitlement_admin_events ev
+                    WHERE ev.entitlement_id = e.id ORDER BY ev.created_at DESC LIMIT 1)
+            FROM access.entitlements e
+            JOIN access.workspace_sites ws ON ws.id = e.workspace_site_id
+            JOIN access.workspaces w ON w.id = ws.workspace_id
+            JOIN access.sites s ON s.id = ws.site_id
+            WHERE e.source = 'internal_grant' AND e.product_code = %s
+            ORDER BY e.active_from DESC, e.id DESC
+            LIMIT %s
+        """, (billing.PRODUCT, limit)).fetchall()
+    return totals, rows
