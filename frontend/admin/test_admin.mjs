@@ -42,3 +42,25 @@ test('Admin normalizes URL to hostname and preserves workspace-specific actions'
   assert.match(grants, /site\.workspace/);
   assert.match(grants, /workspace_site_id: site\.id/);
 });
+
+test('PW-02 keeps consulted workspace sites and readable entitlement labels', () => {
+  assert.match(grants, /displayedGrantSites = new Map\(\)/);
+  assert.match(grants, /displayedGrantSites\.get\(site\.id\)/);
+  assert.match(grants, /grantResults\.prepend\(container\)/);
+  assert.doesNotMatch(grants, /grantResults\.replaceChildren\(\)/);
+  assert.match(grants, /Revocada/);
+  assert.match(grants, /Programada/);
+  assert.match(grants, /Vencida/);
+  assert.match(grants, /Vigente/);
+  assert.match(grants, /days\.value = '30'/);
+  assert.match(grants, /days\.max = '365'/);
+});
+
+test('PW-02 spacing uses page composition while keeping global button styles', async () => {
+  const operatorCss = await readFile(new URL('../operator/site-reviews/styles.css', import.meta.url), 'utf8');
+  assert.match(styles, /\.admin-grants__search \{ display: grid;/);
+  assert.match(styles, /\.admin-grants__site \.admin-grants__field \{ margin: 0;/);
+  assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
+  assert.match(html, /grants\.js\?v=pw02ux368/);
+  assert.match(html, /styles\.css\?v=pw02ux368/);
+});

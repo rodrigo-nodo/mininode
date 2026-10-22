@@ -15,3 +15,15 @@
 .admin-grants__period p { overflow-wrap: anywhere; }
 .admin-grants__period .operator-actions { margin-top: 10px; }
 @media (max-width: 600px) { .admin-grants__search { display: grid; } }
+
+/* PW-02 composition only; appearance is supplied by shared components.css. */
+.admin-grants__search { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.admin-grants__search .admin-grants__field { width: 100%; }
+.admin-grants__search .operator-actions { margin-top: 0; }
+.admin-grants__site { display: grid; gap: 14px; }
+.admin-grants__site .admin-grants__field { margin: 0; }
+.admin-grants__site .admin-grants__form { margin: 0; }
+.admin-grants__site .admin-grants__history { display: grid; gap: 12px; }
+.admin-grants__site .admin-grants__period { display: grid; gap: 10px; }
+.admin-grants__site .admin-grants__period p { margin: 0; }
+.admin-grants__site .operator-actions { margin-top: 0; }
