@@ -257,6 +257,7 @@ async function showGrantSite(site, container) {
       return;
     }
     if (!window.confirm(confirmationCopy(site, daysValue, reason.value.trim(), lastGrantHistory))) return;
+    submit.dataset.processing = 'true';
     submit.disabled = true;
     try {
       await grantApi('/api/access/operator/grants', {
@@ -274,6 +275,7 @@ async function showGrantSite(site, container) {
         : error.message;
       if (conflict) await refresh();
     } finally {
+      delete submit.dataset.processing;
       if (!grantNotice.textContent) submit.disabled = false;
     }
   });
