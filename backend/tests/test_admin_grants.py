@@ -100,7 +100,16 @@ def _seed():
 
 def _prepared():
     db, operator, site, diagnostic, now = _seed()
-    admin_grants.initialize_database()
+    # Test fixture installs the reviewed migration explicitly, not via FastAPI startup.
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "scripts" / "predeploy_migrations.py"
+    spec = importlib.util.spec_from_file_location("pw02_migrator", path)
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    sql, _ = runner.load_sql("20261022_access_entitlement_admin_events.sql")
+    with psycopg.connect(db) as conn:
+        conn.execute(sql)
     return db, operator, site, diagnostic, now
 
 
