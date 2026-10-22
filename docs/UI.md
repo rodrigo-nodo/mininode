@@ -72,3 +72,5 @@ Seleccionar una fila abre un solo detalle, con formulario de concesión/extensi�
 La dirección visual futura debe comunicar calma, seguridad y confianza: luz natural, composición limpia, tonos neutros, gris-azulados o naturales, espacios abiertos y arquitectura, agua, paisaje o detalles sobrios. La fotografía debe sentirse premium, no ostentosa.
 
 La calma de interfaces fintech modernas como Mercury es una referencia conceptual; no se deben copiar imágenes, composiciones ni identidades de terceros.
+
+El listado y la búsqueda de sitios para operadores muestran los emails de todos los miembros con rol `owner` del espacio. El email es dato identificador (no destino de la vigencia); el acceso permanece asociado a `workspace_site_id`. Si hay varios propietarios, se muestran todos; si no hay, se indica que no hay titular registrado. Nunca exponer esta información en endpoints públicos.
