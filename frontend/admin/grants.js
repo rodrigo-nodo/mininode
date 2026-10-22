@@ -82,7 +82,7 @@ function confirmationCopy(site, days, reason, periods) {
   const start = endDates.length ? new Date(Math.max(now.getTime(), ...endDates.map(d => d.getTime()))) : now;
   const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
   return 'Confirmar cortesía de Privacy Web\n\nSitio: ' + site.hostname +
-    '\nEspacio: ' + site.workspace + '\nDuración: ' + days + ' días' +
+    '\nEspacio: ' + site.workspace + '\nTitular: ' + (site.owner_emails || 'Sin titular registrado') + '\nDuración: ' + days + ' días' +
     '\nMotivo: ' + reason + '\nInicio estimado: ' + grantDate(start) +
     '\nTérmino estimado: ' + grantDate(end) +
     '\n\nLas fechas definitivas las determina el servidor al registrar. ¿Confirmar?';
@@ -99,14 +99,14 @@ async function loadGrantOverview() {
     if (!data.courtesies.length) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 5;
+      td.colSpan = 6;
       td.textContent = 'Todavía no hay cortesías registradas.';
       tr.append(td);
       overviewRows.append(tr);
     }
     for (const item of data.courtesies) {
       const tr = document.createElement('tr');
-      for (const value of [item.hostname, item.workspace, grantState(item), grantDate(item.active_until)]) {
+      for (const value of [item.hostname, item.workspace, item.owner_emails || "Sin titular registrado", grantState(item), grantDate(item.active_until)]) {
         const td = document.createElement('td');
         td.textContent = value;
         tr.append(td);
@@ -114,7 +114,7 @@ async function loadGrantOverview() {
       const cell = document.createElement('td');
       const open = grantButton('Administrar');
       open.addEventListener('click', () => selectGrantSite({
-        id: item.workspace_site_id, hostname: item.hostname, workspace: item.workspace,
+        id: item.workspace_site_id, hostname: item.hostname, workspace: item.workspace, owner_emails: item.owner_emails,
       }));
       cell.append(open);
       tr.append(cell);
@@ -147,7 +147,7 @@ async function showGrantSite(site, container) {
   heading.textContent = site.hostname;
   const workspace = document.createElement('p');
   workspace.className = 'admin-grants__workspace';
-  workspace.textContent = 'Espacio: ' + site.workspace;
+  workspace.textContent = 'Espacio: ' + site.workspace + ' · Titular: ' + (site.owner_emails || 'Sin titular registrado');
   const history = document.createElement('div');
   history.className = 'admin-grants__history';
   const form = document.createElement('form');
@@ -276,7 +276,7 @@ grantForm.addEventListener('submit', async event => {
     } else {
       grantResults.replaceChildren();
       for (const site of data.sites) {
-        const select = grantButton(site.hostname + ' · ' + site.workspace);
+        const select = grantButton(site.hostname + ' · ' + site.workspace + ' · ' + (site.owner_emails || 'Sin titular registrado'));
         select.addEventListener('click', () => selectGrantSite(site));
         grantResults.append(select);
       }
