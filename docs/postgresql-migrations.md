@@ -112,3 +112,68 @@ migración es idempotente sobre un esquema compatible.
 **DEV y PROD requieren autorizaciones operativas separadas.** No activar ni ejecutar
 DDL en PROD por el merge del código. El rollback del código no elimina la tabla,
 y sus eventos de auditoría deben preservarse.
+
+
+## Consultas PostgreSQL mediante Render Shell (DEV)
+
+**Procedimiento operativo validado en octubre de 2026.** El PostgreSQL DEV
+`mininode-db-dev` (`mininode_db_dev`) no permite conexiones externas porque su
+lista de IP autorizadas está vacía. No abrir el acceso público para inspeccionar la BD.
+Usar la pestaña **Shell** del servicio Render **`mininode-backend-dev`**, que
+dispone de conexión interna mediante la variable `DATABASE_URL`.
+
+- Entregar al operador **un comando por paso, en una sola línea**, para copiar
+  directamente en Shell. Nunca imprimir `DATABASE_URL`, contraseñas ni tokens.
+- Identificar el entorno con una consulta de solo lectura antes de cualquier
+  operación; confirmar `mininode_db_dev`.
+- Por defecto usar exclusivamente `SELECT` y consultas al catálogo PostgreSQL.
+  No ejecutar DDL, migraciones, inserts o updates sin autorización explícita
+  para la base y entorno concretos.
+- Tras cambios de backend en `dev`, comprobar que Render desplegó el último
+  commit: el despliegue automático de `mininode-backend-dev` puede estar
+  deshabilitado. El código fusionado en GitHub no garantiza que la Shell ya lo tenga.
+- **PROD** requiere identificación, inspección y autorización independientes;
+  no reutilizar automáticamente permisos ni comandos de ejecución de DEV.
+
+Comandos de solo lectura, cada uno en **una línea** (desde `/app` en Render Shell):
+
+**1. Identificar base y existencia de tablas:**
+
+```bash
+python -c 'import os,psycopg; c=psycopg.connect(os.environ["DATABASE_URL"]); print(c.execute("SELECT current_database(),to_regclass('\''access.entitlement_admin_events'\'')::text,to_regclass('\''public.schema_migrations'\'')::text").fetchone()); c.close()'
+```
+
+**2. Inspeccionar estructura, restricciones e índices de PW-02:**
+
+```bash
+python -c 'import os,psycopg; c=psycopg.connect(os.environ["DATABASE_URL"]); q=["SELECT column_name,data_type,is_nullable,column_default FROM information_schema.columns WHERE table_schema=%s AND table_name=%s ORDER BY ordinal_position","SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid=%s::regclass ORDER BY conname","SELECT indexname,indexdef FROM pg_indexes WHERE schemaname=%s AND tablename=%s"]; p=[("access","entitlement_admin_events"),("access.entitlement_admin_events",),("access","entitlement_admin_events")]; [(print("CONSULTA",i+1),[print(r) for r in c.execute(s,a).fetchall()]) for i,(s,a) in enumerate(zip(q,p))]; c.close()'
+```
+
+**3. Revisar migración registrada y eventos de auditoría sin mostrar motivos ni
+correos personales:**
+
+```bash
+python -c 'import os,psycopg; c=psycopg.connect(os.environ["DATABASE_URL"]); print("MIGRACION:",c.execute("SELECT filename,checksum_sha256 FROM public.schema_migrations WHERE filename=%s",("20261022_access_entitlement_admin_events.sql",)).fetchall()); print("AUDITORIA:",c.execute("SELECT id::text,entitlement_id::text,action,created_at FROM access.entitlement_admin_events ORDER BY id").fetchall()); c.close()'
+```
+
+### Caso validado - PW-02 en DEV
+
+Antes de ejecutar `20261022_access_entitlement_admin_events.sql` se comprobó
+que la tabla, restricciones e índices existentes coincidían con el SQL versionado.
+Se registraron **cuatro eventos históricos**. La primera ejecución desde Shell
+falló con `Migration not in reviewed catalog` porque Render aún usaba un deploy
+anterior a PR #375; se desplegó el merge de `dev` y se validó el checksum.
+
+Con autorización expresa para **DEV**, se aplicó mediante el runner canónico:
+
+```bash
+MIGRATION_APPROVED_FILES=20261022_access_entitlement_admin_events.sql python scripts/predeploy_migrations.py
+```
+
+Resultado: `Applied: 20261022_access_entitlement_admin_events.sql`.
+Posteriormente, `public.schema_migrations` confirmó el checksum revisado
+`80ca278aeb683725b64995ba60a54dc42da899ac68c264972f1e8f7bac7c3208`;
+los cuatro eventos originales conservaron sus identificadores. Una prueba
+funcional conceder→revocar agregó ambos eventos para el mismo entitlement.
+**Este caso documenta una ejecución manual autorizada en DEV; no implica
+autorizar futuras ejecuciones ni PROD.**
