@@ -12,6 +12,7 @@
   <script src="../assets/js/core-head.js" defer></script>
   <script src="../include.js" defer></script>
   <script src="../operator/site-reviews/app.js" defer></script>
+  <script src="./grants.js" defer></script>
 </head>
 <body>
   <div data-include="../partials/header-nav.html"></div>
@@ -23,6 +24,11 @@
     <p>Operaciones administrativas de Mininode.</p>
     <section aria-labelledby="privacy-admin-title">
       <h2 id="privacy-admin-title" class="admin-product">Privacy Web</h2>
+      <section aria-labelledby="grants-title">
+        <h3 id="grants-title">Accesos gratuitos</h3>
+        <form id="grant-search-form"><label>Buscar dominio <input id="grant-search" required minlength="3" placeholder="ejemplo.cl"></label><button>Buscar</button></form>
+        <div id="grant-sites"></div><p id="grant-status" role="status"></p>
+      </section>
       <section aria-labelledby="group-title">
         <h3 id="group-title">Solicitudes de agrupación</h3>
         <p>Revisa las solicitudes y registra una decisión. La agrupación requiere evidencia pública y no transfiere derechos comerciales.</p>
