@@ -309,9 +309,9 @@ def operator_grants_overview(user: access.StoredUser = Depends(require_access_us
             "limit": 100,
             "courtesies": [
                 {"id": str(eid), "workspace_site_id": str(sid), "hostname": host,
-                 "workspace": workspace, "active_from": start, "active_until": until,
+                 "workspace": workspace, "owner_emails": owner_emails, "active_from": start, "active_until": until,
                  "status": status, "last_reason": reason}
-                for eid, sid, host, workspace, start, until, status, reason in rows
+                for eid, sid, host, workspace, owner_emails, start, until, status, reason in rows
             ],
         }
     except Exception:
@@ -322,7 +322,7 @@ def operator_grants_overview(user: access.StoredUser = Depends(require_access_us
 def operator_grant_sites(q: str, user: access.StoredUser = Depends(require_access_user)):
     _require_review_operator(user)
     try:
-        return {"sites": [{"id": str(a), "workspace": b, "hostname": c} for a,b,c in admin_grants.search_sites(q)]}
+        return {"sites": [{"id": str(a), "workspace": b, "hostname": c, "owner_emails": d} for a,b,c,d in admin_grants.search_sites(q)]}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
     except Exception:
