@@ -92,3 +92,25 @@ def test_site_group_review_queue_migration_is_reviewed_and_additive():
     assert "invalidated_at TIMESTAMPTZ NULL" in sql
     assert "UNIQUE (workspace_id, first_workspace_site_id, second_workspace_site_id)" in sql
     assert "DROP TABLE" not in sql and "UPDATE access.sites" not in sql
+
+
+def test_pw02_audit_migration_reviewed_and_additive():
+    name = "20261022_access_entitlement_admin_events.sql"
+    sql, checksum = runner.load_sql(name)
+    assert checksum == runner.APPROVED_CHECKSUMS[name]
+    assert "CREATE TABLE IF NOT EXISTS access.entitlement_admin_events" in sql
+    assert "REFERENCES access.entitlements(id)" in sql
+    assert "REFERENCES access.users(id)" in sql
+    assert "CHECK (action IN ('granted','revoked'))" in sql
+    assert "CREATE INDEX IF NOT EXISTS entitlement_admin_events_entitlement_idx" in sql
+    assert "DROP " not in sql.upper()
+    assert "DELETE FROM" not in sql.upper()
+
+
+def test_pw02_audit_schema_is_not_created_in_application_startup():
+    root = Path(__file__).resolve().parents[1] / "src" / "mininode_api"
+    main_source = (root / "main.py").read_text(encoding="utf-8")
+    grant_source = (root / "services" / "admin_grants.py").read_text(encoding="utf-8")
+    assert "admin_grants.initialize_database" not in main_source
+    assert "SCHEMA_SQL" not in grant_source
+    assert "def initialize_database" not in grant_source
