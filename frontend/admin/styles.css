@@ -1,29 +1,49 @@
+/* PW-02 layout only: component appearance comes from the global design system. */
+.admin-page .operator-main { max-width: 1160px; }
 .admin-product { border-top: 1px solid var(--color-border); margin: 28px 0 18px; padding-top: 22px; font-size: 1.2rem; }
 .operator-main h3 { margin: 12px 0 8px; font-size: 1.05rem; }
 .operator-main section > p { color: var(--color-muted); line-height: 1.55; }
-
 .admin-grants { margin: 20px 0 32px; }
-.admin-grants__search { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin: 18px 0 12px; }
-.admin-grants__field { min-width: 0; }
-.admin-grants__search .admin-grants__field { flex: 1 1 260px; }
-.admin-grants__status { color: var(--color-muted); font-size: var(--text-sm); margin: 12px 0; }
-.admin-grants__site h4 { margin: 0 0 8px; overflow-wrap: anywhere; }
-.admin-grants__workspace { overflow-wrap: anywhere; }
-.admin-grants__form { display: grid; gap: 12px; margin: 18px 0; }
+.admin-grants__metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 20px 0 24px; }
+.admin-grants__metric { display: grid; gap: 8px; padding: 18px; }
+.admin-grants__metric span { font-size: var(--text-sm); color: var(--color-muted); }
+.admin-grants__metric strong { font-size: 1.8rem; }
+.admin-grants h4 { margin: 24px 0 12px; }
+.admin-grants__hint, .admin-grants__status { color: var(--color-muted); font-size: var(--text-sm); margin: 10px 0; }
+.admin-grants__table-scroll { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.admin-grants__table { border-collapse: collapse; width: 100%; min-width: 650px; text-align: left; }
+.admin-grants__table th, .admin-grants__table td { padding: 12px 14px; border-bottom: 1px solid var(--color-border); }
+.admin-grants__table th { color: var(--color-muted); font-size: var(--text-sm); font-weight: 600; }
+.admin-grants__table tbody tr:last-child td { border-bottom: 0; }
+.admin-grants__search { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; max-width: 620px; margin: 16px 0; }
+.admin-grants__search .operator-actions { margin: 0; }
+.admin-grants__details { max-width: 900px; margin: 18px 0; }
+.admin-grants__site { padding: 22px; }
+.admin-grants__site h4 { margin: 0 0 8px; }
+.admin-grants__workspace { color: var(--color-muted); margin: 0 0 16px; }
+.admin-grants__form { display: grid; grid-template-columns: minmax(140px, .4fr) minmax(220px,1fr) auto; align-items: end; gap: 14px; margin-bottom: 22px; }
+.admin-grants__form .admin-grants__field, .admin-grants__period .admin-grants__field { margin: 0; min-width: 0; }
+.admin-grants__form .operator-actions { margin: 0; }
+.admin-grants__site h5 { margin: 10px 0 14px; font-size: var(--text-base); }
 .admin-grants__history { border-top: 1px solid var(--color-border); padding-top: 12px; }
-.admin-grants__period { border-bottom: 1px solid var(--color-border); padding: 10px 0 14px; }
-.admin-grants__period p { overflow-wrap: anywhere; }
-.admin-grants__period .operator-actions { margin-top: 10px; }
-@media (max-width: 600px) { .admin-grants__search { display: grid; } }
+.admin-grants__period { border-bottom: 1px solid var(--color-border); display: grid; grid-template-columns: minmax(0,1fr) minmax(160px,.6fr) auto; align-items: end; gap: 12px; padding: 14px 0; }
+.admin-grants__period p { margin: 0; overflow-wrap: anywhere; align-self: center; }
+.admin-grants__period .operator-actions { margin: 0; }
+@media (max-width: 760px) {
+  .admin-grants__metrics { gap: 8px; }
+  .admin-grants__metric { padding: 12px; }
+  .admin-grants__form, .admin-grants__period { grid-template-columns: minmax(0,1fr); }
+  .admin-grants__site { padding: 16px; }
+}
 
-/* PW-02 composition only; appearance is supplied by shared components.css. */
-.admin-grants__search { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.admin-grants__search .admin-grants__field { width: 100%; }
-.admin-grants__search .operator-actions { margin-top: 0; }
-.admin-grants__site { display: grid; gap: 14px; }
-.admin-grants__site .admin-grants__field { margin: 0; }
-.admin-grants__site .admin-grants__form { margin: 0; }
-.admin-grants__site .admin-grants__history { display: grid; gap: 12px; }
-.admin-grants__site .admin-grants__period { display: grid; gap: 10px; }
-.admin-grants__site .admin-grants__period p { margin: 0; }
-.admin-grants__site .operator-actions { margin-top: 0; }
+@media (max-width: 600px) {
+  .admin-grants__metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .admin-grants__metric strong { font-size: 1.4rem; }
+  .admin-grants__table-scroll { overflow-x: visible; border: 0; }
+  .admin-grants__table { min-width: 0; }
+  .admin-grants__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-grants__table tbody, .admin-grants__table tr, .admin-grants__table td { display: block; }
+  .admin-grants__table tr { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 12px; padding: 8px 12px; }
+  .admin-grants__table td { border-bottom: 0; padding: 7px 0; overflow-wrap: anywhere; }
+  .admin-grants__table td[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--color-muted); }
+}

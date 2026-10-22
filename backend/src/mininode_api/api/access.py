@@ -299,11 +299,30 @@ class AdminGrantRequest(BaseModel):
 class AdminRevokeRequest(BaseModel):
     reason: str
 
+@router.get("/operator/grants/overview")
+def operator_grants_overview(user: access.StoredUser = Depends(require_access_user)):
+    _require_review_operator(user)
+    try:
+        totals, rows = admin_grants.list_admin_courtesies()
+        return {
+            "totals": {"current": totals[0], "scheduled": totals[1], "historical": totals[2]},
+            "limit": 100,
+            "courtesies": [
+                {"id": str(eid), "workspace_site_id": str(sid), "hostname": host,
+                 "workspace": workspace, "owner_emails": owner_emails, "active_from": start, "active_until": until,
+                 "status": status, "last_reason": reason}
+                for eid, sid, host, workspace, owner_emails, start, until, status, reason in rows
+            ],
+        }
+    except Exception:
+        logger.exception("Admin courtesy overview failed")
+        raise HTTPException(status_code=503, detail="No pudimos cargar las cortesías.") from None
+
 @router.get("/operator/grant-sites")
 def operator_grant_sites(q: str, user: access.StoredUser = Depends(require_access_user)):
     _require_review_operator(user)
     try:
-        return {"sites": [{"id": str(a), "workspace": b, "hostname": c} for a,b,c in admin_grants.search_sites(q)]}
+        return {"sites": [{"id": str(a), "workspace": b, "hostname": c, "owner_emails": d} for a,b,c,d in admin_grants.search_sites(q)]}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
     except Exception:

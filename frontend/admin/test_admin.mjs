@@ -45,9 +45,9 @@ test('Admin normalizes URL to hostname and preserves workspace-specific actions'
 
 test('PW-02 keeps consulted workspace sites and readable entitlement labels', () => {
   assert.match(grants, /displayedGrantSites = new Map\(\)/);
-  assert.match(grants, /displayedGrantSites\.get\(site\.id\)/);
-  assert.match(grants, /grantResults\.prepend\(container\)/);
-  assert.doesNotMatch(grants, /grantResults\.replaceChildren\(\)/);
+  assert.match(grants, /displayedGrantSites\.set\(site\.id, site\)/);
+  assert.match(grants, /await selectGrantSite\(data\.sites\[0\]\)/);
+  assert.match(grants, /grantResults\.replaceChildren\(\)/);
   assert.match(grants, /Revocada/);
   assert.match(grants, /Programada/);
   assert.match(grants, /Vencida/);
@@ -59,8 +59,30 @@ test('PW-02 keeps consulted workspace sites and readable entitlement labels', ()
 test('PW-02 spacing uses page composition while keeping global button styles', async () => {
   const operatorCss = await readFile(new URL('../operator/site-reviews/styles.css', import.meta.url), 'utf8');
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
-  assert.match(styles, /\.admin-grants__site \.admin-grants__field \{ margin: 0;/);
+  assert.match(styles, /\.admin-grants__form \.admin-grants__field/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02ux368/);
-  assert.match(html, /styles\.css\?v=pw02ux368/);
+  assert.match(html, /grants\.js\?v=pw02owners369/);
+  assert.match(html, /styles\.css\?v=pw02owners369/);
+});
+
+test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
+  assert.match(html, /id="grant-current"/);
+  assert.match(html, /id="grant-scheduled"/);
+  assert.match(html, /id="grant-historical"/);
+  assert.match(html, /id="grant-overview-rows"/);
+  assert.match(grants, /api\/access\/operator\/grants\/overview/);
+  assert.match(grants, /grantGateObserver\.observe\(adminOperations/);
+  assert.match(grants, /adminOperations\.hidden/);
+  assert.match(grants, /Este sitio no tiene accesos registrados/);
+  assert.match(grants, /Extender cortesía/);
+  assert.match(grants, /Las fechas definitivas las determina el servidor/);
+  assert.match(styles, /\.admin-page \.operator-main \{ max-width: 1160px/);
+  assert.match(styles, /@media \(max-width: 760px\)/);
+});
+
+test('PW-02 identifies owner email in overview, site selection and confirmation', () => {
+  assert.match(html, /Titular \(email\)/);
+  assert.match(grants, /item\.owner_emails/);
+  assert.match(grants, /site\.owner_emails/);
+  assert.match(grants, /Titular:/);
 });

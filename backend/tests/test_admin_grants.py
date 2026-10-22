@@ -20,6 +20,9 @@ def test_grant_endpoints_require_operator(monkeypatch):
         api.operator_grant_sites("example.com", user)
     assert exc.value.status_code == 403
     with pytest.raises(HTTPException) as exc:
+        api.operator_grants_overview(user)
+    assert exc.value.status_code == 403
+    with pytest.raises(HTTPException) as exc:
         api.operator_revoke_grant(uuid4(), api.AdminRevokeRequest(reason="Fin de prueba"), user)
     assert exc.value.status_code == 403
 
@@ -202,3 +205,46 @@ def test_postgres_concurrent_grant_and_payment_serialized():
         assert paid == ("paid" if any(label == "payment" for label, _ in outcomes) else "pending")
         count = conn.execute("SELECT count(*) FROM access.entitlement_admin_events").fetchone()[0]
         assert count == (2 if any(label == "grant" for label, _ in outcomes) else 1)
+
+
+def test_admin_courtesy_overview_returns_counts_and_all_sources_remain_separate():
+    db, operator, site, _, _ = _prepared()
+    admin_grants.grant(site, operator, "Cortesía para panel", days=8)
+    totals, rows = admin_grants.list_admin_courtesies()
+    assert totals == (1, 0, 0)
+    assert len(rows) == 1
+    assert rows[0][1] == site
+    assert rows[0][7] == "active"
+    assert rows[0][4] == f'{operator}@example.com'
+    assert rows[0][8] == "Cortesía para panel"
+    admin_grants.revoke(rows[0][0], operator, "Cerrada para prueba")
+    totals, rows = admin_grants.list_admin_courtesies()
+    assert totals == (0, 0, 1)
+    assert rows[0][7] == "revoked"
+
+
+def test_admin_courtesy_overview_keeps_sites_from_different_workspaces():
+    db, operator, site, _, _ = _prepared()
+    with psycopg.connect(db) as conn, conn.cursor() as cur:
+        cur.execute("SELECT site_id FROM access.workspace_sites WHERE id=%s", (site,))
+        linked_site = cur.fetchone()[0]
+        new_workspace, new_ws_site = uuid4(), uuid4()
+        cur.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'Otro espacio')", (new_workspace,))
+        cur.execute(
+            "INSERT INTO access.workspace_sites (id,workspace_id,site_id) VALUES (%s,%s,%s)",
+            (new_ws_site, new_workspace, linked_site),
+        )
+    admin_grants.grant(site, operator, "Cortesía espacio uno")
+    admin_grants.grant(new_ws_site, operator, "Cortesía espacio dos")
+    totals, rows = admin_grants.list_admin_courtesies()
+    assert totals[0] == 2
+    assert {row[1] for row in rows} == {site, new_ws_site}
+    assert len({row[3] for row in rows}) == 2
+
+
+def test_operator_search_exposes_workspace_owner_email_without_changing_grant_target():
+    db, operator, site, _, _ = _prepared()
+    matches = admin_grants.search_sites("example.com")
+    assert len(matches) == 1
+    assert matches[0][0] == site
+    assert matches[0][3] == f"{operator}@example.com"

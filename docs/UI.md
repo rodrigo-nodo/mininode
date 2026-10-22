@@ -61,8 +61,16 @@ La apariencia base de controles reutilizables vive exclusivamente en `frontend/a
 
 **Migración progresiva:** las clases nuevas son opt-in. Los formularios ya publicados conservan sus reglas heredadas hasta migrarse de manera explícita; no agregar selectores globales agresivos que los rediseñen involuntariamente. Las excepciones locales existentes son deuda de migración, no un patrón para páginas nuevas.
 
+## Mininode Admin - PW-02
+
+La vista administrativa de cortesías se apoya en un endpoint de solo lectura (`GET /access/operator/grants/overview`) protegido mediante el mismo rol de operador del resto de PW-02. Al ingresar debe mostrar los totales de cortesías vigentes, programadas e históricas y las últimas 100 operaciones; los totales consideran la totalidad de registros. Las filas conservan la identidad de `workspace_site_id` para distinguir el mismo dominio en distintos espacios. La búsqueda sigue estando disponible para sitios sin cortesías.
+
+Seleccionar una fila abre un solo detalle, con formulario de concesión/extensión, revocación e historial de accesos tanto gratuitos como pagados. El cálculo de duración permanece en días (1 a 365, 30 predeterminado), sin alterar la continuidad de períodos ni Billing. Las fechas de una confirmación son estimadas: la vigencia definitiva la calcula el servidor al registrar. Los formularios utilizan los componentes compartidos; Admin solo define composición responsive.
+
 ## Fotografía
 
 La dirección visual futura debe comunicar calma, seguridad y confianza: luz natural, composición limpia, tonos neutros, gris-azulados o naturales, espacios abiertos y arquitectura, agua, paisaje o detalles sobrios. La fotografía debe sentirse premium, no ostentosa.
 
 La calma de interfaces fintech modernas como Mercury es una referencia conceptual; no se deben copiar imágenes, composiciones ni identidades de terceros.
+
+El listado y la búsqueda de sitios para operadores muestran los emails de todos los miembros con rol `owner` del espacio. El email es dato identificador (no destino de la vigencia); el acceso permanece asociado a `workspace_site_id`. Si hay varios propietarios, se muestran todos; si no hay, se indica que no hay titular registrado. Nunca exponer esta información en endpoints públicos.
