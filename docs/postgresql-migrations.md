@@ -94,3 +94,21 @@ Esta nueva migración solo queda **catalogada en código**. La habilitación
 mediante `MIGRATION_APPROVED_FILES` en DEV exige revisión de CI, inspección
 previa del estado de ambas FK y autorización explícita de la operación de DDL.
 No habilitar ni ejecutar en PROD como parte de este PR.
+
+
+## PW-02 - Auditoría de cortesías
+
+La tabla `access.entitlement_admin_events` se crea **exclusivamente mediante** la migración versionada
+`20261022_access_entitlement_admin_events.sql`. No hay DDL de PW-02 en el startup de FastAPI.
+El SQL es aditivo, conserva los registros existentes y está aprobado por checksum en
+`backend/scripts/predeploy_migrations.py`. El despliegue **no la ejecuta automáticamente**:
+antes de habilitar PW-02 en un entorno nuevo, verificar que existan `access.users` y
+`access.entitlements`, revisar el estado real de la tabla y autorizar explícitamente
+el nombre en `MIGRATION_APPROVED_FILES` para ese servicio, con la secuencia de
+pre-deploy documentada más arriba. Si la tabla ya existía por el inicializador
+anterior, se debe verificar que su estructura y restricciones coincidan; la
+migración es idempotente sobre un esquema compatible.
+
+**DEV y PROD requieren autorizaciones operativas separadas.** No activar ni ejecutar
+DDL en PROD por el merge del código. El rollback del código no elimina la tabla,
+y sus eventos de auditoría deben preservarse.
