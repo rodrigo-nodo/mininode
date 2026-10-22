@@ -74,14 +74,14 @@ async function showGrantSite(site, container) {
       const summary = document.createElement('p');
       const origin = item.source === 'internal_grant' ? 'Cortesía' : 'Acceso pagado';
       const state = item.status === 'revoked' ? 'Revocada' :
-        item.status !== 'active' ? item.status :
+        item.status !== 'active' ? 'No vigente' :
         new Date(item.active_from) > new Date() ? 'Programada' :
         item.active_until && new Date(item.active_until) <= new Date() ? 'Vencida' : 'Vigente';
       summary.textContent = origin + ' · ' + state + ' · ' +
         grantDate(item.active_from) + ' → ' + grantDate(item.active_until) +
         (item.last_reason ? ' · ' + item.last_reason : '');
       record.append(summary);
-      if (item.source === 'internal_grant' && item.status === 'active') {
+      if (item.source === 'internal_grant' && item.status === 'active' && state !== 'Vencida') {
         const reason = document.createElement('input');
         reason.required = true;
         reason.minLength = 3;
