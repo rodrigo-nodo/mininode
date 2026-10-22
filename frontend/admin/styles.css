@@ -35,3 +35,15 @@
   .admin-grants__form, .admin-grants__period { grid-template-columns: minmax(0,1fr); }
   .admin-grants__site { padding: 16px; }
 }
+
+@media (max-width: 600px) {
+  .admin-grants__metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .admin-grants__metric strong { font-size: 1.4rem; }
+  .admin-grants__table-scroll { overflow-x: visible; border: 0; }
+  .admin-grants__table { min-width: 0; }
+  .admin-grants__table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-grants__table tbody, .admin-grants__table tr, .admin-grants__table td { display: block; }
+  .admin-grants__table tr { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 12px; padding: 8px 12px; }
+  .admin-grants__table td { border-bottom: 0; padding: 7px 0; overflow-wrap: anywhere; }
+  .admin-grants__table td[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--color-muted); }
+}
