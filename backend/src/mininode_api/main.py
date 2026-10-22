@@ -16,7 +16,6 @@ async def lifespan(app: FastAPI):
     from mininode_api.services import (
         access,
         billing,
-        admin_grants,
         learn_feedback,
         privacy_correction_plan,
         privacy_correction_plan_order,
@@ -69,11 +68,6 @@ async def lifespan(app: FastAPI):
         )
     else:
         app.state.billing_ready = True
-
-    try:
-        admin_grants.initialize_database()
-    except Exception:
-        logging.getLogger(__name__).exception('Admin grants database initialization failed')
 
     try:
         privacy_correction_plan_order.initialize_database()
