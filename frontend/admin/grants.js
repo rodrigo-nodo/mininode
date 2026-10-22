@@ -28,8 +28,10 @@ async function grantApi(path, options = {}) {
 
 function grantField(labelText, input) {
   const label = document.createElement('label');
-  label.className = 'admin-grants__field';
+  label.className = 'form-field admin-grants__field';
+  input.classList.add('form-control');
   const title = document.createElement('span');
+  title.className = 'form-label';
   title.textContent = labelText;
   label.append(title, input);
   return label;
@@ -39,6 +41,7 @@ function grantButton(text, type = 'button') {
   const button = document.createElement('button');
   button.type = type;
   button.textContent = text;
+  button.className = 'btn btn--secondary';
   return button;
 }
 
@@ -146,6 +149,18 @@ async function showGrantSite(site, container) {
   await refresh();
 }
 
+function normalizeGrantSearch(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try {
+    // Search by hostname, whether the operator typed a URL or a simple domain.
+    const candidate = trimmed.includes('://') ? trimmed : 'https://' + trimmed;
+    return new URL(candidate).hostname.toLowerCase();
+  } catch (_error) {
+    return trimmed.toLowerCase();
+  }
+}
+
 grantForm.addEventListener('submit', async event => {
   event.preventDefault();
   const button = grantForm.querySelector('button');
@@ -153,7 +168,7 @@ grantForm.addEventListener('submit', async event => {
   grantResults.replaceChildren();
   grantStatus.textContent = 'Buscando sitios…';
   try {
-    const data = await grantApi('/api/access/operator/grant-sites?q=' + encodeURIComponent(grantSearch.value.trim()));
+    const data = await grantApi('/api/access/operator/grant-sites?q=' + encodeURIComponent(normalizeGrantSearch(grantSearch.value)));
     if (!data.sites.length) {
       grantStatus.textContent = 'No hay sitios asociados a espacios para ese dominio.';
       return;
