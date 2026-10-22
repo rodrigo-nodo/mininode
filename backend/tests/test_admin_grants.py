@@ -214,12 +214,12 @@ def test_admin_courtesy_overview_returns_counts_and_all_sources_remain_separate(
     assert totals == (1, 0, 0)
     assert len(rows) == 1
     assert rows[0][1] == site
-    assert rows[0][6] == "active"
-    assert rows[0][7] == "Cortesía para panel"
+    assert rows[0][7] == "active"
+    assert rows[0][4] == f'{operator}@example.com'\n    assert rows[0][8] == "Cortesía para panel"
     admin_grants.revoke(rows[0][0], operator, "Cerrada para prueba")
     totals, rows = admin_grants.list_admin_courtesies()
     assert totals == (0, 0, 1)
-    assert rows[0][6] == "revoked"
+    assert rows[0][7] == "revoked"
 
 
 def test_admin_courtesy_overview_keeps_sites_from_different_workspaces():
@@ -239,3 +239,11 @@ def test_admin_courtesy_overview_keeps_sites_from_different_workspaces():
     assert totals[0] == 2
     assert {row[1] for row in rows} == {site, new_ws_site}
     assert len({row[3] for row in rows}) == 2
+
+
+def test_operator_search_exposes_workspace_owner_email_without_changing_grant_target():
+    db, operator, site, _, _ = _prepared()
+    matches = admin_grants.search_sites("example.com")
+    assert len(matches) == 1
+    assert matches[0][0] == site
+    assert matches[0][3] == f"{operator}@example.com"
