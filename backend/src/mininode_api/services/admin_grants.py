@@ -6,25 +6,8 @@ from uuid import UUID, uuid4
 
 from mininode_api.services import billing
 
-SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS access.entitlement_admin_events (
- id UUID PRIMARY KEY,
- entitlement_id UUID NOT NULL REFERENCES access.entitlements(id),
- operator_user_id UUID NOT NULL REFERENCES access.users(id),
- action TEXT NOT NULL CHECK (action IN ('granted','revoked')),
- reason TEXT NOT NULL CHECK (length(btrim(reason)) >= 3),
- created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS entitlement_admin_events_entitlement_idx
- ON access.entitlement_admin_events(entitlement_id, created_at);
-"""
-
 class GrantConflict(ValueError):
     pass
-
-def initialize_database():
-    with billing._connect() as conn:
-        conn.execute(SCHEMA_SQL)
 
 def search_sites(hostname: str):
     hostname = hostname.strip().lower()
