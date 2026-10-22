@@ -32,7 +32,11 @@ def search_sites(hostname: str):
         raise ValueError("Indica un dominio de al menos 3 caracteres.")
     with billing._connect() as conn:
         return conn.execute("""
-            SELECT ws.id, w.name, s.hostname
+            SELECT ws.id, w.name, s.hostname,
+                   (SELECT string_agg(u.email, ', ' ORDER BY u.email)
+                    FROM access.workspace_members wm
+                    JOIN access.users u ON u.id = wm.user_id
+                    WHERE wm.workspace_id = w.id AND wm.role = 'owner') AS owner_emails
             FROM access.workspace_sites ws
             JOIN access.workspaces w ON w.id=ws.workspace_id
             JOIN access.sites s ON s.id=ws.site_id
@@ -140,6 +144,10 @@ def list_admin_courtesies(limit: int = 100):
         """, (billing.PRODUCT,)).fetchone()
         rows = conn.execute("""
             SELECT e.id, ws.id, s.hostname, w.name,
+                   (SELECT string_agg(u.email, ', ' ORDER BY u.email)
+                    FROM access.workspace_members wm
+                    JOIN access.users u ON u.id = wm.user_id
+                    WHERE wm.workspace_id = w.id AND wm.role = 'owner') AS owner_emails,
                    e.active_from, e.active_until, e.status,
                    (SELECT ev.reason FROM access.entitlement_admin_events ev
                     WHERE ev.entitlement_id = e.id ORDER BY ev.created_at DESC LIMIT 1)
