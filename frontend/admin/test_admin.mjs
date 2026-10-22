@@ -71,8 +71,8 @@ test('PW-02 dashboard has operator-gated persistent overview and selected site d
   assert.match(html, /id="grant-historical"/);
   assert.match(html, /id="grant-overview-rows"/);
   assert.match(grants, /api\/access\/operator\/grants\/overview/);
-  assert.match(grants, /grantGateObserver\.observe\(adminOperations/);
-  assert.match(grants, /adminOperations\.hidden/);
+  assert.match(grants, /grantGateObserver\.observe\(grantAdminOperations/);
+  assert.match(grants, /grantAdminOperations\.hidden/);
   assert.match(grants, /Este sitio no tiene accesos registrados/);
   assert.match(grants, /Extender cortesía/);
   assert.match(grants, /Las fechas definitivas las determina el servidor/);
@@ -85,4 +85,11 @@ test('PW-02 identifies owner email in overview, site selection and confirmation'
   assert.match(grants, /item\.owner_emails/);
   assert.match(grants, /site\.owner_emails/);
   assert.match(grants, /Titular:/);
+});
+
+
+test('PW-02 operator and grant scripts use distinct top-level access gate bindings', () => {
+  assert.match(operator, /const adminOperations = document\.querySelector/);
+  assert.match(grants, /const grantAdminOperations = document\.querySelector/);
+  assert.doesNotMatch(grants, /const adminOperations = /);
 });
