@@ -9,7 +9,7 @@
 .operator-review label { display: grid; gap: 7px; font-weight: 600; margin: 14px 0; }
 .operator-review textarea { width: 100%; min-height: 80px; font: inherit; box-sizing: border-box; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); padding: 9px; border-radius: var(--radius-md); }
 .operator-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.operator-actions button { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); cursor: pointer; padding: 9px 16px; border-radius: var(--radius-md); font: inherit; font-weight: 600; }
-.operator-actions button:disabled { opacity: .5; cursor: wait; }
+.operator-actions button:not(.btn) { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); cursor: pointer; padding: 9px 16px; border-radius: var(--radius-md); font: inherit; font-weight: 600; }
+.operator-actions button:not(.btn):disabled { opacity: .5; cursor: wait; }
 .operator-review__error { color: #a13030 !important; }
 @media (max-width: 600px) { .operator-main { margin-top: 20px; } .operator-review { padding: 16px; } }
