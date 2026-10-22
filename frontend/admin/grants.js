@@ -106,12 +106,14 @@ async function loadGrantOverview() {
     }
     for (const item of data.courtesies) {
       const tr = document.createElement('tr');
-      for (const value of [item.hostname, item.workspace, item.owner_emails || "Sin titular registrado", grantState(item), grantDate(item.active_until)]) {
+      for (const [label, value] of [['Sitio', item.hostname], ['Espacio', item.workspace], ['Titular', item.owner_emails || 'Sin titular registrado'], ['Estado', grantState(item)], ['Vencimiento', grantDate(item.active_until)]]) {
         const td = document.createElement('td');
+        td.dataset.label = label;
         td.textContent = value;
         tr.append(td);
       }
       const cell = document.createElement('td');
+      cell.dataset.label = 'Acción';
       const open = grantButton('Administrar');
       open.addEventListener('click', () => selectGrantSite({
         id: item.workspace_site_id, hostname: item.hostname, workspace: item.workspace, owner_emails: item.owner_emails,
