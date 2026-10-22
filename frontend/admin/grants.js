@@ -104,7 +104,16 @@ async function loadGrantOverview() {
       tr.append(td);
       overviewRows.append(tr);
     }
-    for (const item of data.courtesies) {
+    // Keep each site/workspace together; current access before scheduled access.
+    const stateRank = { Vigente: 0, Programada: 1, Vencida: 2, Revocada: 3, 'No vigente': 4 };
+    const ordered = [...data.courtesies].sort((a, b) =>
+      a.hostname.localeCompare(b.hostname, 'es') ||
+      a.workspace.localeCompare(b.workspace, 'es') ||
+      a.workspace_site_id.localeCompare(b.workspace_site_id) ||
+      (stateRank[grantState(a)] ?? 5) - (stateRank[grantState(b)] ?? 5) ||
+      (Date.parse(b.active_until || 0) - Date.parse(a.active_until || 0))
+    );
+    for (const item of ordered) {
       const tr = document.createElement('tr');
       for (const [label, value] of [['Sitio', item.hostname], ['Espacio', item.workspace], ['Titular', item.owner_emails || 'Sin titular registrado'], ['Estado', grantState(item)], ['Vencimiento', grantDate(item.active_until)]]) {
         const td = document.createElement('td');
@@ -169,14 +178,23 @@ async function showGrantSite(site, container) {
   const actions = document.createElement('div');
   actions.className = 'operator-actions';
   actions.append(submit);
-  form.append(grantField('Duración (días)', days), grantField('Motivo', reason), actions);
+  const grantNotice = document.createElement('p');
+  grantNotice.className = 'admin-grants__notice';
+  grantNotice.setAttribute('role', 'status');
+  form.append(grantField('Duración (días)', days), grantField('Motivo', reason), actions, grantNotice);
 
   const refresh = async () => {
     const data = await grantApi('/api/access/operator/grant-sites/' + encodeURIComponent(site.id));
     lastGrantHistory = data.entitlements;
     history.replaceChildren();
     const current = data.entitlements.some(item => item.status === 'active' && item.active_until && new Date(item.active_until) > new Date());
+    const scheduled = data.entitlements.find(item => grantState(item) === 'Programada');
+    const indefinite = data.entitlements.some(item => item.status === 'active' && !item.active_until);
     submit.textContent = current ? 'Extender cortesía' : 'Conceder cortesía';
+    submit.disabled = Boolean(scheduled || indefinite);
+    grantNotice.textContent = scheduled
+      ? 'No se puede extender todavía. Este sitio ya tiene una cortesía o acceso programado del ' + grantDate(scheduled.active_from) + ' al ' + grantDate(scheduled.active_until) + '.'
+      : indefinite ? 'No se puede conceder otra cortesía: este sitio tiene acceso sin vencimiento.' : '';
     if (!data.entitlements.length) {
       const empty = document.createElement('p');
       empty.textContent = 'Este sitio no tiene accesos registrados.';
@@ -232,6 +250,7 @@ async function showGrantSite(site, container) {
   };
   form.addEventListener('submit', async event => {
     event.preventDefault();
+    if (submit.disabled) return;
     const daysValue = Number(days.value);
     if (!Number.isInteger(daysValue) || daysValue < 1 || daysValue > 365 || reason.value.trim().length < 3) {
       grantStatus.textContent = 'Indica entre 1 y 365 días y un motivo de al menos 3 caracteres.';
@@ -249,9 +268,13 @@ async function showGrantSite(site, container) {
       await refresh();
       await loadGrantOverview();
     } catch (error) {
-      grantStatus.textContent = error.message;
+      const conflict = /período futuro reservado/i.test(error.message);
+      grantStatus.textContent = conflict
+        ? 'No se puede extender todavía. Este sitio ya tiene una cortesía o acceso programado; revisa su historial.'
+        : error.message;
+      if (conflict) await refresh();
     } finally {
-      submit.disabled = false;
+      if (!grantNotice.textContent) submit.disabled = false;
     }
   });
   const headingHistory = document.createElement('h5');
