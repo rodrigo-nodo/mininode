@@ -24,10 +24,10 @@
     <p>Operaciones administrativas de Mininode.</p>
     <section aria-labelledby="privacy-admin-title">
       <h2 id="privacy-admin-title" class="admin-product">Privacy Web</h2>
-      <section aria-labelledby="grants-title">
+      <section class="admin-grants" aria-labelledby="grants-title">
         <h3 id="grants-title">Accesos gratuitos</h3>
-        <form id="grant-search-form"><label>Buscar dominio <input id="grant-search" required minlength="3" placeholder="ejemplo.cl"></label><button>Buscar</button></form>
-        <div id="grant-sites"></div><p id="grant-status" role="status"></p>
+        <p>Busca un sitio y selecciona el espacio antes de conceder o revocar un acceso.</p>\n        <form id="grant-search-form" class="admin-grants__search"><label class="admin-grants__field">Buscar dominio <input id="grant-search" required minlength="3" placeholder="ejemplo.cl"></label><div class="operator-actions"><button type="submit">Buscar sitio</button></div></form>
+        <p id="grant-status" class="admin-grants__status" role="status" aria-live="polite"></p><div id="grant-sites" class="operator-reviews"></div>
       </section>
       <section aria-labelledby="group-title">
         <h3 id="group-title">Solicitudes de agrupación</h3>
