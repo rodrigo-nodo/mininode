@@ -61,8 +61,8 @@ test('PW-02 spacing uses page composition while keeping global button styles', a
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
   assert.match(styles, /\.admin-grants__form \.admin-grants__field/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02boot370/);
-  assert.match(html, /styles\.css\?v=pw02owners369/);
+  assert.match(html, /grants\.js\?v=pw02order372/);
+  assert.match(html, /styles\.css\?v=pw02order372/);
 });
 
 test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
@@ -92,4 +92,15 @@ test('PW-02 operator and grant scripts use distinct top-level access gate bindin
   assert.match(operator, /const adminOperations = document\.querySelector/);
   assert.match(grants, /const grantAdminOperations = document\.querySelector/);
   assert.doesNotMatch(grants, /const adminOperations = /);
+});
+
+
+test('PW-02 orders sites and disables extensions for future reservations', () => {
+  assert.match(grants, /a\.hostname\.localeCompare\(b\.hostname/);
+  assert.match(grants, /a\.workspace_site_id\.localeCompare\(b\.workspace_site_id\)/);
+  assert.match(grants, /Vigente: 0, Programada: 1/);
+  assert.match(grants, /submit\.disabled = Boolean\(scheduled \|\| indefinite\)/);
+  assert.match(grants, /grantNotice\.textContent = scheduled/);
+  assert.match(grants, /if \(submit\.disabled\) return/);
+  assert.match(grants, /if \(conflict\) await refresh\(\)/);
 });
