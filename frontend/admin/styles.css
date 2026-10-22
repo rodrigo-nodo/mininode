@@ -49,3 +49,7 @@
 }
 
 .admin-grants__notice { grid-column: 1 / -1; margin: 0; color: var(--color-muted); font-size: var(--text-sm); }
+
+/* Disabled by a business rule is not an operation in progress. */
+.admin-grants__form .btn:disabled { cursor: not-allowed; }
+.admin-grants__form .btn[data-processing="true"]:disabled { cursor: progress; }
