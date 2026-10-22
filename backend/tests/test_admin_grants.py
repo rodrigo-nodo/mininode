@@ -52,7 +52,47 @@ from datetime import datetime, timedelta, timezone
 import os
 import psycopg
 from mininode_api.services import access, privacy_diagnostic_snapshot
-from test_billing_core import _seed
+def _seed():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for Billing PostgreSQL integration tests")
+
+    with psycopg.connect(database_url) as conn, conn.cursor() as cur:
+        cur.execute("DROP SCHEMA IF EXISTS billing CASCADE")
+        cur.execute("DROP SCHEMA IF EXISTS privacy CASCADE")
+        cur.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+    access.initialize_database()
+    privacy_diagnostic_snapshot.initialize_database()
+    billing.initialize_database()
+
+    user_id, workspace_id, site_id, workspace_site_id, diagnostic_id = (uuid4() for _ in range(5))
+    now = datetime.now(timezone.utc)
+
+    with psycopg.connect(database_url) as conn, conn.cursor() as cur:
+        cur.execute("INSERT INTO access.users (id,email) VALUES (%s,%s)", (user_id, f"{user_id}@example.com"))
+        cur.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'Billing')", (workspace_id,))
+        cur.execute(
+            "INSERT INTO access.workspace_members (workspace_id,user_id,role) VALUES (%s,%s,'owner')",
+            (workspace_id, user_id),
+        )
+        cur.execute("INSERT INTO access.sites (id,hostname) VALUES (%s,%s)", (site_id, f"{site_id}.example.com"))
+        cur.execute(
+            "INSERT INTO access.workspace_sites (id,workspace_id,site_id) VALUES (%s,%s,%s)",
+            (workspace_site_id, workspace_id, site_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO privacy.diagnostic
+              (id,site_url,diagnostic_snapshot,score,created_at,purchase_expires_at,workspace_site_id)
+            VALUES (%s,%s,'{}'::jsonb,80,%s,%s,%s)
+            """,
+            (diagnostic_id, "https://example.com", now, now + timedelta(hours=24), workspace_site_id),
+        )
+
+    return database_url, user_id, workspace_site_id, diagnostic_id, now
+
+
 
 
 def _prepared():
