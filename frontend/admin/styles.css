@@ -47,3 +47,5 @@
   .admin-grants__table td { border-bottom: 0; padding: 7px 0; overflow-wrap: anywhere; }
   .admin-grants__table td[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--color-muted); }
 }
+
+.admin-grants__notice { grid-column: 1 / -1; margin: 0; color: var(--color-muted); font-size: var(--text-sm); }
