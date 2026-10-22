@@ -18,6 +18,12 @@
   --text-h2: clamp(1.75rem, 3vw, 2.25rem);
   --text-h1: clamp(2.25rem, 4vw, 3rem);
 
+  --control-height: 44px;
+  --control-height-lg: 54px;
+  --control-padding-x: 12px;
+  --color-danger: #b91c1c;
+  --color-danger-border: #dc2626;
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
@@ -51,6 +57,8 @@
     --color-primary: #66c6d0;
     --color-primary-hover: #8bd8df;
     --color-primary-soft: #17353a;
+    --color-danger: #fca5a5;
+    --color-danger-border: #f87171;
   }
 }
 
@@ -62,4 +70,6 @@
   --color-primary: #66c6d0;
   --color-primary-hover: #8bd8df;
   --color-primary-soft: #17353a;
+  --color-danger: #fca5a5;
+  --color-danger-border: #f87171;
 }

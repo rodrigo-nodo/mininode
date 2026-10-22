@@ -48,6 +48,19 @@ Usar la escala corta de espacios y radios de `tokens.css`. Preferir bordes sutil
 - Conservar navegación por teclado, responsive, temas existentes y estados semánticos.
 - Evitar una versión específica de página cuando el componente global puede resolver el caso.
 
+## Contrato de componentes compartidos
+
+La apariencia base de controles reutilizables vive exclusivamente en `frontend/assets/css/components.css`, y sus valores en `frontend/assets/css/tokens.css`. Se carga mediante `frontend/styles.css`. Las páginas solo pueden ajustar distribución, ancho y composición; las excepciones visuales deben justificarse y preferir una variante compartida.
+
+- Campo: `<input class="form-control">`, `<select class="form-control">` o `<textarea class="form-control">`. Incluye `type="number"`, URL, correo y texto. El campo estándar tiene altura mínima compartida; `.form-control--lg` permite un campo destacado sin copiar alturas.
+- Etiqueta y agrupación: `.form-field` y `.form-label`; mantener asociación accesible mediante `for`/`id` o etiquetas envolventes.
+- Errores: `aria-invalid="true"` en el control, descripción accesible mediante `aria-describedby` cuando exista mensaje y `.form-error` para mostrarlo. La variante `.form-control--error` queda disponible cuando no se usa `aria-invalid`.
+- Botones: `.btn` como base, `.btn--primary`, `.btn--secondary` o `.btn--ghost` según jerarquía; `.btn--sm` y `.btn--lg` para tamaño.
+- Tarjetas: `.card` como superficie común; el padding y la distribución pueden depender del contexto de la página.
+- Estados: foco visible, error y deshabilitado los define el componente compartido; no duplicarlos por página.
+
+**Migración progresiva:** las clases nuevas son opt-in. Los formularios ya publicados conservan sus reglas heredadas hasta migrarse de manera explícita; no agregar selectores globales agresivos que los rediseñen involuntariamente. Las excepciones locales existentes son deuda de migración, no un patrón para páginas nuevas.
+
 ## Fotografía
 
 La dirección visual futura debe comunicar calma, seguridad y confianza: luz natural, composición limpia, tonos neutros, gris-azulados o naturales, espacios abiertos y arquitectura, agua, paisaje o detalles sobrios. La fotografía debe sentirse premium, no ostentosa.
