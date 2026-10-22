@@ -61,8 +61,8 @@ test('PW-02 spacing uses page composition while keeping global button styles', a
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
   assert.match(styles, /\.admin-grants__form \.admin-grants__field/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02order372/);
-  assert.match(html, /styles\.css\?v=pw02order372/);
+  assert.match(html, /grants\.js\?v=pw02cursor373/);
+  assert.match(html, /styles\.css\?v=pw02cursor373/);
 });
 
 test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
