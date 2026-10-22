@@ -380,7 +380,7 @@ test('PW-02 overview forwards only authenticated GET; other methods and paths re
 test('PW-02 overview route exists consistently in client, API, and proxy', async () => {
   const grants = await readFile(new URL('../../admin/grants.js', import.meta.url), 'utf8');
   const backend = await readFile(new URL('../../../backend/src/mininode_api/api/access.py', import.meta.url), 'utf8');
-  assert.match(grants, /api\\/access\\/operator\\/grants\\/overview/);
-  assert.match(backend, /@router\\.get\\("\\/operator\\/grants\\/overview"\\)/);
-  assert.match(source, /destPathPublic === 'access\\/operator\\/grants\\/overview'/);
+  assert.ok(grants.includes("'/api/access/operator/grants/overview'"));
+  assert.ok(backend.includes('@router.get("/operator/grants/overview")'));
+  assert.ok(source.includes("destPathPublic === 'access/operator/grants/overview'"));
 });
