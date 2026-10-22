@@ -359,3 +359,28 @@ test('operator review routes only forward strict authenticated read and decision
   await assertRejected(route + '/all/decision', 'POST');
   await assertRejected('/api/access/operator/members', 'GET');
 });
+
+
+test('PW-02 overview forwards only authenticated GET; other methods and paths remain blocked', async () => {
+  const route = '/api/access/operator/grants/overview';
+  const token = 'operator-session-token';
+  const success = await request(route, 'GET', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer ' + token },
+  });
+  assert.equal(success.response.status, 200);
+  assert.equal(success.calls.length, 1);
+  assert.equal(success.calls[0].url, 'https://backend.example/access/operator/grants/overview');
+  assert.equal(success.calls[0].init.headers.get('Authorization'), 'Bearer ' + token);
+  assert.equal(success.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) await assertRejected(route, method);
+  await assertRejected(route + '/extra', 'GET');
+});
+
+test('PW-02 overview route exists consistently in client, API, and proxy', async () => {
+  const grants = await readFile(new URL('../../admin/grants.js', import.meta.url), 'utf8');
+  const backend = await readFile(new URL('../../../backend/src/mininode_api/api/access.py', import.meta.url), 'utf8');
+  assert.match(grants, /api\\/access\\/operator\\/grants\\/overview/);
+  assert.match(backend, /@router\\.get\\("\\/operator\\/grants\\/overview"\\)/);
+  assert.match(source, /destPathPublic === 'access\\/operator\\/grants\\/overview'/);
+});
