@@ -203,7 +203,7 @@ async function showGrantSite(site, container) {
             return;
           }
           const question = 'Revocar cortesía de Privacy Web\n\nSitio: ' + site.hostname +
-            '\nEspacio: ' + site.workspace + '\nMotivo: ' + revokeReason.value.trim() +
+            '\nEspacio: ' + site.workspace + '\nTitular: ' + (site.owner_emails || 'Sin titular registrado') + '\nMotivo: ' + revokeReason.value.trim() +
             '\nVencimiento actual: ' + grantDate(item.active_until) +
             '\n\n¿Confirmar revocación?';
           if (!window.confirm(question)) return;
