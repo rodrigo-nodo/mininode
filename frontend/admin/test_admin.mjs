@@ -61,6 +61,21 @@ test('PW-02 spacing uses page composition while keeping global button styles', a
   assert.match(styles, /\.admin-grants__search \{ display: grid;/);
   assert.match(styles, /\.admin-grants__site \.admin-grants__field \{ margin: 0;/);
   assert.match(operatorCss, /\.operator-actions button:not\(\.btn\)/);
-  assert.match(html, /grants\.js\?v=pw02ux368/);
-  assert.match(html, /styles\.css\?v=pw02ux368/);
+  assert.match(html, /grants\.js\?v=pw02dashboard369/);
+  assert.match(html, /styles\.css\?v=pw02dashboard369/);
+});
+
+test('PW-02 dashboard has operator-gated persistent overview and selected site detail', () => {
+  assert.match(html, /id="grant-current"/);
+  assert.match(html, /id="grant-scheduled"/);
+  assert.match(html, /id="grant-historical"/);
+  assert.match(html, /id="grant-overview-rows"/);
+  assert.match(grants, /api\/access\/operator\/grants\/overview/);
+  assert.match(grants, /grantGateObserver\.observe\(adminOperations/);
+  assert.match(grants, /adminOperations\.hidden/);
+  assert.match(grants, /Este sitio no tiene accesos registrados/);
+  assert.match(grants, /Extender cortesía/);
+  assert.match(grants, /Las fechas definitivas las determina el servidor/);
+  assert.match(styles, /\.admin-page \.operator-main \{ max-width: 1160px/);
+  assert.match(styles, /@media \(max-width: 760px\)/);
 });
