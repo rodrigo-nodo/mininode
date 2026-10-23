@@ -26,8 +26,15 @@ BLOCKED_LEGACY = frozenset({
 })
 # Reviewed content only; new migrations require an explicit code-reviewed catalog change.
 APPROVED_CHECKSUMS = {
+    "20261022_access_entitlement_admin_events.sql": "80ca278aeb683725b64995ba60a54dc42da899ac68c264972f1e8f7bac7c3208",
     "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",
     "20261015_privacy_workspace_site_fk_dedup.sql": "695f22d5bfb1a5f9c8164e17240859bb0504d0b6f1bb222f737d4b99a354594f",
+    "20261019_access_site_aliases.sql": "de803551492c86420c6d3121749a2402a1c281df2e89004dc60e1579a4576f0b",
+    "20261019_access_workspace_site_unlink.sql": "022ac4498e2589a5907c8bbb73f8dd4ce1853569924c26a052c4ca82ef128823",
+    "20261020_access_site_reconciliations.sql": "ef14698ffdcbb8831ee2d80700a635b7dc47276271aeef4f1eda0ae4336c5ad7",
+    "20261020_privacy_requested_url.sql": "c3631156262ae8453895c406b09e193a91fabc2bdc863a1e65a89b5b5e1bd923",
+    "20261020_access_site_group_review_requests.sql": "d2931d29bbca41134de4bd22211d68245d3281a7a7bf1c129984cde74aaf8048",
+    "20261020_access_site_group_operator.sql": "68eedefbf75a19b60fbc1904f35476262e357244d1f9e9b2845b8681d59abd36",
 }
 
 def parse_approved(raw: str) -> list[str]:

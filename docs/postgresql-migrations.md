@@ -94,3 +94,34 @@ Esta nueva migración solo queda **catalogada en código**. La habilitación
 mediante `MIGRATION_APPROVED_FILES` en DEV exige revisión de CI, inspección
 previa del estado de ambas FK y autorización explícita de la operación de DDL.
 No habilitar ni ejecutar en PROD como parte de este PR.
+
+
+## Preparación integral DEV → PROD - octubre 2026 (solo código)
+
+Se incorporan siete SQL aditivos de DEV, sin cambiar sus contenidos, al catálogo revisado de `main`. Por defecto el runner no se conecta a la base si `MIGRATION_APPROVED_FILES` está vacío. Este PR no ejecuta SQL, no cambia Render ni autoriza el despliegue funcional.
+
+### Base inspeccionada en solo lectura
+
+Render PROD `mininode` PostgreSQL 18: 289 diagnósticos, 4 asociaciones de sitio, 3 usuarios, 2 workspaces, 0 `billing.orders`, 0 `access.entitlements`, 3 `privacy.correction_plan_order` (2 marcadas `paid`). Existen Access, Billing, Privacy y FK canónica `privacy_diagnostic_workspace_site_fk`. No existen `public.schema_migrations`, las cinco tablas nuevas de site aliases/solicitudes/operador/reconciliaciones/auditoría, ni `workspace_sites.detached_at` ni `privacy.diagnostic.requested_url`. No inferir que órdenes antiguas son cobros reales; conservar todo.
+
+### Autorización operativa PROD separada del merge
+
+Antes de cualquier DDL: confirmar respaldo restaurable; identificar base y servicio; validar compatibilidad de la versión anterior del backend; registrar recuentos y esquema; obtener autorización expresa para PROD. El servicio `mininode-backend-prod` sigue rama `main`, despliega automáticamente y **no tiene actualmente Pre-deploy command**. No cambiar Render sin autorización operativa específica. Configurar Pre-deploy como `python scripts/predeploy_migrations.py` solo cuando esté autorizado y se haya verificado `DATABASE_URL` interno correcto. Mantener `MIGRATION_APPROVED_FILES` vacío hasta esa autorización.
+
+**Tanda A** (seis nombres, ordenados alfabéticamente):
+
+```text
+20261019_access_site_aliases.sql,20261019_access_workspace_site_unlink.sql,20261020_access_site_group_review_requests.sql,20261020_access_site_reconciliations.sql,20261020_privacy_requested_url.sql,20261022_access_entitlement_admin_events.sql
+```
+
+Verificar tabla de solicitudes antes de **Tanda B**, que contiene solamente:
+
+```text
+20261020_access_site_group_operator.sql
+```
+
+**Dependencia:** el operador requiere la tabla creada por la migración `site_group_review_requests`, que alfabéticamente viene después de `site_group_operator`; no intentar los siete nombres en una única lista ordenada. El runner registra cada migración transaccionalmente en `public.schema_migrations`; revisar las siete filas con sus hashes y la estructura resultante. Repetir recuentos de registros de Access, Billing, Privacy y órdenes históricas. Los cambios ya aplicados en una transacción previa no se revierten al hacer rollback del backend. Si falla una tanda, detener publicación funcional y corregir forward-only, sin borrar datos.
+
+Tras ambas tandas, retirar/limpiar `MIGRATION_APPROVED_FILES` y verificar entorno antes de publicar el PR funcional. Las migraciones `20260928_...` y `20261006_a4_billing_core.sql` permanecen bloqueadas. No ejecutar scripts de reconciliación `--apply`, ni activar Mercado Pago, ni agregar secretos al repositorio. La BD PROD permite conexiones externas `0.0.0.0/0`; revisar esa exposición mediante gestión operativa separada.
+
+**PR posterior:** integrar funcionalidades DEV sobre `main` conservando Content Reader V1 y CI actual, con validación E2E y merge autorizado individualmente.
