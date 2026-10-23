@@ -1,0 +1,29 @@
+name: Content Reader PDF CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/content-reader-pdf-ci.yml'
+      - 'backend/src/mininode_api/content_reader_pdf/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/tests/content_reader_pdf/**'
+      - 'backend/requirements.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r backend/requirements.txt pytest reportlab
+      - run: pytest -q backend/tests/content_reader_pdf backend/tests/content_reader
