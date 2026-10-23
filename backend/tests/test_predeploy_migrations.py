@@ -73,3 +73,33 @@ def test_unreviewed_sql_variants_fail_closed(monkeypatch, tmp_path, tokens):
     (tmp_path / name).write_text(" ".join(tokens), encoding="utf-8")
     with pytest.raises(ValueError, match="not in reviewed catalog"):
         runner.load_sql(name)
+
+
+# Promotion is schema-only: execution is separately approved per environment.
+PROMOTION_BATCH_A = (
+    "20261019_access_site_aliases.sql",
+    "20261019_access_workspace_site_unlink.sql",
+    "20261020_access_site_group_review_requests.sql",
+    "20261020_access_site_reconciliations.sql",
+    "20261020_privacy_requested_url.sql",
+    "20261022_access_entitlement_admin_events.sql",
+)
+PROMOTION_BATCH_B = ("20261020_access_site_group_operator.sql",)
+
+
+def test_prod_promotion_batches_catalogued_and_sorted():
+    assert list(PROMOTION_BATCH_A) == sorted(PROMOTION_BATCH_A)
+    assert list(PROMOTION_BATCH_B) == sorted(PROMOTION_BATCH_B)
+    for name in PROMOTION_BATCH_A + PROMOTION_BATCH_B:
+        sql, digest = runner.load_sql(name)
+        assert digest == runner.APPROVED_CHECKSUMS[name]
+        assert "DROP TABLE" not in sql.upper()
+        assert "DELETE FROM " not in sql.upper()
+    assert "CREATE TABLE IF NOT EXISTS access.site_group_review_requests" in runner.load_sql("20261020_access_site_group_review_requests.sql")[0]
+    assert "ALTER TABLE access.site_group_review_requests" in runner.load_sql("20261020_access_site_group_operator.sql")[0]
+
+
+def test_prod_promotion_requires_environment_approval(monkeypatch):
+    monkeypatch.delenv("MIGRATION_APPROVED_FILES", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    assert runner.main() == 0
