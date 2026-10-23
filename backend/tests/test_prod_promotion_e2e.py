@@ -7,7 +7,12 @@ import pytest
 from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from mininode_api.services import access, billing, privacy_diagnostic_snapshot
-from test_predeploy_migrations import runner
+import importlib.util
+
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "predeploy_migrations.py"
+spec = importlib.util.spec_from_file_location("prod_promotion_runner", SCRIPT)
+runner = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(runner)
 
 A = (
     "20261019_access_site_aliases.sql",
