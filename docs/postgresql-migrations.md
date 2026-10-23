@@ -125,3 +125,12 @@ Verificar tabla de solicitudes antes de **Tanda B**, que contiene solamente:
 Tras ambas tandas, retirar/limpiar `MIGRATION_APPROVED_FILES` y verificar entorno antes de publicar el PR funcional. Las migraciones `20260928_...` y `20261006_a4_billing_core.sql` permanecen bloqueadas. No ejecutar scripts de reconciliación `--apply`, ni activar Mercado Pago, ni agregar secretos al repositorio. La BD PROD permite conexiones externas `0.0.0.0/0`; revisar esa exposición mediante gestión operativa separada.
 
 **PR posterior:** integrar funcionalidades DEV sobre `main` conservando Content Reader V1 y CI actual, con validación E2E y merge autorizado individualmente.
+
+
+## Cierre de observaciones independientes O1-O3 (PR #377)
+
+- **O1 — Ensayo PostgreSQL 18:** `backend/tests/test_prod_promotion_e2e.py` crea una BD temporal solo desde `mininode_test` de CI, inicializa esquemas Access/Privacy/Billing, inserta registros sintéticos vinculados, demuestra que B antes de A falla, aplica A→B y verifica siete registros de checksum, las tablas/columnas, conservación de datos, reintentos idempotentes y rollback transaccional ante SQL fallido. CI lo ejecuta en PostgreSQL 18 descartable. No presupone respaldo ni autorización para DDL de producción.
+- **O2 — Segunda inspección de solo lectura de PROD:** PostgreSQL `18.6`, BD `mininode`: `public.schema_migrations` ausente, cinco tablas nuevas ausentes, `access.workspace_sites.detached_at` ausente y `privacy.diagnostic.requested_url` ausente. Se revisaron FKs e índices en tablas Access/Privacy y se confirmaron 289 diagnósticos, 4 vínculos, 3 usuarios, 2 workspaces, 3 órdenes históricas, 0 `billing.orders` y 0 `access.entitlements`. La inspección debe repetirse en la ventana real de ejecución; no confirma restaurabilidad de respaldo.
+- **O3 — Ruta alternativa bloqueada:** `.github/workflows/production-db-migration.yml` rechaza expresamente los siete nombres de la promoción antes de ejecutar `scripts/run_migration.py`. El único procedimiento autorizado para este alcance será el runner canónico `scripts/predeploy_migrations.py` con checksums y allowlist exacta, en tandas separadas.
+
+**Estado operativo:** el cierre en código y el resultado de CI NO autorizan ejecutar migraciones en PROD. Pendiente verificar respaldo restaurable, identidad de conexión, configuración efectiva de Pre-deploy y aprobación específica de cada tanda. No habilitar automáticamente un deploy funcional, no registrar falsamente las migraciones como aplicadas y no autorizar merge sin revisión de CI del PR.
