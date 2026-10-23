@@ -263,3 +263,25 @@ Cuando un diagnóstico autenticado queda vinculado a un `workspace_site`, su sna
 La cuenta muestra únicamente el snapshot más reciente por sitio: score, estado y fecha. **Ver resultado** abre ese snapshot ya almacenado; no ejecuta una nueva inspección. Una nueva revisión solo ocurre cuando el usuario inicia explícitamente otro diagnóstico.
 
 Esto no habilita historial completo ni modifica entitlement, vigencia o Billing.
+
+## Guardar un diagnóstico anónimo en una cuenta gratuita
+Al terminar el diagnóstico anónimo, Privacy Web muestra las mismas tres
+prioridades gratuitas y ofrece **Guardar mi diagnóstico**, sin obligar al
+visitante a registrarse o contratar. El navegador conserva temporalmente
+`diagnostic_id` y `claim_token` en `sessionStorage`, sin incluir la prueba
+en la URL. Tras autenticarse con Access/Clerk, el usuario elige su workspace
+y confirma el guardado. Si no tiene workspace, Access crea uno mediante el
+onboarding existente. El frontend llama a `POST /privacy/diagnostic-claims`,
+borra el pendiente tras éxito y abre la última revisión guardada.
+
+Cada diagnóstico queda asociado a un solo workspace; varios workspaces pueden
+mantener revisiones independientes del mismo hostname. Guardar no habilita
+funcionalidades de pago ni amplía el contenido gratuito. El token pendiente
+no se persiste entre sesiones de navegador; si falla el guardado, puede
+reintentarse en la misma pestaña. La asociación inicial sigue sujeta a la
+ventana temporal del backend, independiente de la conservación de revisiones
+ya guardadas.
+
+La UX de resultado reúne ambas opciones bajo **Continúa con Privacy Web**: una tarjeta compacta de activación (acción principal), un enlace secundario para guardar gratis, y apoyo técnico terciario. Las prestaciones y condiciones quedan plegadas en **Ver qué incluye y condiciones**; se informa que el pago en línea aún no está disponible. Si no hay oferta de pago, guardar gratis sigue disponible cuando existe token de asociación. El guardado no cambia las tres prioridades gratuitas.
+
+La elección de continuación del diagnóstico ofrece **Activar Privacy Web** y **Guardar diagnóstico gratis** con acciones equivalentes. Ambas pasan por Access y guardan el snapshot en el workspace elegido; la intención (`save`/`activate`) se mantiene junto con el token temporal solo en `sessionStorage`. La solicitud comercial autenticada y la reactivación de una revisión guardada son trabajo posterior: mientras tanto, la interfaz informa que aún no están disponibles y no afirma que se haya comprado ni activado el producto.
