@@ -67,7 +67,7 @@ def test_promotion_two_batches_idempotent_and_preserving(disposable):
     with psycopg.connect(disposable) as conn:
         history=conn.execute("SELECT filename,checksum_sha256,applied_at FROM public.schema_migrations ORDER BY filename").fetchall()
         assert len(history)==7
-        assert {r[0] for r in history}==set(A+B)
+        assert {r[0] for r in history} == set(A).union(B)
         assert all(r[1]==runner.APPROVED_CHECKSUMS[r[0]] for r in history)
         for table in ("access.site_aliases","access.site_group_review_requests","access.site_group_operator_merges","access.site_reconciliations","access.entitlement_admin_events"):
             assert conn.execute("SELECT to_regclass(%s)",(table,)).fetchone()[0] is not None
