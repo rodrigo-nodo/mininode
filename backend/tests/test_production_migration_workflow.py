@@ -21,3 +21,19 @@ def test_production_migration_workflow_is_manual_and_guarded():
     assert "secrets.PRODUCTION_DATABASE_URL" in text
     assert "scripts/run_migration.py" in text
     assert "ref: main" in text
+
+
+def test_legacy_workflow_blocks_seven_promotion_migrations():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "Reject DEV to PROD promotion migrations" in text
+    for name in (
+        "20261019_access_site_aliases.sql",
+        "20261019_access_workspace_site_unlink.sql",
+        "20261020_access_site_group_operator.sql",
+        "20261020_access_site_group_review_requests.sql",
+        "20261020_access_site_reconciliations.sql",
+        "20261020_privacy_requested_url.sql",
+        "20261022_access_entitlement_admin_events.sql",
+    ):
+        assert name in text
+    assert "exit 1" in text
