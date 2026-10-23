@@ -27,7 +27,7 @@ Este documento identifica trabajo futuro; la existencia de código parcial no eq
 
 | ID | Actividad | Estado |
 |---|---|---|
-| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | Validación |
+| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | Cerrado |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | Pendiente |
 | PW-03 | Retirar el flujo comercial antiguo de órdenes/activaciones, sus endpoints, servicios, tests y documentación; preparar migración controlada | Pendiente |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | Pendiente |
