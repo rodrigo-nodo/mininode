@@ -728,6 +728,8 @@ const showEntitledPrivacyWeb = () => {
   const price = correctionOffer.querySelector('.privacy-price');
   if (heading) heading.textContent = 'Privacy Web activo';
   if (price) price.hidden = true;
+  const conditions = correctionOffer.querySelector('.privacy-offer-details');
+  if (conditions) conditions.hidden = true;
   orderAvailability.hidden = true;
   orderValidity.hidden = true;
   activationNotice.hidden = true;
