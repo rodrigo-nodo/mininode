@@ -34,7 +34,7 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 |---|---|---|
 | PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | **Cerrado · PROD** (PR #379) |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | **Cerrado · PROD** (Mininode Admin; PR #379) |
-| PW-03 | Retirar el flujo comercial antiguo de órdenes/activaciones, sus endpoints, servicios, tests y documentación; preparar migración controlada | Pendiente |
+| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (primer PR: preparación precheckout; sin cobros) |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | **Parcial · DEV** (adaptador y endpoints backend; E2E pendiente, no disponible en PROD) |
 | PW-05 | Unificar tercera persona singular en UX, resultados, hallazgos, recomendaciones, botones, estados y errores | Pendiente |
 | PW-06 | Incorporar observabilidad de diagnósticos, pagos, activaciones y fallos operativos, sin exponer datos sensibles | Pendiente |
@@ -44,7 +44,7 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 
 **Criterios de cierre restantes de la etapa:** recorrido comercial oficial único; pago confirmado por proveedor habilita prestaciones y pago no confirmado no las habilita; mensajes coherentes; fallos detectables; tratamiento de datos definido.
 
-**Decisión comercial (PW-03 → PW-04):** `billing.orders` + `access.entitlements` serán el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. PW-03 debe retirar las rutas/servicios y dependencias del flujo anterior `privacy.correction_plan_order`, **sin borrar órdenes ni evidencia histórica**, y preservar diagnóstico y Plan de corrección. Preparar compatibilidad, estrategia de migración y rollback; verificar dependencias y probar primero en DEV. **Ninguna operación destructiva en producción sin autorización explícita.**
+**Decisión comercial (PW-03 → PW-04):** `billing.orders` + `access.entitlements` serán el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. El historial de órdenes y activaciones del sistema heredado **no necesita migrarse ni conservarse comercialmente**; se preservan diagnósticos, cuentas, sitios y entitlements actuales. PW-03 retirará dependencias del flujo anterior `privacy.correction_plan_order`, desacoplando Plan de corrección y revisiones. El diagnóstico guardado se conserva consultable; al iniciar activación se reutiliza si tiene menos de 24 horas o se actualiza automáticamente, sin exponer plazos al cliente. Preparar compatibilidad y rollback, verificar dependencias y probar primero en DEV. **Ninguna operación destructiva en producción sin autorización explícita.**
 
 ## 4. Etapa 2 - Piloto controlado (P1)
 
