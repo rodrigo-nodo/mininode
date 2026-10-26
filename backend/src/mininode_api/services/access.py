@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS access.workspace_sites (
     workspace_id UUID NOT NULL REFERENCES access.workspaces(id) ON DELETE CASCADE,
     site_id UUID NOT NULL REFERENCES access.sites(id) ON DELETE CASCADE,
     company_id UUID NULL,
+    detached_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT access_workspace_sites_workspace_site_unique
@@ -316,18 +317,28 @@ def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | No
         if cursor.fetchone() is None:
             return None
 
-        site_id = uuid4()
-        cursor.execute(
-            """
-            INSERT INTO access.sites (id, hostname, canonical_url)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (hostname) DO UPDATE
-            SET hostname = EXCLUDED.hostname
-            RETURNING id, hostname
-            """,
-            (site_id, hostname, canonical_url),
-        )
-        site_id, stored_hostname = cursor.fetchone()
+        from mininode_api.services.site_aliases import lock_www_pair, resolve_existing_site
+        lock_www_pair(cursor, hostname)
+        existing = resolve_existing_site(cursor, hostname)
+        if existing is None:
+            from mininode_api.services.site_aliases import register_verified_www_alias
+            if register_verified_www_alias(cursor, hostname):
+                existing = resolve_existing_site(cursor, hostname)
+        if existing is not None:
+            site_id, stored_hostname = existing
+        else:
+            site_id = uuid4()
+            cursor.execute(
+                """
+                INSERT INTO access.sites (id, hostname, canonical_url)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (hostname) DO UPDATE
+                SET hostname = EXCLUDED.hostname
+                RETURNING id, hostname
+                """,
+                (site_id, hostname, canonical_url),
+            )
+            site_id, stored_hostname = cursor.fetchone()
 
         workspace_site_id = uuid4()
         cursor.execute(
@@ -335,7 +346,7 @@ def follow_site(user_id: UUID, workspace_id: UUID, url: str) -> SiteContext | No
             INSERT INTO access.workspace_sites (id, workspace_id, site_id)
             VALUES (%s, %s, %s)
             ON CONFLICT (workspace_id, site_id) DO UPDATE
-            SET site_id = EXCLUDED.site_id
+            SET site_id = EXCLUDED.site_id, detached_at = NULL
             RETURNING id
             """,
             (workspace_site_id, workspace_id, site_id),
@@ -360,7 +371,7 @@ def list_authorized_context(user_id: UUID) -> tuple[WorkspaceContext, ...]:
             SELECT w.id, w.name, wm.role, ws.id, s.id, s.hostname, c.id, c.name
             FROM access.workspace_members AS wm
             JOIN access.workspaces AS w ON w.id = wm.workspace_id
-            LEFT JOIN access.workspace_sites AS ws ON ws.workspace_id = w.id
+            LEFT JOIN access.workspace_sites AS ws ON ws.workspace_id = w.id AND ws.detached_at IS NULL
             LEFT JOIN access.sites AS s ON s.id = ws.site_id
             LEFT JOIN access.companies AS c ON c.id = ws.company_id
             WHERE wm.user_id = %s
@@ -410,7 +421,7 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
             JOIN access.workspaces AS w ON w.id = ws.workspace_id
             JOIN access.workspace_members AS wm
               ON wm.workspace_id = w.id AND wm.user_id = %s
-            WHERE ws.id = %s
+            WHERE ws.id = %s AND ws.detached_at IS NULL
               AND wm.role IN (%s, %s)
             LIMIT 1
             """,
@@ -430,3 +441,56 @@ def get_authorized_site(user_id: UUID, workspace_site_id: UUID) -> AuthorizedSit
         hostname=row[5],
         canonical_url=row[6],
     )
+
+
+class ActiveSiteCannotBeUnlinked(Exception):
+    """A commercial entitlement or order still protects this site."""
+
+    def __init__(self, reason: str = "commercial_block"):
+        self.reason = reason
+        super().__init__(reason)
+
+
+def unlink_workspace_site(user_id: UUID, workspace_id: UUID, workspace_site_id: UUID) -> bool:
+    """Hide a workspace link while retaining snapshots, orders and other workspaces.
+
+    Pending orders or currently active entitlements prevent unlink; historical
+    paid orders whose entitlement has expired remain archived and do not block.
+    """
+    with _connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT ws.id FROM access.workspace_sites ws
+               JOIN access.workspace_members wm ON wm.workspace_id = ws.workspace_id
+               WHERE ws.id = %s AND ws.workspace_id = %s AND wm.user_id = %s
+                 AND wm.role IN ('owner', 'member') AND ws.detached_at IS NULL
+               FOR UPDATE OF ws""",
+            (workspace_site_id, workspace_id, user_id),
+        )
+        if cursor.fetchone() is None:
+            return False
+        cursor.execute(
+            """SELECT
+                EXISTS (
+                    SELECT 1 FROM access.entitlements
+                    WHERE workspace_site_id = %s AND status = 'active'
+                      AND active_from <= CURRENT_TIMESTAMP
+                      AND (active_until IS NULL OR active_until > CURRENT_TIMESTAMP)
+                ),
+                EXISTS (
+                    SELECT 1 FROM billing.orders
+                    WHERE workspace_site_id = %s AND status = 'pending'
+                )""",
+            (workspace_site_id, workspace_site_id),
+        )
+        has_active_entitlement, has_pending_order = cursor.fetchone()
+        if has_active_entitlement:
+            raise ActiveSiteCannotBeUnlinked("active_entitlement")
+        if has_pending_order:
+            raise ActiveSiteCannotBeUnlinked("pending_order")
+        cursor.execute(
+            """UPDATE access.workspace_sites
+               SET detached_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+               WHERE id = %s AND detached_at IS NULL""",
+            (workspace_site_id,),
+        )
+        return True

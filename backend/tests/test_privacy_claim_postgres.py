@@ -68,6 +68,25 @@ def test_claim_atomic_and_snapshot_unchanged(pg_claim):
         assert stored == original and site_id == linked and claimant == owner
 
 
+
+def test_expired_purchase_does_not_block_free_claim(pg_claim):
+    url, did, token, owner, other, workspace, foreign, host = pg_claim
+    with psycopg.connect(url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE privacy.diagnostic SET purchase_expires_at = CURRENT_TIMESTAMP - INTERVAL '1 hour' WHERE id = %s",
+            (did,),
+        )
+    expired = snapshot.get_diagnostic_snapshot(did)
+    with pytest.raises(snapshot.PrivacyDiagnosticPurchaseExpiredError):
+        snapshot.require_purchasable(expired)
+
+    linked = snapshot.claim_anonymous_diagnostic(did, token, owner, workspace)
+    assert linked == snapshot.claim_anonymous_diagnostic(did, token, owner, workspace)
+    with pytest.raises(snapshot.PrivacyDiagnosticClaimRejectedError):
+        snapshot.claim_anonymous_diagnostic(did, token, other, foreign)
+    assert snapshot.get_diagnostic_snapshot(did).workspace_site_id == linked
+
+
 def test_claim_rolls_back_site_on_update_failure(pg_claim):
     url, did, token, owner, other, workspace, foreign, host = pg_claim
     # Database trigger simulates failure after both Access inserts, before diagnostic update.
@@ -134,3 +153,50 @@ def test_migration_from_previous_schema_preserves_existing_snapshot(pg_claim):
         finally:
             connection.rollback()
 
+
+
+def test_requested_url_migration_preserves_legacy_diagnostics_and_persists_new_origin(pg_claim):
+    """Real PostgreSQL: idempotent DDL, historical NULL, new origin, immutable evidence."""
+    url, did, token, owner, other, workspace, foreign, host = pg_claim
+    migration = (SRC.parent / "migrations" / "20261020_privacy_requested_url.sql").read_text()
+    sql = "\n".join(
+        line for line in migration.splitlines() if line.strip() not in ("BEGIN;", "COMMIT;")
+    )
+    with psycopg.connect(url) as connection:
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT site_url, diagnostic_snapshot, score, created_at, workspace_site_id FROM privacy.diagnostic WHERE id=%s",
+                    (did,),
+                )
+                original = cursor.fetchone()
+                cursor.execute("ALTER TABLE privacy.diagnostic DROP COLUMN IF EXISTS requested_url")
+                cursor.execute(sql)
+                cursor.execute(sql)
+                cursor.execute(
+                    "SELECT site_url, diagnostic_snapshot, score, created_at, workspace_site_id, requested_url FROM privacy.diagnostic WHERE id=%s",
+                    (did,),
+                )
+                assert cursor.fetchone() == (*original, None)
+        finally:
+            connection.rollback()
+
+    # Fresh snapshots persist the sanitized input in its own DB column.
+    value = snapshot.create_diagnostic_snapshot(
+        {"site_url": f"https://{host}/", "score": 77, "controls": [{"code": "example"}]},
+        requested_url=f"https://www.{host}/path?private_token=do-not-store#fragment",
+    )
+    try:
+        with psycopg.connect(url) as connection, connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT requested_url, site_url, diagnostic_snapshot, score FROM privacy.diagnostic WHERE id=%s",
+                (value.id,),
+            )
+            requested, final, evidence, score = cursor.fetchone()
+            assert requested == f"https://www.{host}/"
+            assert final == f"https://{host}/"
+            assert evidence == value.diagnostic_snapshot and score == value.score
+            assert "private_token" not in str(requested)
+    finally:
+        with psycopg.connect(url) as connection, connection.cursor() as cursor:
+            cursor.execute("DELETE FROM privacy.diagnostic WHERE id=%s", (value.id,))

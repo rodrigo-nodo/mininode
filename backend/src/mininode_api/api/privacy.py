@@ -432,7 +432,7 @@ def diagnose_workspace_site(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
-                diagnostic, workspace_site_id=workspace_site_id
+                diagnostic, workspace_site_id=workspace_site_id, requested_url=target_url
             )
         except Exception:
             logger.error("Authenticated Privacy diagnostic snapshot persistence failed")
@@ -488,7 +488,9 @@ def diagnose_workspace_url(
         )
 
     try:
-        site = access.follow_site(user.id, workspace_id, body.url)
+        # Associate by inspected HOME, exactly as anonymous diagnostic claims do.
+        # Keep the user-entered origin independently in requested_url below.
+        site = access.follow_site(user.id, workspace_id, diagnostic["site_url"])
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -507,7 +509,7 @@ def diagnose_workspace_url(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
-                diagnostic, workspace_site_id=site.id
+                diagnostic, workspace_site_id=site.id, requested_url=body.url
             )
         except Exception:
             logger.error("Workspace Privacy diagnostic snapshot persistence failed")
@@ -530,8 +532,6 @@ def claim_diagnostic(body: ClaimAnonymousDiagnosticRequest, user: access.StoredU
         site_id = privacy_diagnostic_snapshot.claim_anonymous_diagnostic(
             body.diagnostic_id, body.claim_token, user.id, body.workspace_id
         )
-    except privacy_diagnostic_snapshot.PrivacyDiagnosticPurchaseExpiredError:
-        raise HTTPException(status_code=410, detail="El diagnóstico ya no está disponible para activar.") from None
     except privacy_diagnostic_snapshot.PrivacyDiagnosticClaimRejectedError:
         raise HTTPException(status_code=409, detail="No se pudo asociar este diagnóstico.") from None
     except ValueError:
@@ -563,7 +563,9 @@ def diagnose_privacy(
     if request.app.state.privacy_diagnostic_snapshot_ready:
         try:
             claim_token = secrets.token_urlsafe(32)
-            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(diagnostic, claim_token=claim_token)
+            stored = privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+                diagnostic, claim_token=claim_token, requested_url=body.url
+            )
         except Exception:
             # The free result remains available when the commercial persistence fails.
             logger.error("Privacy diagnostic snapshot persistence failed")

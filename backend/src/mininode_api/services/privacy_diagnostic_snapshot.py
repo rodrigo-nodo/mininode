@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterator, Mapping
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID, uuid4
 
 import psycopg
@@ -20,6 +21,7 @@ CREATE SCHEMA IF NOT EXISTS privacy;
 CREATE TABLE IF NOT EXISTS privacy.diagnostic (
     id UUID PRIMARY KEY,
     site_url TEXT NOT NULL,
+    requested_url TEXT NULL,
     diagnostic_snapshot JSONB NOT NULL,
     score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,8 +76,38 @@ def initialize_database() -> None:
         cursor.execute(INITIALIZE_SQL)
 
 
-def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID | None = None, claim_token: str | None = None) -> StoredPrivacyDiagnostic:
-    """Persist the completed result unchanged, without inspecting the site again."""
+def normalize_requested_url(value: str | None) -> str | None:
+    """Store only the input origin: never persist credentials, path, query or fragment.
+
+    The origin preserves whether the user supplied the apex or www hostname.
+    No URL lookup or network request is performed; the inspector validates the
+    actual target before calling persistence.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("requested_url must be a string")
+    try:
+        parsed = urlsplit(value.strip())
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname
+        port = parsed.port
+        if scheme not in {"http", "https"} or not hostname:
+            raise ValueError("Invalid requested_url")
+        hostname = hostname.rstrip(".").lower().encode("idna").decode("ascii")
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError("Invalid requested_url") from exc
+    authority = f"[{hostname}]" if ":" in hostname else hostname
+    if port is not None and (scheme, port) not in {("http", 80), ("https", 443)}:
+        authority = f"{authority}:{port}"
+    return urlunsplit((scheme, authority, "/", "", ""))
+
+
+def create_diagnostic_snapshot(
+    diagnostic: Mapping, *, workspace_site_id: UUID | None = None,
+    claim_token: str | None = None, requested_url: str | None = None,
+) -> StoredPrivacyDiagnostic:
+    """Persist completed evidence intact, tracking the sanitized input separately."""
     score = diagnostic.get("score")
     site_url = diagnostic.get("site_url")
     if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
@@ -86,18 +118,20 @@ def create_diagnostic_snapshot(diagnostic: Mapping, *, workspace_site_id: UUID |
     if claim_token is not None and (workspace_site_id is not None or len(claim_token) < 32):
         raise ValueError("Claim token is only for anonymous diagnostics")
     claim_hash = hashlib.sha256(claim_token.encode()).hexdigest() if claim_token else None
+    safe_requested_url = normalize_requested_url(requested_url)
     diagnostic_id = uuid4()
     snapshot = dict(diagnostic)
     with _connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO privacy.diagnostic (
-                id, site_url, diagnostic_snapshot, score, purchase_expires_at, workspace_site_id, claim_token_hash
-            ) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s, %s)
+                id, site_url, requested_url, diagnostic_snapshot, score,
+                purchase_expires_at, workspace_site_id, claim_token_hash
+            ) VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '24 hours', %s, %s)
             RETURNING id, site_url, diagnostic_snapshot, score, created_at,
                       purchase_expires_at, workspace_site_id
             """,
-            (diagnostic_id, site_url, Jsonb(snapshot), score, workspace_site_id, claim_hash),
+            (diagnostic_id, site_url, safe_requested_url, Jsonb(snapshot), score, workspace_site_id, claim_hash),
         )
         return StoredPrivacyDiagnostic(*cursor.fetchone())
 
@@ -148,7 +182,7 @@ def list_latest_for_workspace(workspace_id: UUID) -> tuple[StoredPrivacyDiagnost
                    d.purchase_expires_at, d.workspace_site_id
             FROM privacy.diagnostic AS d
             JOIN access.workspace_sites AS ws ON ws.id = d.workspace_site_id
-            WHERE ws.workspace_id = %s
+            WHERE ws.workspace_id = %s AND ws.detached_at IS NULL
             ORDER BY d.workspace_site_id, d.created_at DESC, d.id DESC
             """,
             (workspace_id,),
@@ -176,15 +210,14 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
         # Serialize competing claims without locking the diagnostic row across other connections.
         cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(diagnostic_id),))
         cursor.execute(
-            """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id,
-                      purchase_expires_at >= CURRENT_TIMESTAMP
+            """SELECT site_url, claim_token_hash, workspace_site_id, claimed_by_user_id
                FROM privacy.diagnostic WHERE id = %s""",
             (diagnostic_id,),
         )
         row = cursor.fetchone()
         if row is None or row[1] is None or not hmac.compare_digest(token_hash, row[1]):
             raise PrivacyDiagnosticClaimRejectedError("Invalid claim proof")
-        site_url, _, existing_site, claimed_by, eligible = row
+        site_url, _, existing_site, claimed_by = row
         cursor.execute(
             """SELECT 1 FROM access.workspace_members
                WHERE workspace_id = %s AND user_id = %s AND role IN ('owner', 'member')""",
@@ -200,22 +233,31 @@ def claim_anonymous_diagnostic(diagnostic_id: UUID, claim_token: str, user_id: U
             if claimed_by != user_id or cursor.fetchone() is None:
                 raise PrivacyDiagnosticClaimRejectedError("Diagnostic already claimed")
             return existing_site
-        if not eligible:
-            raise PrivacyDiagnosticPurchaseExpiredError("Diagnostic purchase window expired")
-
+        # Free account saving is independent of the commercial purchase window.
+        # Proof remains single-claim and workspace-authorized even after 24 hours.
         hostname, canonical_url = _normalize_claim_url(site_url)
-        cursor.execute(
-            """INSERT INTO access.sites (id, hostname, canonical_url)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (hostname) DO UPDATE SET hostname = EXCLUDED.hostname
-               RETURNING id""",
-            (uuid4(), hostname, canonical_url),
-        )
-        site_id = cursor.fetchone()[0]
+        from mininode_api.services.site_aliases import lock_www_pair, resolve_existing_site
+        lock_www_pair(cursor, hostname)
+        existing = resolve_existing_site(cursor, hostname)
+        if existing is None:
+            from mininode_api.services.site_aliases import register_verified_www_alias
+            if register_verified_www_alias(cursor, hostname):
+                existing = resolve_existing_site(cursor, hostname)
+        if existing is not None:
+            site_id = existing[0]
+        else:
+            cursor.execute(
+                """INSERT INTO access.sites (id, hostname, canonical_url)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (hostname) DO UPDATE SET hostname = EXCLUDED.hostname
+                   RETURNING id""",
+                (uuid4(), hostname, canonical_url),
+            )
+            site_id = cursor.fetchone()[0]
         cursor.execute(
             """INSERT INTO access.workspace_sites (id, workspace_id, site_id)
                VALUES (%s, %s, %s)
-               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id
+               ON CONFLICT (workspace_id, site_id) DO UPDATE SET site_id = EXCLUDED.site_id, detached_at = NULL
                RETURNING id""",
             (uuid4(), workspace_id, site_id),
         )

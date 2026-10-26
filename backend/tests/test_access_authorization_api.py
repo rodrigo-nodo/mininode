@@ -12,7 +12,7 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.main import create_app  # noqa: E402
-from mininode_api.services import access, access_identity  # noqa: E402
+from mininode_api.services import access, access_identity, site_group_reviews, site_group_operator  # noqa: E402
 
 
 @pytest.fixture
@@ -420,3 +420,215 @@ def test_follow_site_is_idempotent_and_isolated_on_real_postgres():
     finally:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute("DROP SCHEMA IF EXISTS access CASCADE")
+
+
+def test_site_group_review_endpoint_is_authenticated_workspace_scoped(client, monkeypatch):
+    owner = _verified_user(monkeypatch)
+    workspace, first, second = uuid4(), uuid4(), uuid4()
+    review = site_group_reviews.SiteGroupReview(uuid4(), min(first, second), max(first, second), "pending")
+    calls = []
+
+    def create(uid, wid, left, right):
+        calls.append((uid, wid, left, right))
+        return review if uid == owner and wid == workspace else None
+
+    monkeypatch.setattr(site_group_reviews, "create_review_request", create)
+    monkeypatch.setattr(
+        site_group_reviews, "list_review_requests",
+        lambda uid, wid: (review,) if uid == owner and wid == workspace else None,
+    )
+    url = f"/access/workspaces/{workspace}/site-group-reviews"
+    body = {"first_workspace_site_id": str(first), "second_workspace_site_id": str(second)}
+    assert client.post(url, json=body).status_code in (401, 403)
+    saved = client.post(url, json=body, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert saved.status_code == 200
+    assert saved.json()["status"] == "pending"
+    assert calls == [(owner, workspace, first, second)]
+    listed = client.get(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert listed.status_code == 200
+    assert listed.json()["reviews"] == [saved.json()]
+
+    other_url = f"/access/workspaces/{uuid4()}/site-group-reviews"
+    assert client.post(other_url, json=body, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
+    assert client.get(other_url, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
+
+
+def test_operator_api_is_fail_closed_and_resolves_only_verified_operator(client, monkeypatch):
+    _verified_user(monkeypatch)
+    review_id = uuid4()
+    headers = {"Cf-Access-Jwt-Assertion": "signed-token"}
+    url = "/access/operator/site-group-reviews"
+    decision_url = f"{url}/{review_id}/decision"
+    body = {"decision": "rejected", "note": "No hay redirección estable"}
+    calls = []
+    monkeypatch.setattr(site_group_operator, "list_operator_reviews",
+                        lambda: calls.append("list") or [])
+    monkeypatch.setattr(site_group_operator, "decide",
+                        lambda rid, uid, decision, note:
+                        calls.append(("decide", rid, uid, decision, note))
+                        or {"id": rid, "status": decision, "moved_diagnostics": 0})
+    monkeypatch.delenv("MININODE_REVIEW_OPERATOR_EMAILS", raising=False)
+    assert client.get(url).status_code == 401
+    assert client.get(url, headers=headers).status_code == 403
+    assert client.post(decision_url, json=body, headers=headers).status_code == 403
+    assert calls == []
+    monkeypatch.setenv("MININODE_REVIEW_OPERATOR_EMAILS", "other@example.test,PERSON@example.com")
+    allowed = client.get(url, headers=headers)
+    assert allowed.status_code == 200 and allowed.json() == {"reviews": []}
+    decided = client.post(decision_url, json=body, headers=headers)
+    assert decided.status_code == 200 and decided.json()["status"] == "rejected"
+    assert len(calls) == 2
+    assert calls[1][1] == review_id
+
+
+def test_operator_api_handles_conflicts_without_leaking_data(client, monkeypatch):
+    _verified_user(monkeypatch)
+    monkeypatch.setenv("MININODE_REVIEW_OPERATOR_EMAILS", "person@example.com")
+    monkeypatch.setattr(site_group_operator, "decide",
+                        lambda *args: (_ for _ in ()).throw(
+                            site_group_operator.OperatorConflict("Pago existente")
+                        ))
+    review_id = uuid4()
+    res = client.post(f"/access/operator/site-group-reviews/{review_id}/decision",
+                      json={"decision": "approved", "note": "Evidencia comprobada"},
+                      headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert res.status_code == 409
+    assert res.json()["detail"] == "Pago existente"
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        ("active_entitlement", "servicio activo"),
+        ("pending_order", "compra pendiente"),
+    ],
+)
+def test_unlink_site_explains_commercial_block(client, monkeypatch, reason, expected):
+    _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    monkeypatch.setattr(
+        access,
+        "unlink_workspace_site",
+        lambda *_args: (_ for _ in ()).throw(access.ActiveSiteCannotBeUnlinked(reason)),
+    )
+    response = client.post(
+        f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink",
+        headers={"Cf-Access-Jwt-Assertion": "signed-token"},
+    )
+    assert response.status_code == 409
+    assert expected in response.json()["detail"]
+
+
+def test_unlink_site_requires_auth_and_preserves_not_found(client, monkeypatch):
+    user_id = _verified_user(monkeypatch)
+    workspace_id, workspace_site_id = uuid4(), uuid4()
+    calls = []
+
+    def unlink(uid, wid, sid):
+        calls.append((uid, wid, sid))
+        return False
+
+    monkeypatch.setattr(access, "unlink_workspace_site", unlink)
+    url = f"/access/workspaces/{workspace_id}/sites/{workspace_site_id}/unlink"
+    assert client.post(url).status_code in (401, 403)
+    assert calls == []
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 404
+    assert calls == [(user_id, workspace_id, workspace_site_id)]
+
+
+def test_unlink_site_success_has_no_response_body(client, monkeypatch):
+    _verified_user(monkeypatch)
+    monkeypatch.setattr(access, "unlink_workspace_site", lambda *_args: True)
+    url = f"/access/workspaces/{uuid4()}/sites/{uuid4()}/unlink"
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+def test_unlink_service_soft_detaches_without_deleting_history(monkeypatch):
+    user_id, workspace_id, workspace_site_id = uuid4(), uuid4(), uuid4()
+
+    class Cursor:
+        def __init__(self):
+            self.statements = []
+            self.answers = iter([(workspace_site_id,), (False, False)])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, statement, params):
+            self.statements.append((statement, params))
+
+        def fetchone(self):
+            return next(self.answers)
+
+    cursor = Cursor()
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self):
+            return cursor
+
+    monkeypatch.setattr(access, "_connection", lambda: Connection())
+    assert access.unlink_workspace_site(user_id, workspace_id, workspace_site_id) is True
+    sql = "\n".join(statement for statement, _params in cursor.statements)
+    assert "wm.user_id = %s" in sql
+    assert "ws.workspace_id = %s" in sql
+    assert "FOR UPDATE OF ws" in sql
+    assert "UPDATE access.workspace_sites" in sql
+    assert "SET detached_at = CURRENT_TIMESTAMP" in sql
+    assert "DELETE" not in sql
+    assert cursor.statements[-1][1] == (workspace_site_id,)
+
+
+@pytest.mark.parametrize(
+    ("active", "pending", "reason"),
+    [(True, False, "active_entitlement"), (False, True, "pending_order"),
+     (True, True, "active_entitlement")],
+)
+def test_unlink_service_blocks_protected_sites(monkeypatch, active, pending, reason):
+    workspace_site_id = uuid4()
+
+    class Cursor:
+        def __init__(self):
+            self.statements = []
+            self.answers = iter([(workspace_site_id,), (active, pending)])
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, statement, params):
+            self.statements.append(statement)
+
+        def fetchone(self):
+            return next(self.answers)
+
+    cursor = Cursor()
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self):
+            return cursor
+
+    monkeypatch.setattr(access, "_connection", lambda: Connection())
+    with pytest.raises(access.ActiveSiteCannotBeUnlinked) as error:
+        access.unlink_workspace_site(uuid4(), uuid4(), workspace_site_id)
+    assert error.value.reason == reason
+    assert not any("UPDATE access.workspace_sites" in sql for sql in cursor.statements)

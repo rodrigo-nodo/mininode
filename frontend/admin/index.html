@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Mininode Admin</title>
+  <meta name="description" content="Administración interna de Mininode.">
+  <link rel="stylesheet" href="../styles.css?v=pw02cursor373">
+  <link rel="stylesheet" href="../operator/site-reviews/styles.css?v=pw02order372">
+  <link rel="stylesheet" href="./styles.css?v=pw02cursor374">
+  <script src="../assets/js/core-head.js" defer></script>
+  <script src="../include.js" defer></script>
+  <script src="../operator/site-reviews/app.js" defer></script>
+  <script src="./grants.js?v=pw02cursor373" defer></script>
+</head>
+<body class="admin-page">
+  <div data-include="../partials/header-nav.html"></div>
+  <main class="operator-main" aria-labelledby="admin-title">
+    <p class="operator-kicker">Administración interna</p>
+    <h1 id="admin-title">Mininode Admin</h1>
+    <p id="operator-status" role="status" aria-live="polite">Verificando acceso…</p>
+    <div id="admin-operations" hidden>
+    <p>Operaciones administrativas de Mininode.</p>
+    <section aria-labelledby="privacy-admin-title">
+      <h2 id="privacy-admin-title" class="admin-product">Privacy Web</h2>
+      <section class="admin-grants" aria-labelledby="grants-title">
+        <h3 id="grants-title">Accesos gratuitos</h3>
+        <p>Consulta cortesías registradas, selecciona un sitio y administra sus accesos.</p>
+        <div id="grant-overview-status" class="admin-grants__status" role="status" aria-live="polite"></div>
+        <div class="admin-grants__metrics" aria-label="Resumen de cortesías">
+          <div class="card admin-grants__metric"><span>Vigentes</span><strong id="grant-current">—</strong></div>
+          <div class="card admin-grants__metric"><span>Programadas</span><strong id="grant-scheduled">—</strong></div>
+          <div class="card admin-grants__metric"><span>Históricas</span><strong id="grant-historical">—</strong></div>
+        </div>
+        <h4>Cortesías registradas</h4>
+        <p class="admin-grants__hint">Últimas 100 cortesías registradas. Los totales incluyen todas.</p>
+        <div class="admin-grants__table-scroll">
+          <table class="admin-grants__table">
+            <thead><tr><th>Sitio</th><th>Espacio</th><th>Titular (email)</th><th>Estado</th><th>Vencimiento</th><th>Acción</th></tr></thead>
+            <tbody id="grant-overview-rows"><tr><td colspan="6">Cargando cortesías…</td></tr></tbody>
+          </table>
+        </div>
+        <h4>Administrar sitio</h4>
+        <form id="grant-search-form" class="admin-grants__search">
+          <label class="form-field admin-grants__field">
+            <span class="form-label">URL del sitio web</span>
+            <input id="grant-search" class="form-control" type="text" required minlength="3" placeholder="https://tusitio.cl">
+          </label>
+          <div class="operator-actions"><button class="btn btn--secondary" type="submit">Buscar sitio</button></div>
+        </form>
+        <p id="grant-status" class="admin-grants__status" role="status" aria-live="polite"></p>
+        <div id="grant-sites" class="admin-grants__details" aria-live="polite"></div>
+      </section>
+      <section aria-labelledby="group-title">
+        <h3 id="group-title">Solicitudes de agrupación</h3>
+        <p>Revisa las solicitudes y registra una decisión. La agrupación requiere evidencia pública y no transfiere derechos comerciales.</p>
+        <div id="operator-reviews" class="operator-reviews"></div>
+      </section>
+    </section>
+    </div>
+    <a href="/access/">Volver a Mi espacio</a>
+  </main>
+  <div data-include="../partials/footer.html"></div>
+</body>
+</html>

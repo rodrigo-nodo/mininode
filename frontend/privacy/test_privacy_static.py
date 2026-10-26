@@ -17,6 +17,125 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
+        self.assertIn('href="styles.css?v=300savedrow"', HTML)
+        self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
+        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
+        self.assertIn("#privacy-correction-offer .privacy-next", CSS)
+        self.assertIn("#privacy-correction-offer .privacy-save-choice", CSS)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
+        self.assertIn("background: var(--privacy-primary)", CSS)
+        self.assertIn("@media (max-width: 620px)", CSS)
+        summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
+        self.assertIn('class="privacy-offer-details"', summary)
+
+    def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
+        self.assertIn('app.js?v=2739bb4e161b', HTML)
+        self.assertIn('id="privacy-saved-note-description"', HTML)
+        self.assertIn('id="privacy-saved-standalone-description"', HTML)
+        self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
+        self.assertIn("new URL(diagnostic.site_url || websiteUrl).hostname", APP)
+        self.assertIn("La última revisión de ${reviewHostname} está disponible en tu espacio Mininode.", APP)
+        self.assertIn("savedNoteDescription.textContent = savedReviewDescription;", APP)
+        self.assertIn("savedStandaloneDescription.textContent = savedReviewDescription;", APP)
+
+    def test_saved_and_anonymous_result_states_are_distinct(self):
+        # A workspace-linked review is already saved even though it has no claim token.
+        self.assertIn('id="privacy-saved-note"', HTML)
+        self.assertIn('id="privacy-saved-standalone"', HTML)
+        self.assertIn('id="privacy-activation-notice"', HTML)
+        self.assertIn("const isSaved = Boolean(currentPersistedWorkspaceSiteId);", APP)
+        self.assertIn("const canClaim = Boolean(currentDiagnosticId && currentClaimToken && !isSaved);", APP)
+        self.assertIn("savedSiteId || authenticatedWorkspaceSiteId", APP)
+        self.assertIn("saveDiagnosticNote.hidden = !hasOffer || !canClaim;", APP)
+        self.assertIn("savedDiagnosticNote.hidden = !hasOffer || !isSaved;", APP)
+        self.assertIn("savedStandaloneNote.hidden = hasOffer || !isSaved;", APP)
+        self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
+        self.assertIn("activationNotice.hidden = false;", APP)
+        self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
+        self.assertIn("privacy-saved-choice[hidden]", CSS)
+
+    def test_access_auto_saves_pending_diagnostic_after_login(self):
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("if (pending && !pendingWorkspaceChoice) void savePendingDiagnostic();", account)
+        self.assertIn("workspaces.length > 1", account)
+        self.assertIn("Selecciona un espacio para guardar", account)
+        self.assertIn("if (sessionStorage.getItem(PENDING_CLAIM_KEY))", account)
+        self.assertIn("void savePendingDiagnostic();", account)
+        self.assertIn("if (claimInFlight) return;", account)
+        self.assertIn("workspacePicker.disabled = true;", account)
+        self.assertIn("workspacePicker.disabled = false;", account)
+        self.assertIn("if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';", account)
+        self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY);", account)
+        self.assertIn("Reintentar guardado", account)
+
+    def test_free_claim_payload_exactly_matches_forbidden_extra_backend_contract(self):
+        # Prevent reintroducing '...claim': intent is browser state, not a backend field.
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        request = re.search(
+            r"api\('/api/privacy/diagnostic-claims',\s*\{.*?JSON\.stringify\(\{(.*?)\}\)",
+            account, re.S,
+        )
+        self.assertIsNotNone(request)
+        frontend_fields = set(re.findall(r"^\s*(\w+)\s*:", request.group(1), re.M))
+        api_source = (FRONTEND_DIR.parent / "backend" / "src" / "mininode_api" / "api" / "privacy.py").read_text(encoding="utf-8")
+        model = api_source.split("class ClaimAnonymousDiagnosticRequest(BaseModel):", 1)[1].split(
+            "class ClaimedDiagnosticResponse(BaseModel):", 1
+        )[0]
+        backend_fields = set(re.findall(r"^    (\w+):", model, re.M))
+        self.assertEqual(frontend_fields, {"diagnostic_id", "workspace_id", "claim_token"})
+        self.assertEqual(frontend_fields, backend_fields)
+        self.assertIn('ConfigDict(extra="forbid")', model)
+        self.assertIn("if (claim.intent === 'activate')", account)
+
+    def test_saved_result_has_same_row_and_cta_as_free_save(self):
+        self.assertEqual(HTML.count('class="privacy-saved-choice__summary"'), 2)
+        self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button" href="/access/"'), 2)
+        self.assertEqual(HTML.count('Mis sitios →'), 2)
+        self.assertIn("#privacy-correction-offer .privacy-saved-choice", CSS)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
+        self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
+
+    def test_past_purchase_deadline_cannot_show_pending_activation(self):
+        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
+        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
+
+    def test_commercial_notice_appears_only_inside_conditions(self):
+        intro = HTML.split('class="privacy-offer-details"', 1)[0]
+        self.assertNotIn("Sin renovación automática. El pago en línea", intro)
+        detail = HTML.split('class="privacy-offer-details"', 1)[1].split("</details>", 1)[0]
+        self.assertIn("El pago en línea estará disponible próximamente.", detail)
+        self.assertIn("Sin renovación automática.", detail)
+
+    def test_free_anonymous_diagnostic_save_flow(self):
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        account_html = (FRONTEND_DIR / "access" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="privacy-save-diagnostic"', HTML)
+        self.assertIn('id="privacy-save-standalone-button"', HTML)
+        self.assertIn('id="privacy-next-steps"', HTML)
+        self.assertIn('¿Cómo quieres continuar?', HTML)
+        self.assertIn('<summary>Ver qué incluye y condiciones</summary>', HTML)
+        self.assertIn('Guardar diagnóstico gratis', HTML)
+        self.assertIn('El pago en línea estará disponible próximamente.', HTML)
+        self.assertNotIn('Opción principal · Privacy Web activo', HTML)
+        self.assertIn('nextSteps.hidden = !hasOffer && saveStandalone.hidden && savedStandaloneNote.hidden;', APP)
+        self.assertIn('id="pending-claim-button"', account_html)
+        self.assertIn("diagnostic.claim_token", APP)
+        self.assertIn("sessionStorage.setItem(PENDING_CLAIM_KEY", APP)
+        self.assertIn("sessionStorage.getItem(PENDING_CLAIM_KEY)", account)
+        self.assertIn("'/api/privacy/diagnostic-claims'", account)
+        self.assertIn("workspace_id: activeWorkspaceId", account)
+        self.assertIn("sessionStorage.removeItem(PENDING_CLAIM_KEY)", account)
+        self.assertIn("showSavedDiagnosticConfirmation(saved.workspace_site_id)", account)
+        self.assertIn("claimSuccessResult.href = `/privacy/?workspace_site_id=", account)
+        self.assertIn("&view=latest`;", account)
+        self.assertIn("if (claim.intent === 'activate')", account)
+        self.assertIn("renderPriorities(diagnostic.priorities)", APP)
+        self.assertIn("renderCommercialOffer(diagnostic.priorities)", APP)
+        self.assertNotIn("payment_confirmed", account)
+
     def test_authenticated_workspace_site_entry_uses_access_identity(self):
         self.assertNotIn('data-clerk-publishable-key="pk_test_', HTML)
         self.assertNotIn('clerk.accounts.dev', HTML)
@@ -193,10 +312,10 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("Plan de corrección", HTML)
         self.assertIn("$9.900", HTML)
         self.assertNotIn("$49.900", HTML)
-        self.assertEqual(HTML.count("Activo por <strong>1 mes</strong>"), 1)
+        self.assertIn("nuevas revisiones durante un mes.", HTML)
         self.assertNotIn("pago único", HTML)
-        self.assertIn("Activo por <strong>1 mes</strong>", HTML)
-        self.assertIn("Te ayuda a abordar las mejoras detectadas y revisar cómo avanza tu sitio.", HTML)
+        self.assertIn("Vigencia de 1 mes desde la compra. Sin renovación automática.", HTML)
+        self.assertIn("Accede a todas las mejoras, instrucciones para corregirlas y nuevas revisiones durante un mes.", HTML)
         self.assertIn("Todas las mejoras detectadas", HTML)
         self.assertIn("Instrucciones concretas para cada mejora", HTML)
         self.assertIn("Cómo comprobar los cambios", HTML)
@@ -204,7 +323,12 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Seguimiento de tus avances", HTML)
         self.assertNotIn("1 comprobación", HTML)
         self.assertNotIn("30 días", HTML)
-        self.assertIn(">Activar Privacy Web</button>", HTML)
+        self.assertIn('id="correction-order-open">Continuar →</button>', HTML)
+        self.assertIn("sin desbloquear las demás mejoras ni incluir nuevas revisiones.", HTML)
+        self.assertIn("continueWithDiagnostic('activate')", APP)
+        self.assertIn("continueWithDiagnostic('save')", APP)
+        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("claim.intent === 'activate'", account)
         self.assertEqual(HTML.count("Vigencia de 1 mes desde la compra. Sin renovación automática."), 2)
         self.assertIn('id="correction-order-validity"', HTML)
         self.assertIn('id="correction-order-expired-validity"', HTML)
