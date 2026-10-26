@@ -114,10 +114,28 @@ orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
   no tokens de acceso por URL. Cuando un sitio tiene entitlement vigente,
   la tarjeta de Privacy Web muestra «Abrir Privacy Web» en vez del precio.
 
-**Estrategia de BD:** dos tablas nuevas, creadas idempotentemente durante
-la inicialización del servicio, sin DROP ni modificación de datos históricos.
-Antes de promover a producción revisar compatibilidad, índices, migración
-aditiva y rollback. Esta rama no habilita Mercado Pago ni cobros nuevos.
+**Estrategia de BD:** migración aditiva controlada
+`backend/migrations/20261026_privacy_entitled_plans.sql`,
+registrada por SHA-256 en `backend/scripts/predeploy_migrations.py`.
+Se ejecuta **solo** en el entorno explícitamente autorizado a través de
+`MIGRATION_APPROVED_FILES`, antes de desplegar el backend. El inicio del
+servicio verifica las tablas y columnas en modo lectura; si faltan, el nuevo
+módulo no está disponible (sin DDL ni concesión implícita de acceso).
+La migración no elimina datos ni tablas existentes; las tablas nuevas pueden
+coexistir si se revierte el código. Probar primero en DEV y revisar aprobación
+separada para cualquier ejecución sobre PROD.
+
+**Vigencia durante revisión:** el servicio vuelve a comprobar el plazo
+con `clock_timestamp()` después de la inspección externa y después de guardar
+las evidencias dentro de la transacción. Si el plazo vence, revierte
+el snapshot y su comparación, retornando acceso no vigente.
+
+**Errores de entitlement:** la vista del diagnóstico guardado sigue visible
+si falla la consulta de entitlement; muestra «Reintentar acceso» y nunca
+interpreta un error HTTP, de red o de JSON como ausencia de derecho.
+No se prepara pago/activación hasta que la verificación se complete.
+
+Esta rama no habilita Mercado Pago ni cobros nuevos.
 
 **Coexistencia temporal:** los servicios, endpoints y tablas del flujo
 `privacy.correction_plan_order` siguen en el código heredado, pero **no
