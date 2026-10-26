@@ -1265,3 +1265,6 @@ body.privacy-modal-open {
   #privacy-correction-offer .privacy-saved-choice .btn.privacy-choice-button,
   .privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }
 }
+
+/* PW-03B: active entitlements never display an activation price. */
+.privacy-price[hidden] { display: none !important; }
