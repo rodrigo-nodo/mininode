@@ -22,7 +22,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         plan = (PRIVACY_DIR / "plan" / "index.html").read_text(encoding="utf-8")
         shared = (FRONTEND_DIR / "partials" / "header-nav.html").read_text(encoding="utf-8").strip()
         self.assertIn('data-include="/partials/header-nav.html"', plan)
-        self.assertIn(shared, plan)
+        from textwrap import dedent
+        fallback = plan.split('data-include="/partials/header-nav.html">', 1)[1].split("</div>\n  <main", 1)[0]
+        self.assertIn(shared, dedent(fallback).strip())
         self.assertEqual(plan.count('id="site-header-nav"'), 1)
         self.assertIn('id="site-mobile-menu"', plan)
         self.assertIn('id="header-account-menu"', plan)
