@@ -34,7 +34,7 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 |---|---|---|
 | PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | **Cerrado · PROD** (PR #379) |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | **Cerrado · PROD** (Mininode Admin; PR #379) |
-| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A validado; PW-03B en PR: planes y revisiones con entitlement; retirada legacy pendiente) |
+| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A validado; PW-03B en PR: planes y revisiones con entitlement y migración controlada; retirada legacy pendiente) |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | **Parcial · DEV** (adaptador y endpoints backend; E2E pendiente, no disponible en PROD) |
 | PW-05 | Unificar tercera persona singular en UX, resultados, hallazgos, recomendaciones, botones, estados y errores | Pendiente |
 | PW-06 | Incorporar observabilidad de diagnósticos, pagos, activaciones y fallos operativos, sin exponer datos sensibles | Pendiente |
