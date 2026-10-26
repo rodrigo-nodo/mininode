@@ -5,6 +5,17 @@ const requestError = document.querySelector('#request-error');
 const submitButton = document.querySelector('#privacy-submit');
 const loadingCard = document.querySelector('#privacy-loading');
 const resultCard = document.querySelector('#privacy-result');
+const saveDiagnostic = document.querySelector('#privacy-save-diagnostic');
+const saveStandalone = document.querySelector('#privacy-save-standalone');
+const saveStandaloneButton = document.querySelector('#privacy-save-standalone-button');
+const nextSteps = document.querySelector('#privacy-next-steps');
+const saveDiagnosticNote = document.querySelector('#privacy-save-note');
+const savedDiagnosticNote = document.querySelector('#privacy-saved-note');
+const savedStandaloneNote = document.querySelector('#privacy-saved-standalone');
+const savedNoteDescription = document.querySelector('#privacy-saved-note-description');
+const savedStandaloneDescription = document.querySelector('#privacy-saved-standalone-description');
+const activationNotice = document.querySelector('#privacy-activation-notice');
+const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const analyzedUrl = document.querySelector('#analyzed-url');
 const privacyScore = document.querySelector('#privacy-score');
 const scoreValue = document.querySelector('#score-value');
@@ -39,6 +50,8 @@ const focusableSelector = 'button, a[href], input, textarea, select, [tabindex]:
 let lastFocusedElement = null;
 let isDiagnosing = false;
 let currentDiagnosticId = '';
+let currentClaimToken = '';
+let currentPersistedWorkspaceSiteId = '';
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
@@ -296,6 +309,14 @@ const renderPriorities = (priorities) => {
 
 const resetCommercialState = () => {
   currentDiagnosticId = '';
+  currentClaimToken = '';
+  currentPersistedWorkspaceSiteId = '';
+  activationNotice.hidden = true;
+  savedDiagnosticNote.hidden = true;
+  savedStandaloneNote.hidden = true;
+  nextSteps.hidden = true;
+  saveDiagnosticNote.hidden = true;
+  saveStandalone.hidden = true;
   correctionOffer.hidden = true;
   noPrioritiesOffer.hidden = true;
   correctionUnavailable.hidden = true;
@@ -330,7 +351,30 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
 
   analyzedUrl.textContent = websiteUrl;
   currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id.trim() : '';
-  orderOpenButton.disabled = !currentDiagnosticId;
+  currentClaimToken = typeof diagnostic.claim_token === 'string' ? diagnostic.claim_token : '';
+  const savedSiteId = typeof diagnostic.workspace_site_id === 'string' ? diagnostic.workspace_site_id.trim() : '';
+  currentPersistedWorkspaceSiteId = currentDiagnosticId ? (savedSiteId || authenticatedWorkspaceSiteId) : '';
+  const isSaved = Boolean(currentPersistedWorkspaceSiteId);
+  // Display the exact saved review's hostname; do not silently collapse apex and www.
+  let reviewHostname = '';
+  try {
+    reviewHostname = new URL(diagnostic.site_url || websiteUrl).hostname;
+  } catch {
+    // A malformed URL must not expose raw, unvalidated text in this confirmation.
+  }
+  const savedReviewDescription = reviewHostname
+    ? `La última revisión de ${reviewHostname} está disponible en tu espacio Mininode.`
+    : 'La última revisión de este sitio está disponible en tu espacio Mininode.';
+  savedNoteDescription.textContent = savedReviewDescription;
+  savedStandaloneDescription.textContent = savedReviewDescription;
+  const canClaim = Boolean(currentDiagnosticId && currentClaimToken && !isSaved);
+  saveDiagnostic.hidden = !canClaim;
+  saveDiagnosticNote.hidden = !canClaim;
+  saveStandalone.hidden = !canClaim;
+  savedDiagnosticNote.hidden = !isSaved;
+  savedStandaloneNote.hidden = !isSaved;
+  activationNotice.hidden = true;
+  orderOpenButton.disabled = !currentDiagnosticId || (!currentClaimToken && !isSaved);
   orderOpenButton.hidden = false;
   orderForm.hidden = true;
   orderSuccess.hidden = true;
@@ -349,6 +393,12 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   renderCommercialOffer(diagnostic.priorities);
+  const hasOffer = !correctionOffer.hidden;
+  saveDiagnosticNote.hidden = !hasOffer || !canClaim;
+  saveStandalone.hidden = hasOffer || !canClaim;
+  savedDiagnosticNote.hidden = !hasOffer || !isSaved;
+  savedStandaloneNote.hidden = hasOffer || !isSaved;
+  nextSteps.hidden = !hasOffer && saveStandalone.hidden && savedStandaloneNote.hidden;
 };
 
 const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
@@ -495,12 +545,6 @@ urlInput.addEventListener('input', () => {
   }
 });
 
-orderOpenButton?.addEventListener('click', () => {
-  orderOpenButton.hidden = true;
-  orderForm.hidden = false;
-  orderEmail.focus();
-});
-
 orderForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const diagnosticId = currentDiagnosticId;
@@ -595,6 +639,29 @@ const resolveWorkspaceForDiagnosis = async () => {
   throw new Error('workspace_selection_required');
 };
 
+const continueWithDiagnostic = (intent) => {
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId) {
+    // The commercial request is not implemented yet; keep the CTA and state its next step.
+    activationNotice.hidden = false;
+    return;
+  }
+  if (!currentDiagnosticId || !currentClaimToken) return;
+  try {
+    // Carry the selected intent with the one-time claim; never place proof in URLs.
+    sessionStorage.setItem(PENDING_CLAIM_KEY, JSON.stringify({
+      diagnostic_id: currentDiagnosticId,
+      claim_token: currentClaimToken,
+      intent,
+    }));
+    window.location.assign('/access/');
+  } catch {
+    setRequestError('No pudimos preparar el acceso en este navegador. Intenta nuevamente.');
+  }
+};
+orderOpenButton?.addEventListener('click', () => continueWithDiagnostic('activate'));
+saveDiagnostic?.addEventListener('click', () => continueWithDiagnostic('save'));
+saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('save'));
+
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
 
@@ -643,11 +710,16 @@ const initializeAuthenticatedSite = async () => {
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
       const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
-      if (Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now() && !correctionOffer.hidden) {
+      const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();
+      if (purchaseExpired && !correctionOffer.hidden) {
         showExpiredCommercialState(latestDiagnostic.created_at);
       }
       loadingCard.hidden = true;
       resultCard.hidden = false;
+      // An old saved snapshot may still be viewed, but cannot start a new purchase.
+      if (privacyQuery.get('activation') === 'pending' && !purchaseExpired && !correctionOffer.hidden) {
+        activationNotice.hidden = false;
+      }
     }
   } catch (error) {
     reportFlowError('authenticated_site_init_failed', error);

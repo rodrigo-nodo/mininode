@@ -497,3 +497,41 @@ GitHub `production` y el secret `PRODUCTION_DATABASE_URL`; DEV usa el environmen
 nombre exacto de un archivo en `backend/migrations` y una confirmación propia del
 entorno. El workflow DEV ejecuta la migración contra el contenido de la rama permanente
 `dev`; no reutiliza credenciales ni confirmaciones de producción.
+
+
+## Promoción funcional de Privacy Web desde DEV (octubre 2026)
+
+Se trasladan a `main` el guardado de diagnóstico gratuito, la desvinculación reversible, las equivalencias HTTP(S) verificadas, las solicitudes/decisiones de agrupación y las cortesías auditables. Las migraciones A/B requeridas ya se ejecutaron en PostgreSQL PROD, con siete checksums registrados. Los privilegios globales de operador están limitados por la variable de entorno `MININODE_REVIEW_OPERATOR_EMAILS`; si no se configura, ninguna cuenta dispone de ese privilegio. La publicación del código no autoriza conciliaciones preexistentes, cobros reales ni ejecución de scripts `--apply`. El historial comercial anterior permanece sin modificación.
+
+## Mininode Admin - Base administrativa
+
+La entrada canónica de administración interna es `/admin/`. En esta primera etapa
+incluye exclusivamente Privacy Web y reutiliza la interfaz y los contratos existentes
+de revisión de agrupaciones. La ruta anterior `/operator/site-reviews/` redirige a
+`/admin/` para mantener una única entrada visible.
+
+El acceso a datos y decisiones continúa protegido **en backend** por la identidad
+verificada y la lista `MININODE_REVIEW_OPERATOR_EMAILS`; el rol `owner` o
+`member` de un workspace no otorga privilegios administrativos globales.
+El frontend no contiene correos autorizados, secretos ni decisiones de permisos.
+
+## PW-02 - Cortesías administrativas Privacy Web
+
+Mininode Admin (/admin/) permite a operadores autorizados buscar un dominio y distinguir
+sus vínculos privados por workspace antes de conceder acceso. Las operaciones usan
+la misma autorización de operador que las solicitudes de agrupación, validada en backend.
+
+Las cortesías son entitlements del producto `privacy_web` con `source=internal_grant`;
+no crean órdenes de Billing. Duración predeterminada: 30 días, editable entre 1 y 365
+días. La fecha de inicio se coloca al finalizar el período activo si lo hubiera;
+se admite como máximo un período futuro. No hay renovación automática.
+
+Los eventos de concesión y revocación se registran en
+`access.entitlement_admin_events` con operador, fecha y motivo. La revocación
+marca `status=revoked` sin borrar el entitlement ni la auditoría. Las lecturas
+de derechos activos ya excluyen períodos revocados o vencidos.
+
+Billing también comprueba los períodos futuros sin distinguir el origen: una compra
+confirmada comienza al finalizar el período activo (gratuito o pagado), sin
+superposición; no se permite comprar otro período cuando ya hay uno futuro reservado.
+La duración pagada es un mes calendario mediante `add_calendar_month`.

@@ -184,7 +184,7 @@ def test_valid_simple_site_runs_full_pipeline(monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 11
+    assert len(body["controls"]) == 21
     assert isinstance(body["score"], int)
     assert isinstance(body["status"], str)
     assert 0 <= body["coverage"] <= 100
@@ -598,22 +598,19 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
 
     assert response.status_code == 200
     body = response.json()
-    priority = next(item for item in body["priorities"] if item["control_code"] == "PRV-104")
-    assert priority["source_url"] == contact_public
-    assert {"control_code", "name", "priority", "finding", "recommendation"} <= priority.keys()
-    assert {"action_steps", "validation_step"} <= priority.keys()
-    assert len(priority["action_steps"]) == 3
-    assert all("example.com" not in text for text in [*priority["action_steps"], priority["validation_step"]])
-    assert "?" not in priority["source_url"]
-    assert "#" not in priority["source_url"]
-    assert priority["evidence_summary"] == (
-        "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
-    )
+    # PRV-104 is contextual/informational in the current framework (weight zero):
+    # it must not appear as an actionable priority or disclose form content.
+    controls = {item["control_code"]: item for item in body["controls"]}
+    assert "PRV-104" in controls
+    assert all(item["control_code"] != "PRV-104" for item in body["priorities"])
+    for priority in body["priorities"]:
+        source = priority.get("source_url") or ""
+        assert "?" not in source
+        assert "#" not in source
     serialized = str(body)
     assert "persona@example.com" not in serialized
     assert "contenido privado" not in serialized
     assert "<form" not in serialized
-    assert "?" not in priority["evidence_summary"]
 
 
 def test_selection_is_bounded_to_five_pages(monkeypatch):
@@ -905,7 +902,7 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch, caplog):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 11
+    assert len(body["controls"]) == 21
     assert body["scope"] == {"pages_requested": 3, "pages_analyzed": 2, "limited": False}
     assert captured["contract"].inspection.errors[0]["code"] == "timeout"
     controls = {item["control_code"]: item for item in body["controls"]}
@@ -939,3 +936,80 @@ def test_unexpected_error_is_sanitized(monkeypatch):
     assert response.status_code == 500
     assert response.json()["error"] == "internal_error"
     assert "division" not in response.text.lower()
+
+
+def test_public_cross_domain_redirect_is_inspected_at_verified_destination(monkeypatch):
+    source = "https://example.cl/"
+    destination = "https://example.com/"
+    blocked = failed_page(source, "blocked_by_ssrf")
+    blocked.final_url = destination
+    blocked.redirect_count = 1
+    blocked.ssrf_rejection_reason = "redirect_hostname_not_allowed"
+    client, fake = client_with(monkeypatch, {
+        source: blocked,
+        destination: page(destination, "<title>Empresa</title>"),
+    })
+    probes = []
+
+    def probe(url, hostname, *, deadline=None, allow_public_cross_domain_redirects=False):
+        probes.append((url, hostname, allow_public_cross_domain_redirects))
+        observed = page(destination, "<title>Empresa</title>")
+        observed.redirect_count = 1
+        return observed
+
+    fake._fetch_page = probe
+    fake.pages[destination].redirect_count = 1
+    response = client.post("/privacy/diagnose", json={"url": source})
+    assert response.status_code == 200
+    assert response.json()["site_url"] == destination
+    assert fake.target_calls[:2] == [source, destination]
+    assert probes == [(source, "example.cl", True), (source, "example.cl", True)]
+
+
+def test_unsafe_redirect_is_not_retried_as_cross_domain_equivalence(monkeypatch):
+    source = "https://example.cl/"
+    blocked = failed_page(source, "blocked_by_ssrf")
+    blocked.redirect_count = 1
+    blocked.ssrf_rejection_reason = "non_public_address"
+    client, fake = client_with(monkeypatch, {source: blocked})
+    fake._fetch_page = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("Unsafe URL must never be probed again")
+    )
+    response = client.post("/privacy/diagnose", json={"url": source})
+    assert response.status_code == 400
+    assert response.json()["error"] == "unsafe_target"
+
+
+@pytest.mark.parametrize(("destinations", "inspected_final"), [
+    (("https://example.com/", "https://other.example/"), None),
+    (("http://example.com/", "http://example.com/"), None),
+    (("https://example.com/", "https://example.com/"), "https://www.example.com/"),
+])
+def test_cross_domain_requires_repeatable_https_and_stable_destination(
+    monkeypatch, destinations, inspected_final
+):
+    source = "https://example.cl/"
+    blocked = failed_page(source, "blocked_by_ssrf")
+    blocked.redirect_count = 1
+    blocked.ssrf_rejection_reason = "redirect_hostname_not_allowed"
+    destination = "https://example.com/"
+    inspection = page(destination, "<title>Destino</title>")
+    if inspected_final:
+        inspection.final_url = inspected_final
+    client, fake = client_with(monkeypatch, {source: blocked, destination: inspection})
+    probes = []
+
+    def probe(url, host, *, deadline=None, allow_public_cross_domain_redirects=False):
+        target = destinations[len(probes)]
+        probes.append(target)
+        result = page(target, "<title>Verificación</title>")
+        result.redirect_count = 1
+        return result
+
+    fake._fetch_page = probe
+    response = client.post("/privacy/diagnose", json={"url": source})
+    assert response.status_code == 400
+    assert response.json()["error"] == "unsafe_target"
+    # Do not save or score the ambiguous destination.
+    assert fake.target_calls == ([source, destination] if inspected_final else [source])
+    assert len(probes) == (1 if destinations[0].startswith("http:") else 2)

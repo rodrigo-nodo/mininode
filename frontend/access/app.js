@@ -70,6 +70,15 @@ const workspacePickerLabel = document.querySelector('#workspace-picker-label');
 const workspacePicker = document.querySelector('#workspace-picker');
 const privacyWebOpen = document.querySelector('#privacy-web-open');
 const siteList = document.querySelector('#site-list');
+const siteReviewButton = document.querySelector('#site-review-request');
+const siteReviewNotice = document.querySelector('#site-review-notice');
+const pendingClaimPanel = document.querySelector('#pending-claim-panel');
+const pendingClaimButton = document.querySelector('#pending-claim-button');
+const pendingClaimError = document.querySelector('#pending-claim-error');
+const claimSuccessPanel = document.querySelector('#claim-success');
+const claimSuccessDescription = document.querySelector('#claim-success-description');
+const claimSuccessResult = document.querySelector('#claim-success-result');
+const PENDING_CLAIM_KEY = 'mininode.privacy.pending_claim.v1';
 const siteEmpty = document.querySelector('#site-empty');
 
 let signInMounted = false;
@@ -79,6 +88,9 @@ let syncRequested = false;
 let context = { workspaces: [] };
 let activeWorkspaceId = '';
 let latestReviewsRequestId = 0;
+let claimInFlight = false;
+let pendingWorkspaceChoice = false;
+let selectedSiteReviewIds = new Set();
 
 let mininodeAuth = null;
 
@@ -102,6 +114,7 @@ function showLoading(message = 'Preparando acceso…') {
 
 function showSignedOut() {
   lastResolvedSessionId = null; context = { workspaces: [] }; activeWorkspaceId = '';
+  claimSuccessPanel.hidden = true;
   setVisible(loginPanel, true); setVisible(loading, false); setVisible(errorPanel, false);
   setVisible(home, false); setVisible(signInNode, true); setVisible(note, true);
   if (!signInMounted) {
@@ -124,19 +137,33 @@ function showError(message) {
 }
 
 async function api(path, options = {}) {
-  const token = await mininodeAuth.getToken();
+  let token;
+  try {
+    token = await mininodeAuth.getToken();
+  } catch {
+    throw new Error('No pudimos renovar tu sesión. Recarga la página y vuelve a intentarlo.');
+  }
   if (!token) throw new Error('Tu sesión ya no está disponible. Vuelve a acceder.');
 
-  const response = await fetch(path, {
-    ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...(options.headers || {}) },
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+    });
+  } catch {
+    throw new Error('No pudimos conectar con Mininode. Revisa tu conexión e inténtalo nuevamente.');
+  }
   if (!response.ok) {
     if (response.status === 401) throw new Error('Tu sesión ya no puede validarse. Cierra la sesión y vuelve a acceder.');
     if (response.status === 503) throw new Error('El servicio de acceso está temporalmente no disponible.');
+    if (path === '/api/privacy/diagnostic-claims' && response.status === 422) {
+      throw new Error('No pudimos validar los datos del diagnóstico. Puedes reintentarlo o realizar una nueva revisión.');
+    }
     const body = await response.json().catch(() => ({}));
     throw new Error(typeof body.detail === 'string' ? body.detail : 'No pudimos completar la solicitud.');
   }
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -168,7 +195,12 @@ function formatReviewDate(value) {
   }).format(date);
 }
 
-function renderSites(workspace, reviews = []) {
+function updateSiteReviewButton(siteCount) {
+  siteReviewButton.hidden = siteCount < 2;
+  siteReviewButton.disabled = selectedSiteReviewIds.size !== 2;
+}
+
+function renderSites(workspace, reviews = [], groupReviews = []) {
   siteList.replaceChildren();
   const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
   const reviewsBySite = new Map(
@@ -176,6 +208,18 @@ function renderSites(workspace, reviews = []) {
       .filter((review) => review?.workspace_site_id)
       .map((review) => [review.workspace_site_id, review]),
   );
+
+  const reviewItems = Array.isArray(groupReviews) ? groupReviews : [];
+  const pendingSiteIds = new Set(reviewItems
+    .filter((item) => item.status === 'pending')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  const approvedSiteIds = new Set(reviewItems
+    .filter((item) => item.status === 'approved')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  const rejectedSiteIds = new Set(reviewItems
+    .filter((item) => item.status === 'rejected')
+    .flatMap((item) => [item.first_workspace_site_id, item.second_workspace_site_id]));
+  selectedSiteReviewIds = new Set([...selectedSiteReviewIds].filter((id) => sites.some((site) => site.id === id)));
 
   sites.forEach((site) => {
     const row = document.createElement('div');
@@ -189,7 +233,28 @@ function renderSites(workspace, reviews = []) {
     link.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}`;
     link.textContent = site.hostname;
     link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+    if (sites.length > 1) {
+      const select = document.createElement('input');
+      select.type = 'checkbox';
+      select.className = 'site-group-checkbox';
+      select.checked = selectedSiteReviewIds.has(site.id);
+      select.setAttribute('aria-label', `Seleccionar ${site.hostname} para revisión de agrupación`);
+      select.addEventListener('change', () => {
+        if (select.checked) selectedSiteReviewIds.add(site.id);
+        else selectedSiteReviewIds.delete(site.id);
+        updateSiteReviewButton(sites.length);
+      });
+      main.append(select);
+    }
     main.append(link);
+
+    if (pendingSiteIds.has(site.id) || approvedSiteIds.has(site.id) || rejectedSiteIds.has(site.id)) {
+      const state = document.createElement('p');
+      state.className = 'site-review-meta';
+      state.textContent = pendingSiteIds.has(site.id) ? 'Agrupación pendiente de validación'
+        : approvedSiteIds.has(site.id) ? 'Agrupación aprobada' : 'Agrupación rechazada';
+      main.append(state);
+    }
 
     const review = reviewsBySite.get(site.id);
     if (review && Number.isFinite(review.score)) {
@@ -212,20 +277,48 @@ function renderSites(workspace, reviews = []) {
       row.append(main);
     }
 
+    const unlink = document.createElement('button');
+    unlink.type = 'button';
+    unlink.className = 'site-unlink';
+    unlink.textContent = 'Desvincular';
+    unlink.setAttribute('aria-label', `Desvincular ${site.hostname}`);
+    unlink.addEventListener('click', async () => {
+      if (!window.confirm(`¿Desvincular ${site.hostname} de este espacio? Los diagnósticos se conservan.`)) return;
+      unlink.disabled = true;
+      try {
+        await api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/sites/${encodeURIComponent(site.id)}/unlink`, { method: 'POST' });
+      } catch (error) {
+        unlink.disabled = false;
+        window.alert(error instanceof Error ? error.message : 'No pudimos desvincular el sitio.');
+        return;
+      }
+      try {
+        context = await api('/api/access/context');
+        renderHome();
+      } catch {
+        unlink.disabled = false;
+        window.alert('El sitio fue desvinculado, pero no pudimos actualizar la lista. Recarga la página.');
+      }
+    });
+    row.append(unlink);
     siteList.append(row);
   });
   setVisible(siteEmpty, sites.length === 0);
+  updateSiteReviewButton(sites.length);
 }
 
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
-  try {
-    const payload = await api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`);
-    if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
-    renderSites(workspace, Array.isArray(payload.reviews) ? payload.reviews : []);
-  } catch {
-    // Account remains usable even if review summaries are temporarily unavailable.
-  }
+  const [latest, grouping] = await Promise.allSettled([
+    api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`),
+    api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/site-group-reviews`),
+  ]);
+  if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+  renderSites(
+    workspace,
+    latest.status === 'fulfilled' && Array.isArray(latest.value.reviews) ? latest.value.reviews : [],
+    grouping.status === 'fulfilled' && Array.isArray(grouping.value.reviews) ? grouping.value.reviews : [],
+  );
 }
 
 function renderHome() {
@@ -241,12 +334,34 @@ function renderHome() {
     workspacePicker.append(option);
   });
   workspacePicker.value = active.id;
+  if (sessionStorage.getItem(PENDING_CLAIM_KEY) && workspaces.length > 1) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Selecciona un espacio para guardar';
+    placeholder.disabled = true;
+    workspacePicker.prepend(placeholder);
+    workspacePicker.value = '';
+  }
   setVisible(workspacePickerLabel, workspaces.length > 1);
   privacyWebOpen.href = `/privacy/?workspace_id=${encodeURIComponent(active.id)}`;
+  const pending = sessionStorage.getItem(PENDING_CLAIM_KEY);
+  let isActivation = false;
+  try { isActivation = JSON.parse(pending || 'null')?.intent === 'activate'; } catch { /* handled on save attempt */ }
+  pendingClaimPanel.hidden = !pending;
+  pendingClaimButton.hidden = true;
+  pendingWorkspaceChoice = Boolean(pending && workspaces.length > 1);
+  const claimTitle = pendingClaimPanel.querySelector('h2');
+  const claimDescription = pendingClaimPanel.querySelector('p');
+  if (claimTitle) claimTitle.textContent = pendingWorkspaceChoice ? 'Elige dónde guardar el diagnóstico' : 'Guardando tu diagnóstico…';
+  if (claimDescription) claimDescription.textContent = pendingWorkspaceChoice
+    ? 'Selecciona un espacio para continuar. Guardaremos el diagnóstico automáticamente.'
+    : isActivation ? 'Conservaremos el diagnóstico y continuaremos con Privacy Web.' : 'Conservaremos el resultado en tu espacio.';
+  pendingClaimError.hidden = true;
   renderSites(active);
 
   unmountSignIn(); setVisible(loginPanel, false); setVisible(home, true);
   void loadLatestReviews(active);
+  if (pending && !pendingWorkspaceChoice) void savePendingDiagnostic();
 }
 
 async function syncAuthState(session) {
@@ -276,7 +391,119 @@ async function signOut() {
   try { await mininodeAuth.signOut(); } catch { showError('No pudimos cerrar la sesión. Intenta nuevamente.'); }
 }
 
-workspacePicker.addEventListener('change', () => { activeWorkspaceId = workspacePicker.value; renderHome(); });
+function showSavedDiagnosticConfirmation(workspaceSiteId, hostname = '') {
+  pendingClaimPanel.hidden = true;
+  claimSuccessPanel.hidden = false;
+  claimSuccessDescription.textContent = hostname
+    ? `El diagnóstico de ${hostname} está disponible en Mis sitios.`
+    : 'Tu diagnóstico está disponible en Mi espacio, dentro de Mis sitios.';
+  claimSuccessResult.href = `/privacy/?workspace_site_id=${encodeURIComponent(workspaceSiteId)}&view=latest`;
+}
+
+async function savePendingDiagnostic() {
+  if (claimInFlight) return;
+  claimInFlight = true;
+  const raw = sessionStorage.getItem(PENDING_CLAIM_KEY);
+  if (!raw) { pendingClaimPanel.hidden = true; claimInFlight = false; return; }
+  let claim;
+  try { claim = JSON.parse(raw); } catch { sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; claimInFlight = false; return; }
+  if (typeof claim?.diagnostic_id !== 'string' || typeof claim?.claim_token !== 'string') {
+    sessionStorage.removeItem(PENDING_CLAIM_KEY); pendingClaimPanel.hidden = true; claimInFlight = false; return;
+  }
+  pendingClaimPanel.hidden = false;
+  pendingClaimButton.hidden = true;
+  pendingClaimError.hidden = true;
+  workspacePicker.disabled = true;
+  const claimTitle = pendingClaimPanel.querySelector('h2');
+  if (claimTitle) claimTitle.textContent = 'Guardando tu diagnóstico…';
+  try {
+    // The API accepts exactly three fields; intent stays client-side for navigation.
+    const saved = await api('/api/privacy/diagnostic-claims', {
+      method: 'POST',
+      body: JSON.stringify({
+        diagnostic_id: claim.diagnostic_id,
+        claim_token: claim.claim_token,
+        workspace_id: activeWorkspaceId,
+      }),
+    });
+    sessionStorage.removeItem(PENDING_CLAIM_KEY);
+    if (claim.intent === 'activate') {
+      window.location.assign('/privacy/?workspace_site_id='
+        + encodeURIComponent(saved.workspace_site_id) + '&view=latest&activation=pending');
+      return;
+    }
+
+    // Free save ends in Mi espacio, not back in the diagnostic.
+    showSavedDiagnosticConfirmation(saved.workspace_site_id);
+    try {
+      const updatedContext = await api('/api/access/context');
+      const savedWorkspace = (Array.isArray(updatedContext.workspaces) ? updatedContext.workspaces : [])
+        .find((workspace) => workspace.id === activeWorkspaceId);
+      if (!savedWorkspace) throw new Error('Saved workspace unavailable in account refresh');
+      context = updatedContext;
+      renderHome();
+      const site = (Array.isArray(savedWorkspace.sites) ? savedWorkspace.sites : [])
+        .find((item) => item.id === saved.workspace_site_id);
+      showSavedDiagnosticConfirmation(saved.workspace_site_id, site?.hostname || '');
+    } catch {
+      // The claim is already committed. Never report a refresh failure as a failed save.
+      claimSuccessDescription.textContent = 'El diagnóstico se guardó. Si aún no aparece en Mis sitios, recarga la cuenta o selecciona Ver resultado.';
+    }
+  } catch (error) {
+    pendingClaimError.textContent = error instanceof Error ? error.message : 'No pudimos guardar el diagnóstico. Reintenta el guardado.';
+    pendingClaimError.hidden = false;
+    pendingClaimButton.hidden = false;
+    pendingClaimButton.textContent = 'Reintentar guardado';
+    if (claimTitle) claimTitle.textContent = 'No pudimos guardar el diagnóstico';
+  } finally {
+    workspacePicker.disabled = false;
+    claimInFlight = false;
+  }
+}
+pendingClaimButton.addEventListener('click', () => { void savePendingDiagnostic(); });
+
+siteReviewButton.addEventListener('click', async () => {
+  if (selectedSiteReviewIds.size !== 2 || !activeWorkspaceId) return;
+  const workspaceId = activeWorkspaceId;
+  const [first, second] = [...selectedSiteReviewIds];
+  siteReviewButton.disabled = true;
+  siteReviewNotice.textContent = 'Enviando solicitud…';
+  try {
+    const result = await api(`/api/access/workspaces/${encodeURIComponent(workspaceId)}/site-group-reviews`, {
+      method: 'POST',
+      body: JSON.stringify({
+        first_workspace_site_id: first,
+        second_workspace_site_id: second,
+      }),
+    });
+    if (activeWorkspaceId !== workspaceId) return;
+    siteReviewNotice.textContent = result.status === 'pending'
+      ? 'Solicitud recibida. Validaremos si estos sitios pueden agruparse. Por ahora siguen independientes.'
+      : 'Esta solicitud ya fue revisada. Los sitios siguen independientes.';
+    selectedSiteReviewIds.clear();
+    const workspace = context.workspaces.find((item) => item.id === workspaceId);
+    if (workspace) void loadLatestReviews(workspace);
+  } catch (error) {
+    if (activeWorkspaceId === workspaceId) {
+      siteReviewNotice.textContent = error instanceof Error ? error.message : 'No pudimos enviar la solicitud.';
+      const workspace = context.workspaces.find((item) => item.id === workspaceId);
+      updateSiteReviewButton(Array.isArray(workspace?.sites) ? workspace.sites.length : 0);
+    }
+  }
+});
+
+workspacePicker.addEventListener('change', () => {
+  if (!workspacePicker.value) return;
+  activeWorkspaceId = workspacePicker.value;
+  selectedSiteReviewIds.clear();
+  siteReviewNotice.textContent = '';
+  if (sessionStorage.getItem(PENDING_CLAIM_KEY)) {
+    pendingWorkspaceChoice = false;
+    void savePendingDiagnostic();
+    return;
+  }
+  renderHome();
+});
 errorSignOutButton.addEventListener('click', signOut);
 retryButton.addEventListener('click', () => {
   lastResolvedSessionId = null;

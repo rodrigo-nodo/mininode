@@ -67,8 +67,10 @@ def create_order(user_id: UUID, workspace_site_id: UUID, diagnostic_id: UUID) ->
                 SELECT 1 FROM access.workspace_sites ws
                 JOIN access.workspace_members wm ON wm.workspace_id = ws.workspace_id
                 JOIN privacy.diagnostic d ON d.workspace_site_id = ws.id
-                WHERE ws.id = %s AND wm.user_id = %s AND wm.role IN ('owner','member')
+                WHERE ws.id = %s AND ws.detached_at IS NULL
+                  AND wm.user_id = %s AND wm.role IN ('owner','member')
                   AND d.id = %s AND d.purchase_expires_at >= CURRENT_TIMESTAMP
+                FOR UPDATE OF ws
             """, (workspace_site_id, user_id, diagnostic_id))
             if cur.fetchone() is None:
                 raise ValueError("Site or eligible diagnostic not found")
@@ -89,6 +91,34 @@ def get_order(user_id: UUID, order_id: UUID) -> Order | None:
             WHERE o.id = %s AND wm.user_id = %s AND wm.role IN ('owner','member')
         """, (order_id, user_id)).fetchone()
     return Order(*row) if row else None
+
+def get_order_for_provider(order_id: UUID) -> Order | None:
+    """Internal provider lookup. Never expose this without user authorization."""
+    with _connect() as conn:
+        row = conn.execute(f"SELECT {ORDER_FIELDS} FROM billing.orders WHERE id = %s", (order_id,)).fetchone()
+    return Order(*row) if row else None
+
+def attach_provider_order(order_id: UUID, *, provider: str, provider_order_id: str) -> None:
+    """Link a pending Billing order to exactly one provider order."""
+    if not provider or not provider_order_id:
+        raise ValueError("Provider and provider order id are required")
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT status, provider, provider_order_id FROM billing.orders WHERE id=%s FOR UPDATE", (order_id,))
+            row = cur.fetchone()
+            if row is None:
+                raise ValueError("Order not found")
+            status, current_provider, current_reference = row
+            if status != "pending":
+                raise ValueError("Only pending orders can be linked")
+            if current_provider is not None:
+                if (current_provider, current_reference) == (provider, provider_order_id):
+                    return
+                raise ValueError("Order is already linked to another provider order")
+            cur.execute(
+                "UPDATE billing.orders SET provider=%s, provider_order_id=%s WHERE id=%s",
+                (provider, provider_order_id, order_id),
+            )
 
 def add_calendar_month(start: datetime) -> datetime:
     year = start.year + (start.month == 12)
@@ -143,8 +173,13 @@ def payment_confirmed(order_id: UUID, *, provider: str, provider_order_id: str,
                   AND active_until IS NOT NULL AND active_until > %s
             """, (site_id, product, verified_paid_at))
             latest = cur.fetchone()[0]
-            if latest is not None and latest > add_calendar_month(verified_paid_at):
-                raise ValueError("Privacy Web already has one future period paid")
+            cur.execute("""
+                SELECT count(*) FROM access.entitlements
+                WHERE workspace_site_id=%s AND product_code=%s AND status='active'
+                  AND active_from > %s
+            """, (site_id, product, verified_paid_at))
+            if cur.fetchone()[0] > 0:
+                raise ValueError("Privacy Web already has one future period reserved")
             start = max(verified_paid_at, latest) if latest else verified_paid_at
             entitlement_id = uuid4()
             cur.execute("""

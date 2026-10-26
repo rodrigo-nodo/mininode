@@ -237,7 +237,8 @@ class WebFetcher:
                 page = self._fetch_page(fetch_url, allowed_hostname, deadline=deadline)
                 page.requested_url = requested_url
                 page.requested_hostname = requested_hostname
-                page.effective_hostname = effective_hostname
+                # Preserve the actual redirect target on an SSRF-rejected hop.
+                page.effective_hostname = page.effective_hostname or effective_hostname
             result.pages.append(page)
             if page.error:
                 result.errors.append(page.error)
@@ -272,6 +273,7 @@ class WebFetcher:
         *,
         accept_plain_text: bool = False,
         deadline: float | None = None,
+        allow_public_cross_domain_redirects: bool = False,
     ) -> FetchPageResult:
         started = time.monotonic()
         deadline = deadline if deadline is not None else started + self._inspection_budget
@@ -284,7 +286,19 @@ class WebFetcher:
         while True:
             try:
                 validated_addresses = validate_url(current_url, self._resolver)
-                if not same_site_hostname(urlsplit(current_url).hostname, allowed_hostname):
+                # For cross-domain identity evidence, a downgrade on any redirect
+                # hop is not trusted, even if the final page later uses HTTPS.
+                if (
+                    allow_public_cross_domain_redirects and redirects > 0
+                    and urlsplit(current_url).scheme != "https"
+                ):
+                    raise UnsafeTargetError("Redirect verification requires HTTPS")
+                # Opt-in is reserved for a redirect-only HOME verification: every
+                # hop still has strict DNS/SSRF checks and IP-pinned GET transport.
+                # Ordinary inspection (including discovered pages) stays same-site.
+                if not allow_public_cross_domain_redirects and not same_site_hostname(
+                    urlsplit(current_url).hostname, allowed_hostname
+                ):
                     raise UnsafeTargetError("Redirect leaves the initial hostname")
                 # Every attempt is pinned to one deterministic member of this
                 # single, fully validated DNS answer set. No DNS lookup occurs

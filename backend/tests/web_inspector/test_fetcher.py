@@ -964,3 +964,91 @@ def test_preserves_deduplicated_cookie_names_across_redirects():
 
     assert result.pages[0].set_cookie_names == ["cookie_a", "cookie_b"]
     assert "secret" not in repr(result.pages[0].set_cookie_names)
+
+
+def test_cross_domain_redirect_probe_is_opt_in_and_ip_pinned():
+    requests = []
+
+    def handler(request):
+        requests.append((str(request.url), request.extensions[VALIDATED_IP_EXTENSION]))
+        if request.url.host == "example.cl":
+            return httpx.Response(301, headers={"location": "https://example.com/"})
+        return httpx.Response(200, text="destination", headers={"content-type": "text/html"})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    blocked = fetcher._fetch_page("https://example.cl/", "example.cl")
+    assert blocked.error.code == "blocked_by_ssrf"
+    assert blocked.ssrf_rejection_reason == "redirect_hostname_not_allowed"
+    assert requests == [("https://example.cl/", "93.184.216.34")]
+
+    requests.clear()
+    accepted = fetcher._fetch_page(
+        "https://example.cl/", "example.cl", allow_public_cross_domain_redirects=True
+    )
+    assert accepted.error is None
+    assert accepted.final_url == "https://example.com/"
+    assert accepted.redirect_count == 1
+    assert requests == [
+        ("https://example.cl/", "93.184.216.34"),
+        ("https://example.com/", "93.184.216.34"),
+    ]
+
+
+def test_cross_domain_probe_never_fetches_a_private_redirect_target():
+    requests = []
+
+    def handler(request):
+        requests.append(str(request.url))
+        return httpx.Response(302, headers={"location": "http://127.0.0.1/private"})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    page = fetcher._fetch_page(
+        "https://example.cl/", "example.cl", allow_public_cross_domain_redirects=True
+    )
+    assert page.error.code == "blocked_by_ssrf"
+    assert requests == ["https://example.cl/"]
+
+
+def test_cross_domain_probe_accepts_public_https_intermediate_redirects():
+    requested = []
+
+    def handler(request):
+        requested.append(str(request.url))
+        if request.url.host == "example.cl":
+            return httpx.Response(302, headers={"location": "https://intermediate.example/"})
+        if request.url.host == "intermediate.example":
+            return httpx.Response(301, headers={"location": "https://example.com/"})
+        return httpx.Response(200, text="ok", headers={"content-type": "text/html"})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    result = fetcher._fetch_page(
+        "https://example.cl/", "example.cl",
+        allow_public_cross_domain_redirects=True,
+    )
+    assert result.error is None
+    assert result.status_code == 200
+    assert result.redirect_count == 2
+    assert result.final_url == "https://example.com/"
+    assert requested == [
+        "https://example.cl/", "https://intermediate.example/", "https://example.com/",
+    ]
+
+
+@pytest.mark.parametrize("redirect", [
+    "http://example.com/",
+    "http://intermediate.example/",
+])
+def test_cross_domain_probe_rejects_http_destination_and_intermediate(redirect):
+    requested = []
+
+    def handler(request):
+        requested.append(str(request.url))
+        return httpx.Response(302, headers={"location": redirect})
+
+    fetcher = WebFetcher(client=client_for(handler), resolver=public_resolver)
+    result = fetcher._fetch_page(
+        "https://example.cl/", "example.cl",
+        allow_public_cross_domain_redirects=True,
+    )
+    assert result.error.code == "blocked_by_ssrf"
+    assert requested == ["https://example.cl/"]

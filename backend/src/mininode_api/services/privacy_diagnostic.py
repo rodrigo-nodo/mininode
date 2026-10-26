@@ -88,7 +88,7 @@ def _page_diagnostic(result: InspectionFetchResult) -> dict:
         "requested_hostname": requested_hostname,
         "effective_hostname": effective_hostname,
         "internal_error_code": error.code if error else "inspection_failed",
-        "failure_phase": page.failure_phase if page else "home_fetch",
+        "failure_phase": (page.failure_phase or "home_fetch") if page else "home_fetch",
         "dns_attempt_count": page.dns_attempt_count if page else 0,
         "dns_failure_category": page.dns_failure_category if page else None,
         "network_family": page.network_family if page else None,
@@ -145,6 +145,57 @@ def _home_failure(result: InspectionFetchResult) -> None:
     if error.code in failure_codes:
         raise PrivacyInspectionError(failure_codes[error.code], diagnostic=diagnostic)
     raise PrivacyInspectionError("inspection_failed", diagnostic=diagnostic)
+
+
+def _follow_verified_public_home_redirect(fetcher: WebFetcher, source: str, result: InspectionFetchResult, deadline: float) -> InspectionFetchResult:
+    """Retry only a redirect rejected for leaving the source hostname.
+
+    The opt-in probe still validates every hop with the pinned-IP SSRF guard,
+    fixed redirect budget and shared deadline. A successful public HTTPS HOME
+    is then inspected normally (including destination robots policy).
+    Unproven, alternating, HTTP or private targets keep the original controlled error.
+    """
+    page = result.pages[0] if result.pages else None
+    if not (
+        page and page.error and page.error.code == "blocked_by_ssrf"
+        and page.ssrf_rejection_reason == "redirect_hostname_not_allowed"
+        and page.redirect_count > 0
+    ):
+        return result
+    initial_host = urlsplit(source).hostname
+    if not initial_host:
+        return result
+    # Two independent source observations must converge on the same final HOME.
+    # This proves only *this diagnosis*, not permanent cross-domain ownership.
+    destinations = []
+    for _ in range(2):
+        probe = fetcher._fetch_page(
+            source, initial_host, deadline=deadline,
+            allow_public_cross_domain_redirects=True,
+        )
+        final = urlsplit(probe.final_url or "")
+        if (
+            probe.error or probe.status_code != 200 or probe.redirect_count == 0
+            or final.scheme != "https" or not final.hostname
+            or final.hostname == initial_host
+        ):
+            return result
+        destinations.append(probe.final_url)
+    if destinations[0] != destinations[1]:
+        return result
+
+    # Never reuse probe content for Privacy controls: ordinary HOME inspection
+    # must pass the destination's robots policy and same-site restrictions.
+    inspected = fetcher.fetch(destinations[0], [destinations[0]], deadline=deadline)
+    inspected_page = inspected.pages[0] if inspected.pages else None
+    if (
+        inspected.pages_fetched != 1 or not inspected_page
+        or inspected_page.error
+        or inspected_page.status_code != 200
+        or inspected_page.final_url != destinations[0]
+    ):
+        return result
+    return inspected
 
 
 def _result_map(diagnostic: dict) -> dict[str, str]:
@@ -210,6 +261,9 @@ def diagnose_privacy_url(
 
     with factory(inspection_budget=INSPECTION_BUDGET_SECONDS) as fetcher:
         home_result = fetcher.fetch(target_url, [target_url], deadline=deadline)
+        home_result = _follow_verified_public_home_redirect(
+            fetcher, target_url, home_result, deadline
+        )
         if home_result.pages_fetched != 1 or not home_result.pages:
             _home_failure(home_result)
         home_page = home_result.pages[0]

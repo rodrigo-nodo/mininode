@@ -18,7 +18,7 @@ def test_global_styles_load_the_ui_foundations():
 
     for page in MAIN_PAGES:
         html = page.read_text(encoding="utf-8")
-        assert re.search(r'<link rel="stylesheet" href="(?:\.\./)*styles\.css">', html)
+        assert re.search(r'<link rel="stylesheet" href="(?:\.\./)*styles\.css(?:\?v=[^"]+)?">', html)
 
 
 def test_tokens_are_the_only_source_of_brand_color_values():
@@ -61,4 +61,30 @@ def test_main_pages_reuse_the_shared_header_and_footer():
 
 def test_shared_header_links_to_resources_at_the_existing_learn_route():
     header = (FRONTEND / "partials" / "header-nav.html").read_text(encoding="utf-8")
-    assert '<a href="/learn/">Recursos</a>' in header
+    assert re.search(r'<a\b[^>]*href="/learn/"[^>]*>Recursos</a>', header)
+
+
+def test_shared_design_system_exposes_opt_in_form_and_button_contract():
+    css = (FRONTEND / "assets" / "css" / "components.css").read_text(encoding="utf-8")
+    tokens = (FRONTEND / "assets" / "css" / "tokens.css").read_text(encoding="utf-8")
+    for selector in (
+        ".form-field", ".form-label", ".form-control", ".form-control--lg",
+        ".form-control[aria-invalid=\"true\"]", ".form-error",
+        ".btn--primary", ".btn--secondary", ".btn--ghost", ".card",
+        ".form-control:disabled", ".btn:disabled", ".form-control:focus-visible",
+    ):
+        assert selector in css, f"Missing shared primitive: {selector}"
+    for token in (
+        "--control-height:", "--control-height-lg:", "--control-padding-x:",
+        "--color-danger:", "--color-danger-border:",
+    ):
+        assert token in tokens
+    assert ":root[data-theme=\"dark\"]" in tokens
+
+
+def test_shared_controls_do_not_force_a_migration_of_unclassed_number_inputs():
+    css = (FRONTEND / "assets" / "css" / "components.css").read_text(encoding="utf-8")
+    assert ".form-control {" in css
+    assert "input[type=\"number\"]" not in css
+    assert "select.form-control" in css
+    assert "textarea.form-control" in css

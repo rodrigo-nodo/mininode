@@ -12,8 +12,8 @@ async function request(path, method = 'GET', options = {}) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     calls.push({ url, init });
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
+    return new Response(options.upstreamStatus === 204 ? null : JSON.stringify({ ok: true }), {
+      status: options.upstreamStatus || 200,
       headers: { 'Content-Type': 'application/json' },
     });
   };
@@ -30,7 +30,7 @@ async function request(path, method = 'GET', options = {}) {
     };
     if (Object.hasOwn(options, 'params')) context.params = options.params;
     const response = await onRequest(context);
-    return { response, json: await response.json(), calls };
+    return { response, json: response.status === 204 ? null : await response.json(), calls };
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -277,4 +277,110 @@ test('forwards Clerk bearer token to latest Privacy review reads', async () => {
 
   await assertRejected(`/api/privacy/workspace-sites/${siteId}/latest-review`, 'POST');
   await assertRejected(`/api/privacy/workspaces/${workspaceId}/latest-reviews`, 'POST');
+});
+
+test('only DELETE on exact authorized workspace-site path is proxied with bearer and empty 204', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const site = 'cc285ffb-ab8a-4c5e-b333-76b9f7af224f';
+  const path = `/api/access/workspaces/${workspace}/sites/${site}`;
+  const result = await request(path, 'DELETE', {
+    withoutApiKey: true,
+    upstreamStatus: 204,
+    headers: { Authorization: 'Bearer session-token' },
+  });
+  assert.equal(result.response.status, 204);
+  assert.equal(await result.response.text(), '');
+  assert.equal(result.calls.length, 1);
+  assert.equal(result.calls[0].init.method, 'DELETE');
+  assert.equal(result.calls[0].url, `https://backend.example/access/workspaces/${workspace}/sites/${site}`);
+  assert.equal(result.calls[0].init.headers.get('Authorization'), 'Bearer session-token');
+  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['GET', 'POST', 'PATCH']) await assertRejected(path, method);
+  await assertRejected(path + '/other', 'DELETE');
+  await assertRejected('/api/access/workspaces/' + workspace + '/sites/', 'DELETE');
+});
+
+test('accepts only POST on protected unlink action and forwards Clerk bearer', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const site = 'cc285ffb-ab8a-4c5e-b333-76b9f7af224f';
+  const route = `/api/access/workspaces/${workspace}/sites/${site}/unlink`;
+  const response = await request(route, 'POST', {
+    withoutApiKey: true,
+    upstreamStatus: 204,
+    headers: { Authorization: 'Bearer valid-clerk-session' },
+  });
+  assert.equal(response.response.status, 204);
+  assert.equal(response.json, null);
+  assert.equal(response.calls.length, 1);
+  assert.equal(response.calls[0].url, `https://backend.example/access/workspaces/${workspace}/sites/${site}/unlink`);
+  assert.equal(response.calls[0].init.method, 'POST');
+  assert.equal(response.calls[0].init.headers.get('Authorization'), 'Bearer valid-clerk-session');
+  assert.equal(response.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['GET', 'PATCH', 'DELETE', 'PUT']) await assertRejected(route, method);
+  await assertRejected(route + '/anything', 'POST');
+  await assertRejected(route.replace('/unlink', '/other'), 'POST');
+});
+
+
+test('site grouping review queue forwards only authenticated GET and POST', async () => {
+  const workspace = 'e09cf07b-2f3d-4a8a-9519-203b7bb6aa13';
+  const route = `/api/access/workspaces/${workspace}/site-group-reviews`;
+  for (const method of ['GET', 'POST']) {
+    const result = await request(route, method, {
+      withoutApiKey: true, headers: { Authorization: 'Bearer protected-session' },
+    });
+    assert.equal(result.response.status, 200);
+    assert.equal(result.calls.length, 1);
+    assert.equal(result.calls[0].init.headers.get('Authorization'), 'Bearer protected-session');
+    assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  for (const method of ['PATCH', 'DELETE', 'PUT']) await assertRejected(route, method);
+  await assertRejected(route + '/approve', 'POST');
+  await assertRejected(route.replace(workspace, 'foreign'), 'POST');
+});
+
+
+test('operator review routes only forward strict authenticated read and decisions', async () => {
+  const review = 'df608838-4efc-44e5-8d9c-c1eef6bbb940';
+  const route = '/api/access/operator/site-group-reviews';
+  const decide = `${route}/${review}/decision`;
+  for (const [url, method] of [[route, 'GET'], [decide, 'POST']]) {
+    const response = await request(url, method, {
+      withoutApiKey: true, headers: { Authorization: 'Bearer operator-session' },
+    });
+    assert.equal(response.response.status, 200);
+    assert.equal(response.calls.length, 1);
+    assert.equal(response.calls[0].init.headers.get('Authorization'), 'Bearer operator-session');
+    assert.equal(response.calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  for (const method of ['POST', 'PATCH', 'DELETE']) await assertRejected(route, method);
+  for (const method of ['GET', 'PATCH', 'DELETE']) await assertRejected(decide, method);
+  await assertRejected(decide + '/extra', 'POST');
+  await assertRejected(route + '/all/decision', 'POST');
+  await assertRejected('/api/access/operator/members', 'GET');
+});
+
+
+test('PW-02 overview forwards only authenticated GET; other methods and paths remain blocked', async () => {
+  const route = '/api/access/operator/grants/overview';
+  const token = 'operator-session-token';
+  const success = await request(route, 'GET', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer ' + token },
+  });
+  assert.equal(success.response.status, 200);
+  assert.equal(success.calls.length, 1);
+  assert.equal(success.calls[0].url, 'https://backend.example/access/operator/grants/overview');
+  assert.equal(success.calls[0].init.headers.get('Authorization'), 'Bearer ' + token);
+  assert.equal(success.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) await assertRejected(route, method);
+  await assertRejected(route + '/extra', 'GET');
+});
+
+test('PW-02 overview route exists consistently in client, API, and proxy', async () => {
+  const grants = await readFile(new URL('../../admin/grants.js', import.meta.url), 'utf8');
+  const backend = await readFile(new URL('../../../backend/src/mininode_api/api/access.py', import.meta.url), 'utf8');
+  assert.ok(grants.includes("'/api/access/operator/grants/overview'"));
+  assert.ok(backend.includes('@router.get("/operator/grants/overview")'));
+  assert.ok(source.includes("destPathPublic === 'access/operator/grants/overview'"));
 });
