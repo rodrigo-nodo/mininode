@@ -2,7 +2,10 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
+import importlib.util
+import inspect
 import os
+import time
 
 import psycopg
 import pytest
@@ -14,6 +17,13 @@ from mininode_api.main import create_app
 from mininode_api.services import (
     access, access_identity, privacy_diagnostic_snapshot, privacy_entitled_plan,
 )
+
+MIGRATION = "20261026_privacy_entitled_plans.sql"
+RUNNER = Path(__file__).resolve().parents[1] / "scripts" / "predeploy_migrations.py"
+spec = importlib.util.spec_from_file_location("pw03b_predeploy", RUNNER)
+migration_runner = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(migration_runner)
+
 
 SAMPLE = {
     "site_url": "https://example.test/",
@@ -30,11 +40,13 @@ def context(monkeypatch):
     url = os.getenv("DATABASE_URL")
     if not url:
         pytest.skip("Local PostgreSQL DATABASE_URL required")
-    if conninfo_to_dict(url).get("host", "localhost") not in {"localhost", "127.0.0.1", "postgres"}:
-        pytest.skip("Never run integration tests against remote databases")
+    info = conninfo_to_dict(url)
+    if info.get("host", "localhost") not in {"localhost", "127.0.0.1", "postgres"} or info.get("dbname") != "mininode_test":
+        pytest.skip("Only disposable local/CI mininode_test PostgreSQL is allowed")
     access.initialize_database()
     privacy_diagnostic_snapshot.initialize_database()
-    privacy_entitled_plan.initialize_database()
+    migration_runner.migrate(url, [MIGRATION])
+    privacy_entitled_plan.check_schema_ready()
     user_id, foreign_id, workspace_id, site_id, ws_site_id, entitlement_id = (uuid4() for _ in range(6))
     host = f"pw03b-{uuid4().hex}.example"
     snapshot = {**SAMPLE, "site_url": f"https://{host}/"}
@@ -221,3 +233,60 @@ def test_failed_check_rolls_back_diagnostic_and_result(context, monkeypatch):
             "SELECT count(*) FROM privacy.entitled_plan_check WHERE entitled_plan_id IN (SELECT id FROM privacy.entitled_plan WHERE workspace_site_id=%s)",
             (c["site"],),
         ).fetchone()[0] == 0
+
+
+def test_schema_is_applied_by_reviewed_migration_and_startup_is_read_only(context):
+    c = context
+    url = c["url"]
+    with psycopg.connect(url) as conn:
+        applied = conn.execute(
+            "SELECT checksum_sha256, applied_at FROM public.schema_migrations WHERE filename=%s",
+            (MIGRATION,),
+        ).fetchone()
+        assert applied is not None
+        assert len(applied[0]) == 64
+        assert conn.execute(
+            "SELECT to_regclass('privacy.entitled_plan'), to_regclass('privacy.entitled_plan_check')"
+        ).fetchone() == ("entitled_plan", "entitled_plan_check")
+    migration_runner.migrate(url, [MIGRATION])
+    with psycopg.connect(url) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM public.schema_migrations WHERE filename=%s", (MIGRATION,)
+        ).fetchone()[0] == 1
+    check_source = inspect.getsource(privacy_entitled_plan.check_schema_ready).upper()
+    assert "CREATE TABLE" not in check_source
+    assert "ALTER TABLE" not in check_source
+    assert "DROP TABLE" not in check_source
+    privacy_entitled_plan.check_schema_ready()
+
+
+def test_entitlement_expiring_during_inspection_rolls_back_without_claiming_active(context, monkeypatch):
+    c = context
+    path = _path(c)
+    assert c["client"].post(path, headers=c["headers"]).status_code == 200
+    # Initial membership/entitlement passes. The inspector then runs past
+    # the real DB deadline while transaction-start CURRENT_TIMESTAMP remains old.
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("""
+            UPDATE access.entitlements
+            SET active_until=clock_timestamp() + INTERVAL '650 milliseconds'
+            WHERE id=%s
+        """, (c["entitlement"],))
+    inspected = []
+    def slow_inspection(url):
+        inspected.append(url)
+        time.sleep(0.85)
+        return {**c["snapshot"], "score": 87}
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url", slow_inspection)
+    refused = c["client"].post(path + "/check", headers=c["headers"])
+    assert refused.status_code == 403, refused.text
+    assert len(inspected) == 1
+    with psycopg.connect(c["url"]) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM privacy.diagnostic WHERE workspace_site_id=%s",
+            (c["site"],),
+        ).fetchone()[0] == 1
+        assert conn.execute("""
+            SELECT count(*) FROM privacy.entitled_plan_check
+            WHERE entitled_plan_id IN (SELECT id FROM privacy.entitled_plan WHERE workspace_site_id=%s)
+        """, (c["site"],)).fetchone()[0] == 0
