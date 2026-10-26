@@ -216,17 +216,24 @@ const loadPlan = async () => {
   const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
 
   try {
-    const response = entitledSiteId
-      ? await fetch(`/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`, {
-        method: 'POST',
-        headers: await authorizedHeaders(),
-        signal: controller.signal,
-      })
-      : await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
+    // Prefer a read: naturally expired plans remain visible with their last
+    // review, but never permit another inspection. Create only when active
+    // entitlement has no baseline yet.
+    let response;
+    if (entitledSiteId) {
+      const path = `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`;
+      const headers = await authorizedHeaders();
+      response = await fetch(path, { method: 'GET', headers, signal: controller.signal });
+      if (response.status === 409) {
+        response = await fetch(path, { method: 'POST', headers, signal: controller.signal });
+      }
+    } else {
+      response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
       });
+    }
     if ([401, 403, 404, 409].includes(response.status)) { showError('missing'); return; }
     if (!response.ok) { showError('unavailable'); return; }
     let data;
