@@ -128,7 +128,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("plan-item__code", HTML)
 
     def test_controlled_error_states_are_distinct(self):
-        self.assertIn("response.status === 404", APP)
+        self.assertIn("[401, 403, 404, 409].includes(response.status)", APP)
         self.assertIn("if (!response.ok) { showError('unavailable')", APP)
         self.assertIn("Privacy Web no disponible", APP)
         self.assertIn("No pudimos cargar Privacy Web", APP)
@@ -163,7 +163,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=7"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=pw03b1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -246,7 +246,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("$", monitoring)
 
     def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
-        self.assertEqual(APP.count("fetch("), 2)
+        self.assertEqual(APP.count("fetch("), 4)  # legacy and authenticated paths, no monitoring API
         for assignment in (
             "elements.checkBefore.textContent = `${result.original_score} / 100`",
             "elements.checkNow.textContent = `${result.current_score} / 100`",
