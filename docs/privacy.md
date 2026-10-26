@@ -85,6 +85,44 @@ PW-04 deberá anclar la compra a una orden iniciada oportunamente; un webhook
 acreditado tardío nunca debe perder la prestación por la expiración posterior
 del snapshot, ni confiar solo en la URL de retorno.
 
+## PW-03B - Plan de corrección por entitlement (DEV, pendiente de validación)
+
+El nuevo recorrido autenticado se basa **exclusivamente** en
+`access.entitlements` (producto `privacy_web`). Es compatible con los
+orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
+
+- `privacy.entitled_plan`: un plan base por `entitlement_id`, asociado a
+  `workspace_site_id` y un `original_diagnostic_id` inmutable.
+- `privacy.entitled_plan_check`: revisiones repetibles de ese plan,
+  con evidencias y resultados asociados a nuevos snapshots de
+  `privacy.diagnostic`. No usan `privacy.correction_plan_order`.
+- `POST /privacy/workspace-sites/{id}/plan`: crea o retorna el plan de manera
+  idempotente, tomando el último diagnóstico **ya guardado** al iniciar el
+  período; no realiza una inspección nueva ni acepta URLs externas.
+- `GET /privacy/workspace-sites/{id}/plan`: consulta el plan guardado,
+  validando acceso vigente.
+- `POST /privacy/workspace-sites/{id}/plan/check`: inspecciona la URL
+  persistida, compara con la línea base y guarda revisión y snapshot
+  **en la misma transacción**. El inspector sigue siendo público/pasivo.
+- Las tres rutas exigen sesión Clerk/Access, pertenencia al workspace,
+  relación de sitio no desvinculada y entitlement activo (fecha/estado).
+  La autorización se comprueba contra BD en cada petición; una revocación
+  o expiración bloquea lecturas y nuevas revisiones, sin borrar historial.
+- La página `/privacy/plan/?workspace_site_id=...` usa sesión de usuario,
+  no tokens de acceso por URL. Cuando un sitio tiene entitlement vigente,
+  la tarjeta de Privacy Web muestra «Abrir Privacy Web» en vez del precio.
+
+**Estrategia de BD:** dos tablas nuevas, creadas idempotentemente durante
+la inicialización del servicio, sin DROP ni modificación de datos históricos.
+Antes de promover a producción revisar compatibilidad, índices, migración
+aditiva y rollback. Esta rama no habilita Mercado Pago ni cobros nuevos.
+
+**Coexistencia temporal:** los servicios, endpoints y tablas del flujo
+`privacy.correction_plan_order` siguen en el código heredado, pero **no
+participan en este nuevo recorrido**. Su retirada de rutas de acceso y
+servicios se revisará en un PR enfocado adicional antes de cerrar PW-03
+y promover a PROD; no eliminar tablas de PROD sin aprobación explícita.
+
 ## Arquitectura de interpretación semántica
 
 Privacy Web adopta como arquitectura objetivo el flujo:
