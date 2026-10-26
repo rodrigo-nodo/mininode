@@ -247,7 +247,7 @@ def test_schema_is_applied_by_reviewed_migration_and_startup_is_read_only(contex
         assert len(applied[0]) == 64
         assert conn.execute(
             "SELECT to_regclass('privacy.entitled_plan'), to_regclass('privacy.entitled_plan_check')"
-        ).fetchone() == ("entitled_plan", "entitled_plan_check")
+        ).fetchone() == ("privacy.entitled_plan", "privacy.entitled_plan_check")
     migration_runner.migrate(url, [MIGRATION])
     with psycopg.connect(url) as conn:
         assert conn.execute(
