@@ -112,14 +112,13 @@ def test_real_fetcher_verifies_apex_www_redirect_in_both_directions(
         "www.example.com" if requested_host == "example.com" else "example.com",
     )
     # Both HOME pages are independently fetched, and the redirect is followed.
-    assert [host for host, _, _ in requests] == [
-        requested_host, target_host,
-        "www.example.com" if requested_host == "example.com" else "example.com",
-    ] if requested_host == source_host else [
-        requested_host,
-        "example.com" if requested_host == "www.example.com" else "www.example.com",
-        target_host,
-    ]
+    counterpart = "www.example.com" if requested_host == "example.com" else "example.com"
+    expected_hosts = (
+        [source_host, target_host, target_host]
+        if requested_host == source_host
+        else [target_host, source_host, target_host]
+    )
+    assert [host for host, _, _ in requests] == expected_hosts
     assert all(ip == addresses[host] for host, ip, _ in requests)
     assert len(resolutions) == 3
     assert all(port == 443 for _, port in resolutions)
