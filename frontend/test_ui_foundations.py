@@ -18,7 +18,7 @@ def test_global_styles_load_the_ui_foundations():
 
     for page in MAIN_PAGES:
         html = page.read_text(encoding="utf-8")
-        assert re.search(r'<link rel="stylesheet" href="(?:\.\./)*styles\.css">', html)
+        assert re.search(r'<link rel="stylesheet" href="(?:\.\./)*styles\.css(?:\?v=[^"]+)?">', html)
 
 
 def test_tokens_are_the_only_source_of_brand_color_values():
@@ -61,7 +61,7 @@ def test_main_pages_reuse_the_shared_header_and_footer():
 
 def test_shared_header_links_to_resources_at_the_existing_learn_route():
     header = (FRONTEND / "partials" / "header-nav.html").read_text(encoding="utf-8")
-    assert '<a href="/learn/">Recursos</a>' in header
+    assert re.search(r'<a\b[^>]*href="/learn/"[^>]*>Recursos</a>', header)
 
 
 def test_shared_design_system_exposes_opt_in_form_and_button_contract():

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -230,8 +231,9 @@ def test_workspace_uses_standard_shell_layout_and_resyncs_auth():
     assert "syncHeader(Boolean(currentSession))" in auth
     assert "core-head.js?v=286account1" in access
     assert "../styles.css?v=294shell1" in access
-    assert "./styles.css?v=287latest1" in access
-    assert "./app.js?v=287latest3" in access
+    # Product assets use content-addressed fingerprints, not a fixed past version.
+    assert re.search(r'\./styles\.css\?v=[a-f0-9]{12}', access)
+    assert re.search(r'\./app\.js\?v=[a-f0-9]{12}', access)
 
 
 def test_failed_global_signout_does_not_redirect_as_if_successful():
