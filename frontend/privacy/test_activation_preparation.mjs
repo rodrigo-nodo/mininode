@@ -77,7 +77,7 @@ function mount() {
       throw new Error('fetch response must be configured by test');
     },
   };
-  vm.runInNewContext(source + '\nglobalThis.renderSavedForTest = renderDiagnostic; globalThis.diagnosticIdForTest = () => currentDiagnosticId;', context);
+  vm.runInNewContext(source + '\nglobalThis.renderSavedForTest = renderDiagnostic; globalThis.diagnosticIdForTest = () => currentDiagnosticId; globalThis.showEntitledForTest = showEntitledPrivacyWeb;', context);
   return { elements, context, calls, show: (d) => context.renderSavedForTest(d, d.site_url) };
 }
 
@@ -187,4 +187,22 @@ test('invalid preparation response must fail closed and keep the old result', as
   assert.equal(ui.context.diagnosticIdForTest(), 'DIAG-OLD');
   assert.match(ui.elements.get('privacy-activation-notice').textContent, /Intenta nuevamente/);
   assert.equal(ui.elements.get('correction-order-open').disabled, false);
+});
+
+test('active entitlement opens private plan instead of preparing another purchase', async () => {
+  const ui = mount();
+  const original = diagnosis('DIAG-ACTIVE', future());
+  ui.show(original);
+  let navigation = '';
+  ui.context.window.location.assign = (url) => { navigation = url; };
+  const button = ui.elements.get('correction-order-open');
+  ui.context.showEntitledForTest();
+  assert.equal(button.textContent, 'Abrir Privacy Web →');
+  assert.equal(ui.elements.get('privacy-correction-offer').hidden, false);
+  assert.equal(ui.elements.get('correction-order-availability').hidden, true);
+  assert.equal(ui.elements.get('correction-order-validity').hidden, true);
+  button.click();
+  await settle();
+  assert.equal(ui.calls.length, 0, 'an active entitlement must not prepare a new purchase');
+  assert.equal(navigation, '/privacy/plan/?workspace_site_id=' + siteId);
 });
