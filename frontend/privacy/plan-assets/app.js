@@ -11,6 +11,20 @@ const requestTimeoutMs = 10000;
 let requestInProgress = false;
 let checkInProgress = false;
 let currentToken = null;
+const requestedSiteId = new URLSearchParams(window.location.search).get('workspace_site_id');
+const entitledSiteId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedSiteId || '') ? requestedSiteId : null;
+const waitForAuth = () => window.MininodeAuth
+  ? Promise.resolve(window.MininodeAuth)
+  : new Promise((resolve) => window.addEventListener('mininode:auth-api-ready',
+      () => resolve(window.MininodeAuth), { once: true }));
+const authorizedHeaders = async () => {
+  const auth = await waitForAuth();
+  await auth.ready();
+  const token = await auth.getToken();
+  if (!token) throw new Error('auth_required');
+  return { Accept: 'application/json', Authorization: `Bearer ${token}` };
+};
+
 
 const accessTokenFromPath = () => {
   const match = window.location.pathname.match(/^\/privacy\/plan\/([^/]+)\/?$/);
@@ -141,17 +155,22 @@ const render = ({ site_url: siteUrl, plan, check }) => {
   elements.content.hidden = false;
 };
 const performCheck = async () => {
-  if (checkInProgress || !currentToken) return;
+  if (checkInProgress || (!currentToken && !entitledSiteId)) return;
   checkInProgress = true;
   elements.checkSubmit.disabled = true;
   elements.checkCancel.disabled = true;
   elements.checkProgress.hidden = false;
   elements.checkMessage.hidden = true;
   try {
-    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(currentToken)}/check`, {
-      method: 'POST',
-      headers: { Accept: 'application/json' },
-    });
+    const response = entitledSiteId
+      ? await fetch(`/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan/check`, {
+        method: 'POST',
+        headers: await authorizedHeaders(),
+      })
+      : await fetch(`/api/privacy/correction-plans/${encodeURIComponent(currentToken)}/check`, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
     const data = await response.json();
     if (!response.ok) {
       elements.checkMessage.textContent = data.detail || 'No pudimos completar la revisión. Intente nuevamente en unos minutos.';
@@ -186,7 +205,7 @@ const performCheck = async () => {
 const loadPlan = async () => {
   if (requestInProgress) return;
   const token = accessTokenFromPath();
-  if (!token) { showError('missing'); return; }
+  if (!token && !entitledSiteId) { showError('missing'); return; }
 
   currentToken = token; requestInProgress = true;
   elements.retry.disabled = true;
@@ -197,12 +216,25 @@ const loadPlan = async () => {
   const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
 
   try {
-    const response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (response.status === 404) { showError('missing'); return; }
+    // Prefer a read: naturally expired plans remain visible with their last
+    // review, but never permit another inspection. Create only when active
+    // entitlement has no baseline yet.
+    let response;
+    if (entitledSiteId) {
+      const path = `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`;
+      const headers = await authorizedHeaders();
+      response = await fetch(path, { method: 'GET', headers, signal: controller.signal });
+      if (response.status === 409) {
+        response = await fetch(path, { method: 'POST', headers, signal: controller.signal });
+      }
+    } else {
+      response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+    }
+    if ([401, 403, 404, 409].includes(response.status)) { showError('missing'); return; }
     if (!response.ok) { showError('unavailable'); return; }
     let data;
     try { data = await response.json(); } catch { showError('invalid'); return; }

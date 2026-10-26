@@ -54,6 +54,10 @@ let currentClaimToken = '';
 let currentPersistedWorkspaceSiteId = '';
 let currentPurchaseExpiresAt = '';
 let activationPreparationInFlight = false;
+let activePrivacyEntitlement = false;
+let entitlementLookupInFlight = false;
+let entitlementLookupFailed = false;
+let latestRenderedPriorities = [];
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
@@ -396,6 +400,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${humanStatus}.`);
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
+  latestRenderedPriorities = diagnostic.priorities;
   renderCommercialOffer(diagnostic.priorities);
   const hasOffer = !correctionOffer.hidden;
   saveDiagnosticNote.hidden = !hasOffer || !canClaim;
@@ -689,6 +694,15 @@ const prepareActivationForSavedSite = async () => {
 };
 
 const continueWithDiagnostic = (intent) => {
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId && entitlementLookupInFlight) return;
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId && entitlementLookupFailed) {
+    void verifyEntitlementForSavedSite(currentPersistedWorkspaceSiteId);
+    return;
+  }
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId && activePrivacyEntitlement) {
+    window.location.assign(`/privacy/plan/?workspace_site_id=${encodeURIComponent(currentPersistedWorkspaceSiteId)}`);
+    return;
+  }
   if (intent === 'activate' && currentPersistedWorkspaceSiteId) {
     // PW-03 prepares a fresh saved diagnosis; PW-04 will create the payment order.
     void prepareActivationForSavedSite();
@@ -710,6 +724,94 @@ const continueWithDiagnostic = (intent) => {
 orderOpenButton?.addEventListener('click', () => continueWithDiagnostic('activate'));
 saveDiagnostic?.addEventListener('click', () => continueWithDiagnostic('save'));
 saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('save'));
+
+const showEntitledPrivacyWeb = () => {
+  activePrivacyEntitlement = true;
+  correctionOffer.hidden = false;
+  noPrioritiesOffer.hidden = true;
+  nextSteps.hidden = false;
+  orderOpenButton.hidden = false;
+  orderOpenButton.disabled = false;
+  orderOpenButton.textContent = 'Abrir Privacy Web →';
+  const heading = correctionOffer.querySelector('.privacy-offer-heading h3');
+  const price = correctionOffer.querySelector('.privacy-price');
+  if (heading) heading.textContent = 'Privacy Web activo';
+  if (price) price.hidden = true;
+  const conditions = correctionOffer.querySelector('.privacy-offer-details');
+  if (conditions) conditions.hidden = true;
+  orderAvailability.hidden = true;
+  orderValidity.hidden = true;
+  activationNotice.hidden = true;
+};
+
+// A failed entitlement lookup must never look like a negative entitlement:
+// it would hide an existing subscription and mislead the customer into activation.
+const showEntitlementLookupError = () => {
+  activePrivacyEntitlement = false;
+  entitlementLookupFailed = true;
+  correctionOffer.hidden = false;
+  nextSteps.hidden = false;
+  const price = correctionOffer.querySelector('.privacy-price');
+  const details = correctionOffer.querySelector('.privacy-offer-details');
+  if (price) price.hidden = true;
+  if (details) details.hidden = true;
+  orderAvailability.hidden = true;
+  orderValidity.hidden = true;
+  orderOpenButton.hidden = false;
+  orderOpenButton.disabled = false;
+  orderOpenButton.textContent = 'Reintentar acceso →';
+  activationNotice.textContent = 'No pudimos verificar tu acceso a Privacy Web. Intenta nuevamente.';
+  activationNotice.hidden = false;
+};
+
+const restoreActivationOffer = () => {
+  activePrivacyEntitlement = false;
+  const title = correctionOffer.querySelector('.privacy-offer-heading h3');
+  const price = correctionOffer.querySelector('.privacy-price');
+  const details = correctionOffer.querySelector('.privacy-offer-details');
+  if (title) title.textContent = 'Activar Privacy Web';
+  if (price) price.hidden = false;
+  if (details) details.hidden = false;
+  orderAvailability.hidden = false;
+  orderValidity.hidden = false;
+  correctionOffer.hidden = !Array.isArray(latestRenderedPriorities) || latestRenderedPriorities.length === 0;
+  orderOpenButton.disabled = !currentDiagnosticId;
+  orderOpenButton.textContent = 'Continuar →';
+  activationNotice.hidden = true;
+};
+
+const verifyEntitlementForSavedSite = async (siteId, knownToken = null) => {
+  if (entitlementLookupInFlight) return false;
+  entitlementLookupInFlight = true;
+  orderOpenButton.disabled = true;
+  orderOpenButton.textContent = 'Verificando acceso…';
+  try {
+    let token = knownToken;
+    if (!token) {
+      const auth = await waitForMininodeAuth();
+      await auth.ready();
+      token = await auth.getToken();
+    }
+    if (!token) throw new Error('Missing authentication token');
+    const response = await fetch(
+      `/api/billing/sites/${encodeURIComponent(siteId)}/entitlement`,
+      { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } },
+    );
+    if (!response.ok) throw new Error(`Entitlement HTTP ${response.status}`);
+    const entitlement = await response.json();
+    if (typeof entitlement?.active !== 'boolean') throw new Error('Invalid entitlement response');
+    entitlementLookupFailed = false;
+    if (entitlement.active) showEntitledPrivacyWeb();
+    else restoreActivationOffer();
+    return true;
+  } catch (error) {
+    reportFlowError('entitlement_lookup_failed', error);
+    showEntitlementLookupError();
+    return false;
+  } finally {
+    entitlementLookupInFlight = false;
+  }
+};
 
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
@@ -760,9 +862,12 @@ const initializeAuthenticatedSite = async () => {
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
       loadingCard.hidden = true;
       resultCard.hidden = false;
+      // Keep the saved result visible even when entitlement verification fails.
+      // Distinguish "inactive" from transport/auth/JSON failures.
+      const entitlementVerified = await verifyEntitlementForSavedSite(site.id, token);
       // Viewing a saved snapshot never expires. Only an explicit activation intent
       // re-inspects an old result, without asking the person to repeat the action.
-      if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden) {
+      if (entitlementVerified && privacyQuery.get('activation') === 'pending' && !activePrivacyEntitlement && !correctionOffer.hidden) {
         await prepareActivationForSavedSite();
       }
     }

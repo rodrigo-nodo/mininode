@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
         privacy_correction_plan,
         privacy_correction_plan_order,
         privacy_correction_plan_check,
+        privacy_entitled_plan,
         privacy_diagnostic_snapshot,
     )
     from mininode_api.privacy_data.services import data_maps
@@ -88,6 +89,15 @@ async def lifespan(app: FastAPI):
         app.state.privacy_correction_plan_check_ready = True
 
     try:
+        privacy_entitled_plan.check_schema_ready()
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Entitlement-based Privacy plan schema not ready; run approved migration before starting API"
+        )
+    else:
+        app.state.privacy_entitled_plan_ready = True
+
+    try:
         data_maps.initialize_database()
     except Exception:
         logging.getLogger(__name__).exception(
@@ -130,6 +140,7 @@ def create_app() -> FastAPI:
     app.state.privacy_correction_plan_order_ready = False
     app.state.privacy_diagnostic_snapshot_ready = False
     app.state.privacy_correction_plan_check_ready = False
+    app.state.privacy_entitled_plan_ready = False
     app.state.privacy_data_ready = False
 
     # CORS desde env (coma-separado)
@@ -217,6 +228,9 @@ def create_app() -> FastAPI:
         app.include_router(privacy_router)
     except Exception as e:
         logging.exception("Failed to include privacy router: %s", e)
+
+    from mininode_api.api.privacy_entitled_plan import router as privacy_entitled_router
+    app.include_router(privacy_entitled_router)
 
     from mininode_api.privacy_data.api.router import router as privacy_data_router
     app.include_router(privacy_data_router)

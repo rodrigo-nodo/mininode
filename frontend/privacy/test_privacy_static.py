@@ -30,7 +30,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=2739bb4e161b', HTML)
+        self.assertIn('app.js?v=pw03b1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -54,6 +54,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("void prepareActivationForSavedSite();", APP)
         self.assertIn("Estamos actualizando el diagnóstico de tu sitio antes de continuar.", APP)
         self.assertIn("prepare-activation", APP)
+        self.assertIn("const verifyEntitlementForSavedSite = async (siteId, knownToken = null) => {", APP)
+        self.assertIn("showEntitlementLookupError()", APP)
+        self.assertIn("Reintentar acceso →", APP)
         self.assertNotIn("Disponible para activar durante 24 horas", APP)
         self.assertNotIn("Disponible para activar durante 24 horas", HTML)
         self.assertIn("activationNotice.hidden = false;", APP)
@@ -105,7 +108,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_saved_result_is_preserved_and_pending_activation_prepares_fresh_diagnosis(self):
         self.assertIn("const prepareActivationForSavedSite = async () => {", APP)
         self.assertIn("await prepareActivationForSavedSite();", APP)
-        self.assertIn("if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden)", APP)
+        self.assertIn("if (entitlementVerified && privacyQuery.get('activation') === 'pending' && !activePrivacyEntitlement && !correctionOffer.hidden)", APP)
         self.assertIn("if (prepared.refreshed)", APP)
         self.assertIn("renderDiagnostic(prepared.diagnostic", APP)
         self.assertNotIn("if (purchaseExpired && !correctionOffer.hidden)", APP)

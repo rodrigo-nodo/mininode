@@ -254,6 +254,29 @@ test('allows only authenticated POST activation preparation and forwards Bearer'
   await assertRejected(path + '/check', 'POST');
 });
 
+test('entitlement and plan routes forward Bearer with exact method/path allowlist', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  for (const [pathname, method] of [
+    [`/api/billing/sites/${id}/entitlement`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/plan`, 'POST'],
+    [`/api/privacy/workspace-sites/${id}/plan`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/plan/check`, 'POST'],
+  ]) {
+    const ok = await request(pathname, method, {
+      withoutApiKey: true,
+      headers: { Authorization: 'Bearer clerk-session-token' },
+    });
+    assert.equal(ok.response.status, 200);
+    assert.equal(ok.calls.length, 1);
+    assert.equal(ok.calls[0].init.headers.get('Authorization'), 'Bearer clerk-session-token');
+    assert.equal(ok.calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  await assertRejected(`/api/billing/sites/${id}/entitlement`, 'POST');
+  await assertRejected(`/api/privacy/workspace-sites/${id}/plan/check`, 'GET');
+  await assertRejected(`/api/privacy/workspace-sites/${id}/plan/check/extra`, 'POST');
+  await assertRejected(`/api/privacy/workspace-sites/${id}/plan`, 'DELETE');
+});
+
 test('forwards Clerk bearer token to workspace URL Privacy diagnosis', async () => {
   const id = '22222222-2222-4222-8222-222222222222';
   const result = await request(`/api/privacy/workspaces/${id}/diagnose`, 'POST', {

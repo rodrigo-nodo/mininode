@@ -85,6 +85,64 @@ PW-04 deberá anclar la compra a una orden iniciada oportunamente; un webhook
 acreditado tardío nunca debe perder la prestación por la expiración posterior
 del snapshot, ni confiar solo en la URL de retorno.
 
+## PW-03B - Plan de corrección por entitlement (DEV, pendiente de validación)
+
+El nuevo recorrido autenticado se basa **exclusivamente** en
+`access.entitlements` (producto `privacy_web`). Es compatible con los
+orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
+
+- `privacy.entitled_plan`: un plan base por `entitlement_id`, asociado a
+  `workspace_site_id` y un `original_diagnostic_id` inmutable.
+- `privacy.entitled_plan_check`: revisiones repetibles de ese plan,
+  con evidencias y resultados asociados a nuevos snapshots de
+  `privacy.diagnostic`. No usan `privacy.correction_plan_order`.
+- `POST /privacy/workspace-sites/{id}/plan`: crea o retorna el plan de manera
+  idempotente, tomando el último diagnóstico **ya guardado** al iniciar el
+  período; no realiza una inspección nueva ni acepta URLs externas.
+- `GET /privacy/workspace-sites/{id}/plan`: consulta el plan guardado,
+  validando acceso vigente.
+- `POST /privacy/workspace-sites/{id}/plan/check`: inspecciona la URL
+  persistida, compara con la línea base y guarda revisión y snapshot
+  **en la misma transacción**. El inspector sigue siendo público/pasivo.
+- Las tres rutas exigen sesión Clerk/Access, pertenencia al workspace,
+  relación de sitio no desvinculada y entitlement activo (fecha/estado).
+  La autorización se comprueba contra BD en cada petición; una revocación
+  bloquea el acceso. Al expirar naturalmente el período, el Plan y su última
+  revisión siguen consultables **solo en lectura**, pero nuevas revisiones
+  quedan bloqueadas. No se borra historial.
+- La página `/privacy/plan/?workspace_site_id=...` usa sesión de usuario,
+  no tokens de acceso por URL. Cuando un sitio tiene entitlement vigente,
+  la tarjeta de Privacy Web muestra «Abrir Privacy Web» en vez del precio.
+
+**Estrategia de BD:** migración aditiva controlada
+`backend/migrations/20261026_privacy_entitled_plans.sql`,
+registrada por SHA-256 en `backend/scripts/predeploy_migrations.py`.
+Se ejecuta **solo** en el entorno explícitamente autorizado a través de
+`MIGRATION_APPROVED_FILES`, antes de desplegar el backend. El inicio del
+servicio verifica las tablas y columnas en modo lectura; si faltan, el nuevo
+módulo no está disponible (sin DDL ni concesión implícita de acceso).
+La migración no elimina datos ni tablas existentes; las tablas nuevas pueden
+coexistir si se revierte el código. Probar primero en DEV y revisar aprobación
+separada para cualquier ejecución sobre PROD.
+
+**Vigencia durante revisión:** el servicio vuelve a comprobar el plazo
+con `clock_timestamp()` después de la inspección externa y después de guardar
+las evidencias dentro de la transacción. Si el plazo vence, revierte
+el snapshot y su comparación, retornando acceso no vigente.
+
+**Errores de entitlement:** la vista del diagnóstico guardado sigue visible
+si falla la consulta de entitlement; muestra «Reintentar acceso» y nunca
+interpreta un error HTTP, de red o de JSON como ausencia de derecho.
+No se prepara pago/activación hasta que la verificación se complete.
+
+Esta rama no habilita Mercado Pago ni cobros nuevos.
+
+**Coexistencia temporal:** los servicios, endpoints y tablas del flujo
+`privacy.correction_plan_order` siguen en el código heredado, pero **no
+participan en este nuevo recorrido**. Su retirada de rutas de acceso y
+servicios se revisará en un PR enfocado adicional antes de cerrar PW-03
+y promover a PROD; no eliminar tablas de PROD sin aprobación explícita.
+
 ## Arquitectura de interpretación semántica
 
 Privacy Web adopta como arquitectura objetivo el flujo:
