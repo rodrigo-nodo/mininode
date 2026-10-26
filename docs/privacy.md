@@ -107,7 +107,9 @@ orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
 - Las tres rutas exigen sesión Clerk/Access, pertenencia al workspace,
   relación de sitio no desvinculada y entitlement activo (fecha/estado).
   La autorización se comprueba contra BD en cada petición; una revocación
-  o expiración bloquea lecturas y nuevas revisiones, sin borrar historial.
+  bloquea el acceso. Al expirar naturalmente el período, el Plan y su última
+  revisión siguen consultables **solo en lectura**, pero nuevas revisiones
+  quedan bloqueadas. No se borra historial.
 - La página `/privacy/plan/?workspace_site_id=...` usa sesión de usuario,
   no tokens de acceso por URL. Cuando un sitio tiene entitlement vigente,
   la tarjeta de Privacy Web muestra «Abrir Privacy Web» en vez del precio.
