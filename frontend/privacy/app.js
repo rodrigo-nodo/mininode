@@ -387,7 +387,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderExpiredDate.textContent = '';
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
-  orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
+  orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
