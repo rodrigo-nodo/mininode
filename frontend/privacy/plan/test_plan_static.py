@@ -175,9 +175,9 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("<form", HTML.lower())
 
     def test_shared_header_footer_and_plan_disclaimers_are_present(self):
-        self.assertIn('data-include="/partials/header-nav.html"', HTML)
-        self.assertIn('data-include="/partials/footer.html"', HTML)
-        self.assertIn('src="/include.js"', HTML)
+        self.assertIn('data-include="../../partials/header-nav.html"', HTML)
+        self.assertIn('data-include="../../partials/footer.html"', HTML)
+        self.assertIn('src="../../include.js?v=pw03b-header1"', HTML)
         self.assertIn("Privacy Score es un indicador desarrollado por Mininode.", HTML)
         self.assertIn("no reemplaza una revisión jurídica o especializada", HTML)
 
