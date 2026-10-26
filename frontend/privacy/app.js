@@ -54,6 +54,7 @@ let currentClaimToken = '';
 let currentPersistedWorkspaceSiteId = '';
 let currentPurchaseExpiresAt = '';
 let activationPreparationInFlight = false;
+let activePrivacyEntitlement = false;
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
@@ -689,6 +690,10 @@ const prepareActivationForSavedSite = async () => {
 };
 
 const continueWithDiagnostic = (intent) => {
+  if (intent === 'activate' && currentPersistedWorkspaceSiteId && activePrivacyEntitlement) {
+    window.location.assign(`/privacy/plan/?workspace_site_id=${encodeURIComponent(currentPersistedWorkspaceSiteId)}`);
+    return;
+  }
   if (intent === 'activate' && currentPersistedWorkspaceSiteId) {
     // PW-03 prepares a fresh saved diagnosis; PW-04 will create the payment order.
     void prepareActivationForSavedSite();
@@ -710,6 +715,23 @@ const continueWithDiagnostic = (intent) => {
 orderOpenButton?.addEventListener('click', () => continueWithDiagnostic('activate'));
 saveDiagnostic?.addEventListener('click', () => continueWithDiagnostic('save'));
 saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('save'));
+
+const showEntitledPrivacyWeb = () => {
+  activePrivacyEntitlement = true;
+  correctionOffer.hidden = false;
+  noPrioritiesOffer.hidden = true;
+  nextSteps.hidden = false;
+  orderOpenButton.hidden = false;
+  orderOpenButton.disabled = false;
+  orderOpenButton.textContent = 'Abrir Privacy Web →';
+  const heading = correctionOffer.querySelector('.privacy-offer-heading h3');
+  const price = correctionOffer.querySelector('.privacy-price');
+  if (heading) heading.textContent = 'Privacy Web activo';
+  if (price) price.hidden = true;
+  orderAvailability.hidden = true;
+  orderValidity.hidden = true;
+  activationNotice.hidden = true;
+};
 
 const initializeAuthenticatedSite = async () => {
   if (!requestedWorkspaceSiteId) return;
@@ -758,11 +780,21 @@ const initializeAuthenticatedSite = async () => {
       }
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
+      // Entitlements (including audited administrative grants) are the sole
+      // source of truth for access; old commercial orders cannot unlock the UI.
+      const entitlementResponse = await fetch(
+        `/api/billing/sites/${encodeURIComponent(site.id)}/entitlement`,
+        { headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } },
+      );
+      if (entitlementResponse.ok) {
+        const entitlement = await entitlementResponse.json();
+        if (entitlement.active === true) showEntitledPrivacyWeb();
+      }
       loadingCard.hidden = true;
       resultCard.hidden = false;
       // Viewing a saved snapshot never expires. Only an explicit activation intent
       // re-inspects an old result, without asking the person to repeat the action.
-      if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden) {
+      if (privacyQuery.get('activation') === 'pending' && !activePrivacyEntitlement && !correctionOffer.hidden) {
         await prepareActivationForSavedSite();
       }
     }
