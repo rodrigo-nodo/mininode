@@ -105,7 +105,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_saved_result_is_preserved_and_pending_activation_prepares_fresh_diagnosis(self):
         self.assertIn("const prepareActivationForSavedSite = async () => {", APP)
         self.assertIn("await prepareActivationForSavedSite();", APP)
-        self.assertIn("if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden)", APP)
+        self.assertIn("if (privacyQuery.get('activation') === 'pending' && !activePrivacyEntitlement && !correctionOffer.hidden)", APP)
         self.assertIn("if (prepared.refreshed)", APP)
         self.assertIn("renderDiagnostic(prepared.diagnostic", APP)
         self.assertNotIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
