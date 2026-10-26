@@ -1,9 +1,12 @@
 # Privacy Web - Roadmap
 
-**Estado:** Plan aprobado; ejecución pendiente por actividad  
+**Estado:** Plan aprobado; seguimiento actualizado al 26 de octubre de 2026  
 **Producto:** Mininode Privacy Web  
-**Rama de integración:** `dev`  
+**Referencia oficial:** `main` (`docs/privacy-web/roadmap.md`)  
+**Integración y validación:** rama `dev` y entorno `dev.mininode.io`  
 **Alcance:** Preparación, piloto, comercialización y evolución del producto.
+
+Este roadmap es la **fuente oficial del estado funcional** de Privacy Web. Distingue trabajo publicado en producción, avances exclusivos de DEV y trabajo pendiente. La rama `main` continúa siendo la fuente de verdad técnica de producción; `dev` puede contener desarrollos adicionales aún no promovidos. No se exige que sus historiales sean idénticos.
 
 ## 1. Objetivo
 
@@ -11,15 +14,17 @@ Preparar Privacy Web para un piloto controlado, validar su utilidad con usuarios
 
 Privacy Web realiza diagnósticos orientativos de señales públicas de privacidad de sitios web. No constituye una certificación legal, una auditoría completa ni una medición oficial de cumplimiento.
 
-## 2. Situación de partida
+## 2. Situación de partida (26 de octubre de 2026)
 
-- Diagnóstico público gratuito; 21 controles en cinco áreas (ver `docs/privacy.md`).
-- Privacy Score, resultados orientativos, Plan de corrección y revisiones.
-- Mininode Access, workspaces y diagnósticos vinculados a sitios.
-- Backend inicial de Billing A4 y adaptador Mercado Pago.
-- **Pendiente:** habilitar y validar el recorrido comercial completo para clientes.
+- **MAIN / PROD:** diagnóstico gratuito con 21 controles en cinco áreas (ver [`docs/privacy.md`](../privacy.md)), Privacy Score orientativo y Plan de corrección; Access/Clerk, workspaces, guardado y revisiones; desvinculación de sitios; aliases y solicitudes de agrupación; Mininode Admin y cortesías auditadas. Incorporado mediante [PR #379](https://github.com/rodrigo-nodo/mininode/pull/379), con CI y Reviewer PASS y despliegues Cloudflare/Render confirmados. Validación visual PROD aprobada por el Product Owner.
+- **MAIN y DEV:** núcleo de Billing A4 (`billing.orders` y `access.entitlements`). **Ninguna rama tiene aún el recorrido comercial completo validado**; todavía coexiste el flujo anterior `privacy.correction_plan_order`.
+- **Solo DEV:** adaptador Mercado Pago, endpoints backend de checkout/webhook y herramienta interna de conciliación histórica de sitios. No están promovidos ni habilitados como flujo público E2E. La utilidad de conciliación no autoriza operaciones sobre datos reales.
+- **Solo MAIN:** Content Reader V1, independiente de Privacy Web; debe preservarse al alinear ramas.
+- **Pendiente:** consolidar el flujo comercial (PW-03), integrar y validar pagos de extremo a extremo (PW-04), piloto y lanzamiento comercial.
 
-Este documento identifica trabajo futuro; la existencia de código parcial no equivale a una funcionalidad comercial validada. Los estados se confirmarán contra el código, tests y entornos vigentes al iniciar cada trabajo.
+**Criterio de estado:** código presente no equivale a función comercial habilitada, despliegue confirmado ni QA completo. La diferencia de commits entre `main` y `dev` tampoco equivale a trabajo funcional pendiente: comparar archivos, contratos y entornos desplegados.
+
+**Evidencia de publicación:** [PR #379](https://github.com/rodrigo-nodo/mininode/pull/379), [promoción funcional](../privacy-web-prod-promotion.md), [contrato Access/Admin](../access.md) y [flujo DEV → PROD](../dev-prod-release.md).
 
 ## 3. Etapa 1 - Preparación del producto (P1)
 
@@ -27,17 +32,19 @@ Este documento identifica trabajo futuro; la existencia de código parcial no eq
 
 | ID | Actividad | Estado |
 |---|---|---|
-| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | Validación |
-| PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | Pendiente |
+| PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | **Cerrado · PROD** (PR #379) |
+| PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | **Cerrado · PROD** (Mininode Admin; PR #379) |
 | PW-03 | Retirar el flujo comercial antiguo de órdenes/activaciones, sus endpoints, servicios, tests y documentación; preparar migración controlada | Pendiente |
-| PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | Pendiente |
+| PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | **Parcial · DEV** (adaptador y endpoints backend; E2E pendiente, no disponible en PROD) |
 | PW-05 | Unificar tercera persona singular en UX, resultados, hallazgos, recomendaciones, botones, estados y errores | Pendiente |
 | PW-06 | Incorporar observabilidad de diagnósticos, pagos, activaciones y fallos operativos, sin exponer datos sensibles | Pendiente |
 | PW-07 | Definir y revisar acceso, privacidad y retención de datos de usuarios, diagnósticos, pagos y eventos | Pendiente |
 
-**Criterios de cierre:** desasignación sin pérdida indebida de evidencia; acceso interno sin simular pagos; recorrido comercial oficial único; pago confirmado por proveedor habilita prestaciones y pago no confirmado no las habilita; mensajes coherentes; fallos detectables; tratamiento de datos definido.
+**Avance confirmado:** PW-01 y PW-02 fueron implementados y validados en DEV, promovidos a PROD en PR #379 y aprobados visualmente tras el despliegue. No se afirma que se hayan ejecutado transacciones reales de concesión o revocación en PROD. PW-03 no ha comenzado su retirada controlada del flujo antiguo; PW-04 permanece como integración parcial de backend en DEV, sin recorrido comercial E2E.
 
-**Decisión comercial:** `billing.orders` + `access.entitlements` constituyen el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. Se retira el flujo anterior `privacy.correction_plan_order`, sin eliminar las funcionalidades de diagnóstico y Plan de corrección. Antes de eliminar tablas, verificar dependencias y realizar migración en DEV; **ninguna operación destructiva en producción sin aprobación explícita**.
+**Criterios de cierre restantes de la etapa:** recorrido comercial oficial único; pago confirmado por proveedor habilita prestaciones y pago no confirmado no las habilita; mensajes coherentes; fallos detectables; tratamiento de datos definido.
+
+**Decisión comercial (PW-03 → PW-04):** `billing.orders` + `access.entitlements` serán el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. PW-03 debe retirar las rutas/servicios y dependencias del flujo anterior `privacy.correction_plan_order`, **sin borrar órdenes ni evidencia histórica**, y preservar diagnóstico y Plan de corrección. Preparar compatibilidad, estrategia de migración y rollback; verificar dependencias y probar primero en DEV. **Ninguna operación destructiva en producción sin autorización explícita.**
 
 ## 4. Etapa 2 - Piloto controlado (P1)
 
@@ -80,7 +87,7 @@ La URL de retorno del proveedor no confirma el pago: la activación depende de l
 | PW-18 | Priorizar brechas web-observables de cobertura legal sin equipararlas a cumplimiento | Pendiente |
 | PW-19 | Evolucionar Formularios después de V1 (PRV-103/PRV-104) sobre semántica validada | Pendiente |
 | PW-20 | Incorporar revisiones automáticas y alertas de cambios | Pendiente |
-| PW-21 | Validar flujo manual de aprobación de agrupación de sitios cuando exista un caso real | Validación pendiente |
+| PW-21 | Validar flujo manual de aprobación de agrupación de sitios cuando exista un caso real | **Validación de caso real pendiente** (código y pruebas en DEV y PROD) |
 
 Mantener inspección pública y pasiva, límites entre Privacy Web y Privacy Data, tests de consistencia, QA independiente y versionado cuando cambien controles, scoring o comportamiento público. Esta etapa **no bloquea el piloto**.
 
@@ -100,24 +107,24 @@ Los trabajos independientes podrán avanzar en paralelo mediante PRs pequeños. 
 
 ## 8. Estados y seguimiento
 
-- **Pendiente:** trabajo identificado, no iniciado.
-- **En curso:** preparación o implementación activa.
-- **Validación:** cambio implementado, pendiente de comprobación.
-- **Cerrado:** criterios cumplidos y cambio integrado cuando corresponda.
-- **Bloqueado:** existe una dependencia impeditiva.
+- **Pendiente:** actividad identificada sin implementación acreditada para su objetivo completo.
+- **Parcial · DEV:** existe código o pruebas en `dev`, pero faltan componentes, integración E2E o validación; **no** implica publicación comercial.
+- **En curso:** desarrollo o preparación activos.
+- **Validación / validación de caso real pendiente:** implementación disponible, pero falta una comprobación específica para cerrar la actividad.
+- **Cerrado · PROD:** funcionalidad publicada en `main` y PROD, con las validaciones aplicables aprobadas y evidencia trazable; el alcance de esas validaciones se declara.
+- **Bloqueado:** falta una dependencia que impide avanzar.
 
-Los estados se actualizarán con evidencia del repositorio, CI, preview, QA y validación del Product Owner; no por suposición.
+Los estados se actualizarán con evidencia del repositorio, CI, QA, desplegado efectivo y validación del Product Owner; no por suposición. PW-01 y PW-02 se consideran cerrados por la promoción #379 y la aceptación visual de PROD; PW-21 conserva la validación de un caso real pendiente. No interpretar `Cerrado · PROD` como aprobación de pagos o de actividades distintas.
 
 ## 9. Fuera de alcance
 
 Privacy Data; certificación legal; auditoría integral; modificación automática de sitios; renovación automática; controles de procesos internos no observables públicamente; ampliaciones no acordadas.
 
-## 10. Flujo de implementación
+## 10. Flujo de implementación y alineación
 
-`dev` → rama enfocada → PR hacia `dev` → revisión de código y CI del último commit → **merge autorizado a `dev`** → confirmación del despliegue actualizado en **https://dev.mininode.io** → **validación funcional y UX del Product Owner**.
+- **Desarrollo / integración:** cambios enfocados en DEV, CI y validación funcional del Product Owner en **https://dev.mininode.io**, asegurando que el backend desplegado corresponda a la versión que se está validando. Los Branch Previews arbitrarios no sustituyen el entorno integrado de Access/Clerk.
+- **Promoción selectiva:** partir de `main` actualizado, preparar un PR propio hacia `main` con **solo la funcionalidad aprobada** y dependencias necesarias. Conservar componentes exclusivos de MAIN (como Content Reader V1) y excluir trabajos experimentales de DEV. Revisar diff y CI, obtener autorización expresa de merge y confirmar despliegue y validación breve de PROD.
+- **Alineación permanente:** MAIN y DEV comparten la **base funcional aprobada**, mientras DEV puede mantener avances en validación. Las diferencias intencionales de código, datos, credenciales e infraestructura se registran; **no** hacer merge masivo para igualar commits. Ver [`docs/dev-prod-release.md`](../dev-prod-release.md).
+- **Gobierno del roadmap:** mantener **este archivo en `main`** como referencia oficial. Tras aprobar y mergear cambios del roadmap, sincronizar su contenido hacia `dev` mediante un cambio documental enfocado, sin arrastrar código. `frontend/roadmap/index.html` es un resumen público general distinto: actualizarlo solo en un trabajo editorial/UX posterior aprobado.
 
-El Product Owner valida Privacy Web exclusivamente en `dev.mininode.io`; no se le solicitará validar en Branch Previews individuales. Si la validación detecta problemas, se corregirán en un nuevo PR hacia `dev` antes de cerrar la actividad. El merge técnico a `dev` no equivale a validación funcional ni a cierre de la actividad.
-
-Cuando corresponda publicar: `dev` → PR hacia `main` → revisión de código y CI → autorización de merge → comprobación de despliegue y validación de producción.
-
-La fuente de verdad para producción es `main`. Nunca mergear sin autorización explícita.
+**Próximo frente priorizado:** PW-03 (consolidación comercial), seguido de PW-04 (integración E2E Mercado Pago). No activar cobros ni modificar registros históricos por actualizar este roadmap. Nunca mergear sin autorización explícita.
