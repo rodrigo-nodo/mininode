@@ -61,7 +61,7 @@ def initialize_database() -> None:
         conn.execute(SCHEMA_SQL)
 
 
-def _entitlement(cur, user_id: UUID, site_id: UUID):
+def _entitlement(cur, user_id: UUID, site_id: UUID, *, allow_expired: bool = False):
     # All mutations (admin grants/revocations, billing) serialize on ws row.
     # Hold that lock through creation/check to avoid serving revoked periods.
     cur.execute("""
@@ -81,6 +81,19 @@ def _entitlement(cur, user_id: UUID, site_id: UUID):
         ORDER BY active_from DESC, id DESC LIMIT 1
     """, (site_id, billing.PRODUCT))
     entitlement = cur.fetchone()
+    if entitlement is None and allow_expired:
+        # Preserve the last result when a period ends naturally. Revoked grants
+        # never qualify for read-only recovery.
+        cur.execute("""
+            SELECT e.id, e.active_until
+            FROM access.entitlements e
+            JOIN privacy.entitled_plan p ON p.entitlement_id=e.id
+            WHERE e.workspace_site_id=%s AND e.product_code=%s
+              AND e.status='active'
+              AND e.active_until IS NOT NULL AND e.active_until<=CURRENT_TIMESTAMP
+            ORDER BY e.active_until DESC, e.id DESC LIMIT 1
+        """, (site_id, billing.PRODUCT))
+        entitlement = cur.fetchone()
     if entitlement is None:
         raise PlanUnavailable()
     return entitlement
@@ -114,7 +127,8 @@ def _response(cur, entitlement, plan) -> dict:
         "created_at": created_at,
         "plan": snapshot,
         "check": {
-            "status": "available",
+            "status": ("expired" if entitlement[1] is not None
+                       and datetime.now(timezone.utc) >= entitlement[1] else "available"),
             "expires_at": entitlement[1],
             **({"latest_check": {"created_at": latest[0], "result": latest[1]}} if latest else {}),
         },
@@ -156,7 +170,7 @@ def ensure_plan(user_id: UUID, site_id: UUID) -> dict:
 def get_plan(user_id: UUID, site_id: UUID) -> dict:
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
-            entitlement = _entitlement(cur, user_id, site_id)
+            entitlement = _entitlement(cur, user_id, site_id, allow_expired=True)
             current = _plan(cur, entitlement[0])
             if current is None:
                 raise PlanNotFound()
