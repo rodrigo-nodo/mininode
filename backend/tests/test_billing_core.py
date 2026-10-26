@@ -128,7 +128,7 @@ def test_one_early_renewal_allowed_but_second_future_period_rejected():
         assert rows[1][1] == rows[0][2]
 
     order3 = billing.create_order(user_id, workspace_site_id, diagnostic3)
-    with pytest.raises(ValueError, match="already has one future period paid"):
+    with pytest.raises(ValueError, match="already has one future period reserved"):
         billing.payment_confirmed(
             order3.id, provider="test", provider_order_id="pay-3", verified_paid_at=now + timedelta(hours=3)
         )
