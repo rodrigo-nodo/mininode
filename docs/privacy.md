@@ -59,6 +59,32 @@ Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso 
 Framework `0.9` mantiene la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción de `0.8`, y hace que PRV-103 combine acciones explícitas con objetos o resultados acotados dentro del mismo formulario. El clasificador sigue siendo determinístico, sin LLM, y no ejecuta JavaScript del sitio.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
+## PW-03 - Preparación de activación (DEV; sin pagos)
+
+El diagnóstico gratuito guardado permanece disponible para consultar su fotografía
+original. La ventana técnica de 24 horas no es una fecha de caducidad del resultado:
+solo decide si es necesario obtener evidencia más reciente antes de intentar
+activar Privacy Web.
+
+Cuando el usuario decide activar un resultado ya guardado, el endpoint autenticado
+`POST /privacy/workspace-sites/{workspace_site_id}/prepare-activation` verifica
+pertenencia al workspace y reutiliza el último snapshot si sigue reciente.
+En caso contrario inspecciona nuevamente **la URL persistida y autorizada**, guarda
+un snapshot nuevo y lo entrega para la continuación. No solicita otra acción al
+usuario, no elimina el resultado anterior y no crea órdenes ni realiza cobros.
+Si la inspección o la persistencia falla, no se ofrece un diagnóstico nuevo
+como apto para compra: el resultado anterior sigue consultable y se puede reintentar.
+
+La interfaz muestra «Estamos actualizando el diagnóstico de tu sitio antes de
+continuar.» únicamente cuando anticipa una actualización. En esta primera parte
+de PW-03, completar la preparación aún muestra que el pago en línea estará
+disponible próximamente. La conexión con Billing y Mercado Pago es posterior.
+
+La elegibilidad para iniciar checkout y el pago acreditado son conceptos separados:
+PW-04 deberá anclar la compra a una orden iniciada oportunamente; un webhook
+acreditado tardío nunca debe perder la prestación por la expiración posterior
+del snapshot, ni confiar solo en la URL de retorno.
+
 ## Arquitectura de interpretación semántica
 
 Privacy Web adopta como arquitectura objetivo el flujo:
