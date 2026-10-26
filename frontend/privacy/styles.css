@@ -1267,4 +1267,4 @@ body.privacy-modal-open {
 }
 
 /* PW-03B: active entitlements never display an activation price. */
-.privacy-price[hidden] { display: none !important; }
+.privacy-price[hidden], .privacy-offer-details[hidden] { display: none !important; }
