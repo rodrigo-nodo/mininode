@@ -54,6 +54,16 @@ const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
 const context = {
   document,
   URL,
+  URLSearchParams,
+  window: {
+    location: { search: '', assign() {} },
+    addEventListener() {},
+  },
+  sessionStorage: {
+    setItem() {},
+    getItem() { return null; },
+    removeItem() {},
+  },
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
@@ -79,6 +89,7 @@ const controls = codes.map((control_code, index) => ({
 }));
 const baseDiagnostic = {
   diagnostic_id: 'DIAG-A',
+  claim_token: 'test-claim-proof-kept-out-of-urls',
   score: 82,
   coverage: 94,
   status: 'Preparación avanzada',
