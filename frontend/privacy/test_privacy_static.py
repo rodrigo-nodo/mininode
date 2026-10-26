@@ -17,6 +17,20 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_plan_header_fallback_matches_shared_navigation(self):
+        # Async include failure must not leave the authenticated Plan without a header.
+        plan = (PRIVACY_DIR / "plan" / "index.html").read_text(encoding="utf-8")
+        shared = (FRONTEND_DIR / "partials" / "header-nav.html").read_text(encoding="utf-8").strip()
+        self.assertIn('data-include="/partials/header-nav.html"', plan)
+        from textwrap import dedent
+        fallback = plan.split('data-include="/partials/header-nav.html">', 1)[1].split("</div>\n  <main", 1)[0]
+        self.assertIn(shared, dedent(fallback).strip())
+        self.assertEqual(plan.count('id="site-header-nav"'), 1)
+        self.assertIn('id="site-mobile-menu"', plan)
+        self.assertIn('id="header-account-menu"', plan)
+        include = (FRONTEND_DIR / "include.js").read_text(encoding="utf-8")
+        self.assertIn("el.outerHTML = await res.text();", include)
+
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
         self.assertIn('href="styles.css?v=300savedrow"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
