@@ -102,10 +102,13 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
         self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
 
-    def test_past_purchase_deadline_cannot_show_pending_activation(self):
-        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
-        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
-        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
+    def test_saved_result_is_preserved_and_pending_activation_prepares_fresh_diagnosis(self):
+        self.assertIn("const prepareActivationForSavedSite = async () => {", APP)
+        self.assertIn("await prepareActivationForSavedSite();", APP)
+        self.assertIn("if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden)", APP)
+        self.assertIn("if (prepared.refreshed)", APP)
+        self.assertIn("renderDiagnostic(prepared.diagnostic", APP)
+        self.assertNotIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
 
     def test_commercial_notice_appears_only_inside_conditions(self):
         intro = HTML.split('class="privacy-offer-details"', 1)[0]
