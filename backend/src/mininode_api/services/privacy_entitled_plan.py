@@ -20,29 +20,6 @@ from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_SQL = """
-CREATE SCHEMA IF NOT EXISTS privacy;
-CREATE TABLE IF NOT EXISTS privacy.entitled_plan (
-  id UUID PRIMARY KEY,
-  workspace_site_id UUID NOT NULL REFERENCES access.workspace_sites(id),
-  entitlement_id UUID NOT NULL UNIQUE REFERENCES access.entitlements(id),
-  original_diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
-  plan_snapshot JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS privacy_entitled_plan_site_idx
-  ON privacy.entitled_plan(workspace_site_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS privacy.entitled_plan_check (
-  id UUID PRIMARY KEY,
-  entitled_plan_id UUID NOT NULL REFERENCES privacy.entitled_plan(id),
-  check_diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
-  result_snapshot JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS privacy_entitled_plan_check_latest_idx
-  ON privacy.entitled_plan_check(entitled_plan_id, created_at DESC);
-"""
-
 
 class PlanUnavailable(Exception):
     """No active entitlement or authorized site is available."""
@@ -56,9 +33,27 @@ class CheckUnavailable(Exception):
     """The inspection/persistence could not be completed."""
 
 
-def initialize_database() -> None:
+def check_schema_ready() -> None:
+    """Read-only readiness gate: migrations must run before API startup."""
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        conn.execute(SCHEMA_SQL)
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT to_regclass('privacy.entitled_plan'),
+                       to_regclass('privacy.entitled_plan_check')
+            """)
+            if any(table is None for table in cur.fetchone()):
+                raise RuntimeError("PW-03B schema migration has not been applied")
+            # Fail closed on incompatible layouts too, never attempt runtime DDL.
+            cur.execute("""
+                SELECT id, workspace_site_id, entitlement_id,
+                       original_diagnostic_id, plan_snapshot, created_at
+                  FROM privacy.entitled_plan LIMIT 0
+            """)
+            cur.execute("""
+                SELECT id, entitled_plan_id, check_diagnostic_id,
+                       result_snapshot, created_at
+                  FROM privacy.entitled_plan_check LIMIT 0
+            """)
 
 
 def _entitlement(cur, user_id: UUID, site_id: UUID, *, allow_expired: bool = False):
@@ -177,6 +172,15 @@ def get_plan(user_id: UUID, site_id: UUID) -> dict:
             return _response(cur, entitlement, current)
 
 
+def _ensure_time_window(cur, until: datetime | None) -> None:
+    """Use real DB wall-clock, not transaction-start CURRENT_TIMESTAMP."""
+    if until is None:
+        return
+    cur.execute("SELECT clock_timestamp() < %s", (until,))
+    if cur.fetchone()[0] is not True:
+        raise PlanUnavailable("Privacy Web expired during review")
+
+
 def review(user_id: UUID, site_id: UUID) -> dict:
     """Serialize and atomically save a repeatable review and its diagnosis."""
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
@@ -190,6 +194,9 @@ def review(user_id: UUID, site_id: UUID) -> dict:
             # No URL or workspace is accepted from the browser.
             try:
                 diagnosis = diagnose_privacy_url(original_url)
+                # Re-check after potentially slow external inspection, before
+                # any persistence. Transaction-start now() would be stale here.
+                _ensure_time_window(cur, entitlement[1])
                 checked_id = uuid4()
                 cur.execute("""
                     INSERT INTO privacy.diagnostic
@@ -207,6 +214,11 @@ def review(user_id: UUID, site_id: UUID) -> dict:
                     VALUES (%s,%s,%s,%s) RETURNING created_at
                 """, (uuid4(), plan_id, checked_id, Jsonb(result)))
                 created_at = cur.fetchone()[0]
+                # Never return a review as active if the window closed during
+                # persistence; the exception rolls back both inserted rows.
+                _ensure_time_window(cur, entitlement[1])
+            except PlanUnavailable:
+                raise
             except Exception as exc:
                 logger.warning("Privacy entitlement review failed; transaction rolled back")
                 raise CheckUnavailable() from exc
