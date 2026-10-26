@@ -138,8 +138,9 @@ def test_membership_and_revocation_fail_closed(context, monkeypatch):
     assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 403
     with psycopg.connect(c["url"]) as conn:
         assert conn.execute(
-            "SELECT count(*) FROM privacy.entitled_plan_check",
-        ).fetchone()[0] >= 0
+            "SELECT count(*) FROM privacy.entitled_plan_check WHERE entitled_plan_id IN (SELECT id FROM privacy.entitled_plan WHERE workspace_site_id=%s)",
+            (c["site"],),
+        ).fetchone()[0] == 0
 
 
 def test_expiry_blocks_access_without_erasing_plan_or_original(context):
@@ -154,7 +155,10 @@ def test_expiry_blocks_access_without_erasing_plan_or_original(context):
             (c["entitlement"],),
         )
     assert c["client"].post(path, headers=c["headers"]).status_code == 403
-    assert c["client"].get(path, headers=c["headers"]).status_code == 403
+    expired = c["client"].get(path, headers=c["headers"])
+    assert expired.status_code == 200
+    assert expired.json()["id"] == plan_id
+    assert expired.json()["check"]["status"] == "expired"
     assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 403
     with psycopg.connect(c["url"]) as conn:
         assert conn.execute(
