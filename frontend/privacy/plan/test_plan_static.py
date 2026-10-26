@@ -36,6 +36,16 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn(r"^\/privacy\/plan\/([^/]+)\/?$", APP)
         self.assertNotIn("searchParams", APP)
 
+    def test_authenticated_entitlement_plan_uses_workspace_site_and_clerk_bearer(self):
+        self.assertIn('core-head.js?v=286account1', HTML)
+        self.assertIn("new URLSearchParams(window.location.search)", APP)
+        self.assertIn("const authorizedHeaders = async () => {", APP)
+        self.assertIn("Authorization: `Bearer ${token}`", APP)
+        self.assertIn("/plan/check", APP)
+        self.assertIn("entitledSiteId", APP)
+        self.assertIn("method: 'POST'", APP)
+        self.assertNotIn("api.mininode.io", APP)
+
     def test_static_plan_page_and_api_function_remain_available(self):
         self.assertTrue((PLAN_DIR / "index.html").is_file())
         self.assertTrue((FRONTEND_DIR / "functions/api/[[path]].js").is_file())
@@ -54,7 +64,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=1',
             '/privacy/plan-assets/styles.css?v=5',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=7',
+            '/privacy/plan-assets/app.js?v=pw03b1',
         ):
             self.assertIn(asset, HTML)
 
@@ -79,7 +89,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("X-Api-Key", APP)
         self.assertNotIn("api.mininode.io", APP)
         self.assertIn("isAllowedCorrectionPlan", PROXY)
-        self.assertIn("if (!isAllowedCorrectionPlan && !isPublicOrderCreation) headers.set('X-Api-Key'", PROXY)
+        self.assertIn("if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData", PROXY)
 
     def test_token_and_snapshot_are_not_persisted_or_logged(self):
         combined = HTML + APP + REDIRECTS
@@ -146,7 +156,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn(r"^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/?$", PROXY)
         self.assertIn(".test(url.pathname)", PROXY)
         self.assertIn("isCorrectionPlan && method === 'GET'", PROXY)
-        self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !env.MININODE_API_KEY", PROXY)
+        self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData", PROXY)
         self.assertIn("status: upstream.status", PROXY)
         self.assertIn("upstream.headers.get('Content-Type')", PROXY)
 
