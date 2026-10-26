@@ -49,7 +49,7 @@ function diagnosis(id, expiresAt, score = 82) {
   };
 }
 
-function mount() {
+function mount(search = '') {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
   const elements = new Map(ids.map((id) => [id, new Element()]));
   const document = {
@@ -60,13 +60,14 @@ function mount() {
     addEventListener() {},
   };
   const calls = [];
+  const windowListeners = new Map();
   const window = {
-    location: { search: '', assign() { throw new Error('unexpected navigation'); } },
+    location: { search, assign() { throw new Error('unexpected navigation'); } },
     MininodeAuth: {
       ready: async () => {},
       getToken: async () => 'clerk-test-token',
     },
-    addEventListener() {},
+    addEventListener(name, listener) { windowListeners.set(name, listener); },
   };
   const context = {
     document, window, URL, URLSearchParams,
@@ -78,7 +79,11 @@ function mount() {
     },
   };
   vm.runInNewContext(source + '\nglobalThis.renderSavedForTest = renderDiagnostic; globalThis.diagnosticIdForTest = () => currentDiagnosticId; globalThis.showEntitledForTest = showEntitledPrivacyWeb;', context);
-  return { elements, context, calls, show: (d) => context.renderSavedForTest(d, d.site_url) };
+  return {
+    elements, context, calls,
+    show: (d) => context.renderSavedForTest(d, d.site_url),
+    start: () => windowListeners.get('load')?.(),
+  };
 }
 
 function deferred() {
@@ -206,3 +211,75 @@ test('active entitlement opens private plan instead of preparing another purchas
   assert.equal(ui.calls.length, 0, 'an active entitlement must not prepare a new purchase');
   assert.equal(navigation, '/privacy/plan/?workspace_site_id=' + siteId);
 });
+
+test('entitlement HTTP failure preserves saved diagnosis and offers real retry', async () => {
+  const ui = mount('?workspace_site_id=' + siteId + '&view=latest');
+  const old = diagnosis('DIAG-SAVED', future(), 71);
+  let entitlementRequests = 0;
+  let actualInspections = 0;
+  ui.context.fetch = async (url, opts) => {
+    if (url === '/api/access/context') {
+      return { ok: true, json: async () => ({
+        workspaces: [{ sites: [{ id: siteId, hostname: 'saved.example' }] }],
+      }) };
+    }
+    if (url.endsWith('/latest-review')) return { ok: true, json: async () => old };
+    if (url.endsWith('/entitlement')) {
+      entitlementRequests += 1;
+      if (entitlementRequests === 1) return { ok: false, status: 503 };
+      return { ok: true, json: async () => ({ active: true, source: 'internal_grant' }) };
+    }
+    if (url.endsWith('/prepare-activation')) actualInspections += 1;
+    throw new Error('unexpected endpoint: ' + url);
+  };
+  ui.start();
+  await settle();
+  const button = ui.elements.get('correction-order-open');
+  const notice = ui.elements.get('privacy-activation-notice');
+  assert.equal(ui.elements.get('privacy-result').hidden, false);
+  assert.equal(ui.elements.get('score-value').textContent, 71);
+  assert.equal(ui.context.diagnosticIdForTest(), 'DIAG-SAVED');
+  assert.equal(button.textContent, 'Reintentar acceso →');
+  assert.equal(button.disabled, false);
+  assert.match(notice.textContent, /No pudimos verificar tu acceso/);
+  button.click();
+  await settle();
+  assert.equal(entitlementRequests, 2);
+  assert.equal(button.textContent, 'Abrir Privacy Web →');
+  assert.equal(notice.hidden, true);
+  assert.equal(ui.context.diagnosticIdForTest(), 'DIAG-SAVED');
+  assert.equal(actualInspections, 0);
+});
+
+for (const failure of ['network', 'invalid_json']) {
+  test('entitlement ' + failure + ' shows retry without losing the visible diagnosis', async () => {
+    const ui = mount('?workspace_site_id=' + siteId + '&view=latest');
+    const old = diagnosis('DIAG-SAVED', future(), 67);
+    let attempt = 0;
+    ui.context.fetch = async (url) => {
+      if (url === '/api/access/context') return { ok: true, json: async () => ({
+        workspaces: [{ sites: [{ id: siteId, hostname: 'saved.example' }] }],
+      }) };
+      if (url.endsWith('/latest-review')) return { ok: true, json: async () => old };
+      if (url.endsWith('/entitlement')) {
+        attempt += 1;
+        if (attempt === 1 && failure === 'network') throw new Error('Network unavailable');
+        if (attempt === 1) return { ok: true, json: async () => { throw new SyntaxError('Bad JSON'); } };
+        return { ok: true, json: async () => ({ active: false }) };
+      }
+      throw new Error('unexpected');
+    };
+    ui.start();
+    await settle();
+    assert.equal(ui.elements.get('score-value').textContent, 67);
+    assert.equal(ui.elements.get('privacy-result').hidden, false);
+    const button = ui.elements.get('correction-order-open');
+    assert.equal(button.textContent, 'Reintentar acceso →');
+    button.click();
+    await settle();
+    assert.equal(attempt, 2);
+    assert.equal(button.textContent, 'Continuar →');
+    assert.equal(ui.elements.get('privacy-activation-notice').hidden, true);
+    assert.equal(ui.context.diagnosticIdForTest(), 'DIAG-SAVED');
+  });
+}
