@@ -26,6 +26,7 @@ BLOCKED_LEGACY = frozenset({
 })
 # Reviewed content only; new migrations require an explicit code-reviewed catalog change.
 APPROVED_CHECKSUMS = {
+    "20261026_privacy_entitled_plans.sql": "40e0b711771de5ae7441a522392a0ef928453845d0971ee69d2c0f3433354597",
     "20261022_access_entitlement_admin_events.sql": "80ca278aeb683725b64995ba60a54dc42da899ac68c264972f1e8f7bac7c3208",
     "20261013_privacy_anonymous_claim.sql": "16fc03e290c6b7812d30b8965aa491f25d8e8ea988f1be2932ed83e7b574b544",
     "20261015_privacy_workspace_site_fk_dedup.sql": "695f22d5bfb1a5f9c8164e17240859bb0504d0b6f1bb222f737d4b99a354594f",
