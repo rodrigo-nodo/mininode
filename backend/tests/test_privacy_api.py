@@ -184,7 +184,7 @@ def test_valid_simple_site_runs_full_pipeline(monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 11
+    assert len(body["controls"]) == 21
     assert isinstance(body["score"], int)
     assert isinstance(body["status"], str)
     assert 0 <= body["coverage"] <= 100
@@ -598,22 +598,19 @@ def test_contact_form_priority_serializes_sanitized_optional_source_url(monkeypa
 
     assert response.status_code == 200
     body = response.json()
-    priority = next(item for item in body["priorities"] if item["control_code"] == "PRV-104")
-    assert priority["source_url"] == contact_public
-    assert {"control_code", "name", "priority", "finding", "recommendation"} <= priority.keys()
-    assert {"action_steps", "validation_step"} <= priority.keys()
-    assert len(priority["action_steps"]) == 3
-    assert all("example.com" not in text for text in [*priority["action_steps"], priority["validation_step"]])
-    assert "?" not in priority["source_url"]
-    assert "#" not in priority["source_url"]
-    assert priority["evidence_summary"] == (
-        "En el formulario revisado no se identificaron señales visibles de información de privacidad ni de consentimiento o aceptación."
-    )
+    # PRV-104 is contextual/informational in the current framework (weight zero):
+    # it must not appear as an actionable priority or disclose form content.
+    controls = {item["control_code"]: item for item in body["controls"]}
+    assert "PRV-104" in controls
+    assert all(item["control_code"] != "PRV-104" for item in body["priorities"])
+    for priority in body["priorities"]:
+        source = priority.get("source_url") or ""
+        assert "?" not in source
+        assert "#" not in source
     serialized = str(body)
     assert "persona@example.com" not in serialized
     assert "contenido privado" not in serialized
     assert "<form" not in serialized
-    assert "?" not in priority["evidence_summary"]
 
 
 def test_selection_is_bounded_to_five_pages(monkeypatch):
@@ -905,7 +902,7 @@ def test_secondary_timeout_preserves_partial_evidence(monkeypatch, caplog):
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["controls"]) == 11
+    assert len(body["controls"]) == 21
     assert body["scope"] == {"pages_requested": 3, "pages_analyzed": 2, "limited": False}
     assert captured["contract"].inspection.errors[0]["code"] == "timeout"
     controls = {item["control_code"]: item for item in body["controls"]}
@@ -956,7 +953,9 @@ def test_public_cross_domain_redirect_is_inspected_at_verified_destination(monke
 
     def probe(url, hostname, *, deadline=None, allow_public_cross_domain_redirects=False):
         probes.append((url, hostname, allow_public_cross_domain_redirects))
-        return page(destination, "<title>Empresa</title>")
+        observed = page(destination, "<title>Empresa</title>")
+        observed.redirect_count = 1
+        return observed
 
     fake._fetch_page = probe
     fake.pages[destination].redirect_count = 1

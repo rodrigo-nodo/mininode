@@ -237,7 +237,8 @@ class WebFetcher:
                 page = self._fetch_page(fetch_url, allowed_hostname, deadline=deadline)
                 page.requested_url = requested_url
                 page.requested_hostname = requested_hostname
-                page.effective_hostname = effective_hostname
+                # Preserve the actual redirect target on an SSRF-rejected hop.
+                page.effective_hostname = page.effective_hostname or effective_hostname
             result.pages.append(page)
             if page.error:
                 result.errors.append(page.error)

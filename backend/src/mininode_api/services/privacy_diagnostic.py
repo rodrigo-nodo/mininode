@@ -88,7 +88,7 @@ def _page_diagnostic(result: InspectionFetchResult) -> dict:
         "requested_hostname": requested_hostname,
         "effective_hostname": effective_hostname,
         "internal_error_code": error.code if error else "inspection_failed",
-        "failure_phase": page.failure_phase if page else "home_fetch",
+        "failure_phase": (page.failure_phase or "home_fetch") if page else "home_fetch",
         "dns_attempt_count": page.dns_attempt_count if page else 0,
         "dns_failure_category": page.dns_failure_category if page else None,
         "network_family": page.network_family if page else None,

@@ -18,7 +18,7 @@ Publicar selectivamente las funcionalidades de Privacy Web probadas en DEV sobre
 - Content Reader V1 y sus workflows y tests: no se modifican.
 - Las siete migraciones A/B de PROD ya fueron ejecutadas previamente y sus checksums verificados. Este PR no incluye SQL ni modifica Render.
 - No se habilita checkout ni webhook Mercado Pago en `main`. El archivo `api/billing.py` existente conserva sus rutas sin cobros reales.
-- No se ejecuta `reconcile_existing_www.py --apply` ni conciliación masiva; el análisis de sitios existentes requiere decisión posterior.
+- No se promociona la utilidad independiente `site_reconciliation.py` ni se ejecuta `reconcile_existing_www.py --apply` o conciliación masiva; el análisis de sitios existentes requiere una decisión y PR posteriores.
 - Se preservan los snapshots y órdenes históricas (`privacy.correction_plan_order`); la transición al recorrido comercial único será un trabajo separado, no una migración destructiva implícita.
 - Los cambios de controles/scoring no forman parte de esta promoción: sin cambios en `controls.json` ni `scoring.json`.
 - No se copia `render.yaml` antiguo de DEV.
