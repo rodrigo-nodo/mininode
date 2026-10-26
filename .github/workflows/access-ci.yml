@@ -126,6 +126,8 @@ jobs:
         run: pytest -q frontend/privacy/test_privacy_static.py
       - name: Run entitled plan page tests
         run: pytest -q frontend/privacy/plan/test_plan_static.py
+      - name: Run entitled plan client interaction tests
+        run: node --test frontend/privacy/plan/test_entitled_client.mjs
       - name: Run Privacy Web async activation tests
         run: node --test frontend/privacy/test_activation_preparation.mjs
 
