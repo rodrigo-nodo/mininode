@@ -237,6 +237,23 @@ test('forwards Clerk bearer token to authenticated Privacy Web diagnosis', async
 });
 
 
+test('allows only authenticated POST activation preparation and forwards Bearer', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const path = `/api/privacy/workspace-sites/${id}/prepare-activation`;
+  const ok = await request(path, 'POST', {
+    withoutApiKey: true,
+    headers: { Authorization: 'Bearer clerk-session-token' },
+  });
+  assert.equal(ok.response.status, 200);
+  assert.equal(ok.calls.length, 1);
+  assert.equal(ok.calls[0].url, `https://backend.example/privacy/workspace-sites/${id}/prepare-activation`);
+  assert.equal(ok.calls[0].init.headers.get('Authorization'), 'Bearer clerk-session-token');
+  assert.equal(ok.calls[0].init.headers.has('X-Api-Key'), false);
+
+  await assertRejected(path, 'GET');
+  await assertRejected(path + '/check', 'POST');
+});
+
 test('forwards Clerk bearer token to workspace URL Privacy diagnosis', async () => {
   const id = '22222222-2222-4222-8222-222222222222';
   const result = await request(`/api/privacy/workspaces/${id}/diagnose`, 'POST', {

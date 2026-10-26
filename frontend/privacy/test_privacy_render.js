@@ -160,16 +160,17 @@ assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No 
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-no-priorities').hidden, false);
 
-// An expired activation keeps the review available while replacing the invalid purchase CTA.
-context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: 'DIAG-EXPIRED' }, 'https://expired.example');
-context.showExpiredCommercialStateForTest('2026-10-01T21:57:00Z');
-assert.equal(elements.get('correction-order-open').hidden, true);
+// Old saved diagnoses remain visible and retain the activation CTA.
+// The backend refreshes only when the customer actually chooses to activate.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic,
+  diagnostic_id: 'DIAG-EXPIRED',
+  purchase_expires_at: '2026-10-01T21:57:00Z',
+}, 'https://expired.example');
+assert.equal(elements.get('correction-order-open').hidden, false);
 assert.equal(elements.get('correction-order-form').hidden, true);
-assert.equal(elements.get('correction-order-availability').hidden, true);
-assert.equal(elements.get('correction-order-validity').hidden, true);
-assert.equal(elements.get('correction-order-expired').hidden, false);
-assert.equal(elements.get('correction-order-expired-date').hidden, false);
-assert.match(elements.get('correction-order-expired-date').textContent, /^Última revisión: /);
+assert.equal(elements.get('correction-order-availability').hidden, false);
+assert.equal(elements.get('correction-order-expired').hidden, true);
 
 // A new diagnosis removes every commercial state before its request starts.
 elements.get('correction-order-open').trigger('click');

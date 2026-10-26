@@ -52,6 +52,8 @@ let isDiagnosing = false;
 let currentDiagnosticId = '';
 let currentClaimToken = '';
 let currentPersistedWorkspaceSiteId = '';
+let currentPurchaseExpiresAt = '';
+let activationPreparationInFlight = false;
 const privacyQuery = new URLSearchParams(window.location.search);
 const requestedWorkspaceSiteId = privacyQuery.get('workspace_site_id') || '';
 const requestedWorkspaceId = privacyQuery.get('workspace_id') || '';
@@ -311,6 +313,7 @@ const resetCommercialState = () => {
   currentDiagnosticId = '';
   currentClaimToken = '';
   currentPersistedWorkspaceSiteId = '';
+  currentPurchaseExpiresAt = '';
   activationNotice.hidden = true;
   savedDiagnosticNote.hidden = true;
   savedStandaloneNote.hidden = true;
@@ -333,7 +336,7 @@ const resetCommercialState = () => {
   orderSubmit.disabled = false;
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
-  orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
+  orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
 };
 
 const renderCommercialOffer = (priorities) => {
@@ -351,6 +354,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
 
   analyzedUrl.textContent = websiteUrl;
   currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id.trim() : '';
+  currentPurchaseExpiresAt = diagnostic.purchase_expires_at || '';
   currentClaimToken = typeof diagnostic.claim_token === 'string' ? diagnostic.claim_token : '';
   const savedSiteId = typeof diagnostic.workspace_site_id === 'string' ? diagnostic.workspace_site_id.trim() : '';
   currentPersistedWorkspaceSiteId = currentDiagnosticId ? (savedSiteId || authenticatedWorkspaceSiteId) : '';
@@ -383,7 +387,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderExpiredDate.textContent = '';
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
-  orderAvailability.textContent = 'Disponible para activar durante 24 horas después de este diagnóstico.';
+  orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
   scoreValue.textContent = score;
   scoreStatus.textContent = humanStatus;
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
@@ -639,10 +643,55 @@ const resolveWorkspaceForDiagnosis = async () => {
   throw new Error('workspace_selection_required');
 };
 
+const prepareActivationForSavedSite = async () => {
+  if (!currentPersistedWorkspaceSiteId || activationPreparationInFlight) return;
+  activationPreparationInFlight = true;
+  const workspaceSiteId = currentPersistedWorkspaceSiteId;
+  orderOpenButton.disabled = true;
+  orderOpenButton.textContent = 'Preparando…';
+  const expiresAt = Date.parse(currentPurchaseExpiresAt);
+  const visiblyStale = !Number.isFinite(expiresAt) || expiresAt <= Date.now();
+  if (visiblyStale) {
+    activationNotice.textContent = 'Estamos actualizando el diagnóstico de tu sitio antes de continuar.';
+    activationNotice.hidden = false;
+  }
+  try {
+    const auth = await waitForMininodeAuth();
+    await auth.ready();
+    const token = await auth.getToken();
+    if (!token) {
+      window.location.assign('/access/');
+      return;
+    }
+    const response = await fetch(
+      `/api/privacy/workspace-sites/${encodeURIComponent(workspaceSiteId)}/prepare-activation`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+    );
+    if (!response.ok) throw new Error(`Prepare activation HTTP ${response.status}`);
+    const prepared = await response.json();
+    if (!isValidDiagnosticResponse(prepared?.diagnostic) || !prepared.diagnostic.diagnostic_id) {
+      throw new Error('Invalid prepared diagnosis');
+    }
+    if (prepared.refreshed) {
+      renderDiagnostic(prepared.diagnostic, prepared.diagnostic.site_url || analyzedUrl.textContent);
+    }
+    activationNotice.textContent = 'Tu diagnóstico está listo. El pago en línea estará disponible próximamente.';
+    activationNotice.hidden = false;
+  } catch (error) {
+    reportFlowError('activation_preparation_failed', error);
+    activationNotice.textContent = 'No pudimos actualizar el diagnóstico. Intenta nuevamente para continuar.';
+    activationNotice.hidden = false;
+  } finally {
+    activationPreparationInFlight = false;
+    orderOpenButton.disabled = false;
+    orderOpenButton.textContent = 'Continuar →';
+  }
+};
+
 const continueWithDiagnostic = (intent) => {
   if (intent === 'activate' && currentPersistedWorkspaceSiteId) {
-    // The commercial request is not implemented yet; keep the CTA and state its next step.
-    activationNotice.hidden = false;
+    // PW-03 prepares a fresh saved diagnosis; PW-04 will create the payment order.
+    void prepareActivationForSavedSite();
     return;
   }
   if (!currentDiagnosticId || !currentClaimToken) return;
@@ -709,16 +758,12 @@ const initializeAuthenticatedSite = async () => {
       }
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
-      const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
-      const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();
-      if (purchaseExpired && !correctionOffer.hidden) {
-        showExpiredCommercialState(latestDiagnostic.created_at);
-      }
       loadingCard.hidden = true;
       resultCard.hidden = false;
-      // An old saved snapshot may still be viewed, but cannot start a new purchase.
-      if (privacyQuery.get('activation') === 'pending' && !purchaseExpired && !correctionOffer.hidden) {
-        activationNotice.hidden = false;
+      // Viewing a saved snapshot never expires. Only an explicit activation intent
+      // re-inspects an old result, without asking the person to repeat the action.
+      if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden) {
+        await prepareActivationForSavedSite();
       }
     }
   } catch (error) {

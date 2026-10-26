@@ -51,6 +51,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("savedDiagnosticNote.hidden = !hasOffer || !isSaved;", APP)
         self.assertIn("savedStandaloneNote.hidden = hasOffer || !isSaved;", APP)
         self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
+        self.assertIn("void prepareActivationForSavedSite();", APP)
+        self.assertIn("Estamos actualizando el diagnóstico de tu sitio antes de continuar.", APP)
+        self.assertIn("prepare-activation", APP)
+        self.assertNotIn("Disponible para activar durante 24 horas", APP)
+        self.assertNotIn("Disponible para activar durante 24 horas", HTML)
         self.assertIn("activationNotice.hidden = false;", APP)
         self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
         self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
@@ -97,10 +102,13 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
         self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
 
-    def test_past_purchase_deadline_cannot_show_pending_activation(self):
-        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
-        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
-        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
+    def test_saved_result_is_preserved_and_pending_activation_prepares_fresh_diagnosis(self):
+        self.assertIn("const prepareActivationForSavedSite = async () => {", APP)
+        self.assertIn("await prepareActivationForSavedSite();", APP)
+        self.assertIn("if (privacyQuery.get('activation') === 'pending' && !correctionOffer.hidden)", APP)
+        self.assertIn("if (prepared.refreshed)", APP)
+        self.assertIn("renderDiagnostic(prepared.diagnostic", APP)
+        self.assertNotIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
 
     def test_commercial_notice_appears_only_inside_conditions(self):
         intro = HTML.split('class="privacy-offer-details"', 1)[0]
@@ -345,8 +353,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("product_code:", APP)
         self.assertIn("Solicitud preparada", HTML)
         self.assertIn("El pago en línea estará disponible próximamente.", HTML)
-        self.assertIn("Disponible para activar durante 24 horas después de este diagnóstico.", HTML)
-        self.assertIn("Disponible para activar durante 24 horas después de este diagnóstico.", APP)
+        self.assertIn("Si es necesario, actualizaremos el diagnóstico antes de continuar.", HTML)
+        self.assertIn("Si es necesario, actualizaremos el diagnóstico antes de continuar.", APP)
         self.assertIn("Para activar Privacy Web necesitas una revisión reciente", HTML)
         self.assertIn("Esta revisión sigue disponible.", HTML)
         self.assertIn('id="correction-order-expired-date"', HTML)
