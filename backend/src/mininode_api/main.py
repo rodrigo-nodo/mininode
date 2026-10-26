@@ -89,10 +89,10 @@ async def lifespan(app: FastAPI):
         app.state.privacy_correction_plan_check_ready = True
 
     try:
-        privacy_entitled_plan.initialize_database()
+        privacy_entitled_plan.check_schema_ready()
     except Exception:
         logging.getLogger(__name__).exception(
-            "Entitlement-based Privacy plan initialization failed; access remains unavailable"
+            "Entitlement-based Privacy plan schema not ready; run approved migration before starting API"
         )
     else:
         app.state.privacy_entitled_plan_ready = True
