@@ -31,10 +31,10 @@ El envío de notificaciones solo sucede tras una solicitud explícita del usuari
 
 ## Validación previa al merge
 
-1. CI del último SHA, incluyendo pruebas nuevas PostgreSQL 18, SSRF, APIs, accesos y frontend.
-2. Branch Preview del último commit: recorrido anónimo gratuito → iniciar sesión → guardar → Mis sitios; sitio ya guardado; desvinculación.
-3. Acceso al panel Admin sin rol: denegado. Con un operador autorizado en entorno de validación: búsqueda de sitios y concesión/revocación de prueba, sin tocar datos PROD.
-4. Confirmar que las pantallas comerciales informan que el pago en línea todavía no está disponible.
-5. Reviewer independiente para backend/seguridad/contratos; no merge sin autorización del PO.
+1. CI del último SHA del PR, incluyendo PostgreSQL 18, SSRF, APIs, accesos y frontend.
+2. Reviewer independiente de diff, comportamiento esperado, backend/seguridad/contratos y CI, antes de aprobar merge.
+3. QA funcional en el entorno integrado estable **https://dev.mininode.io**, con backend, base de datos y Clerk **DEV**: recorrido anónimo → sesión → guardar → Mis sitios; sitio guardado; desvinculación; operador y denegación para no operador. Validar allí no demuestra que se ejecutó el **mismo SHA** del PR #379: documentar la diferencia y comprobar que los comportamientos probados son equivalentes.
+4. El Branch Preview de una rama arbitraria es solo evidencia de build/maquetación: no se considera QA E2E de Access/Clerk. Las restricciones de origen autorizado (`CLERK_AUTHORIZED_PARTIES`) y de backend/BD hacen inválido asumir que ese preview equivale al entorno integrado.
+5. Confirmar que las pantallas comerciales no presentan checkout real; obtener validación del PO. No hacer merge sin autorización explícita. Tras merge, verificar despliegue PROD del SHA y ejecutar smoke test controlado en el entorno autorizado, sin pagos reales ni cambios destructivos.
 
 Tras merge, validar despliegues de Cloudflare y Render del commit de `main` y confirmar que las migraciones no se reaplican (`MIGRATION_APPROVED_FILES` vacío).
