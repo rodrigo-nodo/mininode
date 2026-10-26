@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 import secrets
 import logging
 from typing import Any
@@ -374,6 +374,55 @@ def get_latest_workspace_site_review(
         "created_at": stored.created_at,
         "purchase_expires_at": stored.purchase_expires_at,
         "workspace_site_id": stored.workspace_site_id,
+    }
+
+
+@router.post(
+    "/workspace-sites/{workspace_site_id}/prepare-activation",
+    dependencies=[Depends(_require_privacy_snapshot_database)],
+)
+def prepare_workspace_site_activation(
+    workspace_site_id: UUID,
+    request: Request,
+    user: access.StoredUser = Depends(require_access_user),
+):
+    """Re-use a recent saved diagnosis; safely refresh an older one before checkout.
+
+    This preparation does not create orders, entitlements or payments.
+    The original saved diagnosis is retained even when a refresh fails.
+    """
+    if access.get_authorized_site(user.id, workspace_site_id) is None:
+        raise HTTPException(status_code=404, detail="Sitio no encontrado.")
+    try:
+        latest = privacy_diagnostic_snapshot.get_latest_for_workspace_site(workspace_site_id)
+    except privacy_diagnostic_snapshot.PrivacyDiagnosticSnapshotNotFoundError:
+        raise HTTPException(status_code=409, detail="Realiza un diagnóstico antes de activar Privacy Web.") from None
+
+    if latest.purchase_expires_at > datetime.now(timezone.utc):
+        return {
+            "refreshed": False,
+            "diagnostic": {
+                **latest.diagnostic_snapshot,
+                "diagnostic_id": latest.id,
+                "created_at": latest.created_at,
+                "purchase_expires_at": latest.purchase_expires_at,
+                "workspace_site_id": workspace_site_id,
+            },
+        }
+
+    # Re-use the same authenticated inspector and stored URL as manual reviews.
+    # Never let an unsaved inspection proceed to checkout as a recent diagnosis.
+    refreshed = diagnose_workspace_site(workspace_site_id, request, user)
+    if isinstance(refreshed, JSONResponse):
+        return refreshed
+    if not refreshed.get("diagnostic_id") or not refreshed.get("purchase_expires_at"):
+        raise HTTPException(
+            status_code=503,
+            detail="No pudimos guardar la nueva revisión. Intenta nuevamente.",
+        )
+    return {
+        "refreshed": True,
+        "diagnostic": {**refreshed, "workspace_site_id": workspace_site_id},
     }
 
 
