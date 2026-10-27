@@ -205,3 +205,24 @@ def current_entitlement(user_id: UUID, workspace_site_id: UUID, product_code: st
               AND (e.active_until IS NULL OR e.active_until > CURRENT_TIMESTAMP)
             ORDER BY e.active_until DESC NULLS FIRST LIMIT 1
         """, (workspace_site_id, user_id, product_code)).fetchone()
+
+
+def active_workspace_site_ids(user_id: UUID, workspace_id: UUID, product_code: str = PRODUCT) -> list[UUID] | None:
+    """One authorized, set-based read. None means workspace not accessible."""
+    with _connect() as conn:
+        authorized = conn.execute("""
+            SELECT 1 FROM access.workspace_members
+            WHERE workspace_id = %s AND user_id = %s AND role IN ('owner','member')
+        """, (workspace_id, user_id)).fetchone()
+        if authorized is None:
+            return None
+        rows = conn.execute("""
+            SELECT DISTINCT ws.id
+            FROM access.workspace_sites ws
+            JOIN access.entitlements e ON e.workspace_site_id = ws.id
+            WHERE ws.workspace_id = %s AND ws.detached_at IS NULL
+              AND e.product_code = %s AND e.status = 'active'
+              AND e.active_from <= CURRENT_TIMESTAMP
+              AND (e.active_until IS NULL OR e.active_until > CURRENT_TIMESTAMP)
+        """, (workspace_id, product_code)).fetchall()
+        return [row[0] for row in rows]
