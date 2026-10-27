@@ -48,11 +48,11 @@
 .site-link { color: var(--color-text); font-weight: 650; text-decoration: none; }
 .site-link:hover, .site-link:focus-visible { color: var(--color-primary); text-decoration: underline; }
 .site-review-meta { color: var(--color-muted); font-size: var(--text-sm); font-weight: 400; margin: 3px 0 0; }
-.site-row__actions { grid-column: 2; display: flex; align-items: center; min-width: 0; }
+.site-row__actions { grid-column: 2; display: grid; align-content: center; justify-items: start; gap: 4px; min-width: 0; }
 .site-row__actions .site-review-link { grid-column: auto; }
 .site-row__actions a { white-space: nowrap; }
 .site-access-pending, .site-access-error { color: var(--color-muted); font-size: var(--text-sm); }
-.site-access-error { font-size: .78rem; }
+.site-access-error { font-size: .78rem; line-height: 1.4; overflow-wrap: normal; }
 .site-plan-link { color: var(--color-primary); font-size: var(--text-sm); font-weight: 700; text-decoration: none; }
 .site-plan-link:hover, .site-plan-link:focus-visible { text-decoration: underline; }
 .site-review-link { grid-column: 2; justify-self: start; color: var(--color-primary); font-size: var(--text-sm); font-weight: 650; text-decoration: none; }

@@ -302,6 +302,8 @@ test('formats latest review date with Chile time', () => {
 });
 
 test('site rows keep result and unlink actions aligned on desktop and reflow on mobile', () => {
+  assert.match(styles, /\.site-row__actions \{[^}]*display: grid; align-content: center; justify-items: start;/);
+  assert.match(styles, /\.site-access-error \{[^}]*overflow-wrap: normal;/);
   const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
   const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
   assert.ok(html.includes(`./styles.css?v=${stylesheetSha}`), 'Access HTML must refresh cached CSS');
@@ -385,9 +387,9 @@ test('bulk actions wait for response, reject stale workspace responses, and hand
 
   sandbox.activeWorkspaceId = 'w1';
   await sandbox.resolveLinks(workspace, 7, entries, Promise.reject(new Error('503')));
-  assert.equal(actions.children[0].textContent, 'No pudimos verificar Privacy Web');
-  assert.equal(actions.children[1].textContent, 'Ver diagnóstico →');
-  assert.equal(actions.children[1].href, '/privacy/?workspace_site_id=s1&view=latest');
+  assert.equal(actions.children[0].textContent, 'Ver diagnóstico →');
+  assert.equal(actions.children[0].href, '/privacy/?workspace_site_id=s1&view=latest');
+  assert.equal(actions.children[1].textContent, 'No pudimos verificar Privacy Web');
 });
 
 test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {
