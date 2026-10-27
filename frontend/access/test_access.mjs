@@ -314,7 +314,7 @@ test('site rows keep result and unlink actions aligned on desktop and reflow on 
   assert.match(mobile, /\.site-row__main \{ grid-column: 1 \/ -1; \}/);
   assert.match(mobile, /\.site-row__actions \{ grid-column: 1; \}/);
   assert.match(mobile, /\.site-unlink \{ grid-column: 2; \}/);
-  assert.match(app, /actions\.append\(resultLink\)/);
+  assert.match(app, /actions\.append\(status\)/);
   assert.match(app, /row\.append\(main, actions\)/);
   assert.match(app, /row\.append\(unlink\)/);
 });
