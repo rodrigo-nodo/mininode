@@ -305,7 +305,7 @@ test('site rows keep result and unlink actions aligned on desktop and reflow on 
   const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
   const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
   assert.ok(html.includes(`./styles.css?v=${stylesheetSha}`), 'Access HTML must refresh cached CSS');
-  assert.match(styles, /\.site-row \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 132px 94px;/);
+  assert.match(styles, /\.site-row \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 165px 94px;/);
   assert.match(styles, /\.site-row__actions \{ grid-column: 2;/);
   assert.match(styles, /\.site-row__actions \.site-review-link \{ grid-column: auto;/);
   assert.match(styles, /\.site-unlink \{ grid-column: 3; justify-self: end;/);
