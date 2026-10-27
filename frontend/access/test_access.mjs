@@ -332,6 +332,9 @@ test('direct Privacy Web link requires active entitlement and preserves result',
   assert.match(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
   assert.match(app, /entitlement\?\.active !== true/);
   assert.match(app, /site-plan-link/);
+  assert.match(app, /const actionsBySite = new Map\(\)/);
+  assert.match(app, /actionsBySite\.set\(site\.id, actions\)/);
+  assert.match(app, /actionsBySite\.get\(site\.id\)/);
   assert.match(app, /\/privacy\/plan\/\?workspace_site_id=/);
   assert.match(app, /Abrir Privacy Web →/);
   assert.match(app, /Ver resultado →/);
