@@ -252,3 +252,28 @@ elements.checkStart.addEventListener('click', () => { elements.checkStart.hidden
 elements.checkCancel.addEventListener('click', () => { if (!checkInProgress) { elements.checkConfirm.hidden = true; elements.checkStart.hidden = false; } });
 elements.checkSubmit.addEventListener('click', performCheck);
 loadPlan();
+
+const planTabIds = ['state', 'actions', 'progress'];
+const setPlanTab = (selected) => {
+  planTabIds.forEach((id) => {
+    const button = document.querySelector(`#plan-tab-${id}`);
+    const panel = document.querySelector(`#plan-panel-${id}`);
+    const active = id === selected;
+    panel.hidden = !active;
+    button.setAttribute('aria-current', active ? 'page' : 'false');
+    button.tabIndex = active ? 0 : -1;
+  });
+};
+planTabIds.forEach((id, index) => {
+  const button = document.querySelector(`#plan-tab-${id}`);
+  button.addEventListener('click', () => setPlanTab(id));
+  button.addEventListener('keydown', (event) => {
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? planTabIds.length - 1
+      : (index + (event.key === 'ArrowRight' ? 1 : -1) + planTabIds.length) % planTabIds.length;
+    setPlanTab(planTabIds[next]);
+    document.querySelector(`#plan-tab-${planTabIds[next]}`).focus();
+  });
+});
+setPlanTab('state');
