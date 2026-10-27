@@ -17,6 +17,7 @@ class Node {
     this.disabled = false;
     this.children = [];
     this.listeners = new Map();
+    this.attributes = new Map();
   }
   addEventListener(name, handler) { this.listeners.set(name, handler); }
   click() {
@@ -24,6 +25,8 @@ class Node {
     assert.ok(callback, 'expected a click listener');
     return callback({ preventDefault() {} });
   }
+  setAttribute(name, value) { this.attributes.set(name, value); }
+  focus() { this.focused = true; }
   append(node) { this.children.push(node); }
   replaceChildren() { this.children = []; }
 }
@@ -132,4 +135,19 @@ test('active plan review posts with Bearer and shows persisted result', async ()
   assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
   assert.equal(ui.nodes.get('check-result').hidden, false);
   assert.equal(ui.nodes.get('check-current-score').textContent, '77 / 100');
+});
+
+test('C1 navigation defaults to state and switches panels without new requests', async () => {
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => payload() }));
+  await flush();
+  assert.equal(ui.nodes.get('plan-panel-state').hidden, false);
+  assert.equal(ui.nodes.get('plan-panel-actions').hidden, true);
+  assert.equal(ui.nodes.get('plan-panel-progress').hidden, true);
+  assert.equal(ui.nodes.get('plan-tab-state').attributes.get('aria-current'), 'page');
+  ui.nodes.get('plan-tab-actions').click();
+  assert.equal(ui.nodes.get('plan-panel-state').hidden, true);
+  assert.equal(ui.nodes.get('plan-panel-actions').hidden, false);
+  ui.nodes.get('plan-tab-progress').click();
+  assert.equal(ui.nodes.get('plan-panel-progress').hidden, false);
+  assert.equal(ui.calls.length, 1);
 });

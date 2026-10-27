@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/styles.css?v=pw03b-cache2">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=pw03b-cache2">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=pw03b-cache2">
+  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c1-1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="../../include.js?v=pw03b-header1" defer></script>
   <script src="/privacy/plan-assets/app.js?v=pw03b1" defer></script>
@@ -23,12 +24,22 @@
         <div class="plan-hero__label"><p>Privacy Web</p></div>
         <h1 id="plan-title">Mejoras y seguimiento de tu sitio</h1>
         <p class="plan-hero__description">Privacy Web organiza las mejoras detectadas y te permite revisar cómo avanza tu sitio mientras esté activo.</p>
+        </section>
+      <nav class="plan-tabs" aria-label="Secciones de Privacy Web">
+        <button type="button" class="plan-tab" id="plan-tab-state" aria-controls="plan-panel-state" aria-current="page">Estado de mi sitio</button>
+        <button type="button" class="plan-tab" id="plan-tab-actions" aria-controls="plan-panel-actions">Qué debo mejorar</button>
+        <button type="button" class="plan-tab" id="plan-tab-progress" aria-controls="plan-panel-progress">Mis avances</button>
+      </nav>
+      <section class="plan-panel" id="plan-panel-state" aria-labelledby="plan-tab-state">
+        <h2>Estado de mi sitio</h2>
+        <p>Resumen del diagnóstico inicial. El estado actual y el detalle por áreas estarán disponibles en la próxima etapa.</p>
         <dl class="plan-facts">
           <div><dt>Sitio</dt><dd id="site-url">—</dd></div>
           <div><dt>Score inicial</dt><dd id="initial-score">—</dd></div>
           <div><dt>Mejoras recomendadas</dt><dd id="item-count">—</dd></div>
         </dl>
       </section>
+      <section class="plan-panel" id="plan-panel-actions" aria-labelledby="plan-tab-actions" hidden>
       <section class="plan-summary" aria-labelledby="summary-title">
         <div><p class="section-label">Resumen</p><h2 id="summary-title"><span id="summary-count">—</span> mejoras recomendadas</h2></div>
         <ul id="priority-summary" aria-label="Distribución de prioridades"></ul>
@@ -40,6 +51,8 @@
         <p>Estas mejoras fueron generadas automáticamente a partir de los hallazgos de Privacy Web.</p><p>La implementación técnica de los cambios no está incluida.</p>
         <p class="plan-closing__future">Mientras Privacy Web esté activo, puedes volver a revisar el sitio para comprobar su evolución.</p>
       </section>
+      </section>
+      <section class="plan-panel" id="plan-panel-progress" aria-labelledby="plan-tab-progress" hidden>
       <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
         <p class="section-label">Seguimiento</p><h2 id="check-title">Revisar avances</h2>
         <div id="check-available">
@@ -73,6 +86,7 @@
         <p class="continuous-monitoring__badge">Próximamente</p>
         <h2 id="continuous-monitoring-title">Seguimiento automático</h2>
         <p>Mininode podrá revisar periódicamente el sitio y avisar si aparecen nuevas señales o si alguna mejora vuelve a quedar pendiente.</p>
+      </section>
       </section>
       <aside class="plan-disclaimer" aria-label="Alcance de Privacy Web"><p>Privacy Score es un indicador desarrollado por Mininode. No es una certificación legal, una auditoría completa ni un porcentaje oficial de cumplimiento.</p><p>Privacy Web se basa en señales observables del sitio web y no reemplaza una revisión jurídica o especializada cuando corresponda.</p></aside>
     </div>

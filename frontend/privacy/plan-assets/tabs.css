@@ -1,0 +1,12 @@
+/* Privacy Web Plan C1 — layout only; existing Plan logic stays unchanged. */
+.plan-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 28px}
+.plan-tab{font:inherit;font-weight:650;min-height:48px;line-height:1.35;text-align:center;cursor:pointer;padding:12px 10px;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.plan-tab:hover{border-color:var(--primary)}
+.plan-tab[aria-current="page"]{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
+.plan-tab:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+.plan-panel{min-width:0}
+.plan-panel > h2:first-child{margin-top:0}
+.plan-panel#plan-panel-state{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--border);border-radius:12px;margin-bottom:28px}
+.plan-panel#plan-panel-state .plan-facts{margin-bottom:0}
+@media(max-width:600px){.plan-tabs{gap:6px}.plan-tab{font-size:.82rem;padding:10px 5px;min-height:52px;overflow-wrap:anywhere}}
+@media(max-width:340px){.plan-tabs{display:flex;flex-direction:column}.plan-tab{text-align:left;padding-inline:14px;min-height:44px}}
