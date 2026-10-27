@@ -271,15 +271,16 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
       meta.textContent = pieces.join(' · ');
       main.append(meta);
 
-      const status = document.createElement('span');
-      status.className = 'site-access-pending';
-      status.textContent = 'Verificando acceso…';
-      status.setAttribute('role', 'status');
-      actions.append(status);
       row.append(main, actions);
     } else {
       row.append(main, actions);
     }
+
+    const status = document.createElement('span');
+    status.className = 'site-access-pending';
+    status.textContent = 'Verificando acceso…';
+    status.setAttribute('role', 'status');
+    actions.append(status);
 
     const unlink = document.createElement('button');
     unlink.type = 'button';
@@ -351,7 +352,7 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitl
 
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
-  const entitlementsRequest = api(`/api/billing/workspaces/${encodeURIComponent(workspace.id)}/entitlements`);
+  const entitlementsRequest = api(`/api/billing/workspaces/${encodeURIComponent(workspace.id)}/entitlements`).catch(() => null);
   const [latest, grouping] = await Promise.allSettled([
     api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`),
     api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/site-group-reviews`),
