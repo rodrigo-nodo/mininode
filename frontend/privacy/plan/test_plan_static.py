@@ -177,7 +177,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_plan_hidden_rule_does_not_hide_shared_header_navigation(self):
         # The shared desktop navigation includes a hidden mobile-menu container.
         # A global [hidden] !important rule suppresses it despite shared CSS.
-        plan_css = (FRONTEND / "privacy" / "plan-demo" / "styles.css").read_text(encoding="utf-8")
+        plan_css = (FRONTEND_DIR / "privacy" / "plan-demo" / "styles.css").read_text(encoding="utf-8")
         self.assertIn(".plan-shell [hidden] { display: none !important; }", plan_css)
         self.assertNotIn("\\n[hidden] { display: none !important; }", plan_css)
 
