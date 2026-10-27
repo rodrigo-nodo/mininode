@@ -223,6 +223,9 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
 
   sites.forEach((site) => {
     const row = document.createElement('div');
+    row.dataset.workspaceSiteId = site.id;
+    const actions = document.createElement('div');
+    actions.className = 'site-row__actions';
     row.className = 'site-row';
 
     const main = document.createElement('div');
@@ -272,9 +275,10 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
       resultLink.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}&view=latest`;
       resultLink.textContent = 'Ver resultado →';
       resultLink.setAttribute('aria-label', `Ver última revisión de ${site.hostname}`);
-      row.append(main, resultLink);
+      actions.append(resultLink);
+      row.append(main, actions);
     } else {
-      row.append(main);
+      row.append(main, actions);
     }
 
     const unlink = document.createElement('button');
@@ -307,6 +311,30 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
   updateSiteReviewButton(sites.length);
 }
 
+async function loadEntitledPlanLinks(workspace, requestId) {
+  const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
+  await Promise.all(sites.map(async (site) => {
+    try {
+      const entitlement = await api(`/api/billing/sites/${encodeURIComponent(site.id)}/entitlement`);
+      if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+      if (entitlement?.active !== true) return;
+      const row = [...siteList.querySelectorAll('.site-row')]
+        .find((item) => item.dataset.workspaceSiteId === site.id);
+      const actions = row?.querySelector('.site-row__actions');
+      if (!actions || actions.querySelector('.site-plan-link')) return;
+      const link = document.createElement('a');
+      link.className = 'site-plan-link';
+      link.href = `/privacy/plan/?workspace_site_id=${encodeURIComponent(site.id)}`;
+      link.textContent = 'Abrir Privacy Web →';
+      link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+      actions.append(link);
+    } catch {
+      // A transient entitlement error must not be interpreted as an active grant.
+      // The existing saved diagnostic and its result link remain available.
+    }
+  }));
+}
+
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
   const [latest, grouping] = await Promise.allSettled([
@@ -319,6 +347,7 @@ async function loadLatestReviews(workspace) {
     latest.status === 'fulfilled' && Array.isArray(latest.value.reviews) ? latest.value.reviews : [],
     grouping.status === 'fulfilled' && Array.isArray(grouping.value.reviews) ? grouping.value.reviews : [],
   );
+  void loadEntitledPlanLinks(workspace, requestId);
 }
 
 function renderHome() {
