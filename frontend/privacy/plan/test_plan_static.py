@@ -174,6 +174,13 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertNotIn("<form", HTML.lower())
 
+    def test_plan_hidden_rule_does_not_hide_shared_header_navigation(self):
+        # The shared desktop navigation includes a hidden mobile-menu container.
+        # A global [hidden] !important rule suppresses it despite shared CSS.
+        plan_css = (FRONTEND_DIR / "privacy" / "plan-demo" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".plan-shell [hidden] { display: none !important; }", plan_css)
+        self.assertNotIn("\\n[hidden] { display: none !important; }", plan_css)
+
     def test_shared_header_footer_and_plan_disclaimers_are_present(self):
         self.assertIn('data-include="../../partials/header-nav.html"', HTML)
         self.assertIn('data-include="../../partials/footer.html"', HTML)

@@ -176,7 +176,7 @@ h1 {
 .plan-closing__future { border-top: 1px solid rgba(255,255,255,.2); margin-top: 24px; padding-top: 24px; }
 .plan-disclaimer { border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; line-height: 1.6; margin: 0 0 48px; padding-top: 24px; }
 .plan-error { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; color: #7c2d12; padding: 16px; }
-[hidden] { display: none !important; }
+.plan-shell [hidden] { display: none !important; }
 
 @media (max-width: 680px) {
   .plan-shell { padding-left: 16px; padding-right: 16px; }
