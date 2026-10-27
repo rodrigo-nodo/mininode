@@ -10,3 +10,70 @@
 .plan-panel#plan-panel-state .plan-facts{margin-bottom:0}
 @media(max-width:600px){.plan-tabs{gap:6px}.plan-tab{font-size:.82rem;padding:10px 5px;min-height:52px;overflow-wrap:anywhere}}
 @media(max-width:340px){.plan-tabs{display:flex;flex-direction:column}.plan-tab{text-align:left;padding-inline:14px;min-height:44px}}
+
+/* The Plan currently defines its own light surfaces. Reconcile them with the
+   shared site theme so dark text tokens never appear on white surfaces. */
+:root[data-theme="dark"] {
+  --ink: var(--color-text);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+  --surface: #1e252c;
+  --background: var(--color-bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ink: var(--color-text);
+    --muted: var(--color-muted);
+    --border: var(--color-border);
+    --surface: #1e252c;
+    --background: var(--color-bg);
+  }
+}
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .plan-shell,
+:root[data-theme="dark"] .plan-hero,
+:root[data-theme="dark"] .plan-facts dd {
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) body,
+  :root:not([data-theme]) .plan-shell,
+  :root:not([data-theme]) .plan-hero,
+  :root:not([data-theme]) .plan-facts dd {
+    color: var(--ink);
+  }
+}
+:root[data-theme="dark"] .plan-summary,
+:root[data-theme="dark"] .plan-closing {
+  background: #123c45;
+  color: #f4fbfc;
+}
+:root[data-theme="dark"] .plan-item__content p,
+:root[data-theme="dark"] .plan-item__steps {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .plan-item__number {
+  color: #0e2226;
+}
+:root[data-theme="dark"] .improvement-check {
+  background: #192f34;
+  border-color: #486b70;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .plan-summary,
+  :root:not([data-theme]) .plan-closing {
+    background: #123c45;
+    color: #f4fbfc;
+  }
+  :root:not([data-theme]) .plan-item__content p,
+  :root:not([data-theme]) .plan-item__steps {
+    color: var(--muted);
+  }
+  :root:not([data-theme]) .plan-item__number {
+    color: #0e2226;
+  }
+  :root:not([data-theme]) .improvement-check {
+    background: #192f34;
+    border-color: #486b70;
+  }
+}
