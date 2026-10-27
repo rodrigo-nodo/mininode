@@ -76,6 +76,18 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             self.assertIn(f"`#plan-tab-${{id}}`", APP)
         self.assertIn("setPlanTab('state')", APP)
 
+    def test_c1_dark_theme_contrast_and_css_cache(self):
+        css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c1-dark-2"', HTML)
+        self.assertIn(':root[data-theme="dark"]', css)
+        self.assertIn(":root:not([data-theme])", css)
+        self.assertIn("prefers-color-scheme: dark", css)
+        for property_name in ("--ink", "--surface", "--background", "--border", "--muted"):
+            self.assertIn(property_name + ":", css)
+        for selector in (".plan-summary", ".plan-closing", ".plan-item__content p",
+                         ".improvement-check"):
+            self.assertIn(selector, css)
+
     def test_only_token_request_matches_plan_rewrite(self):
         source = "/privacy/plan/:token"
 
