@@ -236,7 +236,7 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
     link.className = 'site-link';
     link.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}`;
     link.textContent = site.hostname;
-    link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+    link.setAttribute('aria-label', `Ver diagnóstico de ${site.hostname}`);
     if (sites.length > 1) {
       const select = document.createElement('input');
       select.type = 'checkbox';
@@ -274,7 +274,7 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
       const resultLink = document.createElement('a');
       resultLink.className = 'site-review-link';
       resultLink.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}&view=latest`;
-      resultLink.textContent = 'Ver resultado →';
+      resultLink.textContent = 'Ver diagnóstico →';
       resultLink.setAttribute('aria-label', `Ver última revisión de ${site.hostname}`);
       actions.append(resultLink);
       row.append(main, actions);
@@ -322,12 +322,12 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite) {
       if (entitlement?.active !== true) return;
       const actions = actionsBySite.get(site.id);
       if (!actions) return;
-      const link = document.createElement('a');
+      const link = actions.querySelector('.site-review-link');
+      if (!link) return;
       link.className = 'site-plan-link';
       link.href = `/privacy/plan/?workspace_site_id=${encodeURIComponent(site.id)}`;
       link.textContent = 'Abrir Privacy Web →';
       link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
-      actions.append(link);
     } catch {
       // A transient entitlement error must not be interpreted as an active grant.
       // The existing saved diagnostic and its result link remain available.

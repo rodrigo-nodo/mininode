@@ -305,7 +305,7 @@ test('site rows keep result and unlink actions aligned on desktop and reflow on 
   const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
   const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
   assert.ok(html.includes(`./styles.css?v=${stylesheetSha}`), 'Access HTML must refresh cached CSS');
-  assert.match(styles, /\.site-row \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 132px 94px;/);
+  assert.match(styles, /\.site-row \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 165px 94px;/);
   assert.match(styles, /\.site-row__actions \{ grid-column: 2;/);
   assert.match(styles, /\.site-row__actions \.site-review-link \{ grid-column: auto;/);
   assert.match(styles, /\.site-unlink \{ grid-column: 3; justify-self: end;/);
@@ -324,7 +324,7 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /Última revisión: \$\{formattedDate\}/);
   assert.match(app, /pieces\.push\(\`\$\{review\.score\}\/100\`\)/);
   assert.match(app, /view=latest/);
-  assert.match(app, /Ver resultado →/);
+  assert.match(app, /Ver diagnóstico →/);
   assert.match(app, /site-review-meta/);
 });
 
@@ -335,9 +335,12 @@ test('direct Privacy Web link requires active entitlement and preserves result',
   assert.match(app, /const actionsBySite = new Map\(\)/);
   assert.match(app, /actionsBySite\.set\(site\.id, actions\)/);
   assert.match(app, /actionsBySite\.get\(site\.id\)/);
+  assert.match(app, /const link = actions\.querySelector\('\.site-review-link'\)/);
+  assert.match(app, /link\.className = 'site-plan-link'/);
+  assert.doesNotMatch(app, /actions\.append\(link\)/);
   assert.match(app, /\/privacy\/plan\/\?workspace_site_id=/);
   assert.match(app, /Abrir Privacy Web →/);
-  assert.match(app, /Ver resultado →/);
+  assert.match(app, /Ver diagnóstico →/);
   assert.match(app, /requestId !== latestReviewsRequestId \|\| activeWorkspaceId !== workspace\.id/);
   assert.match(styles, /\.site-plan-link \{/);
 });
