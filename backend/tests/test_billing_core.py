@@ -177,6 +177,49 @@ def test_bulk_workspace_entitlements_authorization_vigency_and_isolation():
     assert billing.active_workspace_site_ids(outsider, workspace_id) is None
     assert billing.active_workspace_site_ids(user_id, other_workspace) is None
     assert billing.active_workspace_site_ids(user_id, workspace_id) == [site_a]
+    assert billing.current_entitlement(user_id, detached_site) is None
     with psycopg.connect(database_url) as conn:
         conn.execute("UPDATE access.entitlements SET status='revoked' WHERE workspace_site_id=%s", (site_a,))
     assert billing.active_workspace_site_ids(user_id, workspace_id) == []
+
+
+def test_bulk_workspace_entitlements_revoked_before_atomic_read(monkeypatch):
+    """Revocation at the query boundary must deny the full bulk response."""
+    database_url, user_id, workspace_site_id, _, now = _seed()
+    with psycopg.connect(database_url) as conn:
+        workspace_id = conn.execute(
+            "SELECT workspace_id FROM access.workspace_sites WHERE id=%s", (workspace_site_id,)
+        ).fetchone()[0]
+        conn.execute("""
+            INSERT INTO access.entitlements
+            (id,workspace_site_id,product_code,active_from,active_until,status,source)
+            VALUES (%s,%s,'privacy_web',%s,%s,'active','internal_grant')
+        """, (uuid4(), workspace_site_id, now - timedelta(days=1), now + timedelta(days=1)))
+
+    original_connect = billing._connect
+    statements = []
+    class QueryBoundary:
+        def __enter__(self):
+            self.conn = original_connect()
+            self.conn.__enter__()
+            return self
+
+        def __exit__(self, *args):
+            return self.conn.__exit__(*args)
+
+        def execute(self, sql, params):
+            statements.append(sql)
+            # Simulate a concurrent admin revoking membership just before the
+            # authorization + entitlement statement begins.
+            with psycopg.connect(database_url) as conn:
+                conn.execute(
+                    "DELETE FROM access.workspace_members WHERE workspace_id=%s AND user_id=%s",
+                    (workspace_id, user_id),
+                )
+            return self.conn.execute(sql, params)
+
+    monkeypatch.setattr(billing, "_connect", lambda: QueryBoundary())
+    assert billing.active_workspace_site_ids(user_id, workspace_id) is None
+    assert len(statements) == 1
+    assert "JOIN access.workspace_sites" in statements[0]
+    assert "access.workspace_members" in statements[0]
