@@ -330,12 +330,6 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitl
     const actions = actionsBySite.get(site.id);
     if (!actions) continue;
     actions.replaceChildren();
-    if (activeIds === null) {
-      const unavailable = document.createElement('span');
-      unavailable.className = 'site-access-error';
-      unavailable.textContent = 'No pudimos verificar Privacy Web';
-      actions.append(unavailable);
-    }
     const link = document.createElement('a');
     const active = activeIds?.has(site.id) === true;
     link.className = active ? 'site-plan-link' : 'site-review-link';
@@ -347,6 +341,12 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitl
       ? `Abrir Privacy Web para ${site.hostname}`
       : `Ver última revisión de ${site.hostname}`);
     actions.append(link);
+    if (activeIds === null) {
+      const unavailable = document.createElement('span');
+      unavailable.className = 'site-access-error';
+      unavailable.textContent = 'No pudimos verificar Privacy Web';
+      actions.append(unavailable);
+    }
   }
 }
 
