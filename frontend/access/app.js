@@ -226,11 +226,11 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
     const row = document.createElement('div');
     const actions = document.createElement('div');
     actions.className = 'site-row__actions';
-    actionsBySite.set(site.id, { actions, main });
     row.className = 'site-row';
 
     const main = document.createElement('div');
     main.className = 'site-row__main';
+    actionsBySite.set(site.id, { actions, main });
 
     const link = document.createElement('a');
     link.className = 'site-link';
