@@ -223,7 +223,7 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
 
   sites.forEach((site) => {
     const row = document.createElement('div');
-    row.dataset.workspaceSiteId = site.id;
+    row.workspaceSiteId = site.id;
     const actions = document.createElement('div');
     actions.className = 'site-row__actions';
     row.className = 'site-row';
@@ -319,7 +319,7 @@ async function loadEntitledPlanLinks(workspace, requestId) {
       if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
       if (entitlement?.active !== true) return;
       const row = [...siteList.querySelectorAll('.site-row')]
-        .find((item) => item.dataset.workspaceSiteId === site.id);
+        .find((item) => item.workspaceSiteId === site.id);
       const actions = row?.querySelector('.site-row__actions');
       if (!actions || actions.querySelector('.site-plan-link')) return;
       const link = document.createElement('a');
