@@ -328,21 +328,20 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /site-review-meta/);
 });
 
-test('direct Privacy Web link requires active entitlement and preserves result', () => {
-  assert.match(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
-  assert.match(app, /entitlement\?\.active !== true/);
-  assert.match(app, /site-plan-link/);
-  assert.match(app, /const actionsBySite = new Map\(\)/);
-  assert.match(app, /actionsBySite\.set\(site\.id, actions\)/);
-  assert.match(app, /actionsBySite\.get\(site\.id\)/);
-  assert.match(app, /const link = actions\.querySelector\('\.site-review-link'\)/);
-  assert.match(app, /link\.className = 'site-plan-link'/);
-  assert.doesNotMatch(app, /actions\.append\(link\)/);
-  assert.match(app, /\/privacy\/plan\/\?workspace_site_id=/);
+test('bulk entitlement lookup resolves one pending action per workspace site', () => {
+  assert.match(app, /\/api\/billing\/workspaces\/\$\{encodeURIComponent\(workspace\.id\)\}\/entitlements/);
+  assert.match(app, /const entitlementsRequest = api\(/);
+  assert.match(app, /const status = document\.createElement\('span'\)/);
+  assert.match(app, /Verificando acceso…/);
+  assert.match(app, /actions\.replaceChildren\(\)/);
+  assert.match(app, /Array\.isArray\(result\?\.active_site_ids\)/);
+  assert.match(app, /new Set\(result\.active_site_ids\)/);
+  assert.match(app, /activeIds\?\.has\(site\.id\) === true/);
   assert.match(app, /Abrir Privacy Web →/);
   assert.match(app, /Ver diagnóstico →/);
+  assert.match(app, /No pudimos verificar Privacy Web/);
   assert.match(app, /requestId !== latestReviewsRequestId \|\| activeWorkspaceId !== workspace\.id/);
-  assert.match(styles, /\.site-plan-link \{/);
+  assert.doesNotMatch(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
 });
 
 test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {
