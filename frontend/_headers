@@ -1,0 +1,6 @@
+# Keep Plan HTML fresh; its versioned assets can remain cached.
+/privacy/plan/
+  Cache-Control: no-cache, must-revalidate
+
+/privacy/plan/*
+  Cache-Control: no-cache, must-revalidate
