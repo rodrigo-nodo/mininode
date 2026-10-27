@@ -64,9 +64,17 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=pw03b-cache2',
             '/privacy/plan-assets/styles.css?v=pw03b-cache2',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=pw03b1',
+            '/privacy/plan-assets/app.js?v=c1-tabs-2',
         ):
             self.assertIn(asset, HTML)
+
+    def test_c1_tab_script_and_panels_are_versioned_together(self):
+        self.assertIn('app.js?v=c1-tabs-2', HTML)
+        for name in ('state', 'actions', 'progress'):
+            self.assertIn(f'id="plan-tab-{name}"', HTML)
+            self.assertIn(f'id="plan-panel-{name}"', HTML)
+            self.assertIn(f"`#plan-tab-${{id}}`", APP)
+        self.assertIn("setPlanTab('state')", APP)
 
     def test_only_token_request_matches_plan_rewrite(self):
         source = "/privacy/plan/:token"
@@ -163,7 +171,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=pw03b1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c1-tabs-2"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
