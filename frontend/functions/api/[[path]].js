@@ -57,6 +57,7 @@ export const onRequest = async (ctx) => {
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/plan$/.test(destPathPublic) && ['GET', 'POST'].includes(method))
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/plan\/check$/.test(destPathPublic) && method === 'POST')
     || (/^billing\/sites\/[0-9a-f-]+\/entitlement$/.test(destPathPublic) && method === 'GET')
+    || (/^billing\/workspaces\/[0-9a-f-]+\/entitlements$/.test(destPathPublic) && method === 'GET')
     || (/^privacy\/workspace-sites\/[0-9a-f-]+\/latest-review$/.test(destPathPublic) && method === 'GET')
     || (/^privacy\/workspaces\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspaces\/[0-9a-f-]+\/latest-reviews$/.test(destPathPublic) && method === 'GET')

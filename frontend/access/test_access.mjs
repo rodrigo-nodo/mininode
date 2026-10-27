@@ -314,7 +314,7 @@ test('site rows keep result and unlink actions aligned on desktop and reflow on 
   assert.match(mobile, /\.site-row__main \{ grid-column: 1 \/ -1; \}/);
   assert.match(mobile, /\.site-row__actions \{ grid-column: 1; \}/);
   assert.match(mobile, /\.site-unlink \{ grid-column: 2; \}/);
-  assert.match(app, /actions\.append\(resultLink\)/);
+  assert.match(app, /actions\.append\(status\)/);
   assert.match(app, /row\.append\(main, actions\)/);
   assert.match(app, /row\.append\(unlink\)/);
 });
@@ -328,21 +328,66 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /site-review-meta/);
 });
 
-test('direct Privacy Web link requires active entitlement and preserves result', () => {
-  assert.match(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
-  assert.match(app, /entitlement\?\.active !== true/);
-  assert.match(app, /site-plan-link/);
-  assert.match(app, /const actionsBySite = new Map\(\)/);
-  assert.match(app, /actionsBySite\.set\(site\.id, actions\)/);
-  assert.match(app, /actionsBySite\.get\(site\.id\)/);
-  assert.match(app, /const link = actions\.querySelector\('\.site-review-link'\)/);
-  assert.match(app, /link\.className = 'site-plan-link'/);
-  assert.doesNotMatch(app, /actions\.append\(link\)/);
-  assert.match(app, /\/privacy\/plan\/\?workspace_site_id=/);
+test('bulk entitlement lookup resolves one pending action per workspace site', () => {
+  assert.match(app, /\/api\/billing\/workspaces\/\$\{encodeURIComponent\(workspace\.id\)\}\/entitlements/);
+  assert.match(app, /const entitlementsRequest = api\(/);
+  assert.match(app, /const status = document\.createElement\('span'\)/);
+  assert.match(app, /Verificando acceso…/);
+  assert.match(app, /actions\.replaceChildren\(\)/);
+  assert.match(app, /Array\.isArray\(result\?\.active_site_ids\)/);
+  assert.match(app, /new Set\(result\.active_site_ids\)/);
+  assert.match(app, /activeIds\?\.has\(site\.id\) === true/);
   assert.match(app, /Abrir Privacy Web →/);
   assert.match(app, /Ver diagnóstico →/);
+  assert.match(app, /No pudimos verificar Privacy Web/);
   assert.match(app, /requestId !== latestReviewsRequestId \|\| activeWorkspaceId !== workspace\.id/);
-  assert.match(styles, /\.site-plan-link \{/);
+  assert.doesNotMatch(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
+});
+
+test('bulk actions wait for response, reject stale workspace responses, and handle failure', async () => {
+  const section = app.slice(
+    app.indexOf('async function loadEntitledPlanLinks('),
+    app.indexOf('async function loadLatestReviews('),
+  );
+  const makeNode = (tag) => ({
+    tag, className: '', href: '', textContent: '', attributes: {},
+    setAttribute(key, value) { this.attributes[key] = value; },
+  });
+  const document = { createElement: makeNode };
+  const actions = {
+    children: [{ textContent: 'Verificando acceso…' }],
+    replaceChildren(...nodes) { this.children = nodes; },
+    append(node) { this.children.push(node); },
+  };
+  const sandbox = { document, latestReviewsRequestId: 7, activeWorkspaceId: 'w1', Set };
+  vm.runInNewContext(section + '\nglobalThis.resolveLinks = loadEntitledPlanLinks;', sandbox);
+  const site = { id: 's1', hostname: 'example.org' };
+  const workspace = { id: 'w1', sites: [site] };
+  const entries = new Map([['s1', actions]]);
+  let deliver;
+  const delayed = new Promise((resolve) => { deliver = resolve; });
+  const pending = sandbox.resolveLinks(workspace, 7, entries, delayed);
+  assert.equal(actions.children[0].textContent, 'Verificando acceso…');
+  deliver({ active_site_ids: ['s1'] });
+  await pending;
+  assert.equal(actions.children.length, 1);
+  assert.equal(actions.children[0].textContent, 'Abrir Privacy Web →');
+  assert.equal(actions.children[0].href, '/privacy/plan/?workspace_site_id=s1');
+
+  actions.replaceChildren({ textContent: 'Verificando acceso…' });
+  let resolveOld;
+  const old = new Promise((resolve) => { resolveOld = resolve; });
+  const obsolete = sandbox.resolveLinks(workspace, 7, entries, old);
+  sandbox.activeWorkspaceId = 'w2';
+  resolveOld({ active_site_ids: [] });
+  await obsolete;
+  assert.equal(actions.children[0].textContent, 'Verificando acceso…');
+
+  sandbox.activeWorkspaceId = 'w1';
+  await sandbox.resolveLinks(workspace, 7, entries, Promise.reject(new Error('503')));
+  assert.equal(actions.children[0].textContent, 'No pudimos verificar Privacy Web');
+  assert.equal(actions.children[1].textContent, 'Ver diagnóstico →');
+  assert.equal(actions.children[1].href, '/privacy/?workspace_site_id=s1&view=latest');
 });
 
 test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {

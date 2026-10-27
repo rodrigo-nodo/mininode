@@ -132,3 +132,94 @@ def test_one_early_renewal_allowed_but_second_future_period_rejected():
         billing.payment_confirmed(
             order3.id, provider="test", provider_order_id="pay-3", verified_paid_at=now + timedelta(hours=3)
         )
+
+
+def test_bulk_workspace_entitlements_authorization_vigency_and_isolation():
+    database_url, user_id, site_a, _, now = _seed()
+    outsider, other_workspace, other_site, detached_site = (uuid4() for _ in range(4))
+    with psycopg.connect(database_url) as conn, conn.cursor() as cur:
+        workspace_id = cur.execute(
+            "SELECT workspace_id FROM access.workspace_sites WHERE id = %s", (site_a,)
+        ).fetchone()[0]
+        cur.execute("INSERT INTO access.users (id,email) VALUES (%s,%s)", (outsider, f"{outsider}@example.com"))
+        cur.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'Other')", (other_workspace,))
+        cur.execute("INSERT INTO access.sites (id,hostname) VALUES (%s,%s)", (uuid4(), f"{other_site}.example.com"))
+        other_logical_site = cur.execute(
+            "SELECT id FROM access.sites WHERE hostname = %s", (f"{other_site}.example.com",)
+        ).fetchone()[0]
+        cur.execute(
+            "INSERT INTO access.workspace_sites (id,workspace_id,site_id) VALUES (%s,%s,%s)",
+            (other_site, other_workspace, other_logical_site),
+        )
+        cur.execute("INSERT INTO access.sites (id,hostname) VALUES (%s,%s)", (uuid4(), f"{detached_site}.example.com"))
+        detached_logical_site = cur.execute(
+            "SELECT id FROM access.sites WHERE hostname = %s", (f"{detached_site}.example.com",)
+        ).fetchone()[0]
+        cur.execute(
+            "INSERT INTO access.workspace_sites (id,workspace_id,site_id,detached_at) VALUES (%s,%s,%s,CURRENT_TIMESTAMP)",
+            (detached_site, workspace_id, detached_logical_site),
+        )
+        for site_id, state, start, end in [
+            (site_a, 'active', now - timedelta(days=1), now + timedelta(days=1)),
+            (site_a, 'active', now - timedelta(days=4), now + timedelta(days=4)),
+            (other_site, 'active', now - timedelta(days=1), now + timedelta(days=1)),
+            (detached_site, 'active', now - timedelta(days=1), now + timedelta(days=1)),
+            (site_a, 'revoked', now - timedelta(days=1), now + timedelta(days=1)),
+            (site_a, 'active', now + timedelta(days=1), now + timedelta(days=2)),
+            (site_a, 'active', now - timedelta(days=2), now - timedelta(days=1)),
+        ]:
+            cur.execute("""
+                INSERT INTO access.entitlements
+                (id, workspace_site_id, product_code, active_from, active_until, status, source)
+                VALUES (%s,%s,'privacy_web',%s,%s,%s,'internal_grant')
+            """, (uuid4(), site_id, start, end, state))
+
+    assert billing.active_workspace_site_ids(outsider, workspace_id) is None
+    assert billing.active_workspace_site_ids(user_id, other_workspace) is None
+    assert billing.active_workspace_site_ids(user_id, workspace_id) == [site_a]
+    assert billing.current_entitlement(user_id, detached_site) is None
+    with psycopg.connect(database_url) as conn:
+        conn.execute("UPDATE access.entitlements SET status='revoked' WHERE workspace_site_id=%s", (site_a,))
+    assert billing.active_workspace_site_ids(user_id, workspace_id) == []
+
+
+def test_bulk_workspace_entitlements_revoked_before_atomic_read(monkeypatch):
+    """Revocation at the query boundary must deny the full bulk response."""
+    database_url, user_id, workspace_site_id, _, now = _seed()
+    with psycopg.connect(database_url) as conn:
+        workspace_id = conn.execute(
+            "SELECT workspace_id FROM access.workspace_sites WHERE id=%s", (workspace_site_id,)
+        ).fetchone()[0]
+        conn.execute("""
+            INSERT INTO access.entitlements
+            (id,workspace_site_id,product_code,active_from,active_until,status,source)
+            VALUES (%s,%s,'privacy_web',%s,%s,'active','internal_grant')
+        """, (uuid4(), workspace_site_id, now - timedelta(days=1), now + timedelta(days=1)))
+
+    original_connect = billing._connect
+    statements = []
+    class QueryBoundary:
+        def __enter__(self):
+            self.conn = original_connect()
+            self.conn.__enter__()
+            return self
+
+        def __exit__(self, *args):
+            return self.conn.__exit__(*args)
+
+        def execute(self, sql, params):
+            statements.append(sql)
+            # Simulate a concurrent admin revoking membership just before the
+            # authorization + entitlement statement begins.
+            with psycopg.connect(database_url) as conn:
+                conn.execute(
+                    "DELETE FROM access.workspace_members WHERE workspace_id=%s AND user_id=%s",
+                    (workspace_id, user_id),
+                )
+            return self.conn.execute(sql, params)
+
+    monkeypatch.setattr(billing, "_connect", lambda: QueryBoundary())
+    assert billing.active_workspace_site_ids(user_id, workspace_id) is None
+    assert len(statements) == 1
+    assert "JOIN access.workspace_sites" in statements[0]
+    assert "access.workspace_members" in statements[0]

@@ -199,9 +199,34 @@ def current_entitlement(user_id: UUID, workspace_site_id: UUID, product_code: st
             SELECT e.id, e.active_from, e.active_until, e.source FROM access.entitlements e
             JOIN access.workspace_sites ws ON ws.id = e.workspace_site_id
             JOIN access.workspace_members wm ON wm.workspace_id = ws.workspace_id
-            WHERE ws.id=%s AND wm.user_id=%s AND wm.role IN ('owner','member')
+            WHERE ws.id=%s AND ws.detached_at IS NULL
+              AND wm.user_id=%s AND wm.role IN ('owner','member')
               AND e.product_code=%s AND e.status='active'
               AND e.active_from <= CURRENT_TIMESTAMP
               AND (e.active_until IS NULL OR e.active_until > CURRENT_TIMESTAMP)
             ORDER BY e.active_until DESC NULLS FIRST LIMIT 1
         """, (workspace_site_id, user_id, product_code)).fetchone()
+
+
+def active_workspace_site_ids(user_id: UUID, workspace_id: UUID, product_code: str = PRODUCT) -> list[UUID] | None:
+    """Read membership and current linked-site grants in one SQL statement/snapshot."""
+    with _connect() as conn:
+        row = conn.execute("""
+            WITH authorized AS (
+                SELECT workspace_id FROM access.workspace_members
+                WHERE workspace_id = %s AND user_id = %s
+                  AND role IN ('owner', 'member')
+            )
+            SELECT EXISTS (SELECT 1 FROM authorized),
+                   ARRAY(
+                       SELECT DISTINCT ws.id
+                       FROM authorized a
+                       JOIN access.workspace_sites ws ON ws.workspace_id = a.workspace_id
+                       JOIN access.entitlements e ON e.workspace_site_id = ws.id
+                       WHERE ws.detached_at IS NULL
+                         AND e.product_code = %s AND e.status = 'active'
+                         AND e.active_from <= CURRENT_TIMESTAMP
+                         AND (e.active_until IS NULL OR e.active_until > CURRENT_TIMESTAMP)
+                   )
+        """, (workspace_id, user_id, product_code)).fetchone()
+        return row[1] if row[0] else None

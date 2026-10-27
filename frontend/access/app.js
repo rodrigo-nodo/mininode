@@ -271,16 +271,16 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
       meta.textContent = pieces.join(' · ');
       main.append(meta);
 
-      const resultLink = document.createElement('a');
-      resultLink.className = 'site-review-link';
-      resultLink.href = `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}&view=latest`;
-      resultLink.textContent = 'Ver diagnóstico →';
-      resultLink.setAttribute('aria-label', `Ver última revisión de ${site.hostname}`);
-      actions.append(resultLink);
       row.append(main, actions);
     } else {
       row.append(main, actions);
     }
+
+    const status = document.createElement('span');
+    status.className = 'site-access-pending';
+    status.textContent = 'Verificando acceso…';
+    status.setAttribute('role', 'status');
+    actions.append(status);
 
     const unlink = document.createElement('button');
     unlink.type = 'button';
@@ -313,30 +313,46 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
   return actionsBySite;
 }
 
-async function loadEntitledPlanLinks(workspace, requestId, actionsBySite) {
-  const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
-  await Promise.all(sites.map(async (site) => {
-    try {
-      const entitlement = await api(`/api/billing/sites/${encodeURIComponent(site.id)}/entitlement`);
-      if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
-      if (entitlement?.active !== true) return;
-      const actions = actionsBySite.get(site.id);
-      if (!actions) return;
-      const link = actions.querySelector('.site-review-link');
-      if (!link) return;
-      link.className = 'site-plan-link';
-      link.href = `/privacy/plan/?workspace_site_id=${encodeURIComponent(site.id)}`;
-      link.textContent = 'Abrir Privacy Web →';
-      link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
-    } catch {
-      // A transient entitlement error must not be interpreted as an active grant.
-      // The existing saved diagnostic and its result link remain available.
+async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitlementsRequest) {
+  let activeIds = null;
+  try {
+    const result = await entitlementsRequest;
+    if (!Array.isArray(result?.active_site_ids) || !result.active_site_ids.every((id) => typeof id === 'string')) {
+      throw new Error('Invalid workspace entitlements response');
     }
-  }));
+    activeIds = new Set(result.active_site_ids);
+  } catch {
+    // Never interpret failed access verification as an inactive entitlement.
+  }
+  if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+  const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
+  for (const site of sites) {
+    const actions = actionsBySite.get(site.id);
+    if (!actions) continue;
+    actions.replaceChildren();
+    if (activeIds === null) {
+      const unavailable = document.createElement('span');
+      unavailable.className = 'site-access-error';
+      unavailable.textContent = 'No pudimos verificar Privacy Web';
+      actions.append(unavailable);
+    }
+    const link = document.createElement('a');
+    const active = activeIds?.has(site.id) === true;
+    link.className = active ? 'site-plan-link' : 'site-review-link';
+    link.href = active
+      ? `/privacy/plan/?workspace_site_id=${encodeURIComponent(site.id)}`
+      : `/privacy/?workspace_site_id=${encodeURIComponent(site.id)}&view=latest`;
+    link.textContent = active ? 'Abrir Privacy Web →' : 'Ver diagnóstico →';
+    link.setAttribute('aria-label', active
+      ? `Abrir Privacy Web para ${site.hostname}`
+      : `Ver última revisión de ${site.hostname}`);
+    actions.append(link);
+  }
 }
 
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
+  const entitlementsRequest = api(`/api/billing/workspaces/${encodeURIComponent(workspace.id)}/entitlements`).catch(() => null);
   const [latest, grouping] = await Promise.allSettled([
     api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`),
     api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/site-group-reviews`),
@@ -347,7 +363,7 @@ async function loadLatestReviews(workspace) {
     latest.status === 'fulfilled' && Array.isArray(latest.value.reviews) ? latest.value.reviews : [],
     grouping.status === 'fulfilled' && Array.isArray(grouping.value.reviews) ? grouping.value.reviews : [],
   );
-  void loadEntitledPlanLinks(workspace, requestId, actionsBySite);
+  void loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitlementsRequest);
 }
 
 function renderHome() {

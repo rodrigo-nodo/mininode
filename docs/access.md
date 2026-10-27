@@ -517,3 +517,23 @@ Billing también comprueba los períodos futuros sin distinguir el origen: una c
 confirmada comienza al finalizar el período activo (gratuito o pagado), sin
 superposición; no se permite comprar otro período cuando ya hay uno futuro reservado.
 La duración pagada es un mes calendario mediante `add_calendar_month`.
+
+
+### Consulta agrupada de activaciones para Mis sitios (DEV)
+
+`GET /api/billing/workspaces/{workspace_id}/entitlements` requiere JWT Access y
+membresía `owner` o `member` del workspace solicitado; otro workspace devuelve
+404 sin exponer sus sitios. Responde `{"active_site_ids": ["uuid", ...]}` con
+identificadores de `workspace_sites` vinculados (`detached_at IS NULL`),
+del producto `privacy_web`, estado `active` y período vigente.
+La evaluación se realiza en PostgreSQL con consulta agrupada; no hay nuevos
+esquemas, ni autorización derivada del frontend. El backend revalida permisos
+al abrir el Plan o iniciar revisiones.
+
+En Mis sitios cada fila muestra `Verificando acceso…` mientras se resuelve
+una sola consulta agrupada por workspace. Una respuesta exitosa activa
+`Abrir Privacy Web` en los sitios habilitados y `Ver diagnóstico` en los
+demás; un error deja disponible el diagnóstico con aviso de verificación
+fallida (no equivale a un entitlement inactivo). Respuestas de un workspace
+anterior se descartan. El endpoint no pagina todavía: evaluar paginación
+de Mis sitios y mediciones SQL antes de escalar a carteras masivas.

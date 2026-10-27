@@ -51,6 +51,18 @@ def entitlement(workspace_site_id: UUID, user: access.StoredUser = Depends(requi
     return EntitlementResponse(active=True, active_from=row[1], active_until=row[2], source=row[3])
 
 
+class WorkspaceEntitlementsResponse(BaseModel):
+    active_site_ids: list[UUID]
+
+
+@router.get("/workspaces/{workspace_id}/entitlements", response_model=WorkspaceEntitlementsResponse)
+def workspace_entitlements(workspace_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    ids = billing.active_workspace_site_ids(user.id, workspace_id)
+    if ids is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return WorkspaceEntitlementsResponse(active_site_ids=ids)
+
+
 class CheckoutResponse(BaseModel):
     checkout_url: str
 
