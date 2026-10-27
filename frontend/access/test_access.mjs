@@ -302,7 +302,7 @@ test('formats latest review date with Chile time', () => {
 });
 
 test('site rows keep result and unlink actions aligned on desktop and reflow on mobile', () => {
-  assert.match(styles, /\.site-row__actions \{[^}]*flex-direction: column; align-items: flex-start;/);
+  assert.match(styles, /\.site-row__actions \{[^}]*display: grid; align-content: center; justify-items: start;/);
   assert.match(styles, /\.site-access-error \{[^}]*overflow-wrap: normal;/);
   const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
   const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
