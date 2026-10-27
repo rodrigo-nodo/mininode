@@ -360,7 +360,7 @@ test('bulk actions wait for response, reject stale workspace responses, and hand
     append(node) { this.children.push(node); },
   };
   const sandbox = { document, latestReviewsRequestId: 7, activeWorkspaceId: 'w1', Set };
-  vm.runInNewContext(section + '\\nglobalThis.resolveLinks = loadEntitledPlanLinks;', sandbox);
+  vm.runInNewContext(section + '\nglobalThis.resolveLinks = loadEntitledPlanLinks;', sandbox);
   const site = { id: 's1', hostname: 'example.org' };
   const workspace = { id: 'w1', sites: [site] };
   const entries = new Map([['s1', actions]]);
