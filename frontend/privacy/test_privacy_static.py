@@ -17,6 +17,16 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_priorities_heading_tracks_visible_count(self):
+        self.assertIn('id="actions-title">Acciones prioritarias</h3>', HTML)
+        self.assertIn("const actionsTitle = document.querySelector('#actions-title');", APP)
+        self.assertIn("const count = visiblePriorities.length;", APP)
+        self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
+        self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
+        self.assertIn(".slice(0, 3)", APP)
+        self.assertIn('src="app.js?v=dd505a87a335"', HTML)
+
+
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
         self.assertIn('href="styles.css?v=300savedrow"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
@@ -30,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=pw03b1', HTML)
+        self.assertIn('app.js?v=dd505a87a335', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
