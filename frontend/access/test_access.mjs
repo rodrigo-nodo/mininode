@@ -344,6 +344,52 @@ test('bulk entitlement lookup resolves one pending action per workspace site', (
   assert.doesNotMatch(app, /\/api\/billing\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/entitlement/);
 });
 
+test('bulk actions wait for response, reject stale workspace responses, and handle failure', async () => {
+  const section = app.slice(
+    app.indexOf('async function loadEntitledPlanLinks('),
+    app.indexOf('async function loadLatestReviews('),
+  );
+  const makeNode = (tag) => ({
+    tag, className: '', href: '', textContent: '', attributes: {},
+    setAttribute(key, value) { this.attributes[key] = value; },
+  });
+  const document = { createElement: makeNode };
+  const actions = {
+    children: [{ textContent: 'Verificando acceso…' }],
+    replaceChildren(...nodes) { this.children = nodes; },
+    append(node) { this.children.push(node); },
+  };
+  const sandbox = { document, latestReviewsRequestId: 7, activeWorkspaceId: 'w1', Set };
+  vm.runInNewContext(section + '\\nglobalThis.resolveLinks = loadEntitledPlanLinks;', sandbox);
+  const site = { id: 's1', hostname: 'example.org' };
+  const workspace = { id: 'w1', sites: [site] };
+  const entries = new Map([['s1', actions]]);
+  let deliver;
+  const delayed = new Promise((resolve) => { deliver = resolve; });
+  const pending = sandbox.resolveLinks(workspace, 7, entries, delayed);
+  assert.equal(actions.children[0].textContent, 'Verificando acceso…');
+  deliver({ active_site_ids: ['s1'] });
+  await pending;
+  assert.equal(actions.children.length, 1);
+  assert.equal(actions.children[0].textContent, 'Abrir Privacy Web →');
+  assert.equal(actions.children[0].href, '/privacy/plan/?workspace_site_id=s1');
+
+  actions.replaceChildren({ textContent: 'Verificando acceso…' });
+  let resolveOld;
+  const old = new Promise((resolve) => { resolveOld = resolve; });
+  const obsolete = sandbox.resolveLinks(workspace, 7, entries, old);
+  sandbox.activeWorkspaceId = 'w2';
+  resolveOld({ active_site_ids: [] });
+  await obsolete;
+  assert.equal(actions.children[0].textContent, 'Verificando acceso…');
+
+  sandbox.activeWorkspaceId = 'w1';
+  await sandbox.resolveLinks(workspace, 7, entries, Promise.reject(new Error('503')));
+  assert.equal(actions.children[0].textContent, 'No pudimos verificar Privacy Web');
+  assert.equal(actions.children[1].textContent, 'Ver diagnóstico →');
+  assert.equal(actions.children[1].href, '/privacy/?workspace_site_id=s1&view=latest');
+});
+
 test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {
   assert.match(app, /window\.confirm\(/);
   assert.match(app, /\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/unlink/);
