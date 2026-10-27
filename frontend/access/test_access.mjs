@@ -324,7 +324,7 @@ test('account shows the latest Privacy Web review for each site', () => {
   assert.match(app, /Última revisión: \$\{formattedDate\}/);
   assert.match(app, /pieces\.push\(\`\$\{review\.score\}\/100\`\)/);
   assert.match(app, /view=latest/);
-  assert.match(app, /Ver resultado →/);
+  assert.match(app, /Ver diagnóstico →/);
   assert.match(app, /site-review-meta/);
 });
 
@@ -335,9 +335,12 @@ test('direct Privacy Web link requires active entitlement and preserves result',
   assert.match(app, /const actionsBySite = new Map\(\)/);
   assert.match(app, /actionsBySite\.set\(site\.id, actions\)/);
   assert.match(app, /actionsBySite\.get\(site\.id\)/);
+  assert.match(app, /const link = actions\.querySelector\('\.site-review-link'\)/);
+  assert.match(app, /link\.className = 'site-plan-link'/);
+  assert.doesNotMatch(app, /actions\.append\(link\)/);
   assert.match(app, /\/privacy\/plan\/\?workspace_site_id=/);
   assert.match(app, /Abrir Privacy Web →/);
-  assert.match(app, /Ver resultado →/);
+  assert.match(app, /Ver diagnóstico →/);
   assert.match(app, /requestId !== latestReviewsRequestId \|\| activeWorkspaceId !== workspace\.id/);
   assert.match(styles, /\.site-plan-link \{/);
 });
