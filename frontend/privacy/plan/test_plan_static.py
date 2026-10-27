@@ -168,6 +168,15 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
 
+    def test_plan_html_revalidates_and_shared_css_is_versioned(self):
+        headers = (FRONTEND_DIR / "_headers").read_text(encoding="utf-8")
+        self.assertIn("/privacy/plan/\\n  Cache-Control: no-cache, must-revalidate", headers)
+        self.assertIn("/privacy/plan/*\\n  Cache-Control: no-cache, must-revalidate", headers)
+        for css_path in ("/styles.css", "/privacy/plan-demo/styles.css",
+                         "/privacy/plan-assets/styles.css"):
+            self.assertIn('href="' + css_path + '?v=pw03b-cache2"', HTML)
+        self.assertNotIn('href="/privacy/plan-demo/styles.css?v=1"', HTML)
+
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
         for forbidden in ("solicitar plan de corrección", "checkout", "stripe", "webpay", "mercado pago", "login", "magic link", "recheck", "checkbox"):
