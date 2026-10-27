@@ -226,11 +226,11 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
     const row = document.createElement('div');
     const actions = document.createElement('div');
     actions.className = 'site-row__actions';
-    actionsBySite.set(site.id, { actions, row });
     row.className = 'site-row';
 
     const main = document.createElement('div');
     main.className = 'site-row__main';
+    actionsBySite.set(site.id, { actions, main });
 
     const link = document.createElement('a');
     link.className = 'site-link';
@@ -329,8 +329,8 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitl
   for (const site of sites) {
     const entry = actionsBySite.get(site.id);
     if (!entry) continue;
-    const { actions, row } = entry;
-    row.querySelector('.site-access-error')?.remove();
+    const { actions, main } = entry;
+    main.querySelector('.site-access-error')?.remove();
     actions.replaceChildren();
     const link = document.createElement('a');
     const active = activeIds?.has(site.id) === true;
@@ -347,7 +347,7 @@ async function loadEntitledPlanLinks(workspace, requestId, actionsBySite, entitl
       const unavailable = document.createElement('span');
       unavailable.className = 'site-access-error';
       unavailable.textContent = 'No pudimos verificar Privacy Web';
-      row.append(unavailable);
+      main.append(unavailable);
     }
   }
 }

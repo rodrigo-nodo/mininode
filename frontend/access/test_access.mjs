@@ -303,7 +303,7 @@ test('formats latest review date with Chile time', () => {
 
 test('site rows keep result and unlink actions aligned on desktop and reflow on mobile', () => {
   assert.match(styles, /\.site-row__actions \{[^}]*display: grid; align-content: center; justify-items: start;/);
-  assert.match(styles, /\.site-access-error \{ grid-column: 1 \/ -1; grid-row: 2;[^}]*overflow-wrap: normal;/);
+  assert.match(styles, /\.site-access-error \{ display: block; margin-top: 4px;[^}]*overflow-wrap: normal;/);
   const header = `blob ${Buffer.byteLength(styles, 'utf8')}\0`;
   const stylesheetSha = createHash('sha1').update(header).update(styles).digest('hex').slice(0, 12);
   assert.ok(html.includes(`./styles.css?v=${stylesheetSha}`), 'Access HTML must refresh cached CSS');
@@ -365,12 +365,12 @@ test('bulk actions wait for response, reject stale workspace responses, and hand
   vm.runInNewContext(section + '\nglobalThis.resolveLinks = loadEntitledPlanLinks;', sandbox);
   const site = { id: 's1', hostname: 'example.org' };
   const workspace = { id: 'w1', sites: [site] };
-  const row = {
+  const main = {
     children: [],
     querySelector() { return this.children.find((node) => node.className === 'site-access-error') || null; },
     append(node) { node.remove = () => { this.children = this.children.filter((item) => item !== node); }; this.children.push(node); },
   };
-  const entries = new Map([['s1', { actions, row }]]);
+  const entries = new Map([['s1', { actions, main }]]);
   let deliver;
   const delayed = new Promise((resolve) => { deliver = resolve; });
   const pending = sandbox.resolveLinks(workspace, 7, entries, delayed);
@@ -395,8 +395,8 @@ test('bulk actions wait for response, reject stale workspace responses, and hand
   assert.equal(actions.children[0].textContent, 'Ver diagnóstico →');
   assert.equal(actions.children[0].href, '/privacy/?workspace_site_id=s1&view=latest');
   assert.equal(actions.children.length, 1);
-  assert.equal(row.children[0].textContent, 'No pudimos verificar Privacy Web');
-  assert.equal(row.children[0].className, 'site-access-error');
+  assert.equal(main.children[0].textContent, 'No pudimos verificar Privacy Web');
+  assert.equal(main.children[0].className, 'site-access-error');
 });
 
 test('unlink UI confirms before protected POST and preserves distinct success vs refresh errors', () => {
