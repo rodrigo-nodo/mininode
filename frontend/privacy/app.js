@@ -24,6 +24,7 @@ const diagnosticScope = document.querySelector('#diagnostic-scope');
 const diagnosticAreas = document.querySelector('#diagnostic-areas');
 const diagnosticControls = document.querySelector('#diagnostic-controls');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
+const actionsTitle = document.querySelector('#actions-title');
 const correctionOffer = document.querySelector('#privacy-correction-offer');
 const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
 const correctionUnavailable = document.querySelector('#privacy-correction-unavailable');
@@ -271,6 +272,8 @@ const renderPriorities = (priorities) => {
   const visiblePriorities = (Array.isArray(priorities) ? priorities : [])
     .filter((priority) => priority && typeof priority === 'object')
     .slice(0, 3);
+  const count = visiblePriorities.length;
+  actionsTitle.textContent = count === 0 ? 'Sin acciones prioritarias' : `${count} ${count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'}`;
 
   if (visiblePriorities.length === 0) {
     appendTextElement(
