@@ -1,6 +1,6 @@
 # Privacy Web - Roadmap
 
-**Estado:** Plan aprobado; seguimiento actualizado al 26 de octubre de 2026  
+**Estado:** Plan aprobado; seguimiento actualizado al 27 de octubre de 2026  
 **Producto:** Mininode Privacy Web  
 **Referencia oficial:** `main` (`docs/privacy-web/roadmap.md`)  
 **Integración y validación:** rama `dev` y entorno `dev.mininode.io`  
@@ -34,7 +34,7 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 |---|---|---|
 | PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | **Cerrado · PROD** (PR #379) |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | **Cerrado · PROD** (Mininode Admin; PR #379) |
-| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A validado; PW-03B en PR: planes y revisiones con entitlement y migración controlada; retirada legacy pendiente) |
+| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A validado; PW-03B integrado en DEV: planes y revisiones con entitlement y migración controlada; retirada legacy pendiente) |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | **Parcial · DEV** (adaptador y endpoints backend; E2E pendiente, no disponible en PROD) |
 | PW-05 | Unificar tercera persona singular en UX, resultados, hallazgos, recomendaciones, botones, estados y errores | Pendiente |
 | PW-06 | Incorporar observabilidad de diagnósticos, pagos, activaciones y fallos operativos, sin exponer datos sensibles | Pendiente |
@@ -128,3 +128,63 @@ Privacy Data; certificación legal; auditoría integral; modificación automáti
 - **Gobierno del roadmap:** mantener **este archivo en `main`** como referencia oficial. Tras aprobar y mergear cambios del roadmap, sincronizar su contenido hacia `dev` mediante un cambio documental enfocado, sin arrastrar código. `frontend/roadmap/index.html` es un resumen público general distinto: actualizarlo solo en un trabajo editorial/UX posterior aprobado.
 
 **Próximo frente priorizado:** PW-03 (consolidación comercial), seguido de PW-04 (integración E2E Mercado Pago). No activar cobros ni modificar registros históricos por actualizar este roadmap. Nunca mergear sin autorización explícita.
+
+## 11. Privacy Web Plan — Etapa C: rediseño UX aprobado (27 de octubre de 2026)
+
+**Estado:** definición de producto y UX aprobada; implementación pendiente. **Alcance de validación:** rama `dev`, integración Clerk/Access en `https://dev.mininode.io`; PROD sin cambios. Los PRs de esta fase tendrán destino `dev`, con CI y autorización explícita antes de merge. No utilizar Branch Preview como entorno principal.
+
+**Objetivo:** integrar diagnóstico, recomendaciones y seguimiento en una única experiencia de Privacy Web activo, clara para usuarios no técnicos y partners con múltiples sitios. El diagnóstico gratuito permanece para usuarios sin activación. Mantener evaluación pública/pasiva y evitar cualquier promesa de certificación o cumplimiento legal.
+
+### Criterios transversales
+
+- Una pantalla con tres secciones navegables: **Estado de mi sitio**, **Qué debo mejorar** y **Mis avances**; iniciar en Estado de mi sitio.
+- Navegación adaptable: tres pestañas en notebook/tablet y navegación compacta en celular, sin perder contenido ni funciones. Referencias de revisión responsive: 1366 px, 768 px, 390 px y accesibilidad a 320 px; verificar teclado, objetivos táctiles y ausencia de desbordamiento horizontal.
+- Diferenciar **inicial** (primera revisión/línea base), **anterior** (inmediatamente precedente) y **actual** (última revisión válida). Evitar diferencias de score engañosas cuando `framework_version` o `scoring_version` no sean compatibles.
+- Separar vigencia del servicio de resultados del sitio. El servicio activo no significa diagnóstico positivo; las revisiones son manuales, no monitoreo continuo.
+- No duplicar resultados ni instrucciones entre bloques; mensajes comprensibles, códigos PRV secundarios y evidencia observable. No usar «Cumple/No cumple» ni prometer corrección automática.
+- Si una revisión falla, conservar el último resultado válido y comunicar el error sin modificar el score mostrado.
+
+### Bloque 1 — Estado de mi sitio
+
+Pregunta: **¿Cómo está mi sitio actualmente?**
+
+- Mostrar como protagonista el **Privacy Score actual**, fecha y origen de la última revisión válida. Antes de la primera revisión posterior, el diagnóstico inicial también es el actual. Score inicial solo como dato secundario.
+- Resumir las cinco áreas (Transparencia, Formularios, Cookies, Contacto, Seguridad) **por cantidades de estados de controles**, no mediante scores porcentuales por área; utilizar los estados reales del motor y no inventar equivalencias.
+- Diagnóstico completo integrado en el Plan mediante detalle expandible por área y por control; no obligar a volver al diagnóstico gratuito.
+- Cada control muestra **resultado**, **evidencia** y **alcance/limitaciones** cuando corresponda. Preferir «Detectado», «No detectado» y «No concluyente» solo cuando correspondan semánticamente al resultado real; nunca equipararlos automáticamente a cumplimiento normativo.
+- Mantener acciones de corrección en el bloque 2 y el inicio de nuevas revisiones en el bloque 3.
+
+### Bloque 2 — Qué debo mejorar
+
+Pregunta: **¿Qué debería corregir y cómo?**
+
+- Mostrar los **hallazgos pendientes de la última revisión válida**, no el listado congelado del diagnóstico inicial. Los confirmados como corregidos dejan de figurar como pendientes y permanecen trazables en Mis avances.
+- Orden automático por prioridad **alta → media → baja**, conservando orden estable del motor dentro de cada prioridad; inicialmente sin filtros ni ordenación manual.
+- Detalle expandible de cada acción: **qué se encontró**, **cómo abordarlo**, **cómo comprobarlo**.
+- **Sin checklist manual** por ahora: el usuario corrige en su sitio y una revisión posterior verifica las señales observables. Un estado no concluyente nunca equivale automáticamente a corregido.
+- Si no existen mejoras pendientes detectadas, mostrar un mensaje positivo pero acotado al alcance observado; distinguir controles no concluyentes y aclarar que no es certificación legal.
+
+### Bloque 3 — Mis avances
+
+Pregunta: **¿Estoy mejorando?**
+
+- Gráfico de evolución del Privacy Score con valores inicial y actual; representar solo tramos comparables, nunca conectar resultados con versiones incompatibles como una serie continua.
+- Historial **completo** de revisiones, más reciente primero, cada una expandible; se podrá incorporar paginación solo cuando el volumen lo justifique.
+- Para la evolución general, comparar **actual frente a inicial** cuando corresponda; para cambios recientes, comparar con la revisión **inmediatamente anterior**.
+- Desglosar cambios como **corregidos**, **pendientes**, **nuevos** y **no concluyentes**, sin considerar ausencias de evidencia o resultados indeterminados como correcciones.
+- Ubicar aquí **Revisar nuevamente**, disponible durante la vigencia del Plan. No prometer seguimiento automático.
+
+### Brechas técnicas conocidas y secuencia propuesta
+
+El Plan actual prioriza score inicial y acciones originales; el endpoint autenticado devuelve solo `latest_check`, aunque las revisiones se almacenan en PostgreSQL. Antes de implementar el historial completo, detalle actual por control, prioridades dinámicas y estados por área, revisar contratos/snapshots existentes y definir los ajustes backend necesarios, evitando inferir datos inexistentes.
+
+| Tramo | Alcance propuesto | Estado |
+|---|---|---|
+| C1 | Estructura visual, navegación y responsive | **Diseño aprobado · pendiente de implementación** |
+| C2 | Estado actual, áreas, controles y diagnóstico expandible integrado | **Diseño aprobado · pendiente de implementación** |
+| C3 | Acciones pendientes dinámicas y verificación sin checklist manual | **Diseño aprobado · pendiente de implementación** |
+| C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
+
+Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
+
+**Roadmap público:** `frontend/roadmap/index.html` es un resumen editorial distinto; actualizarlo en un trabajo posterior separado, sin presentar estas capacidades UX pendientes como ya disponibles.
