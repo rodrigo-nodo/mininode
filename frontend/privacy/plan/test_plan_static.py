@@ -292,6 +292,63 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn('window.MininodePrivacyControlUX?.name(change.control_code', APP)
         self.assertNotIn('innerHTML', APP)
 
+    def test_c4b_successful_post_failed_get_invalidates_stale_history(self):
+        # Execute actual C4b browser functions using a minimal DOM/fetch simulation.
+        # This protects asynchronous behavior that static substring tests cannot catch.
+        import json
+        import subprocess
+
+        start = APP.index("const invalidateProgressHistory = () => {")
+        end = APP.index("const renderProgressHistory = (history) => {", start)
+        invalidate = APP[start:end]
+        start = APP.index("const performCheck = async () => {")
+        end = APP.index("const loadPlan = async () => {", start)
+        perform = APP[start:end]
+        javascript = """
+const assert = require('node:assert/strict');
+let historyContents = ['stale'];
+const progressUI = {
+  summary: {hidden:false}, chartSection: {hidden:false},
+  history: {replaceChildren() { historyContents = []; }},
+};
+const addText = (parent, tag, value) => {
+  historyContents.push(value);
+  return {setAttribute(name, value) { assert.equal(name, 'role'); assert.equal(value, 'status'); }};
+};
+const elements = new Proxy({}, {
+  get(target, key) {
+    if (!target[key]) target[key] = {hidden:false, disabled:false, textContent:''};
+    return target[key];
+  },
+});
+const entitledSiteId = '00000000-0000-4000-8000-000000000001';
+const currentToken = null;
+let checkInProgress = false, calls = [];
+const authorizedHeaders = async () => ({Accept:'application/json'});
+const fetch = async (url, options) => {
+  calls.push(options.method);
+  return calls.length === 1
+    ? {ok:true, json: async () => ({result:{}, expires_at:null})}
+    : {ok:false};
+};
+const renderCheckResult = () => {};
+const renderProgressDates = () => {};
+const unavailableActions = () => {};
+const unavailableState = () => {};
+const requestTimeoutMs = 10000;
+""" + invalidate + perform + """
+performCheck().then(() => {
+  assert.deepEqual(calls, ['POST', 'GET']);
+  assert.equal(progressUI.summary.hidden, true);
+  assert.equal(progressUI.chartSection.hidden, true);
+  assert.equal(historyContents.length, 1);
+  assert.match(historyContents[0], /Recarga la página/);
+  assert.equal(elements.checkProgress.hidden, true);
+}).catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        result = subprocess.run(["node", "-e", javascript], capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
         for forbidden in ("solicitar plan de corrección", "checkout", "stripe", "webpay", "mercado pago", "login", "magic link", "recheck", "checkbox"):
