@@ -447,6 +447,15 @@ const renderProgressChart = (chronological) => {
   progressUI.chart.append(svg);
   progressUI.chartNote.textContent = 'Cada punto representa una revisión. No se unen resultados de versiones incompatibles.';
 };
+const invalidateProgressHistory = () => {
+  // A successful POST has changed the persisted history. Never show stale data as current.
+  progressUI.summary.hidden = true;
+  progressUI.chartSection.hidden = true;
+  progressUI.history.replaceChildren();
+  const notice = addText(progressUI.history, 'p',
+    'La revisión se guardó, pero no pudimos actualizar tus avances. Recarga la página para ver los resultados más recientes.');
+  notice.setAttribute('role', 'status');
+};
 const renderProgressHistory = (history) => {
   progressUI.history.replaceChildren();
   progressUI.summary.hidden = true;
@@ -552,6 +561,7 @@ const performCheck = async () => {
         renderProgressHistory(latest.history);
         renderProgressDates(latest.diagnostic, data);
       } catch {
+        invalidateProgressHistory();
         unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
         unavailableActions('La revisión se guardó, pero no pudimos actualizar las recomendaciones vigentes. Recarga la página.');
       } finally {
