@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c2b-1',
+            '/privacy/plan-assets/app.js?v=c2ux-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c2b-1', HTML)
+        self.assertIn('app.js?v=c2ux-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -121,7 +121,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("unavailableState", APP)
         self.assertIn("La revisión se guardó", APP)
         self.assertIn("renderCheck(check)", APP)
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c2b-1"', HTML)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c2ux-1"', HTML)
 
     def test_c2_uses_only_shared_theme_tokens_for_styles(self):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
@@ -129,6 +129,18 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("@media(max-width:600px)", css)
         self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
         self.assertNotIn(':root[data-theme="dark"]', css)
+
+    def test_c2_simplified_controls_and_progress_dates_have_explicit_layout(self):
+        self.assertIn("plan-state__deferred-summary", APP)
+        self.assertIn("notApplicable.forEach((item) => renderControl(contents, item))", APP)
+        self.assertIn("controls.filter((item) => item.result !== 'not_applicable')", APP)
+        self.assertIn("plan-state__control-name{font-weight:400", (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8"))
+        for date_id in ("check-before-date", "check-now-date", "check-noncomparable-date"):
+            self.assertIn(f'id="{date_id}"', HTML)
+        self.assertNotIn('id="check-created"', HTML)
+        self.assertIn("diagnostic?.initial?.created_at", APP)
+        self.assertIn("diagnostic?.current?.created_at || review?.created_at", APP)
+        self.assertIn("renderProgressDates(latest.diagnostic, data)", APP)
 
     def test_only_token_request_matches_plan_rewrite(self):
         source = "/privacy/plan/:token"
@@ -225,7 +237,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c2b-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c2ux-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -277,7 +289,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("result.pending_count === 1 ? 'todavía pendiente' : 'todavía pendientes'", APP)
         self.assertIn("result.items.forEach", APP)
         self.assertIn("elements.checkAvailable.hidden = false", APP)
-        self.assertIn("elements.checkCreated.textContent = friendlyDate(review.created_at)", APP)
+        self.assertIn("elements.checkNowDate.textContent = progressDate(currentAt)", APP)
         self.assertIn("renderCheckResult(data);", APP)
         self.assertIn("elements.checkStart.hidden = false", APP)
 
@@ -330,7 +342,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             "elements.checkNow.textContent = `${result.current_score} / 100`",
             "elements.checkCorrected.textContent = result.corrected_count",
             "elements.checkPending.textContent = result.pending_count",
-            "elements.checkCreated.textContent = friendlyDate(review.created_at)",
+            "elements.checkNowDate.textContent = progressDate(currentAt)",
         ):
             self.assertIn(assignment, APP)
 
