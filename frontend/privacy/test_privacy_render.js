@@ -53,9 +53,10 @@ const document = {
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
 const catalogSource = fs.readFileSync(`${__dirname}/control-ux.js`, 'utf8');
 const context = {
-  window: {},
+  window: { location: { search: '' }, addEventListener() {} },
   document,
   URL,
+  URLSearchParams,
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
