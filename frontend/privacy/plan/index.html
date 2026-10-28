@@ -10,11 +10,11 @@
   <link rel="stylesheet" href="/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=c1-ui-3">
-  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c3b-1">
+  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c4b-1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="../../include.js?v=pw03b-header1" defer></script>
   <script src="/privacy/control-ux.js?v=ux21-1" defer></script>
-  <script src="/privacy/plan-assets/app.js?v=c3-progress-name-1" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=c4b-1" defer></script>
 </head>
 <body>
   <div data-include="../../partials/header-nav.html"></div>
@@ -67,6 +67,11 @@
       <p class="plan-implementation-note">La implementación técnica de los cambios no está incluida.</p>
       </section>
       <section class="plan-panel" id="plan-panel-progress" aria-labelledby="plan-tab-progress" hidden>
+      <section class="plan-progress-summary" id="progress-summary" hidden>
+<h2>Mis avances</h2><p>Comparación con el diagnóstico inicial.</p>
+<div class="plan-progress-scores"><div>Diagnóstico inicial<strong id="progress-initial">—</strong><small id="progress-initial-date"></small></div><div>Última revisión<strong id="progress-current">—</strong><small id="progress-current-date"></small></div></div>
+<p id="progress-delta"></p><p id="progress-counts"></p>
+</section>
       <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
         <p class="section-label">Seguimiento</p><h2 id="check-title">Revisar avances</h2>
         <div id="check-available">
@@ -80,7 +85,7 @@
         </div>
         <div id="check-result" hidden>
           <div id="check-comparison">
-            <div class="check-scores"><p>Antes<strong id="check-before"></strong><time class="check-scores__date" id="check-before-date"></time></p><p>Ahora<strong id="check-now"></strong><time class="check-scores__date" id="check-now-date"></time></p></div>
+            <div class="check-scores"><p>Diagnóstico inicial<strong id="check-before"></strong><time class="check-scores__date" id="check-before-date"></time></p><p>Última revisión<strong id="check-now"></strong><time class="check-scores__date" id="check-now-date"></time></p></div>
             <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
             <h3 class="check-result__title">Resultado de las mejoras</h3>
             <div class="check-counts"><p><strong id="check-corrected"></strong><span id="check-corrected-label"></span></p><p><strong id="check-pending"></strong><span id="check-pending-label"></span></p></div>
@@ -95,6 +100,8 @@
         </div>
         <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
       </section>
+      <section class="plan-progress-history" aria-labelledby="progress-history-title"><h2 id="progress-history-title">Historial de revisiones</h2><div id="progress-history-list"></div></section>
+      <section class="plan-progress-chart" id="progress-chart-section" aria-labelledby="progress-chart-title" hidden><h2 id="progress-chart-title">Evolución del Privacy Score</h2><div id="progress-chart"></div><p id="progress-chart-note"></p></section>
       <section class="continuous-monitoring" id="continuous-monitoring" aria-labelledby="continuous-monitoring-title" hidden>
         <p class="continuous-monitoring__badge">Próximamente</p>
         <h2 id="continuous-monitoring-title">Seguimiento automático</h2>
