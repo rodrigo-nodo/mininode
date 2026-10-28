@@ -17,6 +17,7 @@ from psycopg.types.json import Jsonb
 
 from mininode_api.domain_packs.privacy.correction_plan import build_correction_plan
 from mininode_api.domain_packs.privacy.evaluator import load_controls
+from mininode_api.domain_packs.privacy.versioning import diagnostic_versions
 from mininode_api.services import billing, privacy_correction_plan_check
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
@@ -176,6 +177,63 @@ def _diagnostic_view(snapshot: dict, created_at: datetime, *, source: str) -> di
     }
 
 
+def _pending_verification(snapshot: dict, baseline: dict) -> list[dict]:
+    """Uncertain evaluated controls need verification, not a claim of correction."""
+    catalog = {control["code"]: control for control in load_controls()}
+    baseline_codes = {item["control_code"] for item in baseline.get("items", [])}
+    reviewed = {}
+    for item in snapshot.get("controls", []):
+        if isinstance(item, dict) and isinstance(item.get("control_code"), str):
+            reviewed[item["control_code"]] = item.get("result")
+    pending = []
+    for code, control in catalog.items():
+        if control["type"] not in {"evaluation", "conditional_evaluation"} or control.get("score_weight", 1) <= 0:
+            continue
+        result = reviewed.get(code)
+        if result == "not_evaluable" or (code in baseline_codes and result in {None, "not_applicable"}):
+            pending.append({
+                "control_code": code,
+                "name": control["name"],
+                "status": "pending_verification",
+                "reason": result or "missing",
+            })
+    return pending
+
+
+def _current_actions(baseline: dict, snapshot: dict, updated_at: datetime, *, source: str) -> dict:
+    """Read-only C3 plan; never mutate the immutable baseline or infer from old versions."""
+    if source == "review":
+        versions = diagnostic_versions()
+        if any(snapshot.get(key) != value for key, value in versions.items()):
+            return {
+                "status": "version_mismatch",
+                "source": source,
+                "created_at": updated_at,
+                "item_count": None,
+                "items": [],
+                "verification_pending_count": None,
+                "verification_pending": [],
+                "actions_version": None,
+            }
+        generated = build_correction_plan(
+            snapshot.get("controls", []), initial_score=snapshot["score"]
+        )
+    else:
+        # Before the first follow-up, reuse the saved initial plan as-is.
+        generated = baseline
+    verification = _pending_verification(snapshot, baseline)
+    return {
+        "status": "available",
+        "source": source,
+        "created_at": updated_at,
+        "item_count": generated["item_count"],
+        "items": generated["items"],
+        "verification_pending_count": len(verification),
+        "verification_pending": verification,
+        "actions_version": generated["actions_version"],
+    }
+
+
 def _response(cur, entitlement, plan) -> dict:
     plan_id, _, site_url, original, snapshot, created_at, initial_at = plan
     latest = _latest_check(cur, plan_id)
@@ -185,6 +243,9 @@ def _response(cur, entitlement, plan) -> dict:
         "site_url": site_url,
         "created_at": created_at,
         "plan": snapshot,
+        "current_actions": _current_actions(
+            snapshot, current_snapshot, current_at, source="review" if latest else "initial"
+        ),
         "diagnostic": {
             "initial": {
                 "score": original["score"],
