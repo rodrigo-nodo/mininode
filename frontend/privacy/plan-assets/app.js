@@ -307,12 +307,13 @@ const performCheck = async () => {
     }
     renderCheckResult(data);
     if (entitledSiteId) {
+      const refreshController = new AbortController();
+      const refreshTimeout = setTimeout(() => refreshController.abort(), requestTimeoutMs);
       try {
-        // A completed review is persisted; refresh the C2 view from the same
-        // authorized Plan read rather than displaying outdated controls.
+        // A completed review is persisted; refresh C2 without another scan.
         const refreshed = await fetch(
           `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`,
-          { method: 'GET', headers: await authorizedHeaders() },
+          { method: 'GET', headers: await authorizedHeaders(), signal: refreshController.signal },
         );
         if (!refreshed.ok) throw new Error('current_diagnostic_unavailable');
         const latest = await refreshed.json();
@@ -320,6 +321,8 @@ const performCheck = async () => {
         renderState(latest.diagnostic);
       } catch {
         unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
+      } finally {
+        clearTimeout(refreshTimeout);
       }
     }
     if (data.expires_at) {
