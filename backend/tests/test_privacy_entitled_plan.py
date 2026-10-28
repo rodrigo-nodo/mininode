@@ -706,3 +706,67 @@ def test_c4a_history_does_not_connect_incompatible_versions(context, monkeypatch
         assert comparison["comparability"]["status"] == "not_comparable"
         assert comparison["score_change"] is None
     assert history[0]["vs_previous"]["changes"] == []
+
+
+@pytest.mark.parametrize("old,new,expected", [
+    ("not_detected", "partial", "improved"),
+    ("partial", "detected", "improved"),
+    ("not_detected", "detected", "improved"),
+    ("detected", "partial", "regressed"),
+    ("partial", "not_detected", "regressed"),
+    ("detected", "not_detected", "regressed"),
+])
+def test_c4a_partial_transitions_follow_ordered_evidence(old, new, expected):
+    versions = diagnostic_versions()
+    before = {**versions, "score": 47, "controls": [
+        {"control_code": "PRV-003", "result": old}]}
+    after = {**versions, "score": 47, "controls": [
+        {"control_code": "PRV-003", "result": new}]}
+    result = privacy_entitled_plan._compare_review_states(before, after)
+    assert result["changes"] == [{
+        "control_code": "PRV-003", "previous": old,
+        "current": new, "status": expected,
+    }]
+
+
+def test_c4a_history_includes_nonbaseline_controls_in_both_comparisons(context, monkeypatch):
+    c = context
+    path = _path(c)
+    versions = diagnostic_versions()
+    initial = {**c["snapshot"], **versions, "score": 47, "controls": [
+        {"control_code": "PRV-001", "result": "not_detected"},
+        {"control_code": "PRV-003", "result": "detected"},
+    ]}
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("UPDATE privacy.diagnostic SET diagnostic_snapshot=%s, score=47 WHERE id=%s",
+                     (Jsonb(initial), c["original"]))
+    first = c["client"].post(path, headers=c["headers"])
+    assert first.status_code == 200, first.text
+    assert [item["control_code"] for item in first.json()["plan"]["items"]] == ["PRV-001"]
+    reviews = iter([
+        {**initial, "score": 55, "controls": [
+            {"control_code": "PRV-001", "result": "partial"},
+            {"control_code": "PRV-003", "result": "not_detected"},
+        ]},
+        {**initial, "score": 58, "controls": [
+            {"control_code": "PRV-001", "result": "not_evaluable"},
+            # PRV-003 is missing, not corrected.
+        ]},
+    ])
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url",
+                        lambda _: next(reviews))
+    for _ in range(2):
+        response = c["client"].post(path + "/check", headers=c["headers"])
+        assert response.status_code == 200, response.text
+    history = c["client"].get(path, headers=c["headers"]).json()["history"]
+    first_review, second_review = history[1], history[0]
+    for field in ("vs_initial", "vs_previous"):
+        changes = {item["control_code"]: item for item in first_review[field]["changes"]}
+        assert changes["PRV-001"]["status"] == "improved"
+        assert changes["PRV-003"]["status"] == "regressed"
+    assert {item["control_code"]: item["status"] for item in second_review["vs_initial"]["changes"]} == {
+        "PRV-001": "not_conclusive", "PRV-003": "not_conclusive",
+    }
+    assert {item["control_code"]: item["status"] for item in second_review["vs_previous"]["changes"]} == {
+        "PRV-001": "not_conclusive", "PRV-003": "not_conclusive",
+    }
