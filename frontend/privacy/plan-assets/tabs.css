@@ -72,3 +72,24 @@
 .plan-actions__verification-reason{color:var(--color-muted);font-size:var(--text-xs)}
 
 .plan-state__description{color:var(--color-muted);font-size:var(--text-sm);line-height:1.55}
+
+/* C4b: summary and history lead; compact evolution is deliberately secondary. */
+.plan-progress-summary,.plan-progress-history,.plan-progress-chart{padding:clamp(16px,3vw,24px);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg);margin:0 0 18px}
+.plan-progress-summary h2,.plan-progress-history h2{font-size:1.2rem;margin:0 0 10px}
+.plan-progress-summary>p,.plan-progress-chart>p{color:var(--color-muted);font-size:var(--text-sm)}
+.plan-progress-scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}
+.plan-progress-scores>div{padding:16px;border:1px solid var(--color-border);border-radius:12px;display:grid;gap:6px;font-size:var(--text-sm);color:var(--color-muted)}
+.plan-progress-scores strong{font-size:clamp(1.7rem,5vw,2.3rem);color:var(--color-text);line-height:1.1}
+.plan-progress-scores small{font-size:var(--text-xs)}
+#progress-delta{font-weight:650;color:var(--color-text)}
+.plan-progress-entry{padding:14px 0;border-top:1px solid var(--color-border)}
+.plan-progress-entry summary{cursor:pointer;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.plan-progress-entry summary small{color:var(--color-muted)}
+.plan-progress-entry-detail{padding:10px 0 0;line-height:1.6;font-size:var(--text-sm)}
+.plan-progress-entry-detail h4{font-size:var(--text-sm);margin:14px 0 6px}
+.plan-progress-entry-detail ul{padding-left:20px}
+.plan-progress-chart h2{font-size:1rem;margin:0 0 8px}
+.plan-progress-svg{width:100%;max-height:150px}
+.plan-progress-line{stroke:var(--color-primary);stroke-width:2;opacity:.7}
+.plan-progress-dot{fill:var(--color-primary)}
+@media(max-width:520px){.plan-progress-scores{gap:8px}.plan-progress-scores>div{padding:10px}}
