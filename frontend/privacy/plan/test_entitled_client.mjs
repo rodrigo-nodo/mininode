@@ -42,6 +42,37 @@ function payload(status = 'available', withReview = false) {
     site_url: 'https://example.com/',
     created_at: '2026-10-26T12:00:00Z',
     plan: { version: '1', actions_version: '1', initial_score: 65, item_count: 0, items: [] },
+    diagnostic: {
+      initial: { score: 65, created_at: '2026-10-25T12:00:00Z',
+                 framework_version: '0.11', scoring_version: '0.11' },
+      current: {
+        score: withReview ? 75 : 65,
+        created_at: withReview ? '2026-10-26T13:00:00Z' : '2026-10-25T12:00:00Z',
+        source: withReview ? 'review' : 'initial',
+        framework_version: '0.11', scoring_version: '0.11',
+        scope: { pages_analyzed: 2, limited: false },
+        controls: [
+          { control_code: 'PRV-001', name: 'Política de privacidad visible',
+            area: 'Transparencia', type: 'evaluation',
+            result: withReview ? 'detected' : 'not_detected',
+            reason: 'Resultado de una revisión pública.',
+            confidence: 'high', evidence_summary: 'Evidencia visible del sitio.',
+            source_url: 'https://example.com/privacy' },
+          { control_code: 'PRV-101', name: 'Formularios públicos',
+            area: 'Formularios', type: 'context', result: 'not_evaluable',
+            reason: 'No concluyente', evidence_summary: null, source_url: null },
+          { control_code: 'PRV-201', name: 'Cookies observadas',
+            area: 'Cookies', type: 'context', result: 'not_applicable',
+            reason: 'No aplica', evidence_summary: null, source_url: null },
+          { control_code: 'PRV-301', name: 'Contacto',
+            area: 'Contacto', type: 'evaluation', result: 'detected',
+            reason: 'Canal visible', evidence_summary: null, source_url: null },
+          { control_code: 'PRV-501', name: 'HTTPS',
+            area: 'Seguridad', type: 'evaluation', result: 'partial',
+            reason: 'Señal parcial', evidence_summary: null, source_url: null },
+        ],
+      },
+    },
     check: {
       status, expires_at: status === 'expired' ? past : future,
       ...(withReview ? { latest_check: {
@@ -91,7 +122,9 @@ test('new active courtesy creates baseline only after authenticated GET misses',
   assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
   assert.equal(ui.nodes.get('plan-content').hidden, false);
   assert.equal(ui.nodes.get('check-start').hidden, false);
-  assert.equal(ui.nodes.get('initial-score').textContent, '65 / 100');
+  assert.equal(ui.nodes.get('current-score').textContent, '65 / 100');
+  assert.match(ui.nodes.get('current-date').textContent, /25 oct 2026/);
+  assert.equal(ui.nodes.get('current-origin').textContent, 'Primera revisión del sitio');
   assert.equal(ui.nodes.get('summary-count').textContent, 'Sin mejoras recomendadas');
   assert.equal(ui.nodes.get('priority-summary').textContent, '');
 });
@@ -118,9 +151,11 @@ test('revoked or unauthorized access renders no private plan and never creates i
   assert.equal(ui.nodes.get('check-start').hidden, true);
 });
 
-test('active plan review posts with Bearer and shows persisted result', async () => {
+test('active plan review refreshes C2 after POST and keeps persisted result', async () => {
+  let reviewed = false;
   const ui = mount((url, options) => {
     if (options.method === 'POST' && url.endsWith('/check')) {
+      reviewed = true;
       return { ok: true, status: 200, json: async () => ({
         status: 'available', expires_at: future,
         created_at: '2026-10-26T14:00:00Z',
@@ -128,18 +163,46 @@ test('active plan review posts with Bearer and shows persisted result', async ()
                   comparability: { status: 'not_comparable' }, items: [] },
       }) };
     }
+    const latest = payload('available', reviewed);
+    if (reviewed) {
+      latest.diagnostic.current.score = 77;
+      latest.diagnostic.current.created_at = '2026-10-26T14:00:00Z';
+    }
+    return { ok: true, status: 200, json: async () => latest };
+  });
+  await flush();
+  ui.nodes.get('check-start').click();
+  ui.nodes.get('check-submit').click();
+  await flush();
+  assert.equal(ui.calls.length, 3);
+  assert.deepEqual(ui.calls.map((call) => call.options.method), ['GET', 'POST', 'GET']);
+  assert.equal(ui.calls[1].url, path + '/check');
+  assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
+  assert.equal(ui.calls[2].options.headers.Authorization, 'Bearer clerk-test-token');
+  assert.equal(ui.nodes.get('check-result').hidden, false);
+  assert.equal(ui.nodes.get('check-current-score').textContent, '77 / 100');
+  assert.equal(ui.nodes.get('current-score').textContent, '77 / 100');
+  assert.equal(ui.nodes.get('current-origin').textContent, 'Última revisión válida');
+});
+
+test('failed C2 refresh after successful POST does not misrepresent old state as current', async () => {
+  const ui = mount((url, options) => {
+    if (url.endsWith('/check')) return { ok: true, status: 200, json: async () => ({
+      status: 'available', created_at: '2026-10-27T14:00:00Z',
+      result: { current_score: 80, comparability: { status: 'not_comparable' }, items: [] },
+    }) };
+    if (ui && ui.calls.length > 2) return { ok: false, status: 503, json: async () => ({}) };
     return { ok: true, status: 200, json: async () => payload() };
   });
   await flush();
   ui.nodes.get('check-start').click();
   ui.nodes.get('check-submit').click();
   await flush();
-  assert.equal(ui.calls.length, 2);
-  assert.equal(ui.calls[1].url, path + '/check');
-  assert.equal(ui.calls[1].options.method, 'POST');
-  assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
   assert.equal(ui.nodes.get('check-result').hidden, false);
-  assert.equal(ui.nodes.get('check-current-score').textContent, '77 / 100');
+  assert.equal(ui.nodes.get('state-score-block').hidden, true);
+  assert.equal(ui.nodes.get('state-diagnostic').hidden, true);
+  assert.equal(ui.nodes.get('state-notice').hidden, false);
+  assert.match(ui.nodes.get('state-notice').textContent, /Recarga la página/);
 });
 
 test('C1 navigation defaults to state and switches panels without new requests', async () => {
@@ -172,4 +235,50 @@ test('compact actions summary lists only nonzero priorities and one recommendati
   assert.equal(ui.nodes.get('priority-summary').textContent, '2 de prioridad alta');
   assert.equal(ui.nodes.get('plan-items').children.length, 2);
   assert.equal(ui.calls.length, 1);
+});
+
+test('C2 renders five areas, control evidence and observed scope without scores per area', async () => {
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => payload() }));
+  await flush();
+  const areas = ui.nodes.get('state-areas').children;
+  assert.equal(areas.length, 5);
+  assert.deepEqual(areas.map((area) => area.children[0].children[0].textContent),
+    ['Transparencia', 'Formularios', 'Cookies', 'Contacto', 'Seguridad']);
+  assert.match(areas[0].children[0].children[1].textContent, /1 no detectado/);
+  const firstControl = areas[0].children[1].children[0];
+  assert.equal(firstControl.children[0].children[0].textContent, 'Política de privacidad visible');
+  assert.equal(firstControl.children[0].children[1].textContent, 'No detectado');
+  const body = firstControl.children[1];
+  assert.ok(body.children.some((child) => child.textContent === 'Evidencia visible del sitio.'));
+  assert.ok(body.children.some((child) => child.href === 'https://example.com/privacy'));
+  assert.match(ui.nodes.get('state-scope').textContent, /2 páginas analizadas/);
+  assert.equal(ui.nodes.get('plan-panel-actions').hidden, true);
+  assert.equal(ui.calls.length, 1);
+});
+
+test('C2 preserves unknown historical controls separately and does not use unsafe links', async () => {
+  const data = payload();
+  data.diagnostic.current.controls.push({
+    control_code: 'PRV-OLD', name: 'Control antiguo', area: null, type: null,
+    result: 'not_evaluable', reason: 'Evidencia incompleta', confidence: 'low',
+    evidence_summary: null, source_url: 'javascript:alert(1)',
+  });
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const areas = ui.nodes.get('state-areas').children;
+  assert.equal(areas.length, 6);
+  assert.equal(areas[5].children[0].children[0].textContent, 'Otros controles de esta revisión');
+  const oldBody = areas[5].children[1].children[0].children[1];
+  assert.equal(oldBody.children.some((child) => child.href), false);
+  assert.match(oldBody.children[0].textContent, /Evidencia incompleta/);
+});
+
+test('C2 displays a safe fallback when an old access lacks the C2a diagnostic contract', async () => {
+  const data = payload();
+  delete data.diagnostic;
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('state-score-block').hidden, true);
+  assert.match(ui.nodes.get('state-notice').textContent, /no está disponible/);
+  assert.equal(ui.nodes.get('check-start').hidden, false);
 });

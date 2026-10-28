@@ -80,6 +80,18 @@ La respuesta autenticada existente de `GET/POST /api/privacy/workspace-sites/{wo
 
 C2b utilizará este contrato para mostrar score actual y fecha, cinco áreas y controles expandibles. El score inicial y su fecha permanecerán en **Mis avances** como referencia comparativa; la evolución/historial corresponde a C4.
 
+#### C2b - Estado de mi sitio (frontend)
+
+C2b consume **únicamente** el contrato autenticado `diagnostic.current` de C2a para presentar:
+
+- Privacy Score actual y su fecha real de diagnóstico, con indicador discreto de primera o última revisión. El score inicial no aparece en esta pestaña: la comparación inicial/actual con ambas fechas pertenece a **Mis avances** (C4).
+- Cinco áreas expandibles y controles anidados expandibles, con conteo textual por estados observados (sin inventar puntuaciones por área). Si un snapshot histórico contiene controles sin área reconocida, se presentan bajo «Otros controles de esta revisión».
+- Resultado, explicación, resumen de evidencia pública y enlace de origen saneado cuando están disponibles. Si no existe resumen de evidencia o un resultado no es concluyente, se señala explícitamente; no se asume cumplimiento ni corrección. Se muestra el alcance limitado y el número de páginas cuando el diagnóstico los informa.
+- Una revisión nueva exitosa refresca el diagnóstico actual mediante el GET autenticado del Plan. Si la lectura posterior falla, se oculta el estado potencialmente obsoleto y se invita a recargar, sin negar que la revisión fue guardada.
+- Accesos legados sin `diagnostic` mantienen sus otras funciones con un mensaje explícito sobre la ausencia del detalle. No se ejecutan inspecciones adicionales por abrir el Plan.
+
+Estilos con tokens globales Mininode, responsive, y tests de contrato visible, aislamiento lógico de pestañas y actualización posterior a revisión. Sin cambios de API, scoring, controles ni BD.
+
 ### Bloque 2 — Qué debo mejorar
 
 Pregunta: **¿Qué debería corregir y cómo?**
@@ -107,8 +119,8 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 | Tramo | Alcance propuesto | Estado |
 |---|---|---|
 | C1 | Estructura visual, navegación y responsive | **Implementado en DEV; validaciones visuales realizadas** |
-| C2a | Backend: contrato de lectura del diagnóstico vigente | **En implementación (PR independiente)** |
-| C2b | Frontend: estado actual, cinco áreas y controles expandibles | **Diseño aprobado · pendiente de implementación** |
+| C2a | Backend: contrato de lectura del diagnóstico vigente | **Mergeado en DEV (PR #400)** |
+| C2b | Frontend: estado actual, cinco áreas y controles expandibles | **Implementado en PR; pendiente de CI, merge y validación DEV** |
 | C3 | Acciones pendientes dinámicas y verificación sin checklist manual | **Diseño aprobado · pendiente de implementación** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
 

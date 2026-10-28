@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=c1-ui-3">
-  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c1-ui-3">
+  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c2b-1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="../../include.js?v=pw03b-header1" defer></script>
-  <script src="/privacy/plan-assets/app.js?v=c1-ui-3" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=c2b-1" defer></script>
 </head>
 <body>
   <div data-include="../../partials/header-nav.html"></div>
@@ -32,12 +32,20 @@
       </nav>
       <section class="plan-panel" id="plan-panel-state" aria-labelledby="plan-tab-state">
         <h2>Estado de mi sitio</h2>
-        <p>Resumen del diagnóstico inicial. El estado actual y el detalle por áreas estarán disponibles en la próxima etapa.</p>
-        <dl class="plan-facts">
-          <div><dt>Sitio</dt><dd id="site-url">—</dd></div>
-          <div><dt>Score inicial</dt><dd id="initial-score">—</dd></div>
-          <div><dt>Mejoras recomendadas</dt><dd id="item-count">—</dd></div>
-        </dl>
+        <p class="plan-state__site" id="site-url">—</p>
+        <div class="plan-state__score" id="state-score-block" hidden>
+          <p class="plan-state__label">Privacy Score actual</p>
+          <p class="plan-state__number" id="current-score">—</p>
+          <p class="plan-state__date">Revisado el <time id="current-date"></time></p>
+          <p class="plan-state__origin" id="current-origin"></p>
+        </div>
+        <p class="plan-state__notice" id="state-notice" role="status" hidden></p>
+        <section class="plan-state__diagnostic" id="state-diagnostic" aria-labelledby="state-areas-title" hidden>
+          <h3 id="state-areas-title">Áreas evaluadas</h3>
+          <p class="plan-state__scope" id="state-scope"></p>
+          <div id="state-areas" class="plan-state__areas"></div>
+          <p class="plan-state__footnote">Estos resultados describen señales públicas observables. No certifican cumplimiento legal.</p>
+        </section>
       </section>
       <section class="plan-panel" id="plan-panel-actions" aria-labelledby="plan-tab-actions" hidden>
       <section class="plan-summary" aria-labelledby="summary-title">

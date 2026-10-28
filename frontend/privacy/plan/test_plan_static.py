@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c1-ui-3',
+            '/privacy/plan-assets/app.js?v=c2b-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c1-ui-3', HTML)
+        self.assertIn('app.js?v=c2b-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -104,6 +104,31 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             ("check-cancel", "btn--secondary"),
         ):
             self.assertRegex(HTML, 'id="' + button_id + '"[^>]*class="btn ' + variant + '"')
+
+    def test_c2_diagnostic_from_authorized_contract_is_not_another_actions_list(self):
+        for element_id in ("site-url", "current-score", "current-date", "current-origin",
+                           "state-score-block", "state-areas", "state-diagnostic", "state-notice"):
+            self.assertIn(f'id="{element_id}"', HTML)
+        self.assertNotIn('id="initial-score"', HTML)
+        self.assertNotIn('id="item-count"', HTML)
+        self.assertIn('renderState(diagnostic)', APP)
+        self.assertIn("diagnosticAreas = ['Transparencia', 'Formularios', 'Cookies', 'Contacto', 'Seguridad']", APP)
+        self.assertIn("current.controls.filter", APP)
+        self.assertIn("'details'", APP)
+        self.assertIn("'summary'", APP)
+        self.assertIn("evidence_summary", APP)
+        self.assertIn("safeEvidenceUrl", APP)
+        self.assertIn("unavailableState", APP)
+        self.assertIn("La revisión se guardó", APP)
+        self.assertIn("renderCheck(check)", APP)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c2b-1"', HTML)
+
+    def test_c2_uses_only_shared_theme_tokens_for_styles(self):
+        css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
+        self.assertIn(".plan-state__area", css)
+        self.assertIn("@media(max-width:600px)", css)
+        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
+        self.assertNotIn(':root[data-theme="dark"]', css)
 
     def test_only_token_request_matches_plan_rewrite(self):
         source = "/privacy/plan/:token"
@@ -142,7 +167,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertLess(APP.index("validPlanResponse(data)"), APP.index("render(data)"))
 
     def test_plan_render_function_is_present_and_invoked(self):
-        self.assertIn("const render = ({ site_url: siteUrl, plan, check }) => {", APP)
+        self.assertIn("const render = ({ site_url: siteUrl, plan, check, diagnostic }) => {", APP)
         self.assertIn("renderCheck(check);", APP)
         self.assertIn("render(data);", APP)
 
@@ -200,7 +225,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c1-ui-3"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c2b-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -299,7 +324,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("$", monitoring)
 
     def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
-        self.assertEqual(APP.count("fetch("), 5)  # legacy and authenticated paths, no monitoring API
+        self.assertEqual(APP.count("fetch("), 6)  # includes C2 post-review read; no monitoring API
         for assignment in (
             "elements.checkBefore.textContent = `${result.original_score} / 100`",
             "elements.checkNow.textContent = `${result.current_score} / 100`",
