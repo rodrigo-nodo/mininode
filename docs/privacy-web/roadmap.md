@@ -172,8 +172,8 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 | C2a | Backend: contrato de lectura del diagnóstico vigente | **Mergeado en DEV (PR #400)** |
 | C2b | Frontend: estado actual, cinco áreas y controles expandibles | **PASS visual en DEV (PRs #401 y #402)** |
 | C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **Mergeado en DEV, PR #403; Reviewer PASS y CI verde** |
-| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **Mergeado en DEV (PR #404); integración real sin cambios validada el 28-oct-2026; cierre visual y recarga pendientes** |
-| C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
+| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **PASS final DEV 28-oct-2026; PRs #404–#407 mergeados; 47→47, cero corregidas, dos pendientes; recarga y nombres UX PRV-003 validados visualmente** |
+| C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño UX aprobado (gráfico compacto al final); C4a historial backend en implementación** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
 
