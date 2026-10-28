@@ -131,6 +131,18 @@ C3b consumirá **exclusivamente** `current_actions` para «Qué debo mejorar», 
 
 Se preservan las tres pestañas y el comportamiento de C2; C4 continúa a cargo del historial y evolución. Sin cambios de API, scoring, controles, persistencia ni motor de recomendaciones.
 
+#### Catálogo de presentación UX - 21 controles (independiente del motor)
+
+Decisión de producto: conservar dos conceptos separados.
+
+- **Catálogo técnico**: `backend/src/mininode_api/domain_packs/privacy/controls.json` (`v0.11`) continúa definiendo el identificador PRV, nombre de referencia técnico, dominio, aplicabilidad, criterios y evidencias. No se modifica scoring, resultados, reglas ni contratos de API.
+- **Catálogo UX único**: `frontend/privacy/control-ux.js` contiene exactamente 21 códigos y para cada uno un nombre comprensible y una descripción breve. Es la única fuente para la **presentación** de controles conocidos en el diagnóstico gratuito, las tres pestañas del Plan (incluidas acciones, verificación y evolución) y la demo. Mantener códigos PRV visibles para trazabilidad.
+- Las descripciones aparecen en los detalles del diagnóstico público y bajo el control expandido de «Estado de mi sitio»; se preservan hallazgos, evidencias y recomendaciones propias del diagnóstico. En «Qué debo mejorar» no se duplica la descripción donde ya existen hallazgo, corrección e instrucciones.
+- Controles históricos desconocidos conservan el nombre recibido sin inventar descripciones ni asociaciones; el cambio de nombre UX no modifica snapshots persistidos ni resultados históricos. Se eliminan las excepciones locales de PRV-003.
+- Los seis controles informativos (`PRV-004`, `PRV-009`, `PRV-101`, `PRV-103`, `PRV-104`, `PRV-201`) siguen sin peso en el score; ser «informativo» en Mininode no equivale a que la información sea legalmente opcional.
+- **Limitaciones fuera de alcance**: PRV-004 detecta fecha **o** versión, no acredita comprobar ambas; PRV-009 observa un fundamento declarado, no verifica su suficiencia legal y no participa del score. Revisar la cobertura de ambos por separado; unificar nombres no cambia el alcance efectivo de estos controles.
+- Versionar scripts compartidos y mantener tests de cobertura del catálogo UX contra los códigos del framework técnico, orden de carga y consistencia visual entre pantallas.
+
 ### Bloque 3 — Mis avances
 
 Pregunta: **¿Estoy mejorando?**

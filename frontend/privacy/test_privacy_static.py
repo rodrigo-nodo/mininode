@@ -17,6 +17,46 @@ CORE_AUTH = (FRONTEND_DIR / "assets" / "js" / "core-auth.js").read_text(encoding
 
 
 class PrivacyResultStaticTests(unittest.TestCase):
+    def test_all_21_controls_have_one_shared_ux_name_and_description(self):
+        ux_source = (PRIVACY_DIR / "control-ux.js").read_text(encoding="utf-8")
+        result = subprocess.run(
+            ["node", "-e", "globalThis.window = {};\n"
+             + ux_source + "\nprocess.stdout.write(JSON.stringify(window.MininodePrivacyControlUX.entries));"],
+            text=True, capture_output=True, check=True,
+        )
+        entries = json.loads(result.stdout)
+        technical = json.loads((FRONTEND_DIR.parent /
+            "backend/src/mininode_api/domain_packs/privacy/controls.json").read_text(encoding="utf-8"))
+        expected_codes = {control["code"] for control in technical["controls"]}
+        self.assertEqual(len(expected_codes), 21)
+        self.assertEqual(set(entries), expected_codes)
+        for code, entry in entries.items():
+            self.assertEqual(set(entry), {"name", "description"})
+            self.assertTrue(entry["name"].strip(), code)
+            self.assertTrue(entry["description"].strip(), code)
+        # The technical framework contract remains separate from customer copy.
+        self.assertNotIn("result:", ux_source)
+
+    def test_all_control_views_load_the_shared_catalog_before_renderers(self):
+        pages = (
+            ("index.html", 'src="app.js?v=ux21-1"'),
+            ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=ux21-1"'),
+            ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
+        )
+        for page, renderer in pages:
+            html = (PRIVACY_DIR / page).read_text(encoding="utf-8")
+            self.assertLess(html.index("control-ux.js?v=ux21-1"), html.index(renderer))
+        for path in ("app.js", "plan-assets/app.js", "plan-demo/app.js"):
+            script = (PRIVACY_DIR / path).read_text(encoding="utf-8")
+            self.assertIn("MininodePrivacyControlUX", script)
+            self.assertNotIn("displayNames", script)
+        plan = (PRIVACY_DIR / "plan-assets/app.js").read_text(encoding="utf-8")
+        self.assertIn("description(item.control_code)", plan)
+        self.assertIn("name(item.control_code, item.name)", plan)
+        self.assertIn("control.code, control.name", APP)
+        self.assertIn("description(control.code)", APP)
+
+
     def test_priorities_heading_tracks_visible_count(self):
         self.assertIn('id="actions-title">Acciones prioritarias</h3>', HTML)
         self.assertIn("const actionsTitle = document.querySelector('#actions-title');", APP)
@@ -24,11 +64,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=dd505a87a335"', HTML)
+        self.assertIn('src="app.js?v=ux21-1"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=300savedrow"', HTML)
+        self.assertIn('href="styles.css?v=ux21-1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -40,7 +80,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=dd505a87a335', HTML)
+        self.assertIn('app.js?v=ux21-1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)

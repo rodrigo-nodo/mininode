@@ -73,7 +73,7 @@ const privacyAreas = [
     controls: [
       { code: 'PRV-001', name: 'Política de privacidad visible' },
       { code: 'PRV-002', name: 'Política de privacidad accesible' },
-      { code: 'PRV-003', name: 'Política atribuible al negocio' },
+      { code: 'PRV-003', name: 'Política propia del responsable' },
       { code: 'PRV-004', name: 'Fecha o versión de la política', informational: true },
       { code: 'PRV-005', name: 'Identificación del responsable' },
       { code: 'PRV-006', name: 'Canal para ejercer derechos' },
@@ -81,7 +81,7 @@ const privacyAreas = [
       { code: 'PRV-008', name: 'Finalidades del tratamiento' },
       { code: 'PRV-009', name: 'Base declarada del tratamiento', informational: true },
       { code: 'PRV-010', name: 'Destinatarios o terceros' },
-      { code: 'PRV-011', name: 'Derechos de las personas' },
+      { code: 'PRV-011', name: 'Derechos del titular' },
       { code: 'PRV-012', name: 'Conservación de datos' },
       { code: 'PRV-013', name: 'Reclamo ante la Agencia' },
       { code: 'PRV-014', name: 'Retiro del consentimiento' },
@@ -90,13 +90,13 @@ const privacyAreas = [
   {
     name: 'Formularios',
     controls: [
-      { code: 'PRV-101', name: 'Recopilación de datos personales' },
-      { code: 'PRV-104', name: 'Información o consentimiento en formularios' },
+      { code: 'PRV-101', name: 'Formularios que recopilan datos personales' },
+      { code: 'PRV-104', name: 'Información de privacidad asociada al formulario' },
     ],
   },
-  { name: 'Cookies', controls: [{ code: 'PRV-201', name: 'Uso o información sobre cookies' }] },
+  { name: 'Cookies', controls: [{ code: 'PRV-201', name: 'Cookies observadas' }] },
   { name: 'Contacto', controls: [{ code: 'PRV-301', name: 'Canal de contacto visible' }] },
-  { name: 'Seguridad', controls: [{ code: 'PRV-501', name: 'HTTPS activo' }] },
+  { name: 'Seguridad', controls: [{ code: 'PRV-501', name: 'Uso de HTTPS' }] },
 ];
 
 const AREA_INFO = {
@@ -246,7 +246,11 @@ const renderAreasAndControls = (controls) => {
 
     area.controls.forEach((control) => {
       const item = appendTextElement(list, 'li', '', 'privacy-control');
-      appendTextElement(item, 'span', control.name, 'privacy-control__name');
+      const nameBlock = appendTextElement(item, 'span', '', 'privacy-control__name');
+      const ux = window.MininodePrivacyControlUX;
+      appendTextElement(nameBlock, 'span', ux?.name(control.code, control.name) ?? control.name, 'privacy-control__label');
+      const description = ux?.description(control.code);
+      if (description) appendTextElement(nameBlock, 'small', description, 'privacy-control__description');
       const result = resultLabels[controlsByCode.get(control.code)?.result] || resultLabels.not_evaluable;
       const badges = appendTextElement(item, 'span', '', 'privacy-control__badges');
       appendTextElement(badges, 'span', result.label, `privacy-state privacy-state--${result.className}`);

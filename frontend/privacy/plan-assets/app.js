@@ -123,7 +123,7 @@ const renderCurrentActions = (currentActions, legacyPlan) => {
     };
     actions.verification_pending.forEach((item) => {
       const row = addText(elements.verificationList, 'li', '', 'plan-actions__verification-item');
-      addText(row, 'span', item.name);
+      addText(row, 'span', window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name);
       addText(row, 'small', labels[item.reason], 'plan-actions__verification-reason');
     });
   }
@@ -235,9 +235,11 @@ const renderState = (diagnostic) => {
     const renderControl = (target, item) => {
       const detail = addText(target, 'details', '', 'plan-state__control');
       const heading = addText(detail, 'summary', '', 'plan-state__control-summary');
-      addText(heading, 'span', item.name, 'plan-state__control-name');
+      addText(heading, 'span', window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name, 'plan-state__control-name');
       addText(heading, 'span', diagnosticStates[item.result] || 'Sin resultado reconocido', 'plan-state__result');
       const body = addText(detail, 'div', '', 'plan-state__control-body');
+      const description = window.MininodePrivacyControlUX?.description(item.control_code);
+      if (description) addText(body, 'p', description, 'plan-state__description');
       addText(body, 'p', item.reason || 'No se registró una explicación para este resultado.');
       if (item.evidence_summary) {
         addText(body, 'p', 'Evidencia observada', 'plan-state__field');
@@ -293,7 +295,7 @@ const showError = (kind) => {
 const renderItem = (item, index) => {
   const fragment = elements.template.content.cloneNode(true);
   fragment.querySelector('.plan-item__number').textContent = index + 1; fragment.querySelector('.plan-item__code').textContent = item.control_code;
-  fragment.querySelector('.plan-item__name').textContent = item.name;
+  fragment.querySelector('.plan-item__name').textContent = window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name;
   const priority = fragment.querySelector('.plan-item__priority'); priority.textContent = `Prioridad ${item.priority.toLowerCase()}`; priority.dataset.priority = item.priority.toLowerCase();
   fragment.querySelector('.plan-item__finding').textContent = item.finding; fragment.querySelector('.plan-item__recommendation').textContent = item.recommendation;
   fragment.querySelector('.plan-item__validation p').textContent = item.validation_step;
@@ -335,7 +337,7 @@ const renderCheckResult = (review) => {
     icon.className = `check-item__icon check-item__icon--${corrected ? 'corrected' : 'pending'}`;
     icon.textContent = corrected ? '✓' : '⚠';
     icon.setAttribute('aria-hidden', 'true');
-    content.textContent = item.name;
+    content.textContent = window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name;
     status.textContent = corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo';
     content.append(status);
     li.append(icon, content);

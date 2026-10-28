@@ -10,15 +10,11 @@ const closing = document.querySelector('.plan-closing');
 const errorMessage = document.querySelector('#plan-error');
 
 const priorityOrder = ['Alta', 'Media', 'Baja'];
-const displayNames = {
-  'PRV-003': 'Política de privacidad claramente asociada a la empresa',
-};
-
 const renderPlanItem = (item, index) => {
   const fragment = itemTemplate.content.cloneNode(true);
   fragment.querySelector('.plan-item__number').textContent = index + 1;
   fragment.querySelector('.plan-item__code').textContent = item.control_code;
-  fragment.querySelector('.plan-item__name').textContent = displayNames[item.control_code] || item.name;
+  fragment.querySelector('.plan-item__name').textContent = window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name;
 
   const priority = fragment.querySelector('.plan-item__priority');
   priority.textContent = `Prioridad ${item.priority.toLowerCase()}`;

@@ -100,11 +100,11 @@ class PlanDemoStaticTests(unittest.TestCase):
             if control["code"] == "PRV-003"
         )
         self.assertEqual(prv_003["name"], "Política propia del responsable")
-        self.assertIn("'PRV-003'", APP)
-        self.assertIn(
-            "Política de privacidad claramente asociada a la empresa", APP
-        )
-        self.assertIn("displayNames[item.control_code] || item.name", APP)
+        self.assertIn("window.MininodePrivacyControlUX?.name(item.control_code, item.name)", APP)
+        ux_catalog = (DEMO_DIR.parent / "control-ux.js").read_text(encoding="utf-8")
+        self.assertIn("Política de privacidad claramente asociada a la empresa", ux_catalog)
+        self.assertIn('src="/privacy/control-ux.js?v=ux21-1"', HTML)
+        self.assertNotIn("displayNames", APP)
 
     def test_demo_has_no_commercial_or_future_infrastructure(self):
         combined = (HTML + APP).lower()
@@ -119,7 +119,7 @@ class PlanDemoStaticTests(unittest.TestCase):
 
     def test_local_assets_are_cache_busted_and_no_external_assets_exist(self):
         self.assertIn('href="styles.css?v=c1-ui-3"', HTML)
-        self.assertIn('src="app.js?v=1"', HTML)
+        self.assertIn('src="app.js?v=ux21-1"', HTML)
         self.assertNotIn("url(", STYLES.lower())
 
     def test_visible_copy_uses_formal_third_person_language(self):
