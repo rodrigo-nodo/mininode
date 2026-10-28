@@ -337,7 +337,7 @@ const renderCheckResult = (review) => {
     icon.className = `check-item__icon check-item__icon--${corrected ? 'corrected' : 'pending'}`;
     icon.textContent = corrected ? '✓' : '⚠';
     icon.setAttribute('aria-hidden', 'true');
-    content.textContent = window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name;
+    content.textContent = window.MininodePrivacyControlUX?.name(item.control_id ?? item.control_code, item.name) ?? item.name;
     status.textContent = corrected ? 'Corregido' : item.status === 'still_pending' ? 'Sigue pendiente' : 'No fue posible evaluarlo';
     content.append(status);
     li.append(icon, content);

@@ -114,9 +114,9 @@ Pregunta: **¿Qué debería corregir y cómo?**
 - `verification_pending_count` y `verification_pending`: controles evaluables sin conclusión (`not_evaluable`) y controles con una acción en el Plan inicial **o en cualquier revisión anterior compatible** que posteriormente pasan a `not_applicable` o desaparecen, sin confirmación de corrección intermedia. Se reconstruyen los hallazgos no resueltos en orden cronológico desde los snapshots guardados de este mismo Plan: solo `detected` confirma su resolución; `not_evaluable`, `not_applicable` y ausencias no la confirman. Son **pendientes de verificación**, nunca acciones supuestamente corregidas ni instrucciones inventadas.
 - El diagnóstico revisado debe identificar exactamente las versiones vigentes de framework/scoring. Si faltan o difieren, `status=version_mismatch`, conteos `null` e instrucciones vacías: **no** interpretar el vacío como «sin pendientes». La generación de acciones desde el diagnóstico vigente no requiere comparar el score histórico inicial con el actual. Una revisión antigua con versiones incompatibles no se reinterpreta con el catálogo vigente.
 - La lectura sigue protegida por membresía, sitio no desvinculado y entitlement, incluidos los accesos de solo lectura tras vencimiento natural y el bloqueo por revocación.
-- Sin cambios de BD, migraciones, motor de priorización, scoring, controles, catálogo de acciones o endpoints de revisión; el frontend actual continuará mostrando el Plan inicial hasta C3b.
+- Sin cambios de BD, migraciones, motor de priorización, scoring, controles, catálogo de acciones o endpoints de revisión. C3b ya se implementó en DEV; «Qué debo mejorar» utiliza las acciones de la última revisión válida.
 
-C3b consumirá **exclusivamente** `current_actions` para «Qué debo mejorar», mostrará un estado explícito para pendientes de verificación y distinguirá `version_mismatch` de un diagnóstico sin hallazgos accionables. Después de cada revisión volverá a leer el Plan autenticado.
+C3b consume **exclusivamente** `current_actions` para «Qué debo mejorar», muestra pendientes de verificación aparte y distingue `version_mismatch` de un diagnóstico sin hallazgos accionables. Después de cada revisión vuelve a leer el Plan autenticado.
 
 #### C3b - Recomendaciones dinámicas (frontend)
 
@@ -131,9 +131,18 @@ C3b consumirá **exclusivamente** `current_actions` para «Qué debo mejorar», 
 
 Se preservan las tres pestañas y el comportamiento de C2; C4 continúa a cargo del historial y evolución. Sin cambios de API, scoring, controles, persistencia ni motor de recomendaciones.
 
+#### Validación C3 en DEV - 28-oct-2026
+
+- En la revisión real de un sitio público sin cambios intencionales: Privacy Score inicial/actual **47/100 → 47/100**, **0** mejoras corregidas, **2** aún pendientes; «Estado de mi sitio» y «Qué debo mejorar» mostraron fecha actualizada y ambas acciones (PRV-001 y PRV-003). Esta prueba confirma el recorrido de revisión y la consistencia observable en ese escenario; **no demuestra** manualmente una corrección ni un hallazgo nuevo.
+- Las pruebas automatizadas de C3a/C3b cubren cambios, pendientes no concluyentes, incompatibilidad de versiones y recuperación del Plan. No reemplazan una QA independiente con nuevos sitios cuando corresponda.
+- Se encontró una diferencia de presentación en «Mis avances»: el backend de comparación emite `items[].control_id`, mientras el frontend leía `control_code` para el nombre UX. Corrección frontend en **PR #407** para usar `control_id` con compatibilidad `control_code`, sin modificar datos, scoring o contrato. Validación visual final y persistencia tras recarga todavía pendientes.
+- Estado de C3: **integración real sin cambios PASS; cierre completo condicionado a validar el ajuste de «Mis avances» y persistencia tras recargar**.
+
 #### Catálogo de presentación UX - 21 controles (independiente del motor)
 
 Decisión de producto: conservar dos conceptos separados.
+
+Cierre: unificación de 21 nombres y descripciones mediante **PR #405** y prioridades gratuitas mediante **PR #406**; ambos mergeados en DEV, CI verde y validación visual del nombre PRV-003 en todas las vistas comprobadas (28-oct-2026).
 
 - **Catálogo técnico**: `backend/src/mininode_api/domain_packs/privacy/controls.json` (`v0.11`) continúa definiendo el identificador PRV, nombre de referencia técnico, dominio, aplicabilidad, criterios y evidencias. No se modifica scoring, resultados, reglas ni contratos de API.
 - **Catálogo UX único**: `frontend/privacy/control-ux.js` contiene exactamente 21 códigos y para cada uno un nombre comprensible y una descripción breve. Es la única fuente para la **presentación** de controles conocidos en el diagnóstico gratuito, las tres pestañas del Plan (incluidas acciones, verificación y evolución) y la demo. Mantener códigos PRV visibles para trazabilidad.
@@ -163,7 +172,7 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 | C2a | Backend: contrato de lectura del diagnóstico vigente | **Mergeado en DEV (PR #400)** |
 | C2b | Frontend: estado actual, cinco áreas y controles expandibles | **PASS visual en DEV (PRs #401 y #402)** |
 | C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **Mergeado en DEV, PR #403; Reviewer PASS y CI verde** |
-| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **En PR · pendiente de CI, merge y validación DEV** |
+| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **Mergeado en DEV (PR #404); integración real sin cambios validada el 28-oct-2026; cierre visual y recarga pendientes** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
