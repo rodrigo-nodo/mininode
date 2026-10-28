@@ -3,7 +3,7 @@ const elements = {
   errorTitle: document.querySelector('#error-title'), errorMessage: document.querySelector('#error-message'), retry: document.querySelector('#retry'), privacyLink: document.querySelector('#privacy-link'),
   site: document.querySelector('#site-url'), currentScore: document.querySelector('#current-score'), currentDate: document.querySelector('#current-date'), currentOrigin: document.querySelector('#current-origin'), scoreBlock: document.querySelector('#state-score-block'), stateDiagnostic: document.querySelector('#state-diagnostic'), stateScope: document.querySelector('#state-scope'), stateAreas: document.querySelector('#state-areas'), stateNotice: document.querySelector('#state-notice'), summaryCount: document.querySelector('#summary-count'),
   prioritySummary: document.querySelector('#priority-summary'), items: document.querySelector('#plan-items'), template: document.querySelector('#plan-item-template'),
-  checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkComparison: document.querySelector('#check-comparison'), checkNotComparable: document.querySelector('#check-not-comparable'), checkCurrentScore: document.querySelector('#check-current-score'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkCreated: document.querySelector('#check-created'), checkFree: document.querySelector('#check-free'), continuousMonitoring: document.querySelector('#continuous-monitoring'),
+  checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkComparison: document.querySelector('#check-comparison'), checkNotComparable: document.querySelector('#check-not-comparable'), checkCurrentScore: document.querySelector('#check-current-score'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkBeforeDate: document.querySelector('#check-before-date'), checkNowDate: document.querySelector('#check-now-date'), checkNotComparableDate: document.querySelector('#check-noncomparable-date'), checkFree: document.querySelector('#check-free'), continuousMonitoring: document.querySelector('#continuous-monitoring'),
 };
 const displayNames = { 'PRV-003': 'Política de privacidad claramente asociada a la empresa' };
 const requiredItemFields = ['control_code', 'name', 'priority', 'finding', 'recommendation', 'action_steps', 'validation_step'];
@@ -137,8 +137,8 @@ const renderState = (diagnostic) => {
       addText(list, 'p', 'No hay controles registrados para esta área en la revisión.', 'plan-state__empty');
       return;
     }
-    controls.forEach((item) => {
-      const detail = addText(list, 'details', '', 'plan-state__control');
+    const renderControl = (target, item) => {
+      const detail = addText(target, 'details', '', 'plan-state__control');
       const heading = addText(detail, 'summary', '', 'plan-state__control-summary');
       addText(heading, 'span', item.name, 'plan-state__control-name');
       addText(heading, 'span', diagnosticStates[item.result] || 'Sin resultado reconocido', 'plan-state__result');
@@ -161,10 +161,30 @@ const renderState = (diagnostic) => {
       if (item.result === 'not_evaluable') addText(body, 'p', 'La evaluación no permite concluir el resultado de este control.', 'plan-state__muted');
       if (item.confidence === 'low') addText(body, 'p', 'Confianza de evaluación: baja.', 'plan-state__muted');
       addText(body, 'p', item.control_code, 'plan-state__code');
-    });
+    };
+    controls.filter((item) => item.result !== 'not_applicable')
+      .forEach((item) => renderControl(list, item));
+    const notApplicable = controls.filter((item) => item.result === 'not_applicable');
+    if (notApplicable.length) {
+      const deferred = addText(list, 'details', '', 'plan-state__deferred');
+      const toggle = addText(deferred, 'summary', '', 'plan-state__deferred-summary');
+      addText(toggle, 'span', `Mostrar ${notApplicable.length} ${notApplicable.length === 1 ? 'control no aplicable' : 'controles no aplicables'}`);
+      const contents = addText(deferred, 'div', '', 'plan-state__deferred-controls');
+      notApplicable.forEach((item) => renderControl(contents, item));
+    }
   });
 };
 
+// Dates come from the stored diagnostic, never inferred from Plan creation.
+const progressDate = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value))
+  ? friendlyDate(value) : 'Fecha no disponible';
+const renderProgressDates = (diagnostic, review) => {
+  // null denotes a review POST waiting for the refreshed read: keep the original date.
+  if (diagnostic !== null) elements.checkBeforeDate.textContent = progressDate(diagnostic?.initial?.created_at);
+  const currentAt = diagnostic?.current?.created_at || review?.created_at;
+  elements.checkNowDate.textContent = progressDate(currentAt);
+  elements.checkNotComparableDate.textContent = progressDate(currentAt);
+};
 const showError = (kind) => {
   const states = {
     missing: ['Privacy Web no disponible', 'No fue posible encontrar este acceso a Privacy Web. Verifique que el enlace esté completo.'],
@@ -197,7 +217,7 @@ const renderCheckResult = (review) => {
     elements.checkLower.hidden = true;
     elements.checkItems.replaceChildren();
     elements.checkCurrentScore.textContent = `${result.current_score} / 100`;
-    elements.checkCreated.textContent = friendlyDate(review.created_at);
+
     return;
   }
   elements.checkBefore.textContent = `${result.original_score} / 100`;
@@ -226,7 +246,7 @@ const renderCheckResult = (review) => {
     li.append(icon, content);
     elements.checkItems.append(li);
   });
-  elements.checkCreated.textContent = friendlyDate(review.created_at);
+
 };
 const renderCheck = (check) => {
   if (!check) {
@@ -272,6 +292,7 @@ const render = ({ site_url: siteUrl, plan, check, diagnostic }) => {
     .join(' · ');
   plan.items.forEach(renderItem);
   renderCheck(check);
+  renderProgressDates(diagnostic, check?.latest_check);
   elements.loading.hidden = true;
   elements.content.hidden = false;
 };
@@ -306,6 +327,7 @@ const performCheck = async () => {
       return;
     }
     renderCheckResult(data);
+    renderProgressDates(null, data);
     if (entitledSiteId) {
       const refreshController = new AbortController();
       const refreshTimeout = setTimeout(() => refreshController.abort(), requestTimeoutMs);
@@ -319,6 +341,7 @@ const performCheck = async () => {
         const latest = await refreshed.json();
         if (!validDiagnostic(latest?.diagnostic)) throw new Error('invalid_diagnostic');
         renderState(latest.diagnostic);
+        renderProgressDates(latest.diagnostic, data);
       } catch {
         unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
       } finally {
