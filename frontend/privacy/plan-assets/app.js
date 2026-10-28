@@ -1,7 +1,7 @@
 const elements = {
   loading: document.querySelector('#plan-loading'), content: document.querySelector('#plan-content'), error: document.querySelector('#plan-error'),
   errorTitle: document.querySelector('#error-title'), errorMessage: document.querySelector('#error-message'), retry: document.querySelector('#retry'), privacyLink: document.querySelector('#privacy-link'),
-  site: document.querySelector('#site-url'), score: document.querySelector('#initial-score'), itemCount: document.querySelector('#item-count'), summaryCount: document.querySelector('#summary-count'), closingCount: document.querySelector('#closing-count'),
+  site: document.querySelector('#site-url'), score: document.querySelector('#initial-score'), itemCount: document.querySelector('#item-count'), summaryCount: document.querySelector('#summary-count'),
   prioritySummary: document.querySelector('#priority-summary'), items: document.querySelector('#plan-items'), template: document.querySelector('#plan-item-template'),
   checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkComparison: document.querySelector('#check-comparison'), checkNotComparable: document.querySelector('#check-not-comparable'), checkCurrentScore: document.querySelector('#check-current-score'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkCreated: document.querySelector('#check-created'), checkFree: document.querySelector('#check-free'), continuousMonitoring: document.querySelector('#continuous-monitoring'),
 };
@@ -134,21 +134,17 @@ const render = ({ site_url: siteUrl, plan, check }) => {
   elements.site.textContent = friendlySite(siteUrl);
   elements.score.textContent = `${plan.initial_score} / 100`;
   elements.itemCount.textContent = plan.item_count;
-  elements.summaryCount.textContent = plan.item_count;
-  elements.closingCount.textContent = plan.item_count;
+  elements.summaryCount.textContent = plan.item_count === 0
+    ? 'Sin mejoras recomendadas'
+    : `${plan.item_count} ${plan.item_count === 1 ? 'mejora recomendada' : 'mejoras recomendadas'}`;
   const counts = plan.items.reduce((result, item) => {
     result[item.priority] = (result[item.priority] || 0) + 1;
     return result;
   }, {});
-  ['Alta', 'Media', 'Baja'].forEach((priority) => {
-    const li = document.createElement('li');
-    const strong = document.createElement('strong');
-    const span = document.createElement('span');
-    strong.textContent = counts[priority] || 0;
-    span.textContent = `prioridad ${priority.toLowerCase()}`;
-    li.append(strong, span);
-    elements.prioritySummary.append(li);
-  });
+  elements.prioritySummary.textContent = ['Alta', 'Media', 'Baja']
+    .filter((priority) => counts[priority] > 0)
+    .map((priority) => `${counts[priority]} de prioridad ${priority.toLowerCase()}`)
+    .join(' · ');
   plan.items.forEach(renderItem);
   renderCheck(check);
   elements.loading.hidden = true;
