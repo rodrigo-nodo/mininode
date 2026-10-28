@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c2ux-1',
+            '/privacy/plan-assets/app.js?v=c3b-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c2ux-1', HTML)
+        self.assertIn('app.js?v=c3b-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -97,6 +97,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn('id="priority-summary"', HTML)
         self.assertIn('>Qué debo mejorar</h2>', HTML)
         self.assertIn("elements.prioritySummary.textContent", APP)
+        self.assertIn("renderCurrentActions(currentActions, entitledSiteId ? null : plan)", APP)
         self.assertNotIn("elements.closingCount", APP)
         for button_id, variant in (
             ("check-start", "btn--primary"),
@@ -104,6 +105,25 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             ("check-cancel", "btn--secondary"),
         ):
             self.assertRegex(HTML, 'id="' + button_id + '"[^>]*class="btn ' + variant + '"')
+
+    def test_c3_dynamic_actions_are_source_of_truth_and_fail_closed(self):
+        self.assertIn("validCurrentActions", APP)
+        self.assertIn("renderCurrentActions(currentActions, entitledSiteId ? null : plan)", APP)
+        self.assertIn("actions.items.forEach(renderItem)", APP)
+        self.assertIn("actions.verification_pending.forEach", APP)
+        self.assertIn("unavailableActions", APP)
+        self.assertIn("renderCurrentActions(latest.current_actions, null)", APP)
+        self.assertIn("unavailableActions('La revisión se guardó", APP)
+        self.assertIn("La última revisión utiliza una versión", APP)
+        self.assertNotIn("plan.items.forEach(renderItem)", APP)
+        for element_id in (
+            "actions-date", "actions-notice", "actions-empty", "actions-verification",
+            "actions-verification-count", "actions-verification-list",
+        ):
+            self.assertIn(f'id="{element_id}"', HTML)
+        css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
+        self.assertIn(".plan-actions__verification", css)
+        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
 
     def test_c2_diagnostic_from_authorized_contract_is_not_another_actions_list(self):
         for element_id in ("site-url", "current-score", "current-date", "current-origin",
@@ -121,7 +141,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("unavailableState", APP)
         self.assertIn("La revisión se guardó", APP)
         self.assertIn("renderCheck(check)", APP)
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c2ux-1"', HTML)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c3b-1"', HTML)
 
     def test_c2_uses_only_shared_theme_tokens_for_styles(self):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
@@ -179,7 +199,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertLess(APP.index("validPlanResponse(data)"), APP.index("render(data)"))
 
     def test_plan_render_function_is_present_and_invoked(self):
-        self.assertIn("const render = ({ site_url: siteUrl, plan, check, diagnostic }) => {", APP)
+        self.assertIn("const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions }) => {", APP)
         self.assertIn("renderCheck(check);", APP)
         self.assertIn("render(data);", APP)
 
@@ -187,18 +207,18 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("friendlySite(siteUrl)", APP)
         self.assertIn("plan.initial_score", APP)
         self.assertIn("plan.item_count", APP)
-        self.assertIn("plan.items.forEach(renderItem)", APP)
+        self.assertIn("actions.items.forEach(renderItem)", APP)
         self.assertNotIn(".sort(", APP)
         self.assertNotIn("/privacy/diagnose", APP)
-        self.assertIn("plan.items.reduce", APP)
+        self.assertIn("actions.items.reduce", APP)
         self.assertIn("['Alta', 'Media', 'Baja']", APP)
 
     def test_full_item_experience_and_humanized_name_are_present(self):
         for copy in ("Qué se encontró", "Qué debería corregirse", "Ver instrucciones", "Pasos recomendados", "Cómo comprobarlo"):
             self.assertIn(copy, HTML)
         self.assertIn('<details class="plan-item__instructions">', HTML)
-        self.assertIn("displayNames[item.control_code] || item.name", APP)
-        self.assertIn("Política de privacidad claramente asociada a la empresa", APP)
+        self.assertIn("fragment.querySelector('.plan-item__name').textContent = item.name", APP)
+        self.assertNotIn("displayNames", APP)
         self.assertIn("plan-item__code", HTML)
 
     def test_controlled_error_states_are_distinct(self):
@@ -237,7 +257,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c2ux-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c3b-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
