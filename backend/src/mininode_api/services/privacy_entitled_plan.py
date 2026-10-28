@@ -309,9 +309,7 @@ def _history_entries(cur, plan_id: UUID, original: dict, original_at: datetime, 
     previous = original
     for _, created_at, stored_result, snapshot, diagnosed_at in rows:
         # Never reinterpret non-comparable snapshots as confirmed corrections.
-        initial_comparison = privacy_correction_plan_check.compare_diagnostics(
-            baseline, original, snapshot,
-        )
+        initial_comparison = _compare_review_states(original, snapshot)
         previous_comparison = _compare_review_states(previous, snapshot)
         entries.append({
             "kind": "review",
@@ -333,6 +331,7 @@ def _compare_review_states(previous: dict, current: dict) -> dict:
               if isinstance(c, dict) and isinstance(c.get("control_code"), str)}
     after = {c["control_code"]: c["result"] for c in current.get("controls", [])
              if isinstance(c, dict) and isinstance(c.get("control_code"), str)}
+    rank = {"not_detected": 0, "partial": 1, "detected": 2}
     changes = []
     for code in sorted(before.keys() | after.keys()):
         old, new = before.get(code), after.get(code)
@@ -340,9 +339,9 @@ def _compare_review_states(previous: dict, current: dict) -> dict:
             continue
         if old is None or new is None or old in {"not_evaluable", "not_applicable"} or new in {"not_evaluable", "not_applicable"}:
             status = "not_conclusive"
-        elif old == "detected" and new in {"partial", "not_detected"}:
+        elif old in rank and new in rank and rank[new] < rank[old]:
             status = "regressed"
-        elif new == "detected" and old in {"partial", "not_detected"}:
+        elif old in rank and new in rank and rank[new] > rank[old]:
             status = "improved"
         else:
             status = "changed"
