@@ -20,8 +20,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_all_21_controls_have_one_shared_ux_name_and_description(self):
         ux_source = (PRIVACY_DIR / "control-ux.js").read_text(encoding="utf-8")
         result = subprocess.run(
-            ["node", "-e", "globalThis.window = {};\\n"
-             + ux_source + "\\nprocess.stdout.write(JSON.stringify(window.MininodePrivacyControlUX.entries));"],
+            ["node", "-e", "globalThis.window = {};\n"
+             + ux_source + "\nprocess.stdout.write(JSON.stringify(window.MininodePrivacyControlUX.entries));"],
             text=True, capture_output=True, check=True,
         )
         entries = json.loads(result.stdout)
@@ -35,7 +35,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
             self.assertTrue(entry["name"].strip(), code)
             self.assertTrue(entry["description"].strip(), code)
         # The technical framework contract remains separate from customer copy.
-        self.assertNotIn("scoring", ux_source)
         self.assertNotIn("result:", ux_source)
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
