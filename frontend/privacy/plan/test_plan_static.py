@@ -123,7 +123,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             self.assertIn(f'id="{element_id}"', HTML)
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
         self.assertIn(".plan-actions__verification", css)
-        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\\b|rgba?\\(")
+        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
 
     def test_c2_diagnostic_from_authorized_contract_is_not_another_actions_list(self):
         for element_id in ("site-url", "current-score", "current-date", "current-origin",
