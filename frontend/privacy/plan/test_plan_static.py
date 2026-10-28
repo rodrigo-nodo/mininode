@@ -77,7 +77,6 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("setPlanTab('state')", APP)
 
     def test_c1_shared_color_tokens_and_compact_summary(self):
-        import re
         css_files = [
             ASSETS_DIR / "tabs.css",
             ASSETS_DIR / "styles.css",
