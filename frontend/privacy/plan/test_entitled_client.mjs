@@ -89,6 +89,8 @@ test('new active courtesy creates baseline only after authenticated GET misses',
   assert.equal(ui.nodes.get('plan-content').hidden, false);
   assert.equal(ui.nodes.get('check-start').hidden, false);
   assert.equal(ui.nodes.get('initial-score').textContent, '65 / 100');
+  assert.equal(ui.nodes.get('summary-count').textContent, 'Sin mejoras recomendadas');
+  assert.equal(ui.nodes.get('priority-summary').textContent, '');
 });
 
 test('expired entitlement retains latest review read-only without creating or scanning', async () => {
