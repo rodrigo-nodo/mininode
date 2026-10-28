@@ -101,6 +101,11 @@ h1 {
 .plan-summary__metrics { color: var(--color-muted); display: flex; flex-wrap: wrap; gap: 0 8px; margin: 0; font-size: .95rem; }
 .plan-summary__metrics span + span:not(:empty)::before { content: "·"; margin-right: 8px; }
 .plan-implementation-note { color: var(--color-muted); font-size: .86rem; margin: 4px 0 26px; }
+/* Retain a quiet closing section in the standalone legacy demo; the active Plan removes it. */
+.plan-closing { border-top: 1px solid var(--color-border); margin: 24px 0; padding: 20px 0; }
+.plan-closing h2 { font-size: 1.2rem; margin: 4px 0 12px; }
+.plan-closing p { color: var(--color-muted); }
+
 
 .plan-item {
   background: var(--color-bg);
