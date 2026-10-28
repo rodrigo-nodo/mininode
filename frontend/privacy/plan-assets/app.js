@@ -80,7 +80,7 @@ const unavailableActions = (message) => {
   elements.actionsNotice.hidden = false;
 };
 const renderCurrentActions = (currentActions, legacyPlan) => {
-  const legacy = !entitledSiteId && legacyPlan;
+  const legacy = Boolean(!entitledSiteId && legacyPlan);
   const actions = legacy
     ? { status: 'available', source: 'initial', items: legacyPlan.items,
         item_count: legacyPlan.item_count, verification_pending: [], verification_pending_count: 0 }
