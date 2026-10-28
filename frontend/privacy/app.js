@@ -292,7 +292,7 @@ const renderPriorities = (priorities) => {
     const item = appendTextElement(diagnosticPriorities, 'article', '', 'privacy-priority');
     appendTextElement(item, 'span', String(index + 1), 'privacy-priority__number');
     const content = appendTextElement(item, 'div', '', 'privacy-priority__content');
-    appendTextElement(content, 'h4', priority.name || 'Acción prioritaria');
+    appendTextElement(content, 'h4', window.MininodePrivacyControlUX?.name(priority.control_code, priority.name || 'Acción prioritaria') ?? (priority.name || 'Acción prioritaria'));
     if (priority.recommendation) {
       appendTextElement(content, 'p', priority.recommendation);
     } else if (priority.finding) {
