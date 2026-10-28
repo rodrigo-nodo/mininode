@@ -183,6 +183,8 @@ test('active plan review refreshes C2 after POST and keeps persisted result', as
   assert.equal(ui.nodes.get('check-current-score').textContent, '77 / 100');
   assert.equal(ui.nodes.get('current-score').textContent, '77 / 100');
   assert.equal(ui.nodes.get('current-origin').textContent, 'Última revisión válida');
+  assert.match(ui.nodes.get('check-before-date').textContent, /25 oct 2026/);
+  assert.match(ui.nodes.get('check-noncomparable-date').textContent, /26 oct 2026/);
 });
 
 test('failed C2 refresh after successful POST does not misrepresent old state as current', async () => {
@@ -271,6 +273,52 @@ test('C2 preserves unknown historical controls separately and does not use unsaf
   const oldBody = areas[5].children[1].children[0].children[1];
   assert.equal(oldBody.children.some((child) => child.href), false);
   assert.match(oldBody.children[0].textContent, /Evidencia incompleta/);
+});
+
+test('C2 uses one lightweight list per area and groups non-applicable controls', async () => {
+  const data = payload();
+  data.diagnostic.current.controls.push(
+    { control_code: 'PRV-002', name: 'Política accesible', area: 'Transparencia',
+      type: 'conditional_evaluation', result: 'not_applicable',
+      reason: 'Depende de la política visible', evidence_summary: null, source_url: null },
+    { control_code: 'PRV-003', name: 'Política propia', area: 'Transparencia',
+      type: 'evaluation', result: 'not_applicable',
+      reason: 'La condición no aplica', evidence_summary: null, source_url: null },
+  );
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const area = ui.nodes.get('state-areas').children[0];
+  const list = area.children[1];
+  assert.equal(list.children.length, 2, 'one observed control plus one deferred group');
+  assert.equal(list.children[0].children[0].children[0].textContent, 'Política de privacidad visible');
+  const deferred = list.children[1];
+  assert.equal(deferred.children[0].children[0].textContent, 'Mostrar 2 controles no aplicables');
+  assert.equal(deferred.children[1].children.length, 2);
+  assert.equal(deferred.children[1].children[0].children[0].children[1].textContent, 'No aplica');
+  assert.match(area.children[0].children[1].textContent, /2 no aplicables/);
+});
+
+test('Mis avances shows original and latest persisted dates directly beneath comparable scores', async () => {
+  const data = payload('available', true);
+  data.check.latest_check.result = {
+    version: '2', comparability: { status: 'comparable' },
+    original_score: 65, current_score: 75, score_change: 10,
+    corrected_count: 1, pending_count: 0, items: [],
+  };
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('check-before').textContent, '65 / 100');
+  assert.equal(ui.nodes.get('check-now').textContent, '75 / 100');
+  assert.match(ui.nodes.get('check-before-date').textContent, /25 oct 2026/);
+  assert.match(ui.nodes.get('check-now-date').textContent, /26 oct 2026/);
+});
+
+test('incomparable reviews retain current date without presenting a score comparison', async () => {
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => payload('available', true) }));
+  await flush();
+  assert.equal(ui.nodes.get('check-comparison').hidden, true);
+  assert.equal(ui.nodes.get('check-not-comparable').hidden, false);
+  assert.match(ui.nodes.get('check-noncomparable-date').textContent, /26 oct 2026/);
 });
 
 test('C2 displays a safe fallback when an old access lacks the C2a diagnostic contract', async () => {
