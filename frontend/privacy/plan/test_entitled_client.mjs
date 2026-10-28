@@ -31,7 +31,7 @@ class Node {
   setAttribute(name, value) { this.attributes.set(name, value); }
   focus() { this.focused = true; }
   querySelector() { return new Node(); }
-  append(node) { this.children.push(node); }
+  append(...nodes) { this.children.push(...nodes); }
   replaceChildren() { this.children = []; }
 }
 
