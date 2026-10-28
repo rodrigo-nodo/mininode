@@ -127,7 +127,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
         self.assertIn(".plan-state__area", css)
         self.assertIn("@media(max-width:600px)", css)
-        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\\b|rgba?\\(")
+        self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
         self.assertNotIn(':root[data-theme="dark"]', css)
 
     def test_only_token_request_matches_plan_rewrite(self):
@@ -324,7 +324,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertNotIn("$", monitoring)
 
     def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
-        self.assertEqual(APP.count("fetch("), 5)  # legacy and authenticated paths, no monitoring API
+        self.assertEqual(APP.count("fetch("), 6)  # includes C2 post-review read; no monitoring API
         for assignment in (
             "elements.checkBefore.textContent = `${result.original_score} / 100`",
             "elements.checkNow.textContent = `${result.current_score} / 100`",
