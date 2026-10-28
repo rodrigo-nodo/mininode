@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c3b-1',
+            '/privacy/plan-assets/app.js?v=ux21-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c3b-1', HTML)
+        self.assertIn('app.js?v=ux21-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -217,7 +217,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         for copy in ("Qué se encontró", "Qué debería corregirse", "Ver instrucciones", "Pasos recomendados", "Cómo comprobarlo"):
             self.assertIn(copy, HTML)
         self.assertIn('<details class="plan-item__instructions">', HTML)
-        self.assertIn("fragment.querySelector('.plan-item__name').textContent = item.name", APP)
+        self.assertIn("fragment.querySelector('.plan-item__name').textContent = window.MininodePrivacyControlUX?.name(item.control_code, item.name) ?? item.name", APP)
         self.assertNotIn("displayNames", APP)
         self.assertIn("plan-item__code", HTML)
 
@@ -257,7 +257,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c3b-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=ux21-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
