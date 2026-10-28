@@ -280,6 +280,18 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             self.assertIn('href="' + css_path + '?v=c1-ui-3"', HTML)
         self.assertNotIn('href="/privacy/plan-demo/styles.css?v=1"', HTML)
 
+    def test_c4b_history_structure_comparability_and_post_check_refresh(self):
+        self.assertIn('id="progress-summary"', HTML)
+        self.assertIn('id="progress-history-list"', HTML)
+        self.assertIn('id="progress-chart-section"', HTML)
+        self.assertLess(HTML.index('id="progress-summary"'), HTML.index('id="progress-history-list"'))
+        self.assertLess(HTML.index('id="progress-history-list"'), HTML.index('id="progress-chart-section"'))
+        self.assertIn('renderProgressHistory(latest.history)', APP)
+        self.assertIn('renderProgressHistory(entitledSiteId ? history : null)', APP)
+        self.assertIn("vs_previous?.comparability?.status !== 'comparable'", APP)
+        self.assertIn('window.MininodePrivacyControlUX?.name(change.control_code', APP)
+        self.assertNotIn('innerHTML', APP)
+
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
         for forbidden in ("solicitar plan de corrección", "checkout", "stripe", "webpay", "mercado pago", "login", "magic link", "recheck", "checkbox"):
