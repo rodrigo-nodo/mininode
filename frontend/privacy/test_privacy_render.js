@@ -51,12 +51,15 @@ const document = {
 };
 
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
+const catalogSource = fs.readFileSync(`${__dirname}/control-ux.js`, 'utf8');
 const context = {
+  window: {},
   document,
   URL,
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
+vm.runInNewContext(catalogSource, context);
 vm.runInNewContext(`${source}
 globalThis.renderDiagnosticForTest = renderDiagnostic;
 globalThis.resetCommercialStateForTest = resetCommercialState;
@@ -123,6 +126,11 @@ documentListeners.get('keydown')({ key: 'Escape' });
 assert.equal(elements.get('privacy-modal').hidden, true);
 assert.match(html, /Ver qué revisamos/);
 assert.equal(elements.get('diagnostic-controls').children.length, 5);
+const policyControl = elements.get('diagnostic-controls').children[0].children[1].children[2];
+assert.equal(policyControl.children[0].children[0].textContent,
+  'Política de privacidad claramente asociada a la empresa');
+assert.match(policyControl.children[0].children[1].textContent, /empresa o entidad responsable/);
+
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
   19,
