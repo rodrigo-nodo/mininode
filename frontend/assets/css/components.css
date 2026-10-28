@@ -17,7 +17,7 @@
 .btn--primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary, var(--color-bg));
 }
 
 .btn--primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
