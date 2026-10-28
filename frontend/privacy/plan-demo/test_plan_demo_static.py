@@ -101,9 +101,9 @@ class PlanDemoStaticTests(unittest.TestCase):
         )
         self.assertEqual(prv_003["name"], "Política propia del responsable")
         self.assertIn("window.MininodePrivacyControlUX?.name(item.control_code, item.name)", APP)
-        self.assertIn(
-            "Política de privacidad claramente asociada a la empresa", APP
-        )
+        ux_catalog = (DEMO_DIR.parent / "control-ux.js").read_text(encoding="utf-8")
+        self.assertIn("Política de privacidad claramente asociada a la empresa", ux_catalog)
+        self.assertIn('src="/privacy/control-ux.js?v=ux21-1"', HTML)
         self.assertNotIn("displayNames", APP)
 
     def test_demo_has_no_commercial_or_future_infrastructure(self):
