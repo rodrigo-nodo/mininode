@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=ux21-1',
+            '/privacy/plan-assets/app.js?v=c3-progress-name-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=ux21-1', HTML)
+        self.assertIn('app.js?v=c3-progress-name-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -105,6 +105,15 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             ("check-cancel", "btn--secondary"),
         ):
             self.assertRegex(HTML, 'id="' + button_id + '"[^>]*class="btn ' + variant + '"')
+
+    def test_c3_progress_names_follow_review_control_id_contract(self):
+        self.assertIn(
+            "MininodePrivacyControlUX?.name(item.control_id ?? item.control_code, item.name)",
+            APP,
+        )
+        contract = (PLAN_DIR.parents[2] / "backend" / "src" / "mininode_api"
+                    / "services" / "privacy_correction_plan_check.py").read_text(encoding="utf-8")
+        self.assertIn('"control_id": code', contract)
 
     def test_c3_dynamic_actions_are_source_of_truth_and_fail_closed(self):
         self.assertIn("validCurrentActions", APP)
@@ -257,7 +266,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=ux21-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c3-progress-name-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
