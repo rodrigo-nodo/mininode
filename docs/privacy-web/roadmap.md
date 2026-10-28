@@ -135,7 +135,7 @@ Se preservan las tres pestañas y el comportamiento de C2; C4 continúa a cargo 
 
 - En la revisión real de un sitio público sin cambios intencionales: Privacy Score inicial/actual **47/100 → 47/100**, **0** mejoras corregidas, **2** aún pendientes; «Estado de mi sitio» y «Qué debo mejorar» mostraron fecha actualizada y ambas acciones (PRV-001 y PRV-003). Esta prueba confirma el recorrido de revisión y la consistencia observable en ese escenario; **no demuestra** manualmente una corrección ni un hallazgo nuevo.
 - Las pruebas automatizadas de C3a/C3b cubren cambios, pendientes no concluyentes, incompatibilidad de versiones y recuperación del Plan. No reemplazan una QA independiente con nuevos sitios cuando corresponda.
-- Se encontró una diferencia de presentación en «Mis avances»: el backend de comparación emite `items[].control_id`, mientras el frontend leía `control_code` para el nombre UX. Corrección frontend acotada para usar `control_id` con compatibilidad `control_code`, sin modificar datos, scoring o contrato. Validación visual final y persistencia tras recarga todavía pendientes.
+- Se encontró una diferencia de presentación en «Mis avances»: el backend de comparación emite `items[].control_id`, mientras el frontend leía `control_code` para el nombre UX. Corrección frontend en **PR #407** para usar `control_id` con compatibilidad `control_code`, sin modificar datos, scoring o contrato. Validación visual final y persistencia tras recarga todavía pendientes.
 - Estado de C3: **integración real sin cambios PASS; cierre completo condicionado a validar el ajuste de «Mis avances» y persistencia tras recargar**.
 
 #### Catálogo de presentación UX - 21 controles (independiente del motor)
