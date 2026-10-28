@@ -591,3 +591,25 @@ def test_c3_historical_open_findings_are_cleared_by_confirmed_detection_only():
     assert privacy_entitled_plan._prior_unresolved_actions(baseline, prior) == set()
     prior.append({**versions, "score": 80, "controls": []})
     assert privacy_entitled_plan._prior_unresolved_actions(baseline, prior) == set()
+
+def test_c4a_previous_comparison_rejects_indeterminate_as_improvement():
+    versions = diagnostic_versions()
+    before = {**versions, "score": 47, "controls": [
+        {"control_code": "PRV-003", "result": "not_detected"}]}
+    unknown = {**versions, "score": 47, "controls": [
+        {"control_code": "PRV-003", "result": "not_evaluable"}]}
+    result = privacy_entitled_plan._compare_review_states(before, unknown)
+    assert result["score_change"] == 0
+    assert result["changes"] == [{
+        "control_code": "PRV-003", "previous": "not_detected",
+        "current": "not_evaluable", "status": "not_conclusive",
+    }]
+
+
+def test_c4a_previous_comparison_version_mismatch():
+    versions = diagnostic_versions()
+    before = {**versions, "score": 47, "controls": []}
+    after = {**before, "framework_version": "unrelated-framework", "score": 65}
+    result = privacy_entitled_plan._compare_review_states(before, after)
+    assert result["score_change"] is None
+    assert result["changes"] == []
