@@ -118,7 +118,7 @@ class PlanDemoStaticTests(unittest.TestCase):
         self.assertNotIn("<button", HTML.lower())
 
     def test_local_assets_are_cache_busted_and_no_external_assets_exist(self):
-        self.assertIn('href="styles.css?v=1"', HTML)
+        self.assertIn('href="styles.css?v=c1-ui-3"', HTML)
         self.assertIn('src="app.js?v=1"', HTML)
         self.assertNotIn("url(", STYLES.lower())
 
