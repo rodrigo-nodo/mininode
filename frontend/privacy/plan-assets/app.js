@@ -1,7 +1,7 @@
 const elements = {
   loading: document.querySelector('#plan-loading'), content: document.querySelector('#plan-content'), error: document.querySelector('#plan-error'),
   errorTitle: document.querySelector('#error-title'), errorMessage: document.querySelector('#error-message'), retry: document.querySelector('#retry'), privacyLink: document.querySelector('#privacy-link'),
-  site: document.querySelector('#site-url'), score: document.querySelector('#initial-score'), itemCount: document.querySelector('#item-count'), summaryCount: document.querySelector('#summary-count'),
+  site: document.querySelector('#site-url'), currentScore: document.querySelector('#current-score'), currentDate: document.querySelector('#current-date'), currentOrigin: document.querySelector('#current-origin'), scoreBlock: document.querySelector('#state-score-block'), stateDiagnostic: document.querySelector('#state-diagnostic'), stateScope: document.querySelector('#state-scope'), stateAreas: document.querySelector('#state-areas'), stateNotice: document.querySelector('#state-notice'), summaryCount: document.querySelector('#summary-count'),
   prioritySummary: document.querySelector('#priority-summary'), items: document.querySelector('#plan-items'), template: document.querySelector('#plan-item-template'),
   checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkComparison: document.querySelector('#check-comparison'), checkNotComparable: document.querySelector('#check-not-comparable'), checkCurrentScore: document.querySelector('#check-current-score'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkCreated: document.querySelector('#check-created'), checkFree: document.querySelector('#check-free'), continuousMonitoring: document.querySelector('#continuous-monitoring'),
 };
@@ -39,6 +39,132 @@ const validPlanResponse = (data) => {
 };
 const friendlySite = (siteUrl) => { try { return new URL(siteUrl).host || siteUrl; } catch { return siteUrl; } };
 const friendlyDate = (value) => new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
+const diagnosticAreas = ['Transparencia', 'Formularios', 'Cookies', 'Contacto', 'Seguridad'];
+const diagnosticStates = {
+  detected: 'Detectado',
+  partial: 'Parcialmente detectado',
+  not_detected: 'No detectado',
+  not_evaluable: 'No concluyente',
+  not_applicable: 'No aplica',
+};
+const addText = (parent, tag, value, className) => {
+  const element = document.createElement(tag);
+  element.textContent = value;
+  if (className) element.className = className;
+  parent.append(element);
+  return element;
+};
+const validDiagnostic = (diagnostic) => {
+  const current = diagnostic?.current;
+  return diagnostic?.initial && Number.isInteger(diagnostic.initial.score)
+    && current && Number.isInteger(current.score) && current.score >= 0 && current.score <= 100
+    && (current.source === 'initial' || current.source === 'review')
+    && typeof current.created_at === 'string' && Number.isFinite(Date.parse(current.created_at))
+    && Array.isArray(current.controls)
+    && current.controls.every((item) => item && typeof item.control_code === 'string'
+      && typeof item.name === 'string' && typeof item.result === 'string'
+      && (item.area === null || typeof item.area === 'string')
+      && (item.reason == null || typeof item.reason === 'string')
+      && (item.evidence_summary == null || typeof item.evidence_summary === 'string')
+      && (item.source_url == null || typeof item.source_url === 'string'));
+};
+const unavailableState = (message) => {
+  elements.scoreBlock.hidden = true;
+  elements.stateDiagnostic.hidden = true;
+  elements.stateAreas.replaceChildren();
+  elements.stateNotice.textContent = message;
+  elements.stateNotice.hidden = false;
+};
+const safeEvidenceUrl = (value) => {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    if (!['https:', 'http:'].includes(url.protocol) || !url.hostname
+        || url.username || url.password) return null;
+    url.search = '';
+    url.hash = '';
+    return url.href;
+  } catch { return null; }
+};
+const renderState = (diagnostic) => {
+  if (!diagnostic) {
+    unavailableState('El detalle del diagnóstico no está disponible para este acceso. Las mejoras y revisiones existentes siguen disponibles.');
+    return;
+  }
+  if (!validDiagnostic(diagnostic)) {
+    unavailableState('No pudimos mostrar el diagnóstico actual. Actualiza la página para intentarlo nuevamente.');
+    return;
+  }
+  const current = diagnostic.current;
+  elements.stateNotice.hidden = true;
+  elements.scoreBlock.hidden = false;
+  elements.stateDiagnostic.hidden = false;
+  elements.currentScore.textContent = `${current.score} / 100`;
+  elements.currentDate.textContent = friendlyDate(current.created_at);
+  elements.currentOrigin.textContent = current.source === 'initial'
+    ? 'Primera revisión del sitio' : 'Última revisión válida';
+  const pages = current.scope?.pages_analyzed;
+  const notes = [];
+  if (Number.isInteger(pages) && pages >= 0) notes.push(`${pages} ${pages === 1 ? 'página analizada' : 'páginas analizadas'}`);
+  if (current.scope?.limited === true) notes.push('Revisión con alcance limitado');
+  elements.stateScope.textContent = notes.join(' · ') || 'Resultados de los controles observables del sitio';
+  elements.stateAreas.replaceChildren();
+
+  const groups = [...diagnosticAreas];
+  if (current.controls.some((item) => !diagnosticAreas.includes(item.area))) {
+    groups.push('Otros controles de esta revisión');
+  }
+  groups.forEach((area) => {
+    const controls = current.controls.filter((item) =>
+      area === 'Otros controles de esta revisión'
+        ? !diagnosticAreas.includes(item.area) : item.area === area);
+    const container = addText(elements.stateAreas, 'details', '', 'plan-state__area');
+    const summary = addText(container, 'summary', '', 'plan-state__area-summary');
+    addText(summary, 'strong', area);
+    const counts = Object.keys(diagnosticStates).map((code) => {
+      const amount = controls.filter((item) => item.result === code).length;
+      return amount ? `${amount} ${amount === 1 ? diagnosticStates[code].toLowerCase() : ({
+        detected: 'detectados', partial: 'parcialmente detectados',
+        not_detected: 'no detectados', not_evaluable: 'no concluyentes',
+        not_applicable: 'no aplicables',
+      })[code]}` : null;
+    }).filter(Boolean);
+    const unknown = controls.filter((item) => !Object.hasOwn(diagnosticStates, item.result)).length;
+    if (unknown) counts.push(`${unknown} sin resultado reconocido`);
+    addText(summary, 'small', counts.join(' · ') || 'Sin controles registrados');
+    const list = addText(container, 'div', '', 'plan-state__controls');
+    if (controls.length === 0) {
+      addText(list, 'p', 'No hay controles registrados para esta área en la revisión.', 'plan-state__empty');
+      return;
+    }
+    controls.forEach((item) => {
+      const detail = addText(list, 'details', '', 'plan-state__control');
+      const heading = addText(detail, 'summary', '', 'plan-state__control-summary');
+      addText(heading, 'span', item.name, 'plan-state__control-name');
+      addText(heading, 'span', diagnosticStates[item.result] || 'Sin resultado reconocido', 'plan-state__result');
+      const body = addText(detail, 'div', '', 'plan-state__control-body');
+      addText(body, 'p', item.reason || 'No se registró una explicación para este resultado.');
+      if (item.evidence_summary) {
+        addText(body, 'p', 'Evidencia observada', 'plan-state__field');
+        addText(body, 'p', item.evidence_summary);
+      } else {
+        addText(body, 'p', 'Sin resumen adicional de evidencia disponible para esta revisión.', 'plan-state__muted');
+      }
+      const source = safeEvidenceUrl(item.source_url);
+      if (source) {
+        const link = addText(body, 'a', 'Consultar página observada');
+        link.href = source;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      if (item.type === 'context') addText(body, 'p', 'Control informativo: no determina por sí solo el score.', 'plan-state__muted');
+      if (item.result === 'not_evaluable') addText(body, 'p', 'La evaluación no permite concluir el resultado de este control.', 'plan-state__muted');
+      if (item.confidence === 'low') addText(body, 'p', 'Confianza de evaluación: baja.', 'plan-state__muted');
+      addText(body, 'p', item.control_code, 'plan-state__code');
+    });
+  });
+};
+
 const showError = (kind) => {
   const states = {
     missing: ['Privacy Web no disponible', 'No fue posible encontrar este acceso a Privacy Web. Verifique que el enlace esté completo.'],
@@ -130,10 +256,9 @@ const renderCheck = (check) => {
   }
   elements.checkStart.hidden = false;
 };
-const render = ({ site_url: siteUrl, plan, check }) => {
+const render = ({ site_url: siteUrl, plan, check, diagnostic }) => {
   elements.site.textContent = friendlySite(siteUrl);
-  elements.score.textContent = `${plan.initial_score} / 100`;
-  elements.itemCount.textContent = plan.item_count;
+  renderState(diagnostic);
   elements.summaryCount.textContent = plan.item_count === 0
     ? 'Sin mejoras recomendadas'
     : `${plan.item_count} ${plan.item_count === 1 ? 'mejora recomendada' : 'mejoras recomendadas'}`;
@@ -181,6 +306,22 @@ const performCheck = async () => {
       return;
     }
     renderCheckResult(data);
+    if (entitledSiteId) {
+      try {
+        // A completed review is persisted; refresh the C2 view from the same
+        // authorized Plan read rather than displaying outdated controls.
+        const refreshed = await fetch(
+          `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`,
+          { method: 'GET', headers: await authorizedHeaders() },
+        );
+        if (!refreshed.ok) throw new Error('current_diagnostic_unavailable');
+        const latest = await refreshed.json();
+        if (!validDiagnostic(latest?.diagnostic)) throw new Error('invalid_diagnostic');
+        renderState(latest.diagnostic);
+      } catch {
+        unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
+      }
+    }
     if (data.expires_at) {
       elements.checkDeadline.textContent = `Activo hasta: ${friendlyDate(data.expires_at)}`;
     }
