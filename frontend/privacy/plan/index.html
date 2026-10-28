@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=c1-ui-3">
-  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c2b-1">
+  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c2ux-1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="../../include.js?v=pw03b-header1" defer></script>
-  <script src="/privacy/plan-assets/app.js?v=c2b-1" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=c2ux-1" defer></script>
 </head>
 <body>
   <div data-include="../../partials/header-nav.html"></div>
@@ -69,7 +69,7 @@
         </div>
         <div id="check-result" hidden>
           <div id="check-comparison">
-            <div class="check-scores"><p>Antes<strong id="check-before"></strong></p><p>Ahora<strong id="check-now"></strong></p></div>
+            <div class="check-scores"><p>Antes<strong id="check-before"></strong><time class="check-scores__date" id="check-before-date"></time></p><p>Ahora<strong id="check-now"></strong><time class="check-scores__date" id="check-now-date"></time></p></div>
             <p class="check-change" id="check-change"></p><p id="check-lower" hidden>El resultado actual es inferior al diagnóstico original.</p>
             <h3 class="check-result__title">Resultado de las mejoras</h3>
             <div class="check-counts"><p><strong id="check-corrected"></strong><span id="check-corrected-label"></span></p><p><strong id="check-pending"></strong><span id="check-pending-label"></span></p></div>
@@ -79,9 +79,8 @@
             <h3 class="check-result__title">Resultado de la revisión actual</h3>
             <p>Esta revisión utiliza una versión diferente del análisis. Para evitar una comparación engañosa, no mostramos una variación directa respecto del diagnóstico anterior.</p>
             <p>El diagnóstico original fue realizado con una versión anterior de Privacy Web.</p>
-            <p class="check-current-score">Score de la revisión actual: <strong id="check-current-score"></strong></p>
+            <p class="check-current-score">Score de la revisión actual: <strong id="check-current-score"></strong></p><p class="check-scores__date">Revisado el <time id="check-noncomparable-date"></time></p>
           </div>
-          <p>Última revisión <time id="check-created"></time></p>
         </div>
         <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
       </section>
