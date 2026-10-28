@@ -57,10 +57,10 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("description(control.code)", APP)
 
 
-    def test_public_result_renderer_regression(self):
-        # Exercise the actual JS render path in CI, including priority titles.
+    def test_free_priority_renderer_regression(self):
+        # Exercise the actual priority renderer without unrelated auth/commercial paths.
         result = subprocess.run(
-            ["node", str(PRIVACY_DIR / "test_privacy_render.js")],
+            ["node", "--test", str(PRIVACY_DIR / "test_priority_ux.mjs")],
             capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
