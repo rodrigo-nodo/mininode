@@ -67,6 +67,19 @@ Pregunta: **¿Cómo está mi sitio actualmente?**
 - Cada control muestra **resultado**, **evidencia** y **alcance/limitaciones** cuando corresponda. Preferir «Detectado», «No detectado» y «No concluyente» solo cuando correspondan semánticamente al resultado real; nunca equipararlos automáticamente a cumplimiento normativo.
 - Mantener acciones de corrección en el bloque 2 y el inicio de nuevas revisiones en el bloque 3.
 
+#### C2a - Contrato de lectura de diagnóstico (backend)
+
+La respuesta autenticada existente de `GET/POST /api/privacy/workspace-sites/{workspace_site_id}/plan` incorpora un objeto **aditivo** `diagnostic`, sin alterar `plan`, `check` ni el endpoint de revisión:
+
+- `diagnostic.initial`: `score`, `created_at` (fecha **real del diagnóstico original**, no fecha de creación del Plan), `framework_version`, `scoring_version`.
+- `diagnostic.current`: `score`, `created_at`, `source` (`initial` o `review`), `framework_version`, `scoring_version`, `scope` acotado y `controls` con `control_code`, `name`, `area`, `type`, `result`, `reason`, `confidence`, `evidence_summary` y `source_url`.
+- Sin revisión posterior, **actual = inicial**. Con revisiones, el actual proviene del `diagnostic_snapshot` correspondiente al último `entitled_plan_check` válido del Plan, no de un escaneo nuevo.
+- Los nombres/áreas provienen del catálogo actual, con la presentación «Seguridad» para el dominio «Seguridad visible». Los códigos antiguos desconocidos se conservan sin asignarles un área inventada. La interfaz deberá distinguir este caso.
+- La evidencia se limita a textos/resúmenes ya evaluados y URL HTTP(S) pública sin credenciales, query ni fragmento. **No** se expone el arreglo crudo `evidence`, parámetros internos, HTML inspeccionado ni otros campos técnicos del snapshot. Una evidencia ausente se muestra como ausente; no se inventa una explicación.
+- Se conserva la autorización de workspace/site/entitlement y el comportamiento de solo lectura tras vencimiento natural; la revocación sigue bloqueando lectura. Sin cambios de scoring, reglas, controles ni migraciones. Las diferencias de score siguen condicionadas a comparabilidad de versiones.
+
+C2b utilizará este contrato para mostrar score actual y fecha, cinco áreas y controles expandibles. El score inicial y su fecha permanecerán en **Mis avances** como referencia comparativa; la evolución/historial corresponde a C4.
+
 ### Bloque 2 — Qué debo mejorar
 
 Pregunta: **¿Qué debería corregir y cómo?**
@@ -93,8 +106,9 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 
 | Tramo | Alcance propuesto | Estado |
 |---|---|---|
-| C1 | Estructura visual, navegación y responsive | **Diseño aprobado · pendiente de implementación** |
-| C2 | Estado actual, áreas, controles y diagnóstico expandible integrado | **Diseño aprobado · pendiente de implementación** |
+| C1 | Estructura visual, navegación y responsive | **Implementado en DEV; validaciones visuales realizadas** |
+| C2a | Backend: contrato de lectura del diagnóstico vigente | **En implementación (PR independiente)** |
+| C2b | Frontend: estado actual, cinco áreas y controles expandibles | **Diseño aprobado · pendiente de implementación** |
 | C3 | Acciones pendientes dinámicas y verificación sin checklist manual | **Diseño aprobado · pendiente de implementación** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
 

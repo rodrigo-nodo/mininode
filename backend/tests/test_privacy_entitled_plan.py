@@ -116,6 +116,21 @@ def test_courtesy_creates_stable_baseline_without_legacy_order(context):
     assert data["site_url"] == c["snapshot"]["site_url"]
     assert data["check"]["status"] == "available"
     assert data["check"]["expires_at"]
+    diagnostic = data["diagnostic"]
+    assert diagnostic["initial"]["score"] == c["snapshot"]["score"]
+    assert diagnostic["current"]["score"] == c["snapshot"]["score"]
+    assert diagnostic["initial"]["created_at"] == diagnostic["current"]["created_at"]
+    assert diagnostic["current"]["source"] == "initial"
+    assert diagnostic["current"]["framework_version"] == c["snapshot"]["framework_version"]
+    assert diagnostic["current"]["scoring_version"] == c["snapshot"]["scoring_version"]
+    assert diagnostic["current"]["controls"][0]["control_code"] == "PRV-001"
+    assert diagnostic["current"]["controls"][0]["area"] == "Transparencia"
+    assert diagnostic["current"]["controls"][0]["result"] == "not_detected"
+    with psycopg.connect(c["url"]) as conn:
+        original_date = conn.execute(
+            "SELECT created_at FROM privacy.diagnostic WHERE id=%s", (c["original"],)
+        ).fetchone()[0]
+    assert diagnostic["initial"]["created_at"] == original_date.isoformat()
     again = c["client"].post(path, headers=c["headers"])
     assert again.status_code == 200
     assert again.json()["id"] == data["id"]
@@ -171,6 +186,8 @@ def test_expiry_blocks_access_without_erasing_plan_or_original(context):
     assert expired.status_code == 200
     assert expired.json()["id"] == plan_id
     assert expired.json()["check"]["status"] == "expired"
+    assert expired.json()["diagnostic"]["current"]["source"] == "initial"
+    assert expired.json()["diagnostic"]["current"]["score"] == c["snapshot"]["score"]
     assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 403
     with psycopg.connect(c["url"]) as conn:
         assert conn.execute(
@@ -199,8 +216,15 @@ def test_repeated_checks_compare_frozen_base_and_persist_atomic_history(context,
     assert all(url == c["snapshot"]["site_url"] for url in inspected)
     assert first.json()["result"]["original_score"] == c["snapshot"]["score"]
     assert first.json()["result"]["current_score"] == 85
-    latest = c["client"].get(path, headers=c["headers"]).json()["check"]["latest_check"]
+    response = c["client"].get(path, headers=c["headers"]).json()
+    latest = response["check"]["latest_check"]
     assert latest["result"]["current_score"] == 85
+    assert response["diagnostic"]["initial"]["score"] == 65
+    assert response["diagnostic"]["current"]["score"] == 85
+    assert response["diagnostic"]["current"]["source"] == "review"
+    assert response["diagnostic"]["current"]["controls"][0]["result"] == "detected"
+    assert response["diagnostic"]["current"]["created_at"] is not None
+    assert response["diagnostic"]["initial"]["created_at"] is not None
     with psycopg.connect(c["url"]) as conn:
         assert conn.execute(
             "SELECT count(*) FROM privacy.entitled_plan_check WHERE entitled_plan_id=%s",
@@ -290,3 +314,60 @@ def test_entitlement_expiring_during_inspection_rolls_back_without_claiming_acti
             SELECT count(*) FROM privacy.entitled_plan_check
             WHERE entitled_plan_id IN (SELECT id FROM privacy.entitled_plan WHERE workspace_site_id=%s)
         """, (c["site"],)).fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("https://example.test/privacy?key=secret#section", "https://example.test/privacy"),
+        ("http://example.test/a/b?token=private", "http://example.test/a/b"),
+        ("javascript:alert(1)", None),
+        ("https://user:password@example.test/policy", None),
+        ("/policy", None),
+        (None, None),
+    ],
+)
+def test_c2_public_source_url_drops_unsafe_links_and_sensitive_queries(value, expected):
+    assert privacy_entitled_plan._public_source_url(value) == expected
+
+
+def test_c2_projection_is_public_read_only_and_uses_real_control_metadata():
+    snapshot = {
+        "score": 47, "framework_version": "0.11", "scoring_version": "0.11",
+        "scope": {"pages_analyzed": 2, "limited": False, "debug_secret": "private"},
+        "internal_diagnostic": {"api_key": "private"},
+        "controls": [
+            {
+                "control_code": "PRV-001", "result": "not_detected",
+                "reason": "No se encontró una política visible.",
+                "confidence": "high", "evidence_summary": "No hay enlace de privacidad.",
+                "source_url": "https://example.test/?session=private",
+                "evidence": [{"secret": "should-never-leave-server"}],
+                "debug": {"credentials": "private"},
+            },
+            {
+                "control_code": "PRV-501", "result": "detected",
+                "source_url": "https://example.test/",
+                "evidence": ["private evidence detail"],
+            },
+            {"control_code": "PRV-FUTURE", "result": "not_evaluable"},
+        ],
+    }
+    when = datetime(2026, 10, 28, tzinfo=timezone.utc)
+    result = privacy_entitled_plan._diagnostic_view(snapshot, when, source="review")
+    assert result["created_at"] == when
+    assert result["score"] == 47
+    assert result["scope"] == {"pages_analyzed": 2, "limited": False}
+    assert result["controls"][0] == {
+        "control_code": "PRV-001",
+        "name": "Política de privacidad visible", "area": "Transparencia",
+        "type": "evaluation", "result": "not_detected",
+        "reason": "No se encontró una política visible.",
+        "confidence": "high", "evidence_summary": "No hay enlace de privacidad.",
+        "source_url": "https://example.test/",
+    }
+    assert result["controls"][1]["area"] == "Seguridad"
+    assert result["controls"][2]["area"] is None
+    assert result["controls"][2]["name"] == "PRV-FUTURE"
+    assert "private" not in str(result)
+    assert "evidence" not in result["controls"][0]

@@ -9,12 +9,14 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID, uuid4
 
 import psycopg
 from psycopg.types.json import Jsonb
 
 from mininode_api.domain_packs.privacy.correction_plan import build_correction_plan
+from mininode_api.domain_packs.privacy.evaluator import load_controls
 from mininode_api.services import billing, privacy_correction_plan_check
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
@@ -97,7 +99,7 @@ def _entitlement(cur, user_id: UUID, site_id: UUID, *, allow_expired: bool = Fal
 def _plan(cur, entitlement_id: UUID):
     cur.execute("""
         SELECT p.id, p.workspace_site_id, d.site_url, d.diagnostic_snapshot,
-               p.plan_snapshot, p.created_at
+               p.plan_snapshot, p.created_at, d.created_at
         FROM privacy.entitled_plan p
         JOIN privacy.diagnostic d ON d.id=p.original_diagnostic_id
         WHERE p.entitlement_id=%s
@@ -107,20 +109,93 @@ def _plan(cur, entitlement_id: UUID):
 
 def _latest_check(cur, plan_id: UUID):
     cur.execute("""
-        SELECT created_at, result_snapshot FROM privacy.entitled_plan_check
-        WHERE entitled_plan_id=%s ORDER BY created_at DESC, id DESC LIMIT 1
+        SELECT c.created_at, c.result_snapshot, d.diagnostic_snapshot, d.created_at
+        FROM privacy.entitled_plan_check c
+        JOIN privacy.entitled_plan p ON p.id=c.entitled_plan_id
+        JOIN privacy.diagnostic d ON d.id=c.check_diagnostic_id
+                                 AND d.workspace_site_id=p.workspace_site_id
+        WHERE c.entitled_plan_id=%s
+        ORDER BY c.created_at DESC, c.id DESC LIMIT 1
     """, (plan_id,))
     return cur.fetchone()
 
 
+def _public_source_url(value: object) -> str | None:
+    """Keep only safe public page locations; never expose query tokens or credentials."""
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return None
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+    except ValueError:
+        return None
+
+
+def _diagnostic_view(snapshot: dict, created_at: datetime, *, source: str) -> dict:
+    """C2 read-only projection; raw technical evidence never leaves the server."""
+    catalog = {control["code"]: control for control in load_controls()}
+    controls = []
+    for item in snapshot.get("controls", []):
+        if not isinstance(item, dict) or not isinstance(item.get("control_code"), str):
+            continue
+        code = item["control_code"]
+        metadata = catalog.get(code, {})
+        area = metadata.get("domain")
+        if area == "Seguridad visible":
+            area = "Seguridad"
+        controls.append({
+            "control_code": code,
+            "name": metadata.get("name", code),
+            "area": area,
+            "type": metadata.get("type"),
+            "result": item.get("result"),
+            "reason": item.get("reason") if isinstance(item.get("reason"), str) else None,
+            "confidence": item.get("confidence") if isinstance(item.get("confidence"), str) else None,
+            "evidence_summary": (
+                item.get("evidence_summary")
+                if isinstance(item.get("evidence_summary"), str) else None
+            ),
+            "source_url": _public_source_url(item.get("source_url")),
+        })
+    scope = snapshot.get("scope")
+    scope = scope if isinstance(scope, dict) else {}
+    return {
+        "source": source,
+        "created_at": created_at,
+        "score": snapshot["score"],
+        "framework_version": snapshot.get("framework_version"),
+        "scoring_version": snapshot.get("scoring_version"),
+        "scope": {
+            "pages_analyzed": scope.get("pages_analyzed"),
+            "limited": scope.get("limited"),
+        },
+        "controls": controls,
+    }
+
+
 def _response(cur, entitlement, plan) -> dict:
-    plan_id, _, site_url, _, snapshot, created_at = plan
+    plan_id, _, site_url, original, snapshot, created_at, initial_at = plan
     latest = _latest_check(cur, plan_id)
+    current_snapshot, current_at = (latest[2], latest[3]) if latest else (original, initial_at)
     return {
         "id": plan_id,
         "site_url": site_url,
         "created_at": created_at,
         "plan": snapshot,
+        "diagnostic": {
+            "initial": {
+                "score": original["score"],
+                "created_at": initial_at,
+                "framework_version": original.get("framework_version"),
+                "scoring_version": original.get("scoring_version"),
+            },
+            "current": _diagnostic_view(
+                current_snapshot, current_at, source="review" if latest else "initial"
+            ),
+        },
         "check": {
             "status": ("expired" if entitlement[1] is not None
                        and datetime.now(timezone.utc) >= entitlement[1] else "available"),
@@ -189,7 +264,7 @@ def review(user_id: UUID, site_id: UUID) -> dict:
             current = _plan(cur, entitlement[0])
             if current is None:
                 raise PlanNotFound()
-            plan_id, _, original_url, original, plan_snapshot, _ = current
+            plan_id, _, original_url, original, plan_snapshot, _, _ = current
             # The inspected URL is always the original stored target.
             # No URL or workspace is accepted from the browser.
             try:
