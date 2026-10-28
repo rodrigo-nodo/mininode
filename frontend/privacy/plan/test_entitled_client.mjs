@@ -92,7 +92,7 @@ function payload(status = 'available', withReview = false) {
   };
 }
 
-function mount(handler) {
+function mount(handler, { legacy = false } = {}) {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((x) => x[1]);
   const nodes = new Map(ids.map((id) => [id, new Node()]));
   const calls = [];
@@ -102,7 +102,9 @@ function mount(handler) {
       createElement: () => new Node(),
     },
     window: {
-      location: { pathname: '/privacy/plan/', search: '?workspace_site_id=' + siteId },
+      location: legacy
+        ? { pathname: '/privacy/plan/legacy-token', search: '' }
+        : { pathname: '/privacy/plan/', search: '?workspace_site_id=' + siteId },
       MininodeAuth: { ready: async () => {}, getToken: async () => 'clerk-test-token' },
       addEventListener() {},
     },
@@ -477,3 +479,19 @@ test('C3b malformed refresh after saved review does not show stale actions', asy
   assert.equal(ui.nodes.get('actions-notice').hidden, false);
 });
 
+
+test('C3b legacy token retains historical actions with explicit disclosure', async () => {
+  const data = payload();
+  delete data.current_actions;
+  data.plan.items = [action('PRV-001')];
+  data.plan.item_count = 1;
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }), { legacy: true });
+  await flush();
+  assert.equal(ui.calls.length, 1);
+  assert.equal(ui.calls[0].options.method, 'GET');
+  assert.match(ui.calls[0].url, /correction-plans\/legacy-token$/);
+  assert.equal(ui.nodes.get('plan-items').children.length, 1);
+  assert.match(ui.nodes.get('actions-date').textContent, /acceso anterior/);
+  assert.match(ui.nodes.get('actions-date').textContent, /no reflejan revisiones posteriores/);
+  assert.equal(ui.nodes.get('actions-verification').hidden, true);
+});
