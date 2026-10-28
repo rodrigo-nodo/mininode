@@ -512,7 +512,7 @@ test('shared UX catalog updates state, verification and progress without alterin
   data.check.latest_check.result = {
     version: '2', comparability: { status: 'comparable' }, original_score: 65,
     current_score: 75, score_change: 10, corrected_count: 0, pending_count: 1,
-    items: [{ control_code: 'PRV-003', name: 'Política propia del responsable', status: 'still_pending' }],
+    items: [{ control_id: 'PRV-003', name: 'Política propia del responsable', status: 'still_pending' }],
   };
   const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
   await flush();
@@ -541,4 +541,62 @@ test('unknown historical codes keep their original names and no invented explana
   const historical = otherArea.children[1].children[0];
   assert.equal(historical.children[0].children[0].textContent, 'Nombre histórico');
   assert.equal(historical.children[1].children[0].textContent, 'No evaluable');
+});
+
+test('C3 progress uses backend control_id and preserves corrected/pending statuses', async () => {
+  // compare_diagnostics() persists control_id, not control_code.
+  const data = payload('available', true);
+  data.check.latest_check.result = {
+    version: '2', comparability: { status: 'comparable' },
+    original_score: 47, current_score: 47, score_change: 0,
+    corrected_count: 0, pending_count: 2, not_evaluable_count: 0,
+    items: [
+      { control_id: 'PRV-001', name: 'Política de privacidad visible', status: 'still_pending' },
+      { control_id: 'PRV-003', name: 'Política propia del responsable', status: 'still_pending' },
+    ],
+  };
+  const handler = () => ({ ok: true, status: 200, json: async () => data });
+  const initial = mount(handler);
+  await flush();
+  assert.equal(initial.nodes.get('check-change').textContent, 'Sin cambios en el score');
+  assert.equal(initial.nodes.get('check-pending').textContent, 2);
+  const items = initial.nodes.get('check-items').children;
+  assert.equal(items.length, 2);
+  assert.equal(items[0].children[1].textContent, 'Política de privacidad visible');
+  assert.equal(items[1].children[1].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.equal(items[1].children[1].children[0].textContent, 'Sigue pendiente');
+  assert.equal(items[1].children[0].textContent, '⚠');
+  assert.deepEqual(initial.calls.map((call) => call.options.method), ['GET']);
+
+  // A fresh load reads the saved latest review, without performing another scan.
+  const reloaded = mount(handler);
+  await flush();
+  assert.equal(reloaded.nodes.get('check-items').children[1].children[1].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.deepEqual(reloaded.calls.map((call) => call.options.method), ['GET']);
+});
+
+test('C3 progress supports prior control_code snapshots and unknown historical IDs', async () => {
+  const data = payload('available', true);
+  data.check.latest_check.result = {
+    version: '2', comparability: { status: 'comparable' },
+    original_score: 65, current_score: 75, score_change: 10,
+    corrected_count: 1, pending_count: 0, not_evaluable_count: 2,
+    items: [
+      { control_code: 'PRV-003', name: 'Política propia del responsable', status: 'corrected' },
+      { control_id: 'PRV-HIST', name: 'Nombre histórico', status: 'not_evaluable' },
+      { control_id: 'PRV-999', name: 'Control sin catálogo UX', status: 'not_evaluable' },
+    ],
+  };
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const items = ui.nodes.get('check-items').children;
+  assert.equal(items[0].children[1].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.equal(items[0].children[1].children[0].textContent, 'Corregido');
+  assert.equal(items[0].children[0].textContent, '✓');
+  assert.equal(items[1].children[1].textContent, 'Nombre histórico');
+  assert.equal(items[1].children[1].children[0].textContent, 'No fue posible evaluarlo');
+  assert.equal(items[2].children[1].textContent, 'Control sin catálogo UX');
 });
