@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const script = readFileSync(new URL('../plan-assets/app.js', import.meta.url), 'utf8');
+const uxScript = readFileSync(new URL('../control-ux.js', import.meta.url), 'utf8');
 const siteId = '11111111-1111-4111-8111-111111111111';
 const path = `/api/privacy/workspace-sites/${siteId}/plan`;
 const future = new Date(Date.now() + 3600000).toISOString();
@@ -114,6 +115,7 @@ function mount(handler, { legacy = false } = {}) {
       return handler(url, options);
     },
   };
+  vm.runInNewContext(uxScript, context);
   vm.runInNewContext(script, context);
   return { nodes, calls, context };
 }
@@ -494,4 +496,49 @@ test('C3b legacy token retains historical actions with explicit disclosure', asy
   assert.match(ui.nodes.get('actions-date').textContent, /acceso anterior/);
   assert.match(ui.nodes.get('actions-date').textContent, /no reflejan revisiones posteriores/);
   assert.equal(ui.nodes.get('actions-verification').hidden, true);
+});
+
+test('shared UX catalog updates state, verification and progress without altering codes/results', async () => {
+  const data = payload('available', true);
+  data.diagnostic.current.controls[0] = {
+    ...data.diagnostic.current.controls[0],
+    control_code: 'PRV-003', name: 'Política propia del responsable', result: 'not_detected',
+  };
+  data.current_actions.verification_pending = [
+    { control_code: 'PRV-003', name: 'Política propia del responsable',
+      status: 'pending_verification', reason: 'not_evaluable' },
+  ];
+  data.current_actions.verification_pending_count = 1;
+  data.check.latest_check.result = {
+    version: '2', comparability: { status: 'comparable' }, original_score: 65,
+    current_score: 75, score_change: 10, corrected_count: 0, pending_count: 1,
+    items: [{ control_code: 'PRV-003', name: 'Política propia del responsable', status: 'still_pending' }],
+  };
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const detail = ui.nodes.get('state-areas').children[0].children[1].children[0];
+  assert.equal(detail.children[0].children[0].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.match(detail.children[1].children[0].textContent, /empresa o entidad responsable/);
+  assert.equal(ui.nodes.get('actions-verification-list').children[0].children[0].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.equal(ui.nodes.get('check-items').children[0].children[1].textContent,
+    'Política de privacidad claramente asociada a la empresa');
+  assert.equal(ui.nodes.get('plan-panel-progress').hidden, true);
+  assert.equal(ui.calls.length, 1);
+});
+
+test('unknown historical codes keep their original names and no invented explanations', async () => {
+  const data = payload();
+  data.diagnostic.current.controls.push({
+    control_code: 'PRV-HIST', name: 'Nombre histórico',
+    area: null, result: 'not_evaluable', reason: 'No evaluable',
+    evidence_summary: null, source_url: null,
+  });
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const otherArea = ui.nodes.get('state-areas').children[5];
+  const historical = otherArea.children[1].children[0];
+  assert.equal(historical.children[0].children[0].textContent, 'Nombre histórico');
+  assert.equal(historical.children[1].children[0].textContent, 'No evaluable');
 });
