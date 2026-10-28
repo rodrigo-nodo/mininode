@@ -78,7 +78,7 @@ La respuesta autenticada existente de `GET/POST /api/privacy/workspace-sites/{wo
 - La evidencia se limita a textos/resúmenes ya evaluados y URL HTTP(S) pública sin credenciales, query ni fragmento. **No** se expone el arreglo crudo `evidence`, parámetros internos, HTML inspeccionado ni otros campos técnicos del snapshot. Una evidencia ausente se muestra como ausente; no se inventa una explicación.
 - Se conserva la autorización de workspace/site/entitlement y el comportamiento de solo lectura tras vencimiento natural; la revocación sigue bloqueando lectura. Sin cambios de scoring, reglas, controles ni migraciones. Las diferencias de score siguen condicionadas a comparabilidad de versiones.
 
-C2b utilizará este contrato para mostrar score actual y fecha, cinco áreas y controles expandibles. El score inicial y su fecha permanecerán en **Mis avances** como referencia comparativa; la evolución/historial corresponde a C4.
+C2b utiliza este contrato para mostrar score actual y fecha, cinco áreas y controles expandibles. El score inicial y su fecha se muestran en **Mis avances** como referencia comparativa; el gráfico de evolución y el historial completo corresponden a C4.
 
 #### C2b - Estado de mi sitio (frontend)
 
@@ -91,6 +91,8 @@ C2b consume **únicamente** el contrato autenticado `diagnostic.current` de C2a 
 - Accesos legados sin `diagnostic` mantienen sus otras funciones con un mensaje explícito sobre la ausencia del detalle. No se ejecutan inspecciones adicionales por abrir el Plan.
 
 Estilos con tokens globales Mininode, responsive, y tests de contrato visible, aislamiento lógico de pestañas y actualización posterior a revisión. Sin cambios de API, scoring, controles ni BD.
+
+**Ajuste UX posterior a C2b:** conservar una sola tarjeta por área y presentar sus controles como filas con separadores sutiles, nombres de peso normal y detalle expandible. Los controles `not_applicable` continúan disponibles bajo «Mostrar N controles no aplicables» dentro de su área, sin perder explicación ni evidencia. Los conteos incluyen todos los controles. En **Mis avances**, la fecha original y la fecha actual se colocan discretamente debajo de sus respectivos scores; se retira la fecha duplicada del pie. En revisiones no comparables se muestra solo el score y la fecha actuales, sin atribuir una variación entre versiones. Sin cambios de scoring ni de contrato.
 
 ### Bloque 2 — Qué debo mejorar
 
