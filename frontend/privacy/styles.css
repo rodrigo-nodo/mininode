@@ -462,6 +462,16 @@
 
 .privacy-control__name {
   font-weight: 400;
+  min-width: 0;
+}
+.privacy-control__label { display: block; }
+.privacy-control__description {
+  color: var(--color-muted);
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.5;
+  margin-top: 4px;
 }
 
 .privacy-control__badges {
