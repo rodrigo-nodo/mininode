@@ -74,15 +74,6 @@
 </section>
       <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
         <p class="section-label">Seguimiento</p><h2 id="check-title">Revisar avances</h2>
-        <div id="check-available">
-          <p>Mientras Privacy Web esté activo, puedes volver a revisar el sitio y compararlo con el diagnóstico original.</p>
-          <p id="check-deadline"></p>
-          <p class="check-recommendation" id="check-recommendation">Revisa nuevamente el sitio después de aplicar cambios para ver cómo avanza.</p>
-          <button id="check-start" type="button" class="btn btn--primary" hidden>Revisar nuevamente</button>
-          <div id="check-confirm" class="check-confirm" hidden><p>Se realizará una nueva revisión del sitio y se comparará con el diagnóstico original.</p><button id="check-cancel" type="button" class="btn btn--secondary">Cancelar</button><button id="check-submit" type="button" class="btn btn--primary">Iniciar revisión</button></div>
-          <p id="check-progress" role="status" hidden>Revisando sitio...</p>
-          <p id="check-message" role="alert" hidden></p>
-        </div>
         <div id="check-result" hidden>
           <div id="check-comparison">
             <div class="check-scores"><p>Diagnóstico inicial<strong id="check-before"></strong><time class="check-scores__date" id="check-before-date"></time></p><p>Última revisión<strong id="check-now"></strong><time class="check-scores__date" id="check-now-date"></time></p></div>
@@ -102,6 +93,17 @@
       </section>
       <section class="plan-progress-history" aria-labelledby="progress-history-title"><h2 id="progress-history-title">Historial de revisiones</h2><div id="progress-history-list"></div></section>
       <section class="plan-progress-chart" id="progress-chart-section" aria-labelledby="progress-chart-title" hidden><h2 id="progress-chart-title">Evolución del Privacy Score</h2><div id="progress-chart"></div><p id="progress-chart-note"></p></section>
+      <section class="improvement-check plan-progress-review" aria-label="Nueva revisión">
+        <div id="check-available">
+          <p>Mientras Privacy Web esté activo, puedes volver a revisar el sitio y compararlo con el diagnóstico original.</p>
+          <p id="check-deadline"></p>
+          <p class="check-recommendation" id="check-recommendation">Revisa nuevamente el sitio después de aplicar cambios para ver cómo avanza.</p>
+          <button id="check-start" type="button" class="btn btn--primary" hidden>Revisar nuevamente</button>
+          <div id="check-confirm" class="check-confirm" hidden><p>Se realizará una nueva revisión del sitio y se comparará con el diagnóstico original.</p><button id="check-cancel" type="button" class="btn btn--secondary">Cancelar</button><button id="check-submit" type="button" class="btn btn--primary">Iniciar revisión</button></div>
+          <p id="check-progress" role="status" hidden>Revisando sitio...</p>
+          <p id="check-message" role="alert" hidden></p>
+        </div>
+      </section>
       <section class="continuous-monitoring" id="continuous-monitoring" aria-labelledby="continuous-monitoring-title" hidden>
         <p class="continuous-monitoring__badge">Próximamente</p>
         <h2 id="continuous-monitoring-title">Seguimiento automático</h2>
