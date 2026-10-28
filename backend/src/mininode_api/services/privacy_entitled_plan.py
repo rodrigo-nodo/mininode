@@ -286,6 +286,71 @@ def _current_actions(
     }
 
 
+
+def _history_entries(cur, plan_id: UUID, original: dict, original_at: datetime, baseline: dict) -> list[dict]:
+    """C4a read-only, ordered history scoped to the already-authorized Plan."""
+    cur.execute("""
+        SELECT c.id, c.created_at, c.result_snapshot, d.diagnostic_snapshot, d.created_at
+        FROM privacy.entitled_plan_check c
+        JOIN privacy.entitled_plan p ON p.id=c.entitled_plan_id
+        JOIN privacy.diagnostic d ON d.id=c.check_diagnostic_id
+                                 AND d.workspace_site_id=p.workspace_site_id
+        WHERE c.entitled_plan_id=%s
+        ORDER BY c.created_at ASC, c.id ASC
+    """, (plan_id,))
+    rows = cur.fetchall()
+    entries = [{
+        "kind": "initial",
+        "created_at": original_at,
+        "diagnostic": _diagnostic_view(original, original_at, source="initial"),
+        "vs_initial": None,
+        "vs_previous": None,
+    }]
+    previous = original
+    for _, created_at, stored_result, snapshot, diagnosed_at in rows:
+        # Never reinterpret non-comparable snapshots as confirmed corrections.
+        initial_comparison = privacy_correction_plan_check.compare_diagnostics(
+            baseline, original, snapshot,
+        )
+        previous_comparison = _compare_review_states(previous, snapshot)
+        entries.append({
+            "kind": "review",
+            "created_at": diagnosed_at,
+            "diagnostic": _diagnostic_view(snapshot, diagnosed_at, source="review"),
+            "vs_initial": initial_comparison,
+            "vs_previous": previous_comparison,
+        })
+        previous = snapshot
+    return list(reversed(entries))
+
+
+def _compare_review_states(previous: dict, current: dict) -> dict:
+    """Score and per-control transitions only within the same diagnostic versions."""
+    comparable = privacy_correction_plan_check.diagnostic_comparability(previous, current)
+    if comparable["status"] == "not_comparable":
+        return {"comparability": comparable, "score_change": None, "changes": []}
+    before = {c["control_code"]: c["result"] for c in previous.get("controls", [])
+              if isinstance(c, dict) and isinstance(c.get("control_code"), str)}
+    after = {c["control_code"]: c["result"] for c in current.get("controls", [])
+             if isinstance(c, dict) and isinstance(c.get("control_code"), str)}
+    changes = []
+    for code in sorted(before.keys() | after.keys()):
+        old, new = before.get(code), after.get(code)
+        if old == new:
+            continue
+        if old is None or new is None or old in {"not_evaluable", "not_applicable"} or new in {"not_evaluable", "not_applicable"}:
+            status = "not_conclusive"
+        elif old == "detected" and new in {"partial", "not_detected"}:
+            status = "regressed"
+        elif new == "detected" and old in {"partial", "not_detected"}:
+            status = "improved"
+        else:
+            status = "changed"
+        changes.append({"control_code": code, "previous": old, "current": new, "status": status})
+    return {"comparability": comparable, "score_change": current["score"] - previous["score"],
+            "changes": changes}
+
+
 def _response(cur, entitlement, plan) -> dict:
     plan_id, _, site_url, original, snapshot, created_at, initial_at = plan
     latest = _latest_check(cur, plan_id)
@@ -311,6 +376,7 @@ def _response(cur, entitlement, plan) -> dict:
                 current_snapshot, current_at, source="review" if latest else "initial"
             ),
         },
+        "history": _history_entries(cur, plan_id, original, initial_at, snapshot),
         "check": {
             "status": ("expired" if entitlement[1] is not None
                        and datetime.now(timezone.utc) >= entitlement[1] else "available"),
