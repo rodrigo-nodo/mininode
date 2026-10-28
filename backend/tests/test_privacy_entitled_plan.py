@@ -613,3 +613,96 @@ def test_c4a_previous_comparison_version_mismatch():
     result = privacy_entitled_plan._compare_review_states(before, after)
     assert result["score_change"] is None
     assert result["changes"] == []
+
+
+def test_c4a_history_integrates_multiple_reviews_order_comparisons_and_access(context, monkeypatch):
+    """Real PostgreSQL/API history is scoped to a live authorized Plan."""
+    c = context
+    path = _path(c)
+    versions = diagnostic_versions()
+    baseline = {**c["snapshot"], **versions, "score": 47, "controls": [
+        {"control_code": "PRV-001", "result": "not_detected",
+         "confidence": "high", "evidence": [{"secret": "initial-private"}]},
+    ]}
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("UPDATE privacy.diagnostic SET diagnostic_snapshot=%s,score=%s WHERE id=%s",
+                     (Jsonb(baseline), 47, c["original"]))
+    started = c["client"].post(path, headers=c["headers"])
+    assert started.status_code == 200, started.text
+    initial = started.json()["history"]
+    assert len(initial) == 1 and initial[0]["kind"] == "initial"
+    assert initial[0]["diagnostic"]["score"] == 47
+    assert initial[0]["vs_initial"] is None and initial[0]["vs_previous"] is None
+
+    reviews = [
+        {**baseline, "score": 62, "controls": [
+            {"control_code": "PRV-001", "result": "detected", "confidence": "high",
+             "evidence": [{"secret": "first-private"}]}]},
+        {**baseline, "score": 62, "controls": [
+            {"control_code": "PRV-001", "result": "not_evaluable", "confidence": "low"}]},
+        {**baseline, "score": 47, "controls": [
+            {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"}]},
+    ]
+    pending = iter(reviews)
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url",
+                        lambda _: next(pending))
+    for _ in reviews:
+        response = c["client"].post(path + "/check", headers=c["headers"])
+        assert response.status_code == 200, response.text
+
+    response = c["client"].get(path, headers=c["headers"])
+    assert response.status_code == 200, response.text
+    data = response.json()
+    history = data["history"]
+    assert [entry["kind"] for entry in history] == ["review", "review", "review", "initial"]
+    assert [entry["diagnostic"]["score"] for entry in history] == [47, 62, 62, 47]
+    assert [entry["diagnostic"]["controls"][0]["result"] for entry in history] == [
+        "not_detected", "not_evaluable", "detected", "not_detected",
+    ]
+    # Last-to-first ordering is based on saved DB check order, including tied timestamps.
+    with psycopg.connect(c["url"]) as conn:
+        timestamps = conn.execute("""
+            SELECT d.created_at FROM privacy.entitled_plan_check ch
+            JOIN privacy.diagnostic d ON d.id=ch.check_diagnostic_id
+            WHERE ch.entitled_plan_id=%s
+            ORDER BY ch.created_at DESC,ch.id DESC
+        """, (data["id"],)).fetchall()
+    assert [entry["created_at"] for entry in history[:3]] == [
+        row[0].isoformat() for row in timestamps]
+    assert history[0]["vs_initial"]["score_change"] == 0
+    assert history[0]["vs_previous"]["score_change"] == -15
+    # The intermediate uncertain review is never treated as a correction.
+    assert history[1]["vs_previous"]["changes"][0]["status"] == "not_conclusive"
+    assert history[2]["vs_previous"]["changes"][0]["status"] == "improved"
+    assert history[3]["vs_previous"] is None
+    assert data["check"]["latest_check"]["result"]["current_score"] == 47
+    assert "secret" not in str(history)
+
+    foreign = access.StoredUser(id=c["foreign"], email="foreign@example.test")
+    monkeypatch.setattr(access, "get_or_create_user", lambda _: foreign)
+    assert c["client"].get(path, headers=c["headers"]).status_code == 403
+    monkeypatch.setattr(access, "get_or_create_user", lambda _: c["user"])
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("UPDATE access.entitlements SET status='revoked' WHERE id=%s",
+                     (c["entitlement"],))
+    assert c["client"].get(path, headers=c["headers"]).status_code == 403
+
+
+def test_c4a_history_does_not_connect_incompatible_versions(context, monkeypatch):
+    c = context
+    path = _path(c)
+    versions = diagnostic_versions()
+    original = {**c["snapshot"], **versions, "score": 47}
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("UPDATE privacy.diagnostic SET diagnostic_snapshot=%s,score=47 WHERE id=%s",
+                     (Jsonb(original), c["original"]))
+    assert c["client"].post(path, headers=c["headers"]).status_code == 200
+    incompatible = {**original, "framework_version": "future-version", "score": 70}
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url", lambda _: incompatible)
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    history = c["client"].get(path, headers=c["headers"]).json()["history"]
+    assert len(history) == 2
+    for comparison in (history[0]["vs_initial"], history[0]["vs_previous"]):
+        assert comparison["comparability"]["status"] == "not_comparable"
+        assert comparison["score_change"] is None
+    assert history[0]["vs_previous"]["changes"] == []
