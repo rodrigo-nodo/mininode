@@ -3,9 +3,9 @@ const elements = {
   errorTitle: document.querySelector('#error-title'), errorMessage: document.querySelector('#error-message'), retry: document.querySelector('#retry'), privacyLink: document.querySelector('#privacy-link'),
   site: document.querySelector('#site-url'), currentScore: document.querySelector('#current-score'), currentDate: document.querySelector('#current-date'), currentOrigin: document.querySelector('#current-origin'), scoreBlock: document.querySelector('#state-score-block'), stateDiagnostic: document.querySelector('#state-diagnostic'), stateScope: document.querySelector('#state-scope'), stateAreas: document.querySelector('#state-areas'), stateNotice: document.querySelector('#state-notice'), summaryCount: document.querySelector('#summary-count'),
   prioritySummary: document.querySelector('#priority-summary'), items: document.querySelector('#plan-items'), template: document.querySelector('#plan-item-template'),
+  actionsDate: document.querySelector('#actions-date'), actionsNotice: document.querySelector('#actions-notice'), actionsEmpty: document.querySelector('#actions-empty'), actionsVerification: document.querySelector('#actions-verification'), verificationCount: document.querySelector('#actions-verification-count'), verificationList: document.querySelector('#actions-verification-list'),
   checkAvailable: document.querySelector('#check-available'), checkDeadline: document.querySelector('#check-deadline'), checkRecommendation: document.querySelector('#check-recommendation'), checkStart: document.querySelector('#check-start'), checkConfirm: document.querySelector('#check-confirm'), checkCancel: document.querySelector('#check-cancel'), checkSubmit: document.querySelector('#check-submit'), checkProgress: document.querySelector('#check-progress'), checkMessage: document.querySelector('#check-message'), checkResult: document.querySelector('#check-result'), checkComparison: document.querySelector('#check-comparison'), checkNotComparable: document.querySelector('#check-not-comparable'), checkCurrentScore: document.querySelector('#check-current-score'), checkBefore: document.querySelector('#check-before'), checkNow: document.querySelector('#check-now'), checkChange: document.querySelector('#check-change'), checkLower: document.querySelector('#check-lower'), checkCorrected: document.querySelector('#check-corrected'), checkCorrectedLabel: document.querySelector('#check-corrected-label'), checkPending: document.querySelector('#check-pending'), checkPendingLabel: document.querySelector('#check-pending-label'), checkItems: document.querySelector('#check-items'), checkBeforeDate: document.querySelector('#check-before-date'), checkNowDate: document.querySelector('#check-now-date'), checkNotComparableDate: document.querySelector('#check-noncomparable-date'), checkFree: document.querySelector('#check-free'), continuousMonitoring: document.querySelector('#continuous-monitoring'),
 };
-const displayNames = { 'PRV-003': 'Política de privacidad claramente asociada a la empresa' };
 const requiredItemFields = ['control_code', 'name', 'priority', 'finding', 'recommendation', 'action_steps', 'validation_step'];
 const requestTimeoutMs = 10000;
 let requestInProgress = false;
@@ -39,6 +39,101 @@ const validPlanResponse = (data) => {
 };
 const friendlySite = (siteUrl) => { try { return new URL(siteUrl).host || siteUrl; } catch { return siteUrl; } };
 const friendlyDate = (value) => new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
+// A missing or malformed C3a contract is not equivalent to zero pending findings.
+const validCurrentActions = (value) => {
+  if (!value || !['available', 'version_mismatch'].includes(value.status)
+      || !['initial', 'review'].includes(value.source)
+      || typeof value.created_at !== 'string'
+      || !Number.isFinite(Date.parse(value.created_at))) return false;
+  if (value.status === 'version_mismatch') {
+    return value.item_count === null && value.verification_pending_count === null
+      && value.actions_version === null && Array.isArray(value.items)
+      && value.items.length === 0 && Array.isArray(value.verification_pending)
+      && value.verification_pending.length === 0;
+  }
+  return typeof value.actions_version === 'string'
+    && Number.isInteger(value.item_count) && value.item_count >= 0
+    && Array.isArray(value.items) && value.item_count === value.items.length
+    && value.items.every((item) => item && requiredItemFields.every((field) => Object.hasOwn(item, field))
+      && typeof item.control_code === 'string' && typeof item.name === 'string'
+      && ['Alta', 'Media', 'Baja'].includes(item.priority)
+      && typeof item.finding === 'string' && typeof item.recommendation === 'string'
+      && Array.isArray(item.action_steps) && item.action_steps.every((step) => typeof step === 'string')
+      && typeof item.validation_step === 'string')
+    && Number.isInteger(value.verification_pending_count)
+    && value.verification_pending_count >= 0
+    && Array.isArray(value.verification_pending)
+    && value.verification_pending_count === value.verification_pending.length
+    && value.verification_pending.every((item) => item && typeof item.control_code === 'string'
+      && typeof item.name === 'string' && item.status === 'pending_verification'
+      && ['not_evaluable', 'not_applicable', 'missing'].includes(item.reason));
+};
+const unavailableActions = (message) => {
+  elements.items.replaceChildren();
+  elements.verificationList.replaceChildren();
+  elements.actionsVerification.hidden = true;
+  elements.actionsEmpty.hidden = true;
+  elements.actionsDate.hidden = true;
+  elements.summaryCount.textContent = '';
+  elements.prioritySummary.textContent = '';
+  elements.actionsNotice.textContent = message;
+  elements.actionsNotice.hidden = false;
+};
+const renderCurrentActions = (currentActions, legacyPlan) => {
+  const legacy = !entitledSiteId && legacyPlan;
+  const actions = legacy
+    ? { status: 'available', source: 'initial', items: legacyPlan.items,
+        item_count: legacyPlan.item_count, verification_pending: [], verification_pending_count: 0 }
+    : currentActions;
+  if (!legacy && !validCurrentActions(actions)) {
+    unavailableActions('No pudimos cargar las recomendaciones vigentes. Recarga la página para volver a consultarlas.');
+    return;
+  }
+  if (actions.status === 'version_mismatch') {
+    unavailableActions('La última revisión utiliza una versión del análisis que no permite generar recomendaciones confiables. No podemos confirmar que no existan mejoras pendientes.');
+    return;
+  }
+  elements.actionsNotice.hidden = true;
+  elements.items.replaceChildren();
+  elements.verificationList.replaceChildren();
+  elements.actionsDate.hidden = false;
+  elements.actionsDate.textContent = legacy
+    ? 'Recomendaciones del diagnóstico inicial (acceso anterior; no reflejan revisiones posteriores).'
+    : `${actions.source === 'initial' ? 'Basado en el diagnóstico inicial' : 'Basado en la última revisión válida'} · ${friendlyDate(actions.created_at)}`;
+  elements.summaryCount.textContent = actions.item_count === 0
+    ? 'Sin mejoras accionables detectadas'
+    : `${actions.item_count} ${actions.item_count === 1 ? 'mejora pendiente' : 'mejoras pendientes'}`;
+  const counts = actions.items.reduce((result, item) => {
+    result[item.priority] = (result[item.priority] || 0) + 1;
+    return result;
+  }, {});
+  elements.prioritySummary.textContent = ['Alta', 'Media', 'Baja']
+    .filter((priority) => counts[priority] > 0)
+    .map((priority) => `${counts[priority]} de prioridad ${priority.toLowerCase()}`)
+    .join(' · ');
+  actions.items.forEach(renderItem);
+  elements.actionsVerification.hidden = legacy || actions.verification_pending_count === 0;
+  if (!legacy && actions.verification_pending_count > 0) {
+    const count = actions.verification_pending_count;
+    elements.verificationCount.textContent = `${count} ${count === 1 ? 'control requiere' : 'controles requieren'} verificación`;
+    const labels = {
+      not_evaluable: 'Resultado no concluyente',
+      not_applicable: 'No aplica en esta revisión',
+      missing: 'No evaluado en esta revisión',
+    };
+    actions.verification_pending.forEach((item) => {
+      const row = addText(elements.verificationList, 'li', '', 'plan-actions__verification-item');
+      addText(row, 'span', item.name);
+      addText(row, 'small', labels[item.reason], 'plan-actions__verification-reason');
+    });
+  }
+  elements.actionsEmpty.hidden = actions.item_count !== 0;
+  if (actions.item_count === 0) {
+    elements.actionsEmpty.textContent = actions.verification_pending_count > 0
+      ? 'No se detectaron mejoras concretas en esta revisión, pero hay controles sin resultado confirmado.'
+      : 'No se detectaron mejoras pendientes en el alcance observado. Esto no acredita cumplimiento legal.';
+  }
+};
 const diagnosticAreas = ['Transparencia', 'Formularios', 'Cookies', 'Contacto', 'Seguridad'];
 const diagnosticStates = {
   detected: 'Detectado',
@@ -198,7 +293,7 @@ const showError = (kind) => {
 const renderItem = (item, index) => {
   const fragment = elements.template.content.cloneNode(true);
   fragment.querySelector('.plan-item__number').textContent = index + 1; fragment.querySelector('.plan-item__code').textContent = item.control_code;
-  fragment.querySelector('.plan-item__name').textContent = displayNames[item.control_code] || item.name;
+  fragment.querySelector('.plan-item__name').textContent = item.name;
   const priority = fragment.querySelector('.plan-item__priority'); priority.textContent = `Prioridad ${item.priority.toLowerCase()}`; priority.dataset.priority = item.priority.toLowerCase();
   fragment.querySelector('.plan-item__finding').textContent = item.finding; fragment.querySelector('.plan-item__recommendation').textContent = item.recommendation;
   fragment.querySelector('.plan-item__validation p').textContent = item.validation_step;
@@ -276,21 +371,10 @@ const renderCheck = (check) => {
   }
   elements.checkStart.hidden = false;
 };
-const render = ({ site_url: siteUrl, plan, check, diagnostic }) => {
+const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions }) => {
   elements.site.textContent = friendlySite(siteUrl);
   renderState(diagnostic);
-  elements.summaryCount.textContent = plan.item_count === 0
-    ? 'Sin mejoras recomendadas'
-    : `${plan.item_count} ${plan.item_count === 1 ? 'mejora recomendada' : 'mejoras recomendadas'}`;
-  const counts = plan.items.reduce((result, item) => {
-    result[item.priority] = (result[item.priority] || 0) + 1;
-    return result;
-  }, {});
-  elements.prioritySummary.textContent = ['Alta', 'Media', 'Baja']
-    .filter((priority) => counts[priority] > 0)
-    .map((priority) => `${counts[priority]} de prioridad ${priority.toLowerCase()}`)
-    .join(' · ');
-  plan.items.forEach(renderItem);
+  renderCurrentActions(currentActions, entitledSiteId ? null : plan);
   renderCheck(check);
   renderProgressDates(diagnostic, check?.latest_check);
   elements.loading.hidden = true;
@@ -329,6 +413,8 @@ const performCheck = async () => {
     renderCheckResult(data);
     renderProgressDates(null, data);
     if (entitledSiteId) {
+      // The review is persisted. Do not keep presenting pre-review actions.
+      unavailableActions('La revisión se guardó. Actualizando las recomendaciones vigentes…');
       const refreshController = new AbortController();
       const refreshTimeout = setTimeout(() => refreshController.abort(), requestTimeoutMs);
       try {
@@ -341,9 +427,11 @@ const performCheck = async () => {
         const latest = await refreshed.json();
         if (!validDiagnostic(latest?.diagnostic)) throw new Error('invalid_diagnostic');
         renderState(latest.diagnostic);
+        renderCurrentActions(latest.current_actions, null);
         renderProgressDates(latest.diagnostic, data);
       } catch {
         unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
+        unavailableActions('La revisión se guardó, pero no pudimos actualizar las recomendaciones vigentes. Recarga la página.');
       } finally {
         clearTimeout(refreshTimeout);
       }
