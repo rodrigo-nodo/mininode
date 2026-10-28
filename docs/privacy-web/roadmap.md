@@ -118,6 +118,19 @@ Pregunta: **¿Qué debería corregir y cómo?**
 
 C3b consumirá **exclusivamente** `current_actions` para «Qué debo mejorar», mostrará un estado explícito para pendientes de verificación y distinguirá `version_mismatch` de un diagnóstico sin hallazgos accionables. Después de cada revisión volverá a leer el Plan autenticado.
 
+#### C3b - Recomendaciones dinámicas (frontend)
+
+«Qué debo mejorar» consume `current_actions` del Plan autenticado sin recrear hallazgos ni consultar el diagnóstico histórico por su cuenta:
+
+- Usa solo `current_actions.items` para las tarjetas de acciones y mantiene el orden estable del backend, con prioridades Alta/Media/Baja y pasos expandibles. Se elimina la excepción local de nombre PRV-003, utilizando el nombre canónico del contrato.
+- Muestra fecha/origen de la revisión que sustenta las recomendaciones. Los controles `verification_pending` aparecen separados de las acciones, con motivos «Resultado no concluyente», «No aplica en esta revisión» o «No evaluado en esta revisión», sin instrucciones inventadas, checklist ni cierre automático.
+- Solo muestra «Sin mejoras pendientes en el alcance observado» si **ambos conteos valen cero**. Ese mensaje recuerda que no acredita cumplimiento legal. Si hay pendientes de verificación, no presenta una conclusión positiva.
+- Si el estado es `version_mismatch`, el contrato está incompleto o tiene datos incoherentes, oculta acciones previas y explica que no puede mostrar recomendaciones vigentes, sin sustituirlas por el Plan inicial.
+- Después de cada POST de revisión exitosa, invalida inmediatamente las acciones antiguas y utiliza el mismo GET autenticado existente para refrescar diagnóstico y recomendaciones. Un error de GET mantiene ocultas las recomendaciones obsoletas y solicita recargar. Sin solicitudes de escaneo adicionales.
+- Solo para el recorrido legado por token, que no expone `current_actions`, conserva las instrucciones iniciales identificadas explícitamente como históricas y no actualizadas. No se considera origen válido para acciones vigentes de Access.
+
+Se preservan las tres pestañas y el comportamiento de C2; C4 continúa a cargo del historial y evolución. Sin cambios de API, scoring, controles, persistencia ni motor de recomendaciones.
+
 ### Bloque 3 — Mis avances
 
 Pregunta: **¿Estoy mejorando?**
@@ -137,8 +150,8 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 | C1 | Estructura visual, navegación y responsive | **Implementado en DEV; validaciones visuales realizadas** |
 | C2a | Backend: contrato de lectura del diagnóstico vigente | **Mergeado en DEV (PR #400)** |
 | C2b | Frontend: estado actual, cinco áreas y controles expandibles | **PASS visual en DEV (PRs #401 y #402)** |
-| C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **En PR; pendiente de revisión, CI y merge** |
-| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **Diseño aprobado · pendiente de implementación** |
+| C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **Mergeado en DEV, PR #403; Reviewer PASS y CI verde** |
+| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **En PR · pendiente de CI, merge y validación DEV** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
