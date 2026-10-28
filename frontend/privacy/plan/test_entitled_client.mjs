@@ -18,6 +18,8 @@ class Node {
     this.children = [];
     this.listeners = new Map();
     this.attributes = new Map();
+    this.dataset = {};
+    this.content = { cloneNode: () => new Node() };
   }
   addEventListener(name, handler) { this.listeners.set(name, handler); }
   click() {
@@ -27,6 +29,7 @@ class Node {
   }
   setAttribute(name, value) { this.attributes.set(name, value); }
   focus() { this.focused = true; }
+  querySelector() { return new Node(); }
   append(node) { this.children.push(node); }
   replaceChildren() { this.children = []; }
 }
@@ -151,5 +154,22 @@ test('C1 navigation defaults to state and switches panels without new requests',
   assert.equal(ui.nodes.get('plan-panel-actions').hidden, false);
   ui.nodes.get('plan-tab-progress').click();
   assert.equal(ui.nodes.get('plan-panel-progress').hidden, false);
+  assert.equal(ui.calls.length, 1);
+});
+
+test('compact actions summary lists only nonzero priorities and one recommendation count', async () => {
+  const item = (priority) => ({
+    control_code: 'PRV-003', name: 'Política de privacidad', priority,
+    finding: 'Hallazgo observable', recommendation: 'Revisar el sitio',
+    action_steps: ['Publicar información'], validation_step: 'Volver a revisar',
+  });
+  const data = payload();
+  data.plan.items = [item('Alta'), item('Alta')];
+  data.plan.item_count = data.plan.items.length;
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('summary-count').textContent, '2 mejoras recomendadas');
+  assert.equal(ui.nodes.get('priority-summary').textContent, '2 de prioridad alta');
+  assert.equal(ui.nodes.get('plan-items').children.length, 2);
   assert.equal(ui.calls.length, 1);
 });
