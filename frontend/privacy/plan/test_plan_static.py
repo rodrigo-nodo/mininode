@@ -61,32 +61,50 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_dynamic_page_assets_are_absolute(self):
         for asset in (
             '/styles.css',
-            '/privacy/plan-demo/styles.css?v=pw03b-cache2',
-            '/privacy/plan-assets/styles.css?v=pw03b-cache2',
+            '/privacy/plan-demo/styles.css?v=c1-ui-3',
+            '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c1-tabs-2',
+            '/privacy/plan-assets/app.js?v=c1-ui-3',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c1-tabs-2', HTML)
+        self.assertIn('app.js?v=c1-ui-3', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
             self.assertIn(f"`#plan-tab-${{id}}`", APP)
         self.assertIn("setPlanTab('state')", APP)
 
-    def test_c1_dark_theme_contrast_and_css_cache(self):
-        css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c1-dark-2"', HTML)
-        self.assertIn(':root[data-theme="dark"]', css)
-        self.assertIn(":root:not([data-theme])", css)
-        self.assertIn("prefers-color-scheme: dark", css)
-        for property_name in ("--ink", "--surface", "--background", "--border", "--muted"):
-            self.assertIn(property_name + ":", css)
-        for selector in (".plan-summary", ".plan-closing", ".plan-item__content p",
-                         ".improvement-check"):
-            self.assertIn(selector, css)
+    def test_c1_shared_color_tokens_and_compact_summary(self):
+        import re
+        css_files = [
+            ASSETS_DIR / "tabs.css",
+            ASSETS_DIR / "styles.css",
+            FRONTEND_DIR / "privacy/plan-demo/styles.css",
+        ]
+        for path in css_files:
+            css = path.read_text(encoding="utf-8")
+            self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\\b|rgba?\\(")
+            self.assertNotIn(':root[data-theme="dark"]', css)
+        tokens = (FRONTEND_DIR / "assets/css/tokens.css").read_text(encoding="utf-8")
+        components = (FRONTEND_DIR / "assets/css/components.css").read_text(encoding="utf-8")
+        self.assertIn("--color-on-primary:", tokens)
+        self.assertIn("color: var(--color-on-primary)", components)
+        self.assertNotIn('id="closing-count"', HTML)
+        self.assertNotIn('class="plan-closing"', HTML)
+        self.assertNotIn('class="plan-summary__value"', HTML)
+        self.assertEqual(HTML.count('id="summary-count"'), 1)
+        self.assertIn('id="priority-summary"', HTML)
+        self.assertIn('>Qué debo mejorar</h2>', HTML)
+        self.assertIn("elements.prioritySummary.textContent", APP)
+        self.assertNotIn("elements.closingCount", APP)
+        for button_id, variant in (
+            ("check-start", "btn--primary"),
+            ("check-submit", "btn--primary"),
+            ("check-cancel", "btn--secondary"),
+        ):
+            self.assertRegex(HTML, 'id="' + button_id + '"[^>]*class="btn ' + variant + '"')
 
     def test_only_token_request_matches_plan_rewrite(self):
         source = "/privacy/plan/:token"
@@ -183,7 +201,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c1-tabs-2"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c1-ui-3"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -194,7 +212,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("/privacy/plan/*\n  Cache-Control: no-cache, must-revalidate", headers)
         for css_path in ("/styles.css", "/privacy/plan-demo/styles.css",
                          "/privacy/plan-assets/styles.css"):
-            self.assertIn('href="' + css_path + '?v=pw03b-cache2"', HTML)
+            self.assertIn('href="' + css_path + '?v=c1-ui-3"', HTML)
         self.assertNotIn('href="/privacy/plan-demo/styles.css?v=1"', HTML)
 
     def test_future_product_features_remain_out_of_scope(self):
