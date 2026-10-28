@@ -89,7 +89,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         tokens = (FRONTEND_DIR / "assets/css/tokens.css").read_text(encoding="utf-8")
         components = (FRONTEND_DIR / "assets/css/components.css").read_text(encoding="utf-8")
         self.assertIn("--color-on-primary:", tokens)
-        self.assertIn("color: var(--color-on-primary)", components)
+        self.assertIn("color: var(--color-on-primary, var(--color-bg))", components)
         self.assertNotIn('id="closing-count"', HTML)
         self.assertNotIn('class="plan-closing"', HTML)
         self.assertNotIn('class="plan-summary__value"', HTML)
