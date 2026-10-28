@@ -145,6 +145,33 @@ assert.match(html, /Activar Privacy Web/);
 assert.match(html, /Conocer Privacy Data/);
 assert.equal(elements.get('request-error').textContent, '');
 
+// A priority may carry the official backend name; display text must come from
+// the same UX catalog used for controls and Plan, without altering the action.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic,
+  priorities: [
+    {
+      control_code: 'PRV-003',
+      name: 'Política propia del responsable',
+      priority: 'Alta',
+      recommendation: 'Mantener la recomendación original.',
+      action_steps: ['Paso original'],
+      validation_step: 'Validación original',
+    },
+    { control_code: 'PRV-HIST', name: 'Nombre histórico', recommendation: 'Acción histórica' },
+    { name: 'Acción sin código', recommendation: 'Acción sin identificador' },
+  ],
+}, 'https://example.com');
+const priorityCards = elements.get('diagnostic-priorities').children;
+assert.equal(priorityCards.length, 3);
+assert.equal(priorityCards[0].children[1].children[0].textContent,
+  'Política de privacidad claramente asociada a la empresa');
+assert.equal(priorityCards[0].children[1].children[1].textContent, 'Mantener la recomendación original.');
+assert.equal(priorityCards[0].children[1].children[2].children[1].children[1].children[0].textContent, 'Paso original');
+assert.equal(priorityCards[1].children[1].children[0].textContent, 'Nombre histórico');
+assert.equal(priorityCards[2].children[1].children[0].textContent, 'Acción sin código');
+context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com');
+
 const controlsWithGaps = controls
   .filter(({ control_code }) => control_code !== 'PRV-002')
   .map((control) => control.control_code === 'PRV-003' ? { ...control, result: 'unexpected_result' } : control);
