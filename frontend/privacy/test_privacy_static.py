@@ -57,6 +57,14 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("description(control.code)", APP)
 
 
+    def test_public_result_renderer_regression(self):
+        # Exercise the actual JS render path in CI, including priority titles.
+        result = subprocess.run(
+            ["node", str(PRIVACY_DIR / "test_privacy_render.js")],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
     def test_priorities_use_shared_ux_catalog_for_known_codes(self):
         self.assertIn(
             "window.MininodePrivacyControlUX?.name(priority.control_code, priority.name || 'Acción prioritaria')",
