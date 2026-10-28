@@ -39,7 +39,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
-            ("index.html", 'src="app.js?v=ux21-1"'),
+            ("index.html", 'src="app.js?v=ux21-priorities-2"'),
             ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=ux21-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
@@ -57,6 +57,16 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("description(control.code)", APP)
 
 
+    def test_priorities_use_shared_ux_catalog_for_known_codes(self):
+        self.assertIn(
+            "window.MininodePrivacyControlUX?.name(priority.control_code, priority.name || 'Acción prioritaria')",
+            APP,
+        )
+        self.assertNotIn(
+            "appendTextElement(content, 'h4', priority.name || 'Acción prioritaria')",
+            APP,
+        )
+
     def test_priorities_heading_tracks_visible_count(self):
         self.assertIn('id="actions-title">Acciones prioritarias</h3>', HTML)
         self.assertIn("const actionsTitle = document.querySelector('#actions-title');", APP)
@@ -64,7 +74,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=ux21-1"', HTML)
+        self.assertIn('src="app.js?v=ux21-priorities-2"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
@@ -80,7 +90,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=ux21-1', HTML)
+        self.assertIn('app.js?v=ux21-priorities-2', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
