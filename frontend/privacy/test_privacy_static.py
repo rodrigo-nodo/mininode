@@ -24,11 +24,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=dd505a87a335"', HTML)
+        self.assertIn('src="app.js?v=ux21-1"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=300savedrow"', HTML)
+        self.assertIn('href="styles.css?v=ux21-1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -40,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=dd505a87a335', HTML)
+        self.assertIn('app.js?v=ux21-1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
