@@ -1,79 +1,12 @@
 /* Privacy Web Plan C1 — layout only; existing Plan logic stays unchanged. */
-.plan-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 28px}
-.plan-tab{font:inherit;font-weight:650;min-height:48px;line-height:1.35;text-align:center;cursor:pointer;padding:12px 10px;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:12px}
-.plan-tab:hover{border-color:var(--primary)}
-.plan-tab[aria-current="page"]{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
-.plan-tab:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+.plan-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 20px}
+.plan-tab{font:inherit;font-weight:650;min-height:48px;line-height:1.35;text-align:center;cursor:pointer;padding:12px 10px;color:var(--color-text);background:var(--color-bg);border:1px solid var(--color-border);border-radius:12px}
+.plan-tab:hover{border-color:var(--color-primary)}
+.plan-tab[aria-current="page"]{background:var(--color-primary-soft);border-color:var(--color-primary);color:var(--color-primary-hover)}
+.plan-tab:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}
 .plan-panel{min-width:0}
 .plan-panel > h2:first-child{margin-top:0}
-.plan-panel#plan-panel-state{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--border);border-radius:12px;margin-bottom:28px}
+.plan-panel#plan-panel-state{background:var(--color-bg);padding:clamp(16px,3vw,24px);border:1px solid var(--color-border);border-radius:12px;margin-bottom:28px}
 .plan-panel#plan-panel-state .plan-facts{margin-bottom:0}
 @media(max-width:600px){.plan-tabs{gap:6px}.plan-tab{font-size:.82rem;padding:10px 5px;min-height:52px;overflow-wrap:anywhere}}
 @media(max-width:340px){.plan-tabs{display:flex;flex-direction:column}.plan-tab{text-align:left;padding-inline:14px;min-height:44px}}
-
-/* The Plan currently defines its own light surfaces. Reconcile them with the
-   shared site theme so dark text tokens never appear on white surfaces. */
-:root[data-theme="dark"] {
-  --ink: var(--color-text);
-  --muted: var(--color-muted);
-  --border: var(--color-border);
-  --surface: #1e252c;
-  --background: var(--color-bg);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --ink: var(--color-text);
-    --muted: var(--color-muted);
-    --border: var(--color-border);
-    --surface: #1e252c;
-    --background: var(--color-bg);
-  }
-}
-:root[data-theme="dark"] body,
-:root[data-theme="dark"] .plan-shell,
-:root[data-theme="dark"] .plan-hero,
-:root[data-theme="dark"] .plan-facts dd {
-  color: var(--ink);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) body,
-  :root:not([data-theme]) .plan-shell,
-  :root:not([data-theme]) .plan-hero,
-  :root:not([data-theme]) .plan-facts dd {
-    color: var(--ink);
-  }
-}
-:root[data-theme="dark"] .plan-summary,
-:root[data-theme="dark"] .plan-closing {
-  background: #123c45;
-  color: #f4fbfc;
-}
-:root[data-theme="dark"] .plan-item__content p,
-:root[data-theme="dark"] .plan-item__steps {
-  color: var(--muted);
-}
-:root[data-theme="dark"] .plan-item__number {
-  color: #0e2226;
-}
-:root[data-theme="dark"] .improvement-check {
-  background: #192f34;
-  border-color: #486b70;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .plan-summary,
-  :root:not([data-theme]) .plan-closing {
-    background: #123c45;
-    color: #f4fbfc;
-  }
-  :root:not([data-theme]) .plan-item__content p,
-  :root:not([data-theme]) .plan-item__steps {
-    color: var(--muted);
-  }
-  :root:not([data-theme]) .plan-item__number {
-    color: #0e2226;
-  }
-  :root:not([data-theme]) .improvement-check {
-    background: #192f34;
-    border-color: #486b70;
-  }
-}
