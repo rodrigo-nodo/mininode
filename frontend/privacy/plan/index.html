@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-demo/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/plan-assets/styles.css?v=c1-ui-3">
-  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c2ux-1">
+  <link rel="stylesheet" href="/privacy/plan-assets/tabs.css?v=c3b-1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="../../include.js?v=pw03b-header1" defer></script>
-  <script src="/privacy/plan-assets/app.js?v=c2ux-1" defer></script>
+  <script src="/privacy/plan-assets/app.js?v=c3b-1" defer></script>
 </head>
 <body>
   <div data-include="../../partials/header-nav.html"></div>
@@ -51,8 +51,18 @@
       <section class="plan-summary" aria-labelledby="summary-title">
         <h2 id="summary-title">Qué debo mejorar</h2>
         <p class="plan-summary__metrics"><span id="summary-count">—</span><span id="priority-summary"></span></p>
+        <p class="plan-actions__date" id="actions-date" hidden></p>
       </section>
+      <p class="plan-actions__notice" id="actions-notice" role="status" hidden></p>
+      <p class="plan-actions__empty" id="actions-empty" hidden></p>
       <section class="improvements" aria-label="Acciones recomendadas"><div id="plan-items"></div></section>
+      <section class="plan-actions__verification" id="actions-verification" aria-labelledby="actions-verification-title" hidden>
+        <h3 id="actions-verification-title">Pendientes de verificación</h3>
+        <p class="plan-actions__verification-caption">Estos resultados no confirman una corrección ni permiten recomendar pasos automáticos.</p>
+        <p class="plan-actions__verification-count" id="actions-verification-count"></p>
+        <ul id="actions-verification-list"></ul>
+        <p class="plan-actions__verification-caption">Puedes consultar el detalle en «Estado de mi sitio».</p>
+      </section>
       <p class="plan-implementation-note">La implementación técnica de los cambios no está incluida.</p>
       </section>
       <section class="plan-panel" id="plan-panel-progress" aria-labelledby="plan-tab-progress" hidden>
