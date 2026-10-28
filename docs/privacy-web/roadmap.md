@@ -104,6 +104,20 @@ Pregunta: **¿Qué debería corregir y cómo?**
 - **Sin checklist manual** por ahora: el usuario corrige en su sitio y una revisión posterior verifica las señales observables. Un estado no concluyente nunca equivale automáticamente a corregido.
 - Si no existen mejoras pendientes detectadas, mostrar un mensaje positivo pero acotado al alcance observado; distinguir controles no concluyentes y aclarar que no es certificación legal.
 
+#### C3a - Recomendaciones vigentes (backend)
+
+`GET/POST /api/privacy/workspace-sites/{workspace_site_id}/plan` incorpora el campo **aditivo** `current_actions`. Los campos existentes `plan` (diagnóstico inicial inmutable), `diagnostic` y `check` se conservan:
+
+- `current_actions.status`: `available` o `version_mismatch`; `source`: `initial` o `review`; `created_at`: fecha real del diagnóstico utilizado; `actions_version`: versión del catálogo con el que se generaron instrucciones (o `null` cuando no son seguras).
+- `item_count` e `items`: solo acciones actuales y evaluables, en el orden determinista del motor, con el mismo contrato de acciones del Plan inicial. Si todavía no hay revisión, se reutilizan las acciones **guardadas** inicialmente sin regenerarlas.
+- Tras una revisión, las acciones se recalculan en memoria sobre el diagnóstico persistido de la última revisión válida utilizando `build_correction_plan`, sin escanear de nuevo ni sobrescribir el `plan_snapshot`. Se incorporan hallazgos nuevos con acciones de catálogo y se retiran los detectados como corregidos.
+- `verification_pending_count` y `verification_pending`: controles evaluables sin conclusión (`not_evaluable`) y controles con una acción en el Plan inicial **o en cualquier revisión anterior compatible** que posteriormente pasan a `not_applicable` o desaparecen, sin confirmación de corrección intermedia. Se reconstruyen los hallazgos no resueltos en orden cronológico desde los snapshots guardados de este mismo Plan: solo `detected` confirma su resolución; `not_evaluable`, `not_applicable` y ausencias no la confirman. Son **pendientes de verificación**, nunca acciones supuestamente corregidas ni instrucciones inventadas.
+- El diagnóstico revisado debe identificar exactamente las versiones vigentes de framework/scoring. Si faltan o difieren, `status=version_mismatch`, conteos `null` e instrucciones vacías: **no** interpretar el vacío como «sin pendientes». La generación de acciones desde el diagnóstico vigente no requiere comparar el score histórico inicial con el actual. Una revisión antigua con versiones incompatibles no se reinterpreta con el catálogo vigente.
+- La lectura sigue protegida por membresía, sitio no desvinculado y entitlement, incluidos los accesos de solo lectura tras vencimiento natural y el bloqueo por revocación.
+- Sin cambios de BD, migraciones, motor de priorización, scoring, controles, catálogo de acciones o endpoints de revisión; el frontend actual continuará mostrando el Plan inicial hasta C3b.
+
+C3b consumirá **exclusivamente** `current_actions` para «Qué debo mejorar», mostrará un estado explícito para pendientes de verificación y distinguirá `version_mismatch` de un diagnóstico sin hallazgos accionables. Después de cada revisión volverá a leer el Plan autenticado.
+
 ### Bloque 3 — Mis avances
 
 Pregunta: **¿Estoy mejorando?**
@@ -122,8 +136,9 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 |---|---|---|
 | C1 | Estructura visual, navegación y responsive | **Implementado en DEV; validaciones visuales realizadas** |
 | C2a | Backend: contrato de lectura del diagnóstico vigente | **Mergeado en DEV (PR #400)** |
-| C2b | Frontend: estado actual, cinco áreas y controles expandibles | **Implementado en PR; pendiente de CI, merge y validación DEV** |
-| C3 | Acciones pendientes dinámicas y verificación sin checklist manual | **Diseño aprobado · pendiente de implementación** |
+| C2b | Frontend: estado actual, cinco áreas y controles expandibles | **PASS visual en DEV (PRs #401 y #402)** |
+| C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **En PR; pendiente de revisión, CI y merge** |
+| C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **Diseño aprobado · pendiente de implementación** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño aprobado · pendiente de implementación** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.

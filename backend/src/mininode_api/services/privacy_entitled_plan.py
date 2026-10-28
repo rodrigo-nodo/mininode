@@ -17,6 +17,7 @@ from psycopg.types.json import Jsonb
 
 from mininode_api.domain_packs.privacy.correction_plan import build_correction_plan
 from mininode_api.domain_packs.privacy.evaluator import load_controls
+from mininode_api.domain_packs.privacy.versioning import diagnostic_versions
 from mininode_api.services import billing, privacy_correction_plan_check
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
@@ -176,6 +177,115 @@ def _diagnostic_view(snapshot: dict, created_at: datetime, *, source: str) -> di
     }
 
 
+def _prior_unresolved_actions(baseline: dict, prior_snapshots: list[dict]) -> set[str]:
+    """Track findings from baseline and prior reviews, clearing only confirmed detections.
+
+    Missing/non-applicable/non-evaluable results do not prove that a previously
+    actionable finding was corrected. Incompatible historical catalog versions
+    cannot be reinterpreted using today's control definitions.
+    """
+    unresolved = {
+        item["control_code"] for item in baseline.get("items", [])
+        if isinstance(item, dict) and isinstance(item.get("control_code"), str)
+    }
+    versions = diagnostic_versions()
+    for snapshot in prior_snapshots:
+        if not isinstance(snapshot, dict) or any(
+            snapshot.get(key) != value for key, value in versions.items()
+        ):
+            continue
+        for item in snapshot.get("controls", []):
+            if (isinstance(item, dict) and isinstance(item.get("control_code"), str)
+                    and item.get("result") == "detected"):
+                unresolved.discard(item["control_code"])
+        plan = build_correction_plan(snapshot.get("controls", []), initial_score=snapshot["score"])
+        unresolved.update(item["control_code"] for item in plan["items"])
+    return unresolved
+
+
+def _prior_review_actions(cur, plan_id: UUID, baseline: dict) -> set[str]:
+    """Read all earlier checks for this Plan in chronological order, excluding latest."""
+    cur.execute("""
+        SELECT d.diagnostic_snapshot
+        FROM privacy.entitled_plan_check c
+        JOIN privacy.entitled_plan p ON p.id=c.entitled_plan_id
+        JOIN privacy.diagnostic d ON d.id=c.check_diagnostic_id
+                                 AND d.workspace_site_id=p.workspace_site_id
+        WHERE c.entitled_plan_id=%s
+        ORDER BY c.created_at ASC, c.id ASC
+    """, (plan_id,))
+    snapshots = [row[0] for row in cur.fetchall()]
+    if not snapshots:
+        raise RuntimeError("Latest Plan check is missing from diagnostic history")
+    return _prior_unresolved_actions(baseline, snapshots[:-1])
+
+
+def _pending_verification(snapshot: dict, prior_unresolved: set[str]) -> list[dict]:
+    """Uncertain evaluated controls need verification, not a claim of correction."""
+    catalog = {control["code"]: control for control in load_controls()}
+    reviewed = {}
+    for item in snapshot.get("controls", []):
+        if isinstance(item, dict) and isinstance(item.get("control_code"), str):
+            reviewed[item["control_code"]] = item.get("result")
+    pending = []
+    for code, control in catalog.items():
+        if control["type"] not in {"evaluation", "conditional_evaluation"} or control.get("score_weight", 1) <= 0:
+            continue
+        result = reviewed.get(code)
+        if result == "not_evaluable" or (code in prior_unresolved and result in {None, "not_applicable"}):
+            pending.append({
+                "control_code": code,
+                "name": control["name"],
+                "status": "pending_verification",
+                "reason": result or "missing",
+            })
+    return pending
+
+
+def _current_actions(
+    baseline: dict, snapshot: dict, updated_at: datetime, *, source: str,
+    prior_unresolved: set[str] | None = None,
+) -> dict:
+    """Read-only C3 plan; never mutate the immutable baseline or infer from old versions."""
+    if source == "review":
+        versions = diagnostic_versions()
+        if any(snapshot.get(key) != value for key, value in versions.items()):
+            return {
+                "status": "version_mismatch",
+                "source": source,
+                "created_at": updated_at,
+                "item_count": None,
+                "items": [],
+                "verification_pending_count": None,
+                "verification_pending": [],
+                "actions_version": None,
+            }
+        generated = build_correction_plan(
+            snapshot.get("controls", []), initial_score=snapshot["score"]
+        )
+    else:
+        # Before the first follow-up, reuse the saved initial plan as-is.
+        generated = baseline
+    # No review uses the frozen baseline. Reviewed Plans carry the reconciled
+    # set of unresolved findings from baseline and all earlier valid checks.
+    if prior_unresolved is None:
+        prior_unresolved = {
+            item["control_code"] for item in baseline.get("items", [])
+            if isinstance(item, dict) and isinstance(item.get("control_code"), str)
+        }
+    verification = _pending_verification(snapshot, prior_unresolved)
+    return {
+        "status": "available",
+        "source": source,
+        "created_at": updated_at,
+        "item_count": generated["item_count"],
+        "items": generated["items"],
+        "verification_pending_count": len(verification),
+        "verification_pending": verification,
+        "actions_version": generated["actions_version"],
+    }
+
+
 def _response(cur, entitlement, plan) -> dict:
     plan_id, _, site_url, original, snapshot, created_at, initial_at = plan
     latest = _latest_check(cur, plan_id)
@@ -185,6 +295,11 @@ def _response(cur, entitlement, plan) -> dict:
         "site_url": site_url,
         "created_at": created_at,
         "plan": snapshot,
+        "current_actions": _current_actions(
+            snapshot, current_snapshot, current_at,
+            source="review" if latest else "initial",
+            prior_unresolved=_prior_review_actions(cur, plan_id, snapshot) if latest else None,
+        ),
         "diagnostic": {
             "initial": {
                 "score": original["score"],

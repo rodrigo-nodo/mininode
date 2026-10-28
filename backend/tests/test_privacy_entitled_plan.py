@@ -8,12 +8,14 @@ import os
 import time
 
 import psycopg
+from psycopg.types.json import Jsonb
 import pytest
 from psycopg.conninfo import conninfo_to_dict
 from fastapi.testclient import TestClient
 
 from mininode_api.api import privacy_entitled_plan as api
 from mininode_api.main import create_app
+from mininode_api.domain_packs.privacy.versioning import diagnostic_versions
 from mininode_api.services import (
     access, access_identity, privacy_diagnostic_snapshot, privacy_entitled_plan,
 )
@@ -113,6 +115,11 @@ def test_courtesy_creates_stable_baseline_without_legacy_order(context):
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["plan"]["initial_score"] == c["snapshot"]["score"]
+    assert data["current_actions"]["status"] == "available"
+    assert data["current_actions"]["source"] == "initial"
+    assert data["current_actions"]["created_at"] == data["diagnostic"]["initial"]["created_at"]
+    assert data["current_actions"]["items"] == data["plan"]["items"]
+    assert data["current_actions"]["item_count"] == data["plan"]["item_count"]
     assert data["site_url"] == c["snapshot"]["site_url"]
     assert data["check"]["status"] == "available"
     assert data["check"]["expires_at"]
@@ -187,6 +194,8 @@ def test_expiry_blocks_access_without_erasing_plan_or_original(context):
     assert expired.json()["id"] == plan_id
     assert expired.json()["check"]["status"] == "expired"
     assert expired.json()["diagnostic"]["current"]["source"] == "initial"
+    assert expired.json()["current_actions"]["status"] == "available"
+    assert expired.json()["current_actions"]["items"] == created.json()["plan"]["items"]
     assert expired.json()["diagnostic"]["current"]["score"] == c["snapshot"]["score"]
     assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 403
     with psycopg.connect(c["url"]) as conn:
@@ -371,3 +380,214 @@ def test_c2_projection_is_public_read_only_and_uses_real_control_metadata():
     assert result["controls"][2]["name"] == "PRV-FUTURE"
     assert "private" not in str(result)
     assert "evidence" not in result["controls"][0]
+
+
+def test_c3_actions_rebuild_from_latest_review_without_mutating_baseline(context, monkeypatch):
+    c = context
+    path = _path(c)
+    baseline = c["client"].post(path, headers=c["headers"]).json()
+    assert baseline["plan"]["item_count"] == 1
+    assert [item["control_code"] for item in baseline["plan"]["items"]] == ["PRV-001"]
+    current = {**c["snapshot"], **diagnostic_versions(), "score": 84,
+               "controls": [
+                   {"control_code": "PRV-001", "result": "detected", "confidence": "high"},
+                   {"control_code": "PRV-003", "result": "not_detected", "confidence": "high"},
+               ]}
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url", lambda _url: current)
+    check = c["client"].post(path + "/check", headers=c["headers"])
+    assert check.status_code == 200, check.text
+    # The original diagnostic uses an older version: score deltas are not comparable.
+    assert check.json()["result"]["comparability"]["status"] == "not_comparable"
+    latest = c["client"].get(path, headers=c["headers"])
+    assert latest.status_code == 200, latest.text
+    data = latest.json()
+    assert data["plan"] == baseline["plan"]
+    assert data["diagnostic"]["current"]["score"] == 84
+    actions = data["current_actions"]
+    assert actions["status"] == "available"
+    assert actions["source"] == "review"
+    assert actions["created_at"] == data["diagnostic"]["current"]["created_at"]
+    assert actions["item_count"] == 1
+    assert [item["control_code"] for item in actions["items"]] == ["PRV-003"]
+    assert actions["items"][0]["action_steps"]
+    assert actions["items"][0]["validation_step"]
+    assert actions["verification_pending"] == []
+    with psycopg.connect(c["url"]) as conn:
+        assert conn.execute(
+            "SELECT plan_snapshot FROM privacy.entitled_plan WHERE id=%s",
+            (baseline["id"],),
+        ).fetchone()[0] == baseline["plan"]
+
+
+def test_c3_uncertain_findings_are_not_counted_as_corrected_or_actionable(context, monkeypatch):
+    c = context
+    path = _path(c)
+    first = c["client"].post(path, headers=c["headers"]).json()
+    versions = diagnostic_versions()
+    followup = {**c["snapshot"], **versions, "score": 75,
+                "controls": [
+                    {"control_code": "PRV-001", "result": "not_evaluable", "confidence": "low"},
+                    {"control_code": "PRV-003", "result": "not_detected", "confidence": "high"},
+                ]}
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url", lambda _: followup)
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    actions = c["client"].get(path, headers=c["headers"]).json()["current_actions"]
+    assert actions["status"] == "available"
+    assert [item["control_code"] for item in actions["items"]] == ["PRV-003"]
+    assert actions["verification_pending_count"] == 1
+    assert actions["verification_pending"] == [{
+        "control_code": "PRV-001", "name": "Política de privacidad visible",
+        "status": "pending_verification", "reason": "not_evaluable",
+    }]
+    assert all(item["control_code"] != "PRV-001" for item in actions["items"])
+    assert first["plan"]["item_count"] == 1
+    # A second valid review replaces the first active plan, not its baseline.
+    followup["controls"] = [
+        {"control_code": "PRV-001", "result": "detected", "confidence": "high"},
+        {"control_code": "PRV-003", "result": "detected", "confidence": "high"},
+    ]
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    latest = c["client"].get(path, headers=c["headers"]).json()
+    assert latest["current_actions"]["item_count"] == 0
+    assert latest["current_actions"]["verification_pending_count"] == 0
+    assert latest["plan"] == first["plan"]
+
+
+def test_c3_unknown_or_nonapplicable_baseline_control_requires_verification():
+    versions = diagnostic_versions()
+    initial = {
+        "item_count": 1, "items": [{"control_code": "PRV-001", "name": "Original"}],
+        "actions_version": "2",
+    }
+    at = datetime(2026, 10, 28, tzinfo=timezone.utc)
+    snapshot = {**versions, "score": 78, "controls": [
+        {"control_code": "PRV-001", "result": "not_applicable"},
+    ]}
+    result = privacy_entitled_plan._current_actions(initial, snapshot, at, source="review")
+    assert result["item_count"] == 0
+    assert result["verification_pending_count"] == 1
+    assert result["verification_pending"][0]["reason"] == "not_applicable"
+    snapshot["controls"] = []
+    result = privacy_entitled_plan._current_actions(initial, snapshot, at, source="review")
+    assert result["verification_pending"][0]["reason"] == "missing"
+
+
+def test_c3_version_mismatch_never_claims_zero_pending_or_generates_actions():
+    versions = diagnostic_versions()
+    initial = {"item_count": 2, "items": [
+        {"control_code": "PRV-001"}, {"control_code": "PRV-003"},
+    ], "actions_version": "2"}
+    at = datetime(2026, 10, 28, tzinfo=timezone.utc)
+    current = {**versions, "framework_version": "unrecognized-version",
+               "score": 95, "controls": [
+                   {"control_code": "PRV-001", "result": "detected"},
+                   {"control_code": "PRV-003", "result": "not_detected"},
+               ]}
+    result = privacy_entitled_plan._current_actions(initial, current, at, source="review")
+    assert result["status"] == "version_mismatch"
+    assert result["source"] == "review"
+    assert result["item_count"] is None
+    assert result["items"] == []
+    assert result["verification_pending_count"] is None
+    assert result["actions_version"] is None
+    assert initial["item_count"] == 2
+
+
+def test_c3_no_review_retains_immutable_initial_plan_even_when_versions_are_old():
+    initial = {"item_count": 1, "items": [{
+        "control_code": "PRV-001", "name": "Historical wording",
+        "action_steps": ["Old approved advice"], "validation_step": "Check again",
+    }], "actions_version": "1"}
+    snapshot = {"framework_version": "old", "scoring_version": "old",
+                "score": 35, "controls": [
+                    {"control_code": "PRV-001", "result": "not_detected"},
+                ]}
+    at = datetime(2026, 10, 28, tzinfo=timezone.utc)
+    result = privacy_entitled_plan._current_actions(initial, snapshot, at, source="initial")
+    assert result["status"] == "available"
+    assert result["items"] == initial["items"]
+    assert result["items"][0]["action_steps"] == ["Old approved advice"]
+    assert result["actions_version"] == "1"
+    assert result["created_at"] == at
+
+def test_c3_new_issue_persists_across_nonapplicable_and_missing_reviews(context, monkeypatch):
+    """B1: good initially, new finding, non-applicable/missing, confirmed correction."""
+    c = context
+    path = _path(c)
+    original = {**c["snapshot"], "controls": [
+        {"control_code": "PRV-001", "result": "not_detected", "confidence": "high"},
+        {"control_code": "PRV-003", "result": "detected", "confidence": "high"},
+    ]}
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute(
+            "UPDATE privacy.diagnostic SET diagnostic_snapshot=%s WHERE id=%s",
+            (Jsonb(original), c["original"]),
+        )
+    baseline = c["client"].post(path, headers=c["headers"]).json()
+    assert [item["control_code"] for item in baseline["plan"]["items"]] == ["PRV-001"]
+    current = {**c["snapshot"], **diagnostic_versions(), "score": 80, "controls": [
+        {"control_code": "PRV-001", "result": "detected", "confidence": "high"},
+        {"control_code": "PRV-003", "result": "not_detected", "confidence": "high"},
+    ]}
+    monkeypatch.setattr(privacy_entitled_plan, "diagnose_privacy_url", lambda _: current)
+
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    first = c["client"].get(path, headers=c["headers"]).json()
+    assert [i["control_code"] for i in first["current_actions"]["items"]] == ["PRV-003"]
+    assert first["current_actions"]["verification_pending_count"] == 0
+
+    current["controls"] = [
+        {"control_code": "PRV-001", "result": "detected"},
+        {"control_code": "PRV-003", "result": "not_applicable"},
+    ]
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    second = c["client"].get(path, headers=c["headers"]).json()
+    assert second["current_actions"]["item_count"] == 0
+    assert second["current_actions"]["verification_pending_count"] == 1
+    assert [(i["control_code"], i["reason"]) for i in second["current_actions"]["verification_pending"]] == [
+        ("PRV-003", "not_applicable"),
+    ]
+
+    current["controls"] = [{"control_code": "PRV-001", "result": "detected"}]
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    third = c["client"].get(path, headers=c["headers"]).json()
+    assert third["current_actions"]["item_count"] == 0
+    assert third["current_actions"]["verification_pending_count"] == 1
+    assert [(i["control_code"], i["reason"]) for i in third["current_actions"]["verification_pending"]] == [
+        ("PRV-003", "missing"),
+    ]
+
+    current["controls"] = [
+        {"control_code": "PRV-001", "result": "detected"},
+        {"control_code": "PRV-003", "result": "detected"},
+    ]
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    final = c["client"].get(path, headers=c["headers"]).json()
+    assert final["current_actions"]["item_count"] == 0
+    assert final["current_actions"]["verification_pending_count"] == 0
+    assert final["plan"] == baseline["plan"]
+    with psycopg.connect(c["url"]) as conn:
+        assert conn.execute(
+            "SELECT plan_snapshot FROM privacy.entitled_plan WHERE id=%s",
+            (baseline["id"],),
+        ).fetchone()[0] == baseline["plan"]
+
+
+def test_c3_historical_open_findings_are_cleared_by_confirmed_detection_only():
+    versions = diagnostic_versions()
+    baseline = {"items": [{"control_code": "PRV-001"}]}
+    def review(one, three):
+        return {**versions, "score": 80, "controls": [
+            {"control_code": "PRV-001", "result": one, "confidence": "high"},
+            {"control_code": "PRV-003", "result": three, "confidence": "high"},
+        ]}
+    prior = [
+        review("detected", "not_detected"),
+        review("not_applicable", "not_applicable"),
+        review("not_evaluable", "not_evaluable"),
+    ]
+    assert privacy_entitled_plan._prior_unresolved_actions(baseline, prior) == {"PRV-003"}
+    prior.append(review("detected", "detected"))
+    assert privacy_entitled_plan._prior_unresolved_actions(baseline, prior) == set()
+    prior.append({**versions, "score": 80, "controls": []})
+    assert privacy_entitled_plan._prior_unresolved_actions(baseline, prior) == set()
