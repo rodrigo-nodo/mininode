@@ -84,7 +84,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         ]
         for path in css_files:
             css = path.read_text(encoding="utf-8")
-            self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\\b|rgba?\\(")
+            self.assertNotRegex(css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(")
             self.assertNotIn(':root[data-theme="dark"]', css)
         tokens = (FRONTEND_DIR / "assets/css/tokens.css").read_text(encoding="utf-8")
         components = (FRONTEND_DIR / "assets/css/components.css").read_text(encoding="utf-8")
