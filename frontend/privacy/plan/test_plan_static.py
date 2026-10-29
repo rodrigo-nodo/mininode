@@ -298,7 +298,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         import json
         import subprocess
 
-        start = APP.index("const invalidateProgressHistory = () => {")
+        start = APP.index("const syncProgressDetail = () => {")
         end = APP.index("const renderProgressHistory = (history) => {", start)
         invalidate = APP[start:end]
         start = APP.index("const performCheck = async () => {")
@@ -311,6 +311,11 @@ const progressUI = {
   summary: {hidden:false}, chartSection: {hidden:false},
   history: {replaceChildren() { historyContents = []; }},
 };
+const section = {hidden:false, setAttribute() {}};
+const document = {querySelector: (selector) => {
+  assert.equal(selector, '#improvement-check');
+  return section;
+}};
 const addText = (parent, tag, value) => {
   historyContents.push(value);
   return {setAttribute(name, value) { assert.equal(name, 'role'); assert.equal(value, 'status'); }};
