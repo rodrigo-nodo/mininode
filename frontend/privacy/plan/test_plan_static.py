@@ -136,7 +136,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("unavailableState", APP)
         self.assertIn("La revisión se guardó", APP)
         self.assertIn("renderCheck(check)", APP)
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=pw03c2-1"', HTML)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c4c-1"', HTML)
 
     def test_c2_uses_only_shared_theme_tokens_for_styles(self):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
@@ -417,7 +417,7 @@ performCheck().then(() => {
         self.assertNotIn("$", monitoring)
 
     def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
-        self.assertEqual(APP.count("fetch("), 6)  # includes C2 post-review read; no monitoring API
+        self.assertEqual(APP.count("fetch("), 4)  # entitlement GET/POST/check/refresh; no legacy or monitoring API
         for assignment in (
             "elements.checkBefore.textContent = `${result.original_score} / 100`",
             "elements.checkNow.textContent = `${result.current_score} / 100`",
