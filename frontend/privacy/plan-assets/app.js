@@ -373,11 +373,139 @@ const renderCheck = (check) => {
   }
   elements.checkStart.hidden = false;
 };
-const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions }) => {
+
+const progressUI = {
+  summary: document.querySelector('#progress-summary'),
+  initial: document.querySelector('#progress-initial'),
+  current: document.querySelector('#progress-current'),
+  initialDate: document.querySelector('#progress-initial-date'),
+  currentDate: document.querySelector('#progress-current-date'),
+  delta: document.querySelector('#progress-delta'),
+  counts: document.querySelector('#progress-counts'),
+  history: document.querySelector('#progress-history-list'),
+  chartSection: document.querySelector('#progress-chart-section'),
+  chart: document.querySelector('#progress-chart'),
+  chartNote: document.querySelector('#progress-chart-note'),
+};
+const progressLabels = { improved: 'Mejora', regressed: 'Retroceso',
+  changed: 'Cambio', not_conclusive: 'No concluyente' };
+const renderProgressComparison = (parent, comparison, heading) => {
+  addText(parent, 'h4', heading);
+  if (!comparison || comparison.comparability?.status !== 'comparable') {
+    addText(parent, 'p', 'No se pueden comparar estas revisiones por diferencias de versión o información insuficiente.');
+    return;
+  }
+  const delta = comparison.score_change;
+  addText(parent, 'p', delta === 0 ? 'Sin variación en el score'
+    : Number.isInteger(delta) ? `${delta > 0 ? '+' : ''}${delta} puntos` : 'Variación no disponible');
+  const changes = Array.isArray(comparison.changes) ? comparison.changes : [];
+  if (changes.length === 0) {
+    addText(parent, 'p', 'Sin cambios detectados entre los controles comparables.');
+    return;
+  }
+  const list = addText(parent, 'ul', '');
+  changes.forEach((change) => {
+    const name = window.MininodePrivacyControlUX?.name(change.control_code, change.control_code) ?? change.control_code;
+    addText(list, 'li', `${name} (${change.control_code}) — ${progressLabels[change.status] || 'Cambio'}`);
+  });
+};
+const renderProgressChart = (chronological) => {
+  progressUI.chart.replaceChildren();
+  progressUI.chartSection.hidden = chronological.length < 2;
+  if (chronological.length < 2) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 560 135');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Evolución histórica del Privacy Score');
+  svg.classList.add('plan-progress-svg');
+  const points = chronological.map((entry, i) => ({
+    x: 20 + 520 * i / (chronological.length - 1),
+    y: 110 - entry.diagnostic.score * 0.9,
+  }));
+  for (let i = 1; i < points.length; i += 1) {
+    if (chronological[i].vs_previous?.comparability?.status !== 'comparable') continue;
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', points[i - 1].x);
+    line.setAttribute('y1', points[i - 1].y);
+    line.setAttribute('x2', points[i].x);
+    line.setAttribute('y2', points[i].y);
+    line.setAttribute('class', 'plan-progress-line');
+    svg.append(line);
+  }
+  chronological.forEach((entry, i) => {
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', points[i].x);
+    circle.setAttribute('cy', points[i].y);
+    circle.setAttribute('r', 4);
+    circle.setAttribute('class', 'plan-progress-dot');
+    const tip = document.createElementNS(ns, 'title');
+    tip.textContent = `${progressDate(entry.created_at)}: ${entry.diagnostic.score}/100`;
+    circle.append(tip);
+    svg.append(circle);
+  });
+  progressUI.chart.append(svg);
+  progressUI.chartNote.textContent = 'Cada punto representa una revisión. No se unen resultados de versiones incompatibles.';
+};
+const invalidateProgressHistory = () => {
+  // A successful POST has changed the persisted history. Never show stale data as current.
+  progressUI.summary.hidden = true;
+  progressUI.chartSection.hidden = true;
+  progressUI.history.replaceChildren();
+  const notice = addText(progressUI.history, 'p',
+    'La revisión se guardó, pero no pudimos actualizar tus avances. Recarga la página para ver los resultados más recientes.');
+  notice.setAttribute('role', 'status');
+};
+const renderProgressHistory = (history) => {
+  progressUI.history.replaceChildren();
+  progressUI.summary.hidden = true;
+  progressUI.chartSection.hidden = true;
+  if (!Array.isArray(history) || history.length === 0) {
+    addText(progressUI.history, 'p', 'El historial no está disponible para este acceso.');
+    return;
+  }
+  const initial = history[history.length - 1];
+  const latest = history[0];
+  if (!initial?.diagnostic || !latest?.diagnostic) return;
+  progressUI.summary.hidden = false;
+  progressUI.initial.textContent = `${initial.diagnostic.score}/100`;
+  progressUI.current.textContent = `${latest.diagnostic.score}/100`;
+  progressUI.initialDate.textContent = progressDate(initial.created_at);
+  progressUI.currentDate.textContent = progressDate(latest.created_at);
+  const compared = latest.kind === 'review' ? latest.vs_initial : null;
+  progressUI.delta.textContent = latest.kind === 'initial'
+    ? 'Este es tu punto de partida. Todavía no hay revisiones adicionales.'
+    : compared?.comparability?.status !== 'comparable'
+      ? 'Los diagnósticos utilizan versiones incompatibles; no corresponde comparar puntuaciones.'
+      : compared.score_change === 0 ? 'Sin variación respecto del diagnóstico inicial.'
+        : `${compared.score_change > 0 ? '+' : ''}${compared.score_change} puntos respecto del diagnóstico inicial.`;
+  if (latest.kind === 'review' && compared?.comparability?.status === 'comparable') {
+    const changes = compared.changes || [];
+    const count = (status) => changes.filter(item => item.status === status).length;
+    progressUI.counts.textContent = `${count('improved')} mejoras · ${count('regressed')} retrocesos · ${count('not_conclusive')} no concluyentes`;
+  } else progressUI.counts.textContent = '';
+  history.forEach((entry) => {
+    const details = addText(progressUI.history, 'details', '', 'plan-progress-entry');
+    const summary = addText(details, 'summary', '');
+    addText(summary, 'strong', `${entry.kind === 'initial' ? 'Diagnóstico inicial' : 'Revisión'} · ${entry.diagnostic.score}/100`);
+    addText(summary, 'small', progressDate(entry.created_at));
+    if (entry.kind === 'initial') {
+      addText(details, 'p', 'Punto de partida del seguimiento.');
+      return;
+    }
+    const detail = addText(details, 'div', '', 'plan-progress-entry-detail');
+    renderProgressComparison(detail, entry.vs_previous, 'Frente a la revisión anterior');
+    renderProgressComparison(detail, entry.vs_initial, 'Frente al diagnóstico inicial');
+  });
+  renderProgressChart([...history].reverse());
+};
+
+const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions, history }) => {
   elements.site.textContent = friendlySite(siteUrl);
   renderState(diagnostic);
   renderCurrentActions(currentActions, entitledSiteId ? null : plan);
   renderCheck(check);
+  renderProgressHistory(entitledSiteId ? history : null);
   renderProgressDates(diagnostic, check?.latest_check);
   elements.loading.hidden = true;
   elements.content.hidden = false;
@@ -430,8 +558,10 @@ const performCheck = async () => {
         if (!validDiagnostic(latest?.diagnostic)) throw new Error('invalid_diagnostic');
         renderState(latest.diagnostic);
         renderCurrentActions(latest.current_actions, null);
+        renderProgressHistory(latest.history);
         renderProgressDates(latest.diagnostic, data);
       } catch {
+        invalidateProgressHistory();
         unavailableState('La revisión se guardó, pero no pudimos actualizar el diagnóstico actual. Recarga la página para consultarlo.');
         unavailableActions('La revisión se guardó, pero no pudimos actualizar las recomendaciones vigentes. Recarga la página.');
       } finally {

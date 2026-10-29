@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c3-progress-name-1',
+            '/privacy/plan-assets/app.js?v=c4b-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c3-progress-name-1', HTML)
+        self.assertIn('app.js?v=c4b-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -150,7 +150,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("unavailableState", APP)
         self.assertIn("La revisión se guardó", APP)
         self.assertIn("renderCheck(check)", APP)
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c3b-1"', HTML)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c4b-1"', HTML)
 
     def test_c2_uses_only_shared_theme_tokens_for_styles(self):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
@@ -208,7 +208,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertLess(APP.index("validPlanResponse(data)"), APP.index("render(data)"))
 
     def test_plan_render_function_is_present_and_invoked(self):
-        self.assertIn("const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions }) => {", APP)
+        self.assertIn("const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions, history }) => {", APP)
         self.assertIn("renderCheck(check);", APP)
         self.assertIn("render(data);", APP)
 
@@ -266,7 +266,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c3-progress-name-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c4b-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -279,6 +279,75 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
                          "/privacy/plan-assets/styles.css"):
             self.assertIn('href="' + css_path + '?v=c1-ui-3"', HTML)
         self.assertNotIn('href="/privacy/plan-demo/styles.css?v=1"', HTML)
+
+    def test_c4b_history_structure_comparability_and_post_check_refresh(self):
+        self.assertIn('id="progress-summary"', HTML)
+        self.assertIn('id="progress-history-list"', HTML)
+        self.assertIn('id="progress-chart-section"', HTML)
+        self.assertLess(HTML.index('id="progress-summary"'), HTML.index('id="progress-history-list"'))
+        self.assertLess(HTML.index('id="progress-history-list"'), HTML.index('id="progress-chart-section"'))
+        self.assertIn('renderProgressHistory(latest.history)', APP)
+        self.assertIn('renderProgressHistory(entitledSiteId ? history : null)', APP)
+        self.assertIn("vs_previous?.comparability?.status !== 'comparable'", APP)
+        self.assertIn('window.MininodePrivacyControlUX?.name(change.control_code', APP)
+        self.assertNotIn('innerHTML', APP)
+
+    def test_c4b_successful_post_failed_get_invalidates_stale_history(self):
+        # Execute actual C4b browser functions using a minimal DOM/fetch simulation.
+        # This protects asynchronous behavior that static substring tests cannot catch.
+        import json
+        import subprocess
+
+        start = APP.index("const invalidateProgressHistory = () => {")
+        end = APP.index("const renderProgressHistory = (history) => {", start)
+        invalidate = APP[start:end]
+        start = APP.index("const performCheck = async () => {")
+        end = APP.index("const loadPlan = async () => {", start)
+        perform = APP[start:end]
+        javascript = """
+const assert = require('node:assert/strict');
+let historyContents = ['stale'];
+const progressUI = {
+  summary: {hidden:false}, chartSection: {hidden:false},
+  history: {replaceChildren() { historyContents = []; }},
+};
+const addText = (parent, tag, value) => {
+  historyContents.push(value);
+  return {setAttribute(name, value) { assert.equal(name, 'role'); assert.equal(value, 'status'); }};
+};
+const elements = new Proxy({}, {
+  get(target, key) {
+    if (!target[key]) target[key] = {hidden:false, disabled:false, textContent:''};
+    return target[key];
+  },
+});
+const entitledSiteId = '00000000-0000-4000-8000-000000000001';
+const currentToken = null;
+let checkInProgress = false, calls = [];
+const authorizedHeaders = async () => ({Accept:'application/json'});
+const fetch = async (url, options) => {
+  calls.push(options.method);
+  return calls.length === 1
+    ? {ok:true, json: async () => ({result:{}, expires_at:null})}
+    : {ok:false};
+};
+const renderCheckResult = () => {};
+const renderProgressDates = () => {};
+const unavailableActions = () => {};
+const unavailableState = () => {};
+const requestTimeoutMs = 10000;
+""" + invalidate + perform + """
+performCheck().then(() => {
+  assert.deepEqual(calls, ['POST', 'GET']);
+  assert.equal(progressUI.summary.hidden, true);
+  assert.equal(progressUI.chartSection.hidden, true);
+  assert.equal(historyContents.length, 1);
+  assert.match(historyContents[0], /Recarga la página/);
+  assert.equal(elements.checkProgress.hidden, true);
+}).catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        result = subprocess.run(["node", "-e", javascript], capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
