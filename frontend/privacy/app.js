@@ -30,16 +30,8 @@ const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
 const correctionUnavailable = document.querySelector('#privacy-correction-unavailable');
 const correctionUnavailableRetry = document.querySelector('#correction-unavailable-retry');
 const orderOpenButton = document.querySelector('#correction-order-open');
-const orderForm = document.querySelector('#correction-order-form');
-const orderEmail = document.querySelector('#correction-order-email');
-const orderSubmit = document.querySelector('#correction-order-submit');
-const orderError = document.querySelector('#correction-order-error');
-const orderSuccess = document.querySelector('#correction-order-success');
 const orderAvailability = document.querySelector('#correction-order-availability');
 const orderValidity = document.querySelector('#correction-order-validity');
-const orderExpired = document.querySelector('#correction-order-expired');
-const orderExpiredDate = document.querySelector('#correction-order-expired-date');
-const orderRetry = document.querySelector('#correction-order-retry');
 const helpLink = document.querySelector('#how-it-works');
 const headerHelpLink = document.querySelector('#help-link');
 const modal = document.querySelector('#privacy-modal');
@@ -336,15 +328,6 @@ const resetCommercialState = () => {
   correctionUnavailable.hidden = true;
   orderOpenButton.hidden = false;
   orderOpenButton.disabled = true;
-  orderForm.hidden = true;
-  orderEmail.value = '';
-  orderError.textContent = '';
-  orderError.hidden = true;
-  orderSuccess.hidden = true;
-  orderExpired.hidden = true;
-  orderExpiredDate.hidden = true;
-  orderExpiredDate.textContent = '';
-  orderSubmit.disabled = false;
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
   orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
@@ -391,11 +374,6 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   activationNotice.hidden = true;
   orderOpenButton.disabled = !currentDiagnosticId || (!currentClaimToken && !isSaved);
   orderOpenButton.hidden = false;
-  orderForm.hidden = true;
-  orderSuccess.hidden = true;
-  orderExpired.hidden = true;
-  orderExpiredDate.hidden = true;
-  orderExpiredDate.textContent = '';
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
   orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
@@ -420,34 +398,6 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
 const isValidDiagnosticResponse = (diagnostic) => diagnostic !== null
   && typeof diagnostic === 'object'
   && Number.isFinite(diagnostic.score);
-
-const formatReviewDate = (value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('es-CL', {
-    timeZone: 'America/Santiago',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
-};
-
-const showExpiredCommercialState = (reviewedAt = '') => {
-  orderOpenButton.hidden = true;
-  orderForm.hidden = true;
-  orderSuccess.hidden = true;
-  orderAvailability.hidden = true;
-  orderValidity.hidden = true;
-  orderExpired.hidden = false;
-
-  const formattedDate = formatReviewDate(reviewedAt);
-  orderExpiredDate.textContent = formattedDate ? `Última revisión: ${formattedDate}.` : '';
-  orderExpiredDate.hidden = !formattedDate;
-};
-
 
 const reportFlowError = (code, error) => {
   // Do not log the submitted URL, response payload, evidence, or form contents.
@@ -559,46 +509,6 @@ urlInput.addEventListener('input', () => {
   if (isValidUrl(urlInput.value)) {
     setUrlError(false);
   }
-});
-
-orderForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const diagnosticId = currentDiagnosticId;
-  if (!diagnosticId || correctionOffer.hidden) {
-    return;
-  }
-  orderError.hidden = true;
-  orderSubmit.disabled = true;
-
-  try {
-    const response = await fetch('/api/privacy/correction-plan-orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ diagnostic_id: diagnosticId, email: orderEmail.value }),
-    });
-    if (response.status === 410) {
-      showExpiredCommercialState();
-      return;
-    }
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    orderForm.hidden = true;
-    orderSuccess.hidden = false;
-  } catch (error) {
-    reportFlowError('order_request_failed', error);
-    orderError.textContent = 'No pudimos preparar la solicitud. Intente nuevamente.';
-    orderError.hidden = false;
-  } finally {
-    orderSubmit.disabled = false;
-  }
-});
-
-orderRetry?.addEventListener('click', () => {
-  orderExpired.hidden = true;
-  resultCard.hidden = true;
-  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  urlInput.focus();
 });
 
 correctionUnavailableRetry?.addEventListener('click', () => {

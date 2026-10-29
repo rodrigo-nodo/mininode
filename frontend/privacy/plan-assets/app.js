@@ -10,7 +10,6 @@ const requiredItemFields = ['control_code', 'name', 'priority', 'finding', 'reco
 const requestTimeoutMs = 10000;
 let requestInProgress = false;
 let checkInProgress = false;
-let currentToken = null;
 const requestedSiteId = new URLSearchParams(window.location.search).get('workspace_site_id');
 const entitledSiteId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedSiteId || '') ? requestedSiteId : null;
 const waitForAuth = () => window.MininodeAuth
@@ -26,11 +25,6 @@ const authorizedHeaders = async () => {
 };
 
 
-const accessTokenFromPath = () => {
-  const match = window.location.pathname.match(/^\/privacy\/plan\/([^/]+)\/?$/);
-  if (!match) return null;
-  try { return decodeURIComponent(match[1]); } catch { return null; }
-};
 const validPlanResponse = (data) => {
   if (!data || typeof data.site_url !== 'string' || !data.site_url || !data.plan) return false;
   const plan = data.plan;
@@ -79,13 +73,8 @@ const unavailableActions = (message) => {
   elements.actionsNotice.textContent = message;
   elements.actionsNotice.hidden = false;
 };
-const renderCurrentActions = (currentActions, legacyPlan) => {
-  const legacy = Boolean(!entitledSiteId && legacyPlan);
-  const actions = legacy
-    ? { status: 'available', source: 'initial', items: legacyPlan.items,
-        item_count: legacyPlan.item_count, verification_pending: [], verification_pending_count: 0 }
-    : currentActions;
-  if (!legacy && !validCurrentActions(actions)) {
+const renderCurrentActions = (actions) => {
+  if (!validCurrentActions(actions)) {
     unavailableActions('No pudimos cargar las recomendaciones vigentes. Recarga la página para volver a consultarlas.');
     return;
   }
@@ -97,9 +86,7 @@ const renderCurrentActions = (currentActions, legacyPlan) => {
   elements.items.replaceChildren();
   elements.verificationList.replaceChildren();
   elements.actionsDate.hidden = false;
-  elements.actionsDate.textContent = legacy
-    ? 'Recomendaciones del diagnóstico inicial (acceso anterior; no reflejan revisiones posteriores).'
-    : `${actions.source === 'initial' ? 'Basado en el diagnóstico inicial' : 'Basado en la última revisión válida'} · ${friendlyDate(actions.created_at)}`;
+  elements.actionsDate.textContent = `${actions.source === 'initial' ? 'Basado en el diagnóstico inicial' : 'Basado en la última revisión válida'} · ${friendlyDate(actions.created_at)}`;
   elements.summaryCount.textContent = actions.item_count === 0
     ? 'Sin mejoras accionables detectadas'
     : `${actions.item_count} ${actions.item_count === 1 ? 'mejora pendiente' : 'mejoras pendientes'}`;
@@ -112,8 +99,8 @@ const renderCurrentActions = (currentActions, legacyPlan) => {
     .map((priority) => `${counts[priority]} de prioridad ${priority.toLowerCase()}`)
     .join(' · ');
   actions.items.forEach(renderItem);
-  elements.actionsVerification.hidden = legacy || actions.verification_pending_count === 0;
-  if (!legacy && actions.verification_pending_count > 0) {
+  elements.actionsVerification.hidden = actions.verification_pending_count === 0;
+  if (actions.verification_pending_count > 0) {
     const count = actions.verification_pending_count;
     elements.verificationCount.textContent = `${count} ${count === 1 ? 'control requiere' : 'controles requieren'} verificación`;
     const labels = {
@@ -466,7 +453,6 @@ const renderProgressChart = (chronological) => {
   progressUI.chartNote.textContent = 'Cada punto representa una revisión. No se unen resultados de versiones incompatibles.';
 };
 const syncProgressDetail = () => {
-  // The legacy score comparison remains available until full C4a history exists.
   const section = document.querySelector('#improvement-check');
   section.setAttribute('data-progress-summary', progressUI.summary.hidden ? 'false' : 'true');
   // A baseline without a completed review has no details: avoid an empty card.
@@ -532,30 +518,24 @@ const renderProgressHistory = (history) => {
 const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions, history }) => {
   elements.site.textContent = friendlySite(siteUrl);
   renderState(diagnostic);
-  renderCurrentActions(currentActions, entitledSiteId ? null : plan);
+  renderCurrentActions(currentActions);
   renderCheck(check);
-  renderProgressHistory(entitledSiteId ? history : null);
+  renderProgressHistory(history);
   renderProgressDates(diagnostic, check?.latest_check);
   elements.loading.hidden = true;
   elements.content.hidden = false;
 };
 const performCheck = async () => {
-  if (checkInProgress || (!currentToken && !entitledSiteId)) return;
+  if (checkInProgress || !entitledSiteId) return;
   checkInProgress = true;
   elements.checkSubmit.disabled = true;
   elements.checkCancel.disabled = true;
   elements.checkProgress.hidden = false;
   elements.checkMessage.hidden = true;
   try {
-    const response = entitledSiteId
-      ? await fetch(`/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan/check`, {
-        method: 'POST',
-        headers: await authorizedHeaders(),
-      })
-      : await fetch(`/api/privacy/correction-plans/${encodeURIComponent(currentToken)}/check`, {
-        method: 'POST',
-        headers: { Accept: 'application/json' },
-      });
+    const response = await fetch(`/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan/check`, {
+      method: 'POST', headers: await authorizedHeaders(),
+    });
     const data = await response.json();
     if (!response.ok) {
       elements.checkMessage.textContent = data.detail || 'No pudimos completar la revisión. Intente nuevamente en unos minutos.';
@@ -586,7 +566,7 @@ const performCheck = async () => {
         const latest = await refreshed.json();
         if (!validDiagnostic(latest?.diagnostic)) throw new Error('invalid_diagnostic');
         renderState(latest.diagnostic);
-        renderCurrentActions(latest.current_actions, null);
+        renderCurrentActions(latest.current_actions);
         renderProgressHistory(latest.history);
         renderProgressDates(latest.diagnostic, data);
       } catch {
@@ -616,10 +596,9 @@ const performCheck = async () => {
 };
 const loadPlan = async () => {
   if (requestInProgress) return;
-  const token = accessTokenFromPath();
-  if (!token && !entitledSiteId) { showError('missing'); return; }
+  if (!entitledSiteId) { showError('missing'); return; }
 
-  currentToken = token; requestInProgress = true;
+  requestInProgress = true;
   elements.retry.disabled = true;
   elements.error.hidden = true;
   elements.content.hidden = true;
@@ -631,20 +610,11 @@ const loadPlan = async () => {
     // Prefer a read: naturally expired plans remain visible with their last
     // review, but never permit another inspection. Create only when active
     // entitlement has no baseline yet.
-    let response;
-    if (entitledSiteId) {
-      const path = `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`;
-      const headers = await authorizedHeaders();
-      response = await fetch(path, { method: 'GET', headers, signal: controller.signal });
-      if (response.status === 409) {
-        response = await fetch(path, { method: 'POST', headers, signal: controller.signal });
-      }
-    } else {
-      response = await fetch(`/api/privacy/correction-plans/${encodeURIComponent(token)}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-      });
+    const path = `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/plan`;
+    const headers = await authorizedHeaders();
+    let response = await fetch(path, { method: 'GET', headers, signal: controller.signal });
+    if (response.status === 409) {
+      response = await fetch(path, { method: 'POST', headers, signal: controller.signal });
     }
     if ([401, 403, 404, 409].includes(response.status)) { showError('missing'); return; }
     if (!response.ok) { showError('unavailable'); return; }
