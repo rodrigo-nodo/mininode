@@ -412,6 +412,9 @@ const renderProgressChart = (chronological) => {
   }));
   for (let i = 1; i < points.length; i += 1) {
     if (chronological[i].vs_previous?.comparability?.status !== 'comparable') continue;
+    // A later entitlement is not continuous monitoring of an inactive period.
+    if (chronological[i].period != null && chronological[i - 1].period != null
+        && chronological[i].period !== chronological[i - 1].period) continue;
     const line = document.createElementNS(ns, 'line');
     line.setAttribute('x1', points[i - 1].x);
     line.setAttribute('y1', points[i - 1].y);
@@ -450,7 +453,7 @@ const renderProgressChart = (chronological) => {
     svg.append(circle);
   });
   progressUI.chart.append(svg);
-  progressUI.chartNote.textContent = 'Cada punto representa una revisión. No se unen resultados de versiones incompatibles.';
+  progressUI.chartNote.textContent = 'Cada punto representa un diagnóstico o una revisión. No se unen períodos de acceso distintos ni versiones incompatibles.';
 };
 const syncProgressDetail = () => {
   const section = document.querySelector('#improvement-check');
@@ -502,11 +505,16 @@ const renderProgressHistory = (history) => {
   history.forEach((entry) => {
     const details = addText(progressUI.history, 'details', '', 'plan-progress-entry');
     const summary = addText(details, 'summary', '');
-    addText(summary, 'strong', `${entry.kind === 'initial' ? 'Diagnóstico inicial' : 'Revisión'} · ${entry.diagnostic.score}/100`);
+    const label = entry.kind === 'initial' ? 'Diagnóstico inicial'
+      : entry.kind === 'baseline' ? 'Diagnóstico de reactivación' : 'Revisión';
+    addText(summary, 'strong', `${label} · ${entry.diagnostic.score}/100`);
     addText(summary, 'small', progressDate(entry.created_at));
     if (entry.kind === 'initial') {
       addText(details, 'p', 'Punto de partida del seguimiento.');
       return;
+    }
+    if (entry.kind === 'baseline') {
+      addText(details, 'p', 'Nuevo período de acceso. El historial anterior se conserva; no implica seguimiento durante la pausa.');
     }
     const detail = addText(details, 'div', '', 'plan-progress-entry-detail');
     renderProgressComparison(detail, entry.vs_previous, 'Frente a la revisión anterior');

@@ -50,12 +50,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=pw03c2-1',
+            '/privacy/plan-assets/app.js?v=pw03-history-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=pw03c2-1', HTML)
+        self.assertIn('app.js?v=pw03-history-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -232,7 +232,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=pw03c2-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=pw03-history-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -331,6 +331,9 @@ performCheck().then(() => {
         self.assertIn("plan-progress-chart-score", tabs_css)
         self.assertIn("plan-progress-chart-date", tabs_css)
         self.assertIn("i % labelStep !== 0", APP)
+        self.assertIn("chronological[i].period !== chronological[i - 1].period", APP)
+        self.assertIn("Diagnóstico de reactivación", APP)
+        self.assertIn("no implica seguimiento durante la pausa", APP)
 
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
