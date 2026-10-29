@@ -96,6 +96,20 @@ orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
 - `privacy.entitled_plan_check`: revisiones repetibles de ese plan,
   con evidencias y resultados asociados a nuevos snapshots de
   `privacy.diagnostic`. No usan `privacy.correction_plan_order`.
+- **Continuidad histórica entre períodos (PW-03C, correctivo posterior a C2):**
+  un entitlement nuevo crea un Plan nuevo, pero «Mis avances» consulta todos
+  los Planes y sus revisiones vinculados al **mismo `workspace_site_id`**.
+  Un intervalo sin acceso no borra evidencias ni implica seguimiento automático.
+  Si la nueva línea base reutiliza exactamente el diagnóstico de la última
+  revisión anterior (`diagnostic.id`), aparece una sola vez; una línea base
+  distinta se muestra como «Diagnóstico de reactivación». La evolución no
+  conecta gráficamente períodos diferentes ni versiones incompatibles; las
+  comparaciones entre observaciones quedan condicionadas a su comparabilidad.
+  Se conserva una línea base inmutable para cada Plan, y «Estado de mi sitio»,
+  «Qué debo mejorar» y «Revisar nuevamente» permanecen limitados al período
+  autorizado vigente. Sin derecho vigente no se habilitan nuevas revisiones;
+  la lectura tras un vencimiento natural mantiene la regla preexistente.
+  Nunca se mezclan historias de workspaces distintos aunque compartan dominio.
 - `POST /privacy/workspace-sites/{id}/plan`: crea o retorna el plan de manera
   idempotente, tomando el último diagnóstico **ya guardado** al iniciar el
   período; no realiza una inspección nueva ni acepta URLs externas.

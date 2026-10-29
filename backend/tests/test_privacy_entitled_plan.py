@@ -923,3 +923,67 @@ def test_reactivation_with_distinct_diagnostic_has_labeled_baseline_and_version_
     with psycopg.connect(c["url"]) as conn:
         conn.execute("UPDATE access.entitlements SET status='revoked' WHERE id=%s", (next_id,))
     assert c["client"].get(path, headers=c["headers"]).status_code == 403
+
+
+def test_site_history_never_crosses_workspaces_for_the_same_hostname(context, monkeypatch):
+    c = context
+    path = _path(c)
+    assert c["client"].post(path, headers=c["headers"]).status_code == 200
+    other_workspace, other_link, other_entitlement = (uuid4() for _ in range(3))
+    with psycopg.connect(c["url"]) as conn:
+        shared_site = conn.execute(
+            "SELECT site_id FROM access.workspace_sites WHERE id=%s", (c["site"],)
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO access.workspaces(id,name) VALUES (%s,'Separate workspace')",
+            (other_workspace,),
+        )
+        conn.execute(
+            "INSERT INTO access.workspace_members(workspace_id,user_id,role) VALUES (%s,%s,'owner')",
+            (other_workspace, c["foreign"]),
+        )
+        conn.execute(
+            "INSERT INTO access.workspace_sites(id,workspace_id,site_id) VALUES (%s,%s,%s)",
+            (other_link, other_workspace, shared_site),
+        )
+        conn.execute("""
+            INSERT INTO access.entitlements (
+              id, workspace_site_id, product_code, active_from, active_until,
+              status, source, source_id
+            ) VALUES (%s,%s,'privacy_web',now()-INTERVAL '1 minute',
+                      now()+INTERVAL '30 days','active','internal_grant',%s)
+        """, (other_entitlement, other_link, str(other_entitlement)))
+    try:
+        privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+            {**c["snapshot"], "score": 93}, workspace_site_id=other_link,
+            requested_url=c["snapshot"]["site_url"],
+        )
+        original_user = c["user"]
+        second_user = access.StoredUser(id=c["foreign"], email="foreign@example.test")
+        monkeypatch.setattr(access, "get_or_create_user", lambda _: second_user)
+        other_path = f"/privacy/workspace-sites/{other_link}/plan"
+        other_plan = c["client"].post(other_path, headers=c["headers"])
+        assert other_plan.status_code == 200, other_plan.text
+        assert [i["diagnostic"]["score"] for i in other_plan.json()["history"]] == [93]
+        assert c["client"].get(path, headers=c["headers"]).status_code == 403
+        monkeypatch.setattr(access, "get_or_create_user", lambda _: original_user)
+        initial = c["client"].get(path, headers=c["headers"])
+        assert initial.status_code == 200
+        assert [i["diagnostic"]["score"] for i in initial.json()["history"]] == [65]
+        assert c["client"].get(other_path, headers=c["headers"]).status_code == 403
+    finally:
+        with psycopg.connect(c["url"]) as conn:
+            conn.execute("""
+                DELETE FROM privacy.entitled_plan_check WHERE entitled_plan_id IN
+                  (SELECT id FROM privacy.entitled_plan WHERE workspace_site_id=%s)
+            """, (other_link,))
+            conn.execute("DELETE FROM privacy.entitled_plan WHERE workspace_site_id=%s",
+                         (other_link,))
+            conn.execute("DELETE FROM privacy.diagnostic WHERE workspace_site_id=%s",
+                         (other_link,))
+            conn.execute("DELETE FROM access.entitlements WHERE workspace_site_id=%s",
+                         (other_link,))
+            conn.execute("DELETE FROM access.workspace_sites WHERE id=%s", (other_link,))
+            conn.execute("DELETE FROM access.workspace_members WHERE workspace_id=%s",
+                         (other_workspace,))
+            conn.execute("DELETE FROM access.workspaces WHERE id=%s", (other_workspace,))
