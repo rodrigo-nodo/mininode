@@ -654,6 +654,7 @@ test('C4c keeps initial-only history compact and legacy score comparison availab
   assert.equal(initial.nodes.get('progress-summary').hidden, false);
   assert.equal(initial.nodes.get('progress-chart-section').hidden, true);
   assert.equal(initial.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'true');
+  assert.equal(initial.nodes.get('improvement-check').hidden, true, 'no empty detail card before first review');
   const old = payload('available', true);
   const legacy = mount(() => ({ ok: true, status: 200, json: async () => old }), {legacy: true});
   await flush();
