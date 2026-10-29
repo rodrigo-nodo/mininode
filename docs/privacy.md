@@ -105,7 +105,12 @@ orígenes `payment` e `internal_grant` sin inventar órdenes de cobro.
   distinta se muestra como «Diagnóstico de reactivación». La evolución no
   conecta gráficamente períodos diferentes ni versiones incompatibles; las
   comparaciones entre observaciones quedan condicionadas a su comparabilidad.
-  Se conserva una línea base inmutable para cada Plan, y «Estado de mi sitio»,
+  Cuando el GET se autoriza únicamente por la recuperación en lectura de
+  un entitlement vencido naturalmente, el historial visible queda acotado
+  hasta ese período: un entitlement anterior no autoriza datos de períodos
+  posteriores revocados. Un entitlement **vigente** y autorizado mantiene
+  acceso al historial acumulativo completo del sitio. Se conserva una línea
+  base inmutable para cada Plan, y «Estado de mi sitio»,
   «Qué debo mejorar» y «Revisar nuevamente» permanecen limitados al período
   autorizado vigente. Sin derecho vigente no se habilitan nuevas revisiones;
   la lectura tras un vencimiento natural mantiene la regla preexistente.
