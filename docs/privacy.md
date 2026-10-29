@@ -164,9 +164,13 @@ de `versioning.py`; el código heredado permaneció intacto hasta **C2**, sin
 adaptarlo ni extenderlo. **C2** retira endpoints, servicios, formulario de orden, rutas por token,
 proxy e inicializaciones sin eliminar registros. La comprobación histórica de
 órdenes en la agrupación de sitios permanece temporalmente como protección
-hasta validar los datos en ambas BD. **C3** verificará registros y dependencias en DEV y PROD,
-preparará respaldo/rollback y migración explícita para eliminar solo las tablas
-legadas. Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
+hasta validar los datos en ambas BD. **C3** inventarió DEV (0 registros
+legados, 3 Planes y 3 revisiones nuevas) y PROD (2 Planes, 3 órdenes, 1
+revisión legada). Se preparó una migración **exclusiva DEV, no ejecutada ni
+habilitada en Pre-deploy**, con guarda de BD, filas vacías, bloqueo y
+RESTRICT; ver [runbook PW-03C3](privacy-web/pw-03c3-legacy-dev-retirement.md).
+Cualquier retiro exige respaldo verificable y autorización separada.
+La limpieza futura se limitará a las tres tablas legadas. Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
 planes y revisiones nuevos. No realizar DROP en PROD sin aprobación expresa.
 C1 no modifica BD, scoring, controles, API ni comportamiento público.
 La UX C1–C4c está validada en DEV (C4c: PR #410); aún no está en PROD.

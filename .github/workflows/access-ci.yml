@@ -35,6 +35,7 @@ on:
       - 'backend/tests/test_migration_runner.py'
       - 'backend/tests/test_predeploy_migrations.py'
       - 'backend/tests/test_predeploy_migrations_postgres.py'
+      - 'backend/tests/test_pw03c3_legacy_dev_retirement.py'
       - 'backend/tests/test_production_migration_workflow.py'
       - 'backend/tests/test_development_migration_workflow.py'
       - 'backend/tests/test_access_persistence.py'
@@ -117,7 +118,7 @@ jobs:
           pip install -r backend/requirements.txt pytest
 
       - name: Run Access tests
-        run: pytest -q backend/tests/test_site_reconciliation.py backend/tests/test_site_group_reviews.py backend/tests/test_site_group_operator_migration.py backend/tests/test_access_unlink.py backend/tests/test_site_aliases.py backend/tests/test_site_equivalence.py backend/tests/test_access_persistence.py backend/tests/test_billing_core.py backend/tests/test_admin_grants.py backend/tests/test_mercadopago_adapter.py backend/tests/test_access_identity_api.py backend/tests/test_access_clerk_identity.py backend/tests/test_access_clerk_jwks.py backend/tests/test_access_clerk_malformed_token.py backend/tests/test_access_provider_fallback.py backend/tests/test_access_authorization_api.py backend/tests/test_privacy_diagnostic_snapshot.py backend/tests/test_privacy_claim_postgres.py backend/tests/test_privacy_workspace_site_api.py backend/tests/test_privacy_activation_preparation_api.py backend/tests/test_privacy_entitled_plan.py backend/tests/domain_packs/privacy/test_diagnostic_comparison.py backend/tests/test_migration_runner.py backend/tests/test_predeploy_migrations.py backend/tests/test_predeploy_migrations_postgres.py backend/tests/test_production_migration_workflow.py backend/tests/test_development_migration_workflow.py
+        run: pytest -q backend/tests/test_site_reconciliation.py backend/tests/test_site_group_reviews.py backend/tests/test_site_group_operator_migration.py backend/tests/test_access_unlink.py backend/tests/test_site_aliases.py backend/tests/test_site_equivalence.py backend/tests/test_access_persistence.py backend/tests/test_billing_core.py backend/tests/test_admin_grants.py backend/tests/test_mercadopago_adapter.py backend/tests/test_access_identity_api.py backend/tests/test_access_clerk_identity.py backend/tests/test_access_clerk_jwks.py backend/tests/test_access_clerk_malformed_token.py backend/tests/test_access_provider_fallback.py backend/tests/test_access_authorization_api.py backend/tests/test_privacy_diagnostic_snapshot.py backend/tests/test_privacy_claim_postgres.py backend/tests/test_privacy_workspace_site_api.py backend/tests/test_privacy_activation_preparation_api.py backend/tests/test_privacy_entitled_plan.py backend/tests/domain_packs/privacy/test_diagnostic_comparison.py backend/tests/test_migration_runner.py backend/tests/test_predeploy_migrations.py backend/tests/test_predeploy_migrations_postgres.py backend/tests/test_pw03c3_legacy_dev_retirement.py backend/tests/test_production_migration_workflow.py backend/tests/test_development_migration_workflow.py
 
       - name: Run Access proxy tests
         run: node --test frontend/functions/api/test_proxy.mjs
