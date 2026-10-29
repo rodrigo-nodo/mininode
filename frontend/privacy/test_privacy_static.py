@@ -40,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
             ("index.html", 'src="app.js?v=ux21-priorities-2"'),
-            ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=c4b-1"'),
+            ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=c4c-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
         for page, renderer in pages:
