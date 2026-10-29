@@ -415,12 +415,12 @@ const renderProgressChart = (chronological) => {
   if (chronological.length < 2) return;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 560 135');
+  svg.setAttribute('viewBox', '0 0 560 145');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Evolución histórica del Privacy Score');
   svg.classList.add('plan-progress-svg');
   const points = chronological.map((entry, i) => ({
-    x: 20 + 520 * i / (chronological.length - 1),
+    x: 40 + 480 * i / (chronological.length - 1),
     y: 110 - entry.diagnostic.score * 0.9,
   }));
   for (let i = 1; i < points.length; i += 1) {
@@ -433,6 +433,24 @@ const renderProgressChart = (chronological) => {
     line.setAttribute('class', 'plan-progress-line');
     svg.append(line);
   }
+  // Label a bounded selection of points so dates remain legible on mobile.
+  const labelStep = Math.ceil((chronological.length - 1) / 5);
+  chronological.forEach((entry, i) => {
+    if (i !== chronological.length - 1 && i % labelStep !== 0) return;
+    const score = document.createElementNS(ns, 'text');
+    score.setAttribute('x', points[i].x);
+    score.setAttribute('y', Math.max(12, points[i].y - 12));
+    score.setAttribute('class', 'plan-progress-chart-score');
+    score.textContent = String(entry.diagnostic.score);
+    svg.append(score);
+    const date = document.createElementNS(ns, 'text');
+    date.setAttribute('x', points[i].x);
+    date.setAttribute('y', 134);
+    date.setAttribute('class', 'plan-progress-chart-date');
+    date.textContent = new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'short' })
+      .format(new Date(entry.created_at));
+    svg.append(date);
+  });
   chronological.forEach((entry, i) => {
     const circle = document.createElementNS(ns, 'circle');
     circle.setAttribute('cx', points[i].x);
@@ -447,10 +465,16 @@ const renderProgressChart = (chronological) => {
   progressUI.chart.append(svg);
   progressUI.chartNote.textContent = 'Cada punto representa una revisión. No se unen resultados de versiones incompatibles.';
 };
+const syncProgressDetail = () => {
+  // The legacy score comparison remains available until full C4a history exists.
+  document.querySelector('#improvement-check').setAttribute('data-progress-summary',
+    progressUI.summary.hidden ? 'false' : 'true');
+};
 const invalidateProgressHistory = () => {
   // A successful POST has changed the persisted history. Never show stale data as current.
   progressUI.summary.hidden = true;
   progressUI.chartSection.hidden = true;
+  syncProgressDetail();
   progressUI.history.replaceChildren();
   const notice = addText(progressUI.history, 'p',
     'La revisión se guardó, pero no pudimos actualizar tus avances. Recarga la página para ver los resultados más recientes.');
@@ -460,6 +484,7 @@ const renderProgressHistory = (history) => {
   progressUI.history.replaceChildren();
   progressUI.summary.hidden = true;
   progressUI.chartSection.hidden = true;
+  syncProgressDetail();
   if (!Array.isArray(history) || history.length === 0) {
     addText(progressUI.history, 'p', 'El historial no está disponible para este acceso.');
     return;
@@ -468,6 +493,7 @@ const renderProgressHistory = (history) => {
   const latest = history[0];
   if (!initial?.diagnostic || !latest?.diagnostic) return;
   progressUI.summary.hidden = false;
+  syncProgressDetail();
   progressUI.initial.textContent = `${initial.diagnostic.score}/100`;
   progressUI.current.textContent = `${latest.diagnostic.score}/100`;
   progressUI.initialDate.textContent = progressDate(initial.created_at);
