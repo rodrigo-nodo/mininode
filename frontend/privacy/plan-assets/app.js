@@ -490,7 +490,7 @@ const renderProgressHistory = (history) => {
   progressUI.current.textContent = `${latest.diagnostic.score}/100`;
   progressUI.initialDate.textContent = progressDate(initial.created_at);
   progressUI.currentDate.textContent = progressDate(latest.created_at);
-  const compared = latest.kind === 'review' ? latest.vs_initial : null;
+  const compared = latest.kind === 'initial' ? null : latest.vs_initial;
   progressUI.delta.textContent = latest.kind === 'initial'
     ? 'Este es tu punto de partida. Todavía no hay revisiones adicionales.'
     : compared?.comparability?.status !== 'comparable'
