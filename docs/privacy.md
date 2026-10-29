@@ -141,9 +141,11 @@ Esta rama no habilita Mercado Pago ni cobros nuevos.
 funcional futura para órdenes o tokens antiguos. En **C1** el Plan por
 entitlement usa una comparación determinista neutral en
 `domain_packs/privacy/diagnostic_comparison.py` y la comparabilidad canónica
-de `versioning.py`; el código heredado queda intacto hasta **C2**, sin
-adaptarlo ni extenderlo. **C2** retirará sus endpoints, servicios, formularios
-e inicializaciones. **C3** verificará registros y dependencias en DEV y PROD,
+de `versioning.py`; el código heredado permaneció intacto hasta **C2**, sin
+adaptarlo ni extenderlo. **C2** retira endpoints, servicios, formulario de orden, rutas por token,
+proxy e inicializaciones sin eliminar registros. La comprobación histórica de
+órdenes en la agrupación de sitios permanece temporalmente como protección
+hasta validar los datos en ambas BD. **C3** verificará registros y dependencias en DEV y PROD,
 preparará respaldo/rollback y migración explícita para eliminar solo las tablas
 legadas. Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
 planes y revisiones nuevos. No realizar DROP en PROD sin aprobación expresa.
