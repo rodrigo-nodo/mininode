@@ -16,9 +16,10 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from mininode_api.domain_packs.privacy.correction_plan import build_correction_plan
+from mininode_api.domain_packs.privacy.diagnostic_comparison import compare_diagnostics
 from mininode_api.domain_packs.privacy.evaluator import load_controls
-from mininode_api.domain_packs.privacy.versioning import diagnostic_versions
-from mininode_api.services import billing, privacy_correction_plan_check
+from mininode_api.domain_packs.privacy.versioning import diagnostic_comparability, diagnostic_versions
+from mininode_api.services import billing
 from mininode_api.services.privacy_diagnostic import diagnose_privacy_url
 
 logger = logging.getLogger(__name__)
@@ -324,7 +325,7 @@ def _history_entries(cur, plan_id: UUID, original: dict, original_at: datetime, 
 
 def _compare_review_states(previous: dict, current: dict) -> dict:
     """Score and per-control transitions only within the same diagnostic versions."""
-    comparable = privacy_correction_plan_check.diagnostic_comparability(previous, current)
+    comparable = diagnostic_comparability(previous, current)
     if comparable["status"] == "not_comparable":
         return {"comparability": comparable, "score_change": None, "changes": []}
     before = {c["control_code"]: c["result"] for c in previous.get("controls", [])
@@ -460,7 +461,7 @@ def review(user_id: UUID, site_id: UUID) -> dict:
                     VALUES (%s,%s,%s,%s,%s,CURRENT_TIMESTAMP + INTERVAL '24 hours',%s)
                 """, (checked_id, diagnosis["site_url"], original_url,
                       Jsonb(diagnosis), diagnosis["score"], site_id))
-                result = privacy_correction_plan_check.compare_diagnostics(
+                result = compare_diagnostics(
                     plan_snapshot, original, diagnosis,
                 )
                 cur.execute("""

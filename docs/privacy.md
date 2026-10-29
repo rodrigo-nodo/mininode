@@ -85,7 +85,7 @@ PW-04 deberá anclar la compra a una orden iniciada oportunamente; un webhook
 acreditado tardío nunca debe perder la prestación por la expiración posterior
 del snapshot, ni confiar solo en la URL de retorno.
 
-## PW-03B - Plan de corrección por entitlement (DEV, pendiente de validación)
+## PW-03B - Plan de corrección por entitlement (validado en DEV; no promovido a PROD)
 
 El nuevo recorrido autenticado se basa **exclusivamente** en
 `access.entitlements` (producto `privacy_web`). Es compatible con los
@@ -137,11 +137,18 @@ No se prepara pago/activación hasta que la verificación se complete.
 
 Esta rama no habilita Mercado Pago ni cobros nuevos.
 
-**Coexistencia temporal:** los servicios, endpoints y tablas del flujo
-`privacy.correction_plan_order` siguen en el código heredado, pero **no
-participan en este nuevo recorrido**. Su retirada de rutas de acceso y
-servicios se revisará en un PR enfocado adicional antes de cerrar PW-03
-y promover a PROD; no eliminar tablas de PROD sin aprobación explícita.
+**PW-03C — retiro total del modelo comercial legado:** no hay compatibilidad
+funcional futura para órdenes o tokens antiguos. En **C1** el Plan por
+entitlement usa una comparación determinista neutral en
+`domain_packs/privacy/diagnostic_comparison.py` y la comparabilidad canónica
+de `versioning.py`; el código heredado queda intacto hasta **C2**, sin
+adaptarlo ni extenderlo. **C2** retirará sus endpoints, servicios, formularios
+e inicializaciones. **C3** verificará registros y dependencias en DEV y PROD,
+preparará respaldo/rollback y migración explícita para eliminar solo las tablas
+legadas. Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
+planes y revisiones nuevos. No realizar DROP en PROD sin aprobación expresa.
+C1 no modifica BD, scoring, controles, API ni comportamiento público.
+La UX C1–C4c está validada en DEV (C4c: PR #410); aún no está en PROD.
 
 ## Arquitectura de interpretación semántica
 

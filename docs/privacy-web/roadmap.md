@@ -1,6 +1,6 @@
 # Privacy Web - Roadmap
 
-**Estado:** Plan aprobado; seguimiento actualizado al 27 de octubre de 2026  
+**Estado:** Plan aprobado; seguimiento actualizado al 29 de octubre de 2026  
 **Producto:** Mininode Privacy Web  
 **Referencia oficial:** `main` (`docs/privacy-web/roadmap.md`)  
 **Integración y validación:** rama `dev` y entorno `dev.mininode.io`  
@@ -38,11 +38,11 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 | Header compartido de Privacy Web Plan | **Sin nueva promoción de esta etapa** | **PASS** (PRs #385–#387) |
 | Título dinámico de prioridades del diagnóstico gratuito | **Sin nueva promoción de esta etapa** | **Mergeado** (#394, CI SUCCESS); validación visual posterior pendiente |
 | Mercado Pago, checkout y webhook | **Recorrido E2E no habilitado** | **Integración backend parcial**; compra E2E sin validar |
-| Rediseño integral del Plan — etapa C | **No implementado** | **UX aprobada, implementación pendiente** |
+| Rediseño integral del Plan — etapa C | **No implementado** | **C1–C4c implementados y PASS funcional/visual en DEV; no promovido a PROD** |
 
 **Regla de lectura:** distinguir código presente, CI, despliegue y validación de usuario; no dar por promovido a PROD lo validado solo en DEV. El estado se basa en evidencia de PRs y validaciones documentadas; no sustituye una comprobación operativa nueva de cada entorno.
 
-## 3. Próximo trabajo prioritario — Privacy Web Plan — Etapa C: rediseño UX aprobado (27 de octubre de 2026)
+## 3. Privacy Web Plan — Etapa C: rediseño implementado en DEV (29 de octubre de 2026)
 
 **Estado:** definición de producto y UX aprobada; implementación pendiente. **Alcance de validación:** rama `dev`, integración Clerk/Access en `https://dev.mininode.io`; PROD sin cambios. Los PRs de esta fase tendrán destino `dev`, con CI y autorización explícita antes de merge. No utilizar Branch Preview como entorno principal.
 
@@ -164,7 +164,7 @@ Pregunta: **¿Estoy mejorando?**
 
 ### Brechas técnicas conocidas y secuencia propuesta
 
-El contrato C4a del Plan autenticado entrega historial completo (diagnóstico inicial y revisiones), comparaciones frente al inicial y anterior, y comparabilidad por versiones. C4b ya está integrado y validado visualmente en DEV: 47/100 en las cuatro mediciones (21, 26, 27 y 28 oct 2026), historial expandible y gráfico sin variaciones. El backend DEV debió desplegarse manualmente porque su autodespliegue está desactivado; confirmar siempre el SHA publicado antes de una validación. El recorrido legado por token no entrega este historial y conserva su presentación anterior.
+El contrato C4a del Plan autenticado entrega historial completo (diagnóstico inicial y revisiones), comparaciones frente al inicial y anterior, y comparabilidad por versiones. C4b y C4c fueron mergeados y validados funcional y visualmente en DEV: 47/100 en las cuatro mediciones (21, 26, 27 y 28 oct 2026), historial expandible con indicador, comparación sin duplicaciones y gráfico con puntuaciones/fechas. El backend DEV debió desplegarse manualmente porque su autodespliegue está desactivado; confirmar siempre el SHA publicado antes de una validación. El recorrido legado por token no entrega este historial y se retirará en PW-03C2.
 
 | Tramo | Alcance propuesto | Estado |
 |---|---|---|
@@ -174,7 +174,7 @@ El contrato C4a del Plan autenticado entrega historial completo (diagnóstico in
 | C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **Mergeado en DEV, PR #403; Reviewer PASS y CI verde** |
 | C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **PASS final DEV 28-oct-2026; PRs #404–#407 mergeados; 47→47, cero corregidas, dos pendientes; recarga y nombres UX PRV-003 validados visualmente** |
 | C4 | Historial completo, gráfico, comparaciones y nueva revisión | **C4a backend PR #408 y C4b frontend PR #409 mergeados a DEV; Reviewer PASS y validación visual funcional de historial, comparaciones y gráfico** |
-| C4c | Ajuste UX de «Mis avances»: eliminar score duplicado, etiquetar gráfico y señalar filas expandibles | **En PR hacia DEV; pendiente CI, validación visual y merge autorizado** |
+| C4c | Ajuste UX de «Mis avances»: eliminar score duplicado, etiquetar gráfico y señalar filas expandibles | **PASS funcional/visual en DEV; PR #410 mergeado a dev (31dd5c99731308d47be8b3507be1dd8d487269e2)** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
 
@@ -188,7 +188,7 @@ Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar 
 |---|---|---|
 | PW-01 | Desasignar sitios de un workspace conservando historial y evidencia, con autorización correcta | **Cerrado · PROD** (PR #379) |
 | PW-02 | Habilitar uso interno completo sin pago mediante entitlement explícito, auditable y separado de Billing | **Cerrado · PROD** (Mininode Admin; PR #379) |
-| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A validado; PW-03B integrado en DEV: planes y revisiones con entitlement y migración controlada; retirada legacy pendiente) |
+| PW-03 | Consolidar Billing como recorrido único, retirar órdenes heredadas y desacoplar Plan de corrección y revisiones; preparación de activación con actualización automática | **En curso · DEV** (PW-03A y PW-03B validados; C1 desacoplamiento técnico en PR; C2 retiro de código y C3 limpieza de BD pendientes) |
 | PW-04 | Conectar Mercado Pago con el recorrido de compra: checkout, retorno, webhook, confirmación, entitlement, expiración y reintentos | **Parcial · DEV** (adaptador y endpoints backend; E2E pendiente, no disponible en PROD) |
 | PW-05 | Unificar tercera persona singular en UX, resultados, hallazgos, recomendaciones, botones, estados y errores | Pendiente |
 | PW-06 | Incorporar observabilidad de diagnósticos, pagos, activaciones y fallos operativos, sin exponer datos sensibles | Pendiente |
@@ -198,7 +198,7 @@ Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar 
 
 **Criterios de cierre restantes de la etapa:** recorrido comercial oficial único; pago confirmado por proveedor habilita prestaciones y pago no confirmado no las habilita; mensajes coherentes; fallos detectables; tratamiento de datos definido.
 
-**Decisión comercial (PW-03 → PW-04):** `billing.orders` + `access.entitlements` serán el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. El historial de órdenes y activaciones del sistema heredado **no necesita migrarse ni conservarse comercialmente**; se preservan diagnósticos, cuentas, sitios y entitlements actuales. PW-03 retirará dependencias del flujo anterior `privacy.correction_plan_order`, desacoplando Plan de corrección y revisiones. El diagnóstico guardado se conserva consultable; al iniciar activación se reutiliza si tiene menos de 24 horas o se actualiza automáticamente, sin exponer plazos al cliente. Preparar compatibilidad y rollback, verificar dependencias y probar primero en DEV. **Ninguna operación destructiva en producción sin autorización explícita.**
+**Decisión comercial (PW-03 → PW-04):** `billing.orders` + `access.entitlements` serán el único recorrido comercial oficial. Mercado Pago es el proveedor inicial. El historial de órdenes y activaciones del sistema heredado **no necesita migrarse ni conservarse comercialmente**; se preservan diagnósticos, cuentas, sitios y entitlements actuales. PW-03 retirará dependencias del flujo anterior `privacy.correction_plan_order`, desacoplando Plan de corrección y revisiones. El diagnóstico guardado se conserva consultable; al iniciar activación se reutiliza si tiene menos de 24 horas o se actualiza automáticamente, sin exponer plazos al cliente. Sin compatibilidad funcional para enlaces comerciales legados. Secuencia: **PW-03C1** extraer comparación neutral y desacoplar solo el Plan nuevo, sin adaptar el legado; **PW-03C2** retirar APIs, servicios, formularios e inicialización legacy; **PW-03C3** verificar datos, dependencias, respaldos y recuperación en DEV y PROD antes de una migración explícita para retirar tablas. No eliminar registros de diagnóstico ni datos del modelo nuevo. Evitar `CASCADE` indiscriminado. **Ninguna operación destructiva en producción sin autorización explícita.**
 
 ## 5. Etapa 2 - Piloto controlado (P1)
 
@@ -281,4 +281,4 @@ Privacy Data; certificación legal; auditoría integral; modificación automáti
 - **Alineación permanente:** MAIN y DEV comparten la **base funcional aprobada**, mientras DEV puede mantener avances en validación. Las diferencias intencionales de código, datos, credenciales e infraestructura se registran; **no** hacer merge masivo para igualar commits. Ver [`docs/dev-prod-release.md`](../dev-prod-release.md).
 - **Gobierno del roadmap:** `main` representa el estado publicado en PROD; este cambio documental se revisa primero en `dev` por tratarse de la planificación de la etapa C. La actualización de la referencia oficial en `main` se hará mediante promoción documental selectiva y autorizada, preservando las diferencias explícitas DEV/PROD. `frontend/roadmap/index.html` es un resumen público general distinto: actualizarlo solo en un trabajo editorial/UX posterior aprobado.
 
-**Próximo frente priorizado:** etapa C del Privacy Web Plan (C1–C4), seguida por los pendientes de PW-03 (consolidación comercial) y PW-04 (integración E2E Mercado Pago). No activar cobros ni modificar registros históricos por actualizar este roadmap. Nunca mergear sin autorización explícita.
+**Próximo frente priorizado:** cerrar PW-03C1–C3 tras completar C1–C4 funcionalmente en DEV; luego PW-04 (integración E2E Mercado Pago). No activar cobros ni modificar registros históricos por actualizar este roadmap. Nunca mergear sin autorización explícita.
