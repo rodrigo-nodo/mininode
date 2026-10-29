@@ -23,14 +23,6 @@ export const onRequest = async (ctx) => {
 
   // Whitelist MVP
   const ALLOWED = new Set(['write/draft', 'analyze/summary', 'capture', 'privacy/diagnose', 'learn/feedback']);
-  // Security for browser-facing plan routes is based on the HTTP pathname itself,
-  // never on a catch-all parameter or a reconstructed path.
-  const isCorrectionPlan = /^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/?$/.test(url.pathname);
-  const isCorrectionPlanCheck = /^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/check\/?$/.test(url.pathname);
-  const isAllowedCorrectionPlan = (isCorrectionPlan && method === 'GET')
-    || (isCorrectionPlanCheck && method === 'POST');
-  const isPublicOrderCreation = destPathPublic === 'privacy/correction-plan-orders'
-    && method === 'POST';
   const isFeedbackById = /^learn\/feedback\/[0-9a-f-]+$/.test(destPathPublic);
   const isAllowedFeedbackById = isFeedbackById && ['GET', 'PATCH'].includes(method);
   const isPrivacyData = /^privacy\/data\/(catalog|maps(?:\/[A-Za-z0-9_-]+(?:\/(?:activities(?:\/[0-9a-f-]+)?|recovery-link))?)?)$/.test(destPathPublic);
@@ -62,7 +54,7 @@ export const onRequest = async (ctx) => {
     || (/^privacy\/workspaces\/[0-9a-f-]+\/diagnose$/.test(destPathPublic) && method === 'POST')
     || (/^privacy\/workspaces\/[0-9a-f-]+\/latest-reviews$/.test(destPathPublic) && method === 'GET')
   );
-  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) {
+  if (!ALLOWED.has(destPathPublic) && !isAllowedFeedbackById && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) {
     return new Response(JSON.stringify({ error: 'Path no permitido', path: destPathPublic }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -77,12 +69,7 @@ export const onRequest = async (ctx) => {
     'privacy/diagnose': 'privacy/diagnose',
     'learn/feedback': 'learn/feedback',
   };
-  const correctionPlanBackendPath = url.pathname
-    .replace(/^\/api\//, '')
-    .replace(/\/$/, '');
-  const destPathBackend = isAllowedCorrectionPlan
-    ? correctionPlanBackendPath
-    : (ROUTE_MAP[destPathPublic] || destPathPublic);
+  const destPathBackend = ROUTE_MAP[destPathPublic] || destPathPublic;
 
   const apiBase = env.MININODE_API_BASE || 'https://api.mininode.io';
   const target = new URL(`${apiBase}/${destPathBackend}`);
@@ -117,7 +104,7 @@ export const onRequest = async (ctx) => {
   const headers = new Headers();
   if (contentType) headers.set('Content-Type', contentType);
   headers.set('Accept', 'application/json');
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
+  if (!isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected) headers.set('X-Api-Key', env.MININODE_API_KEY || '');
   if (isAccessProtected) {
     const authorization = request.headers.get('Authorization');
     const accessAssertion = request.headers.get('Cf-Access-Jwt-Assertion');
@@ -125,7 +112,7 @@ export const onRequest = async (ctx) => {
     if (accessAssertion) headers.set('Cf-Access-Jwt-Assertion', accessAssertion);
   }
 
-  if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected && !env.MININODE_API_KEY) {
+  if (!isAllowedPrivacyData && !isAllowedPrivacyDataReview && !isAccessProtected && !env.MININODE_API_KEY) {
     return new Response(JSON.stringify({ error: 'Falta MININODE_API_KEY (Pages Secret)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },

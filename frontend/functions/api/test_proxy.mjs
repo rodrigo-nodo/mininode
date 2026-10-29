@@ -43,82 +43,6 @@ async function assertRejected(path, method = 'GET') {
   assert.equal(result.calls.length, 0);
 }
 
-test('allows strict public correction-plan reads and forwards query strings', async () => {
-  const tokens = [
-    'ABC123',
-    'PLAN-003',
-    'Upper_lower-0123456789',
-    'GlHIycPAQYtNNOSz9hYKz_8u4-jbH6PpN3wRZsT0aVq7CdEfLmX2',
-  ];
-
-  for (const [index, token] of tokens.entries()) {
-    const result = await request(`/api/privacy/correction-plans/${token}?v=2`, 'GET', {
-      withoutApiKey: index === 0,
-    });
-    assert.equal(result.response.status, 200);
-    assert.equal(result.calls.length, 1);
-    assert.equal(result.calls[0].url, `https://backend.example/privacy/correction-plans/${token}?v=2`);
-    assert.equal(result.calls[0].init.method, 'GET');
-    assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
-    assert.equal(JSON.stringify(result.json).includes(API_KEY), false);
-  }
-});
-
-test('uses request pathname regardless of catch-all params representation', async () => {
-  const paramsVariants = [
-    undefined,
-    {},
-    { path: 'privacy/correction-plans/ABC123' },
-    { path: ['privacy', 'correction-plans', 'ABC123'] },
-    { path: { unexpected: true } },
-  ];
-
-  for (const params of paramsVariants) {
-    const result = await request('/api/privacy/correction-plans/ABC123', 'GET', {
-      withoutApiKey: true,
-      params,
-    });
-    assert.equal(result.response.status, 200);
-    assert.equal(result.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123');
-  }
-});
-
-test('normalizes an optional trailing slash before forwarding public plan routes', async () => {
-  const read = await request('/api/privacy/correction-plans/ABC123/', 'GET', { withoutApiKey: true });
-  assert.equal(read.response.status, 200);
-  assert.equal(read.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123');
-
-  const check = await request('/api/privacy/correction-plans/ABC123/check/', 'POST', { withoutApiKey: true });
-  assert.equal(check.response.status, 200);
-  assert.equal(check.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123/check');
-});
-
-test('allows only POST for the public correction-plan check', async () => {
-  const result = await request('/api/privacy/correction-plans/ABC123/check', 'POST', { withoutApiKey: true });
-  assert.equal(result.response.status, 200);
-  assert.equal(result.calls[0].url, 'https://backend.example/privacy/correction-plans/ABC123/check');
-  assert.equal(result.calls[0].init.headers.has('X-Api-Key'), false);
-
-  await assertRejected('/api/privacy/correction-plans/ABC123', 'POST');
-  await assertRejected('/api/privacy/correction-plans/ABC123/check', 'GET');
-  for (const method of ['PUT', 'PATCH', 'DELETE']) {
-    await assertRejected('/api/privacy/correction-plans/ABC123', method);
-  }
-});
-
-test('rejects malformed tokens, traversal, and additional segments', async () => {
-  for (const path of [
-    '/api/privacy/correction-plans/',
-    '/api/privacy/correction-plans/foo/bar',
-    '/api/privacy/correction-plans/foo/check/bar',
-    '/api/privacy/correction-plans/../foo',
-    '/api/privacy/correction-plans/%2Ffoo',
-    '/api/privacy/correction-plans/foo/extra',
-  ]) {
-    await assertRejected(path);
-  }
-});
-
 test('keeps protected and existing allowlist behavior unchanged', async () => {
   await assertRejected('/api/privacy/correction-plan-orders/order-123/activate', 'POST');
   await assertRejected('/api/privacy/correction-plan-orders', 'GET');
@@ -129,9 +53,12 @@ test('keeps protected and existing allowlist behavior unchanged', async () => {
   assert.equal(diagnose.response.status, 200);
   assert.equal(diagnose.calls[0].init.headers.get('X-Api-Key'), API_KEY);
 
-  const order = await request('/api/privacy/correction-plan-orders', 'POST');
-  assert.equal(order.response.status, 200);
-  assert.equal(order.calls[0].init.headers.has('X-Api-Key'), false);
+  for (const [path, method] of [
+    ['/api/privacy/correction-plan-orders', 'POST'],
+    ['/api/privacy/correction-plans/ABC123', 'GET'],
+    ['/api/privacy/correction-plans/ABC123/check', 'POST'],
+    ['/api/privacy/correction-plans', 'POST'],
+  ]) await assertRejected(path, method);
 
   const missingKey = await request('/api/privacy/diagnose', 'POST', { withoutApiKey: true });
   assert.equal(missingKey.response.status, 500);

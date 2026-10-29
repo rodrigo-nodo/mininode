@@ -15,26 +15,12 @@ PROXY = (FRONTEND_DIR / "functions/api/[[path]].js").read_text(encoding="utf-8")
 
 
 class RealCorrectionPlanStaticTests(unittest.TestCase):
-    def test_clean_dynamic_route_uses_static_rewrite(self):
+    def test_legacy_plan_token_route_is_retired(self):
         self.assertTrue(REDIRECTS_PATH.is_file())
         self.assertFalse(ROUTE_PATH.exists())
         self.assertFalse(OPTIONAL_ROUTE_PATH.exists())
-
-        rules = [line.split() for line in REDIRECTS.splitlines()
-                 if line.strip() and not line.lstrip().startswith("#")]
-        plan_rules = [rule for rule in rules if rule[0] == "/privacy/plan/:token"]
-        self.assertEqual(plan_rules, [["/privacy/plan/:token", "/privacy/plan/", "200"]])
-        self.assertNotIn(["/privacy/plan/*", "/privacy/plan/", "200"], rules)
-        self.assertNotIn(plan_rules[0][2], {"301", "302", "307", "308"})
-
-        plan_rule_index = rules.index(plan_rules[0])
-        catch_all_indexes = [index for index, rule in enumerate(rules)
-                             if rule[0] in {"/*", "*"}]
-        self.assertTrue(all(plan_rule_index < index for index in catch_all_indexes))
-
-        self.assertIn("window.location.pathname", APP)
-        self.assertIn(r"^\/privacy\/plan\/([^/]+)\/?$", APP)
-        self.assertNotIn("searchParams", APP)
+        self.assertNotIn("/privacy/plan/:token", REDIRECTS)
+        self.assertNotIn("accessTokenFromPath", APP)
 
     def test_authenticated_entitlement_plan_uses_workspace_site_and_clerk_bearer(self):
         self.assertIn('core-head.js?v=286account1', HTML)
@@ -64,12 +50,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c4c-1',
+            '/privacy/plan-assets/app.js?v=pw03c2-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c4c-1', HTML)
+        self.assertIn('app.js?v=pw03c2-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -97,7 +83,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn('id="priority-summary"', HTML)
         self.assertIn('>Qué debo mejorar</h2>', HTML)
         self.assertIn("elements.prioritySummary.textContent", APP)
-        self.assertIn("renderCurrentActions(currentActions, entitledSiteId ? null : plan)", APP)
+        self.assertIn("renderCurrentActions(currentActions)", APP)
         self.assertNotIn("elements.closingCount", APP)
         for button_id, variant in (
             ("check-start", "btn--primary"),
@@ -112,16 +98,16 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             APP,
         )
         contract = (PLAN_DIR.parents[2] / "backend" / "src" / "mininode_api"
-                    / "services" / "privacy_correction_plan_check.py").read_text(encoding="utf-8")
+                    / "domain_packs" / "privacy" / "diagnostic_comparison.py").read_text(encoding="utf-8")
         self.assertIn('"control_id": code', contract)
 
     def test_c3_dynamic_actions_are_source_of_truth_and_fail_closed(self):
         self.assertIn("validCurrentActions", APP)
-        self.assertIn("renderCurrentActions(currentActions, entitledSiteId ? null : plan)", APP)
+        self.assertIn("renderCurrentActions(currentActions)", APP)
         self.assertIn("actions.items.forEach(renderItem)", APP)
         self.assertIn("actions.verification_pending.forEach", APP)
         self.assertIn("unavailableActions", APP)
-        self.assertIn("renderCurrentActions(latest.current_actions, null)", APP)
+        self.assertIn("renderCurrentActions(latest.current_actions)", APP)
         self.assertIn("unavailableActions('La revisión se guardó", APP)
         self.assertIn("La última revisión utiliza una versión", APP)
         self.assertNotIn("plan.items.forEach(renderItem)", APP)
@@ -171,28 +157,11 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("diagnostic?.current?.created_at || review?.created_at", APP)
         self.assertIn("renderProgressDates(latest.diagnostic, data)", APP)
 
-    def test_only_token_request_matches_plan_rewrite(self):
-        source = "/privacy/plan/:token"
-
-        def matches(path):
-            source_parts = source.strip("/").split("/")
-            path_parts = path.strip("/").split("/")
-            return len(source_parts) == len(path_parts) and all(
-                expected.startswith(":") or expected == actual
-                for expected, actual in zip(source_parts, path_parts)
-            )
-
-        self.assertTrue(matches("/privacy/plan/ABC123"))
-        self.assertFalse(matches("/privacy/plan-assets/app.js"))
-        self.assertFalse(matches("/privacy/plan-assets/styles.css"))
-
-    def test_get_uses_same_origin_proxy_without_api_credentials(self):
-        self.assertIn("`/api/privacy/correction-plans/${encodeURIComponent(token)}`", APP)
-        self.assertIn("method: 'GET'", APP)
-        self.assertNotIn("X-Api-Key", APP)
-        self.assertNotIn("api.mininode.io", APP)
-        self.assertIn("isAllowedCorrectionPlan", PROXY)
-        self.assertIn("if (!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData", PROXY)
+    def test_plan_uses_authenticated_same_origin_api_only(self):
+        self.assertIn("/api/privacy/workspace-sites/", APP)
+        self.assertIn("authorizedHeaders()", APP)
+        self.assertNotIn("/api/privacy/correction-plans/", APP)
+        self.assertNotIn("isAllowedCorrectionPlan", PROXY)
 
     def test_token_and_snapshot_are_not_persisted_or_logged(self):
         combined = HTML + APP + REDIRECTS
@@ -255,18 +224,15 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("elements.retry.disabled = false", APP)
         self.assertIn("elements.retry.addEventListener('click', loadPlan)", APP)
 
-    def test_proxy_keeps_correction_plan_get_narrow_and_public(self):
-        self.assertIn(r"^\/api\/privacy\/correction-plans\/[A-Za-z0-9_-]+\/?$", PROXY)
-        self.assertIn(".test(url.pathname)", PROXY)
-        self.assertIn("isCorrectionPlan && method === 'GET'", PROXY)
-        self.assertIn("!isAllowedCorrectionPlan && !isPublicOrderCreation && !isAllowedPrivacyData", PROXY)
-        self.assertIn("status: upstream.status", PROXY)
-        self.assertIn("upstream.headers.get('Content-Type')", PROXY)
+    def test_proxy_no_longer_allows_legacy_commercial_routes(self):
+        self.assertNotIn("isPublicOrderCreation", PROXY)
+        self.assertNotIn("isAllowedCorrectionPlan", PROXY)
+        self.assertIn("isAccessProtected", PROXY)
 
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c4c-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=pw03c2-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -287,7 +253,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertLess(HTML.index('id="progress-summary"'), HTML.index('id="progress-history-list"'))
         self.assertLess(HTML.index('id="progress-history-list"'), HTML.index('id="progress-chart-section"'))
         self.assertIn('renderProgressHistory(latest.history)', APP)
-        self.assertIn('renderProgressHistory(entitledSiteId ? history : null)', APP)
+        self.assertIn('renderProgressHistory(history)', APP)
         self.assertIn("vs_previous?.comparability?.status !== 'comparable'", APP)
         self.assertIn('window.MininodePrivacyControlUX?.name(change.control_code', APP)
         self.assertNotIn('innerHTML', APP)
@@ -327,7 +293,6 @@ const elements = new Proxy({}, {
   },
 });
 const entitledSiteId = '00000000-0000-4000-8000-000000000001';
-const currentToken = null;
 let checkInProgress = false, calls = [];
 const authorizedHeaders = async () => ({Accept:'application/json'});
 const fetch = async (url, options) => {
@@ -452,7 +417,7 @@ performCheck().then(() => {
         self.assertNotIn("$", monitoring)
 
     def test_continuous_monitoring_does_not_add_requests_or_change_check_result(self):
-        self.assertEqual(APP.count("fetch("), 6)  # includes C2 post-review read; no monitoring API
+        self.assertEqual(APP.count("fetch("), 4)  # entitlement GET/POST/check/refresh; no legacy or monitoring API
         for assignment in (
             "elements.checkBefore.textContent = `${result.original_score} / 100`",
             "elements.checkNow.textContent = `${result.current_score} / 100`",

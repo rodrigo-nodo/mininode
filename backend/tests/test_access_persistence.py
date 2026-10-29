@@ -17,9 +17,6 @@ from mininode_api.main import create_app  # noqa: E402
 from mininode_api.services import access  # noqa: E402
 from mininode_api.services import (  # noqa: E402
     learn_feedback,
-    privacy_correction_plan,
-    privacy_correction_plan_check,
-    privacy_correction_plan_order,
     privacy_diagnostic_snapshot,
 )
 from mininode_api.privacy_data.services import data_maps  # noqa: E402
@@ -175,10 +172,7 @@ def test_initialize_database_executes_schema_once(monkeypatch):
 def _stub_other_database_initializers(monkeypatch):
     for module in (
         learn_feedback,
-        privacy_correction_plan,
         privacy_diagnostic_snapshot,
-        privacy_correction_plan_order,
-        privacy_correction_plan_check,
         data_maps,
     ):
         monkeypatch.setattr(module, "initialize_database", lambda: None)
