@@ -83,7 +83,12 @@
 .plan-progress-scores small{font-size:var(--text-xs)}
 #progress-delta{font-weight:650;color:var(--color-text)}
 .plan-progress-entry{padding:14px 0;border-top:1px solid var(--color-border)}
-.plan-progress-entry summary{cursor:pointer;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.plan-progress-entry summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;list-style:none}
+.plan-progress-entry summary::-webkit-details-marker{display:none}
+.plan-progress-entry summary::before{content:"";display:inline-block;width:7px;height:7px;flex:0 0 7px;border-right:2px solid var(--color-muted);border-bottom:2px solid var(--color-muted);transform:rotate(-45deg);transition:transform .15s ease}
+.plan-progress-entry[open] > summary::before{transform:rotate(45deg)}
+.plan-progress-entry summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;border-radius:3px}
+.plan-progress-entry summary strong{flex:1;min-width:140px}
 .plan-progress-entry summary small{color:var(--color-muted)}
 .plan-progress-entry-detail{padding:10px 0 0;line-height:1.6;font-size:var(--text-sm)}
 .plan-progress-entry-detail h4{font-size:var(--text-sm);margin:14px 0 6px}
@@ -93,3 +98,16 @@
 .plan-progress-line{stroke:var(--color-primary);stroke-width:2;opacity:.7}
 .plan-progress-dot{fill:var(--color-primary)}
 @media(max-width:520px){.plan-progress-scores{gap:8px}.plan-progress-scores>div{padding:10px}}
+
+/* C4c: one score summary on Access, preserve legacy score details and error recovery. */
+#improvement-check[data-progress-summary="true"] > .section-label,
+#improvement-check[data-progress-summary="true"] > #check-title,
+#improvement-check[data-progress-summary="true"] .check-scores,
+#improvement-check[data-progress-summary="true"] #check-change,
+#improvement-check[data-progress-summary="true"] #check-lower,
+#improvement-check[data-progress-summary="true"] .check-current-score,
+#improvement-check[data-progress-summary="true"] #check-not-comparable .check-scores__date{display:none}
+#improvement-check[data-progress-summary="true"] .check-result__title{margin-top:0}
+.plan-progress-chart-score,.plan-progress-chart-date{text-anchor:middle;font-family:inherit}
+.plan-progress-chart-score{fill:var(--color-text);font-size:15px;font-weight:650}
+.plan-progress-chart-date{fill:var(--color-muted);font-size:13px}
