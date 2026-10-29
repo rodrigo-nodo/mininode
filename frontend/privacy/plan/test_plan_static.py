@@ -64,12 +64,12 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
             '/privacy/plan-demo/styles.css?v=c1-ui-3',
             '/privacy/plan-assets/styles.css?v=c1-ui-3',
             '/include.js',
-            '/privacy/plan-assets/app.js?v=c4b-1',
+            '/privacy/plan-assets/app.js?v=c4c-1',
         ):
             self.assertIn(asset, HTML)
 
     def test_c1_tab_script_and_panels_are_versioned_together(self):
-        self.assertIn('app.js?v=c4b-1', HTML)
+        self.assertIn('app.js?v=c4c-1', HTML)
         for name in ('state', 'actions', 'progress'):
             self.assertIn(f'id="plan-tab-{name}"', HTML)
             self.assertIn(f'id="plan-panel-{name}"', HTML)
@@ -150,7 +150,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
         self.assertIn("unavailableState", APP)
         self.assertIn("La revisión se guardó", APP)
         self.assertIn("renderCheck(check)", APP)
-        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c4b-1"', HTML)
+        self.assertIn('href="/privacy/plan-assets/tabs.css?v=c4c-1"', HTML)
 
     def test_c2_uses_only_shared_theme_tokens_for_styles(self):
         css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
@@ -266,7 +266,7 @@ class RealCorrectionPlanStaticTests(unittest.TestCase):
     def test_private_page_metadata_and_cache_busted_local_assets(self):
         self.assertIn('<meta name="robots" content="noindex, nofollow">', HTML)
         self.assertIn('<meta name="referrer" content="no-referrer">', HTML)
-        self.assertIn('src="/privacy/plan-assets/app.js?v=c4b-1"', HTML)
+        self.assertIn('src="/privacy/plan-assets/app.js?v=c4c-1"', HTML)
         self.assertNotIn('src="/privacy/plan-assets/app.js?v=1"', HTML)
         self.assertNotIn("http://", HTML)
         self.assertNotIn("https://", HTML)
@@ -348,6 +348,19 @@ performCheck().then(() => {
 """
         result = subprocess.run(["node", "-e", javascript], capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_c4c_progress_summary_and_chart_visual_contract(self):
+        tabs_css = (ASSETS_DIR / "tabs.css").read_text(encoding="utf-8")
+        self.assertIn("data-progress-summary", APP)
+        self.assertIn('id="progress-summary"', HTML)
+        self.assertIn("#improvement-check[data-progress-summary=\"true\"] .check-scores", tabs_css)
+        self.assertIn("syncProgressDetail();", APP)
+        self.assertIn("plan-progress-entry summary::before", tabs_css)
+        self.assertIn("plan-progress-entry[open] > summary::before", tabs_css)
+        self.assertIn("plan-progress-entry summary:focus-visible", tabs_css)
+        self.assertIn("plan-progress-chart-score", tabs_css)
+        self.assertIn("plan-progress-chart-date", tabs_css)
+        self.assertIn("i % labelStep !== 0", APP)
 
     def test_future_product_features_remain_out_of_scope(self):
         combined = (HTML + APP).lower()
