@@ -678,6 +678,8 @@ test('C4c exposes saved review detail if refreshing history fails after POST', a
 });
 
 
+const subtreeText = (node) => [node.textContent, ...(node.children || []).map(subtreeText)].join(' ');
+
 test('site history spans periods, labels a new baseline and does not bridge inactive periods', async () => {
   const data = payload('available');
   data.history = [
@@ -691,8 +693,8 @@ test('site history spans periods, labels a new baseline and does not bridge inac
   const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
   await flush();
   assert.equal(ui.nodes.get('progress-history-list').children.length, 3);
-  assert.match(ui.nodes.get('progress-history-list').children[0].textContent, /Diagnóstico de reactivación/);
-  assert.match(ui.nodes.get('progress-history-list').children[0].textContent, /no implica seguimiento durante la pausa/);
+  assert.match(subtreeText(ui.nodes.get('progress-history-list').children[0]), /Diagnóstico de reactivación/);
+  assert.match(subtreeText(ui.nodes.get('progress-history-list').children[0]), /no implica seguimiento durante la pausa/);
   assert.equal(ui.nodes.get('progress-initial').textContent, '65/100');
   assert.equal(ui.nodes.get('progress-current').textContent, '70/100');
   const svg = ui.nodes.get('progress-chart').children[0];
@@ -713,5 +715,5 @@ test('renewal reusing last observed diagnostic does not add duplicate history po
   await flush();
   assert.equal(ui.nodes.get('progress-history-list').children.length, 2);
   assert.equal(ui.nodes.get('progress-current').textContent, '47/100');
-  assert.doesNotMatch(ui.nodes.get('progress-history-list').children[0].textContent, /Diagnóstico de reactivación/);
+  assert.doesNotMatch(subtreeText(ui.nodes.get('progress-history-list').children[0]), /Diagnóstico de reactivación/);
 });
