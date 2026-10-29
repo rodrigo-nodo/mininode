@@ -467,8 +467,11 @@ const renderProgressChart = (chronological) => {
 };
 const syncProgressDetail = () => {
   // The legacy score comparison remains available until full C4a history exists.
-  document.querySelector('#improvement-check').setAttribute('data-progress-summary',
-    progressUI.summary.hidden ? 'false' : 'true');
+  const section = document.querySelector('#improvement-check');
+  section.setAttribute('data-progress-summary', progressUI.summary.hidden ? 'false' : 'true');
+  // A baseline without a completed review has no details: avoid an empty card.
+  if (!progressUI.summary.hidden) section.hidden = elements.checkResult.hidden;
+  else if (!elements.checkResult.hidden) section.hidden = false;
 };
 const invalidateProgressHistory = () => {
   // A successful POST has changed the persisted history. Never show stale data as current.
