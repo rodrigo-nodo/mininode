@@ -157,10 +157,12 @@ Cierre: unificación de 21 nombres y descripciones mediante **PR #405** y priori
 Pregunta: **¿Estoy mejorando?**
 
 - Gráfico de evolución del Privacy Score con valores inicial y actual; representar solo tramos comparables, nunca conectar resultados con versiones incompatibles como una serie continua.
-- Historial **completo** de revisiones, más reciente primero, cada una expandible; se podrá incorporar paginación solo cuando el volumen lo justifique.
+- Historial **completo** del sitio dentro del workspace, incluyendo revisiones y líneas base de períodos de acceso anteriores, más reciente primero; se podrá incorporar paginación solo cuando el volumen lo justifique. Al reactivar después de meses conserva todo lo anterior; no duplica un mismo `diagnostic.id` si el nuevo Plan reutiliza el último diagnóstico. Una línea base distinta se distingue como «Diagnóstico de reactivación». No unir gráficamente períodos diferentes ni versiones incompatibles, ni implicar actividad durante interrupciones.
 - Para la evolución general, comparar **actual frente a inicial** cuando corresponda; para cambios recientes, comparar con la revisión **inmediatamente anterior**.
 - Desglosar cambios como **corregidos**, **pendientes**, **nuevos** y **no concluyentes**, sin considerar ausencias de evidencia o resultados indeterminados como correcciones.
 - Ubicar aquí **Revisar nuevamente**, disponible durante la vigencia del Plan. No prometer seguimiento automático.
+
+**Continuidad entre entitlements (correctivo PW-03):** se detectó en DEV que un nuevo entitlement de `abc.cl` mostraba un Plan sin revisiones aunque el anterior conservaba tres. La corrección restaura el historial acumulativo mediante lectura por `workspace_site_id`, sin migración ni mutaciones de datos. El contrato conserva la línea base por entitlement para acciones y revisiones vigentes; solo «Mis avances» atraviesa períodos. Se validará con backend DEV actualizado y el historial real antes de iniciar PW-03C3 (retirada de tablas legadas). No implica publicación en PROD.
 
 ### Brechas técnicas conocidas y secuencia propuesta
 

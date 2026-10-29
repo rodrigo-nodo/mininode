@@ -401,7 +401,7 @@ La propuesta comercial vigente para Privacy Web activo es un período de un mes,
 
 La colaboración es una capacidad comercial pagada, pero `workspace_member` sigue siendo una entidad transversal de Access y no debe acoplarse estructuralmente a Privacy Web. Inicialmente no se define cobro por usuario adicional.
 
-Cuando expire Privacy Web, la cuenta, el workspace y el sitio asociado permanecen. La última revisión continúa disponible según la regla comercial vigente. La política exacta para historial anterior —por ejemplo, conservarlo oculto para una futura reactivación— se definirá con Billing antes de implementarla.
+Cuando expire Privacy Web, la cuenta, el workspace y el sitio asociado permanecen. La última revisión continúa disponible en lectura según la regla comercial vigente. Al reactivar el acceso, «Mis avances» conserva el historial de todos los períodos anteriores del mismo `workspace_site_id`, sin mostrar datos de otro workspace aunque comparta el dominio. Los períodos sin servicio no representan revisiones automáticas. El entitlement vigente controla el acceso y las nuevas revisiones; los Planes y snapshots históricos no se reescriben.
 
 ### Entitlement
 

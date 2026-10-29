@@ -676,3 +676,77 @@ test('C4c exposes saved review detail if refreshing history fails after POST', a
   assert.equal(ui.nodes.get('check-result').hidden, false);
   assert.match(ui.nodes.get('progress-history-list').children[0].textContent, /Recarga la página/);
 });
+
+
+const subtreeText = (node) => [node.textContent, ...(node.children || []).map(subtreeText)].join(' ');
+
+test('site history spans periods, labels a new baseline and does not bridge inactive periods', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'baseline', period: 1, created_at: '2026-10-28T13:00:00Z',
+      diagnostic: { score: 70 }, vs_initial: comparison(5), vs_previous: comparison(5) },
+    { kind: 'review', period: 0, created_at: '2026-07-27T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: comparison(0), vs_previous: comparison(0) },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 3);
+  assert.match(subtreeText(ui.nodes.get('progress-history-list').children[0]), /Diagnóstico de reactivación/);
+  assert.match(subtreeText(ui.nodes.get('progress-history-list').children[0]), /no implica seguimiento durante la pausa/);
+  assert.equal(ui.nodes.get('progress-initial').textContent, '65/100');
+  assert.equal(ui.nodes.get('progress-current').textContent, '70/100');
+  const svg = ui.nodes.get('progress-chart').children[0];
+  assert.equal(svg.children.filter((node) => node.tagName === 'line').length, 1,
+    'only the earlier same-period segment is connected');
+  assert.match(ui.nodes.get('progress-chart-note').textContent, /períodos de acceso distintos/);
+});
+
+test('renewal reusing last observed diagnostic does not add duplicate history point', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'review', period: 0, created_at: '2026-07-28T13:00:00Z',
+      diagnostic: { score: 47 }, vs_initial: comparison(0), vs_previous: comparison(0) },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T12:00:00Z',
+      diagnostic: { score: 47 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 2);
+  assert.equal(ui.nodes.get('progress-current').textContent, '47/100');
+  assert.doesNotMatch(subtreeText(ui.nodes.get('progress-history-list').children[0]), /Diagnóstico de reactivación/);
+});
+
+
+test('reactivation baseline with comparable versions displays real score change', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'baseline', period: 1, created_at: '2026-10-28T13:00:00Z',
+      diagnostic: { score: 72 }, vs_initial: comparison(7), vs_previous: comparison(7) },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('progress-current').textContent, '72/100');
+  assert.match(ui.nodes.get('progress-delta').textContent, /\+7 puntos respecto del diagnóstico inicial/);
+  assert.doesNotMatch(ui.nodes.get('progress-delta').textContent, /versiones incompatibles/);
+  assert.equal(ui.nodes.get('progress-counts').textContent, '',
+    'a new baseline is not a confirmed correction');
+});
+
+test('reactivation baseline with incompatible versions does not compare scores', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'baseline', period: 1, created_at: '2026-10-28T13:00:00Z',
+      diagnostic: { score: 72 }, vs_initial: comparison(0, 'not_comparable'),
+      vs_previous: comparison(0, 'not_comparable') },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.match(ui.nodes.get('progress-delta').textContent, /versiones incompatibles/);
+  assert.doesNotMatch(ui.nodes.get('progress-delta').textContent, /\+7 puntos/);
+});

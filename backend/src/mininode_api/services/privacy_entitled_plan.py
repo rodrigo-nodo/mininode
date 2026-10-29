@@ -288,36 +288,80 @@ def _current_actions(
 
 
 
-def _history_entries(cur, plan_id: UUID, original: dict, original_at: datetime, baseline: dict) -> list[dict]:
-    """C4a read-only, ordered history scoped to the already-authorized Plan."""
+def _history_entries(cur, site_id: UUID, authorized_entitlement_id: UUID) -> list[dict]:
+    """Site history bounded by the entitlement that authorized this read.
+
+    With an active entitlement the full site history is readable. When only
+    a naturally expired entitlement authorizes read-only recovery, later
+    revoked periods must never become visible through that older grant.
+    """
     cur.execute("""
-        SELECT c.id, c.created_at, c.result_snapshot, d.diagnostic_snapshot, d.created_at
-        FROM privacy.entitled_plan_check c
-        JOIN privacy.entitled_plan p ON p.id=c.entitled_plan_id
-        JOIN privacy.diagnostic d ON d.id=c.check_diagnostic_id
+        SELECT p.id, p.original_diagnostic_id, d.diagnostic_snapshot,
+               d.created_at, e.active_from
+        FROM privacy.entitled_plan p
+        JOIN access.entitlements e ON e.id=p.entitlement_id
+                                 AND e.workspace_site_id=p.workspace_site_id
+                                 AND e.product_code=%s
+        JOIN access.entitlements authorized
+          ON authorized.id=%s
+         AND authorized.workspace_site_id=p.workspace_site_id
+         AND authorized.product_code=%s
+         AND authorized.status='active'
+        JOIN privacy.diagnostic d ON d.id=p.original_diagnostic_id
                                  AND d.workspace_site_id=p.workspace_site_id
-        WHERE c.entitled_plan_id=%s
-        ORDER BY c.created_at ASC, c.id ASC
-    """, (plan_id,))
-    rows = cur.fetchall()
-    entries = [{
-        "kind": "initial",
-        "created_at": original_at,
-        "diagnostic": _diagnostic_view(original, original_at, source="initial"),
-        "vs_initial": None,
-        "vs_previous": None,
-    }]
-    previous = original
-    for _, created_at, stored_result, snapshot, diagnosed_at in rows:
-        # Never reinterpret non-comparable snapshots as confirmed corrections.
-        initial_comparison = _compare_review_states(original, snapshot)
-        previous_comparison = _compare_review_states(previous, snapshot)
+        WHERE p.workspace_site_id=%s
+          AND (
+            e.active_from < authorized.active_from OR e.id=authorized.id
+            OR (
+              authorized.active_from <= CURRENT_TIMESTAMP
+              AND (authorized.active_until IS NULL
+                   OR authorized.active_until > CURRENT_TIMESTAMP)
+              AND e.active_from <= CURRENT_TIMESTAMP
+            )
+          )
+        ORDER BY e.active_from ASC, p.created_at ASC, p.id ASC
+    """, (billing.PRODUCT, authorized_entitlement_id, billing.PRODUCT, site_id))
+    periods = cur.fetchall()
+    if not periods:
+        return []
+
+    # A plan's baseline and its checks belong to one immutable period.
+    # Plan membership is authorized at the caller's _entitlement() boundary.
+    observations = []
+    seen_diagnostics = set()
+    for period, (plan_id, original_id, original, initial_at, _) in enumerate(periods):
+        if original_id not in seen_diagnostics:
+            observations.append((original_id, "initial" if not observations else "baseline",
+                                 initial_at, original, period))
+            seen_diagnostics.add(original_id)
+        cur.execute("""
+            SELECT c.check_diagnostic_id, d.diagnostic_snapshot, d.created_at
+            FROM privacy.entitled_plan_check c
+            JOIN privacy.diagnostic d ON d.id=c.check_diagnostic_id
+                                     AND d.workspace_site_id=%s
+            WHERE c.entitled_plan_id=%s
+            ORDER BY c.created_at ASC, c.id ASC
+        """, (site_id, plan_id))
+        for diagnostic_id, checked, diagnosed_at in cur.fetchall():
+            if diagnostic_id in seen_diagnostics:
+                continue
+            observations.append((diagnostic_id, "review", diagnosed_at, checked, period))
+            seen_diagnostics.add(diagnostic_id)
+
+    if not observations:
+        return []
+    first = observations[0][3]
+    previous = None
+    entries = []
+    for _, kind, observed_at, snapshot, period in observations:
         entries.append({
-            "kind": "review",
-            "created_at": diagnosed_at,
-            "diagnostic": _diagnostic_view(snapshot, diagnosed_at, source="review"),
-            "vs_initial": initial_comparison,
-            "vs_previous": previous_comparison,
+            "kind": kind,
+            "period": period,
+            "created_at": observed_at,
+            "diagnostic": _diagnostic_view(snapshot, observed_at, source=(
+                "initial" if kind != "review" else "review")),
+            "vs_initial": _compare_review_states(first, snapshot) if previous is not None else None,
+            "vs_previous": _compare_review_states(previous, snapshot) if previous is not None else None,
         })
         previous = snapshot
     return list(reversed(entries))
@@ -352,7 +396,7 @@ def _compare_review_states(previous: dict, current: dict) -> dict:
 
 
 def _response(cur, entitlement, plan) -> dict:
-    plan_id, _, site_url, original, snapshot, created_at, initial_at = plan
+    plan_id, site_id, site_url, original, snapshot, created_at, initial_at = plan
     latest = _latest_check(cur, plan_id)
     current_snapshot, current_at = (latest[2], latest[3]) if latest else (original, initial_at)
     return {
@@ -376,7 +420,7 @@ def _response(cur, entitlement, plan) -> dict:
                 current_snapshot, current_at, source="review" if latest else "initial"
             ),
         },
-        "history": _history_entries(cur, plan_id, original, initial_at, snapshot),
+        "history": _history_entries(cur, site_id, entitlement[0]),
         "check": {
             "status": ("expired" if entitlement[1] is not None
                        and datetime.now(timezone.utc) >= entitlement[1] else "available"),
