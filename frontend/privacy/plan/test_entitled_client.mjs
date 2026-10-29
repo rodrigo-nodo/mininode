@@ -717,3 +717,36 @@ test('renewal reusing last observed diagnostic does not add duplicate history po
   assert.equal(ui.nodes.get('progress-current').textContent, '47/100');
   assert.doesNotMatch(subtreeText(ui.nodes.get('progress-history-list').children[0]), /Diagnóstico de reactivación/);
 });
+
+
+test('reactivation baseline with comparable versions displays real score change', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'baseline', period: 1, created_at: '2026-10-28T13:00:00Z',
+      diagnostic: { score: 72 }, vs_initial: comparison(7), vs_previous: comparison(7) },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('progress-current').textContent, '72/100');
+  assert.match(ui.nodes.get('progress-delta').textContent, /\+7 puntos respecto del diagnóstico inicial/);
+  assert.doesNotMatch(ui.nodes.get('progress-delta').textContent, /versiones incompatibles/);
+  assert.equal(ui.nodes.get('progress-counts').textContent, '',
+    'a new baseline is not a confirmed correction');
+});
+
+test('reactivation baseline with incompatible versions does not compare scores', async () => {
+  const data = payload('available');
+  data.history = [
+    { kind: 'baseline', period: 1, created_at: '2026-10-28T13:00:00Z',
+      diagnostic: { score: 72 }, vs_initial: comparison(0, 'not_comparable'),
+      vs_previous: comparison(0, 'not_comparable') },
+    { kind: 'initial', period: 0, created_at: '2026-07-21T13:00:00Z',
+      diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+  ];
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.match(ui.nodes.get('progress-delta').textContent, /versiones incompatibles/);
+  assert.doesNotMatch(ui.nodes.get('progress-delta').textContent, /\+7 puntos/);
+});
