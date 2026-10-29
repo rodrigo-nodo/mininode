@@ -987,3 +987,73 @@ def test_site_history_never_crosses_workspaces_for_the_same_hostname(context, mo
             conn.execute("DELETE FROM access.workspace_members WHERE workspace_id=%s",
                          (other_workspace,))
             conn.execute("DELETE FROM access.workspaces WHERE id=%s", (other_workspace,))
+
+
+def test_expired_read_only_cannot_recover_later_revoked_period_history(context, monkeypatch):
+    """B1: an older expired grant cannot read newer revoked Plan evidence."""
+    c = context
+    path = _path(c)
+    old = c["client"].post(path, headers=c["headers"])
+    assert old.status_code == 200, old.text
+    old_id = old.json()["id"]
+    monkeypatch.setattr(
+        privacy_entitled_plan, "diagnose_privacy_url",
+        lambda _: {**c["snapshot"], "score": 80},
+    )
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("""
+            UPDATE access.entitlements
+               SET active_from=now()-INTERVAL '60 days',
+                   active_until=now()-INTERVAL '30 days'
+             WHERE id=%s
+        """, (c["entitlement"],))
+
+    privacy_diagnostic_snapshot.create_diagnostic_snapshot(
+        {**c["snapshot"], "score": 77},
+        workspace_site_id=c["site"],
+        requested_url=c["snapshot"]["site_url"],
+    )
+    newer_id = uuid4()
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("""
+            INSERT INTO access.entitlements
+              (id, workspace_site_id, product_code, active_from, active_until,
+               status, source, source_id)
+            VALUES (%s,%s,'privacy_web',now()-INTERVAL '1 minute',
+                    now()+INTERVAL '30 days','active','internal_grant',%s)
+        """, (newer_id, c["site"], str(newer_id)))
+
+    newer = c["client"].post(path, headers=c["headers"])
+    assert newer.status_code == 200, newer.text
+    new_plan_id = newer.json()["id"]
+    assert new_plan_id != old_id
+    monkeypatch.setattr(
+        privacy_entitled_plan, "diagnose_privacy_url",
+        lambda _: {**c["snapshot"], "score": 93},
+    )
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 200
+    before = c["client"].get(path, headers=c["headers"]).json()
+    assert [r["diagnostic"]["score"] for r in before["history"]] == [93, 77, 80, 65]
+
+    # The later period is revoked, but read-only recovery of expired E1
+    # remains possible. The older entitlement grants no access to E2 data.
+    with psycopg.connect(c["url"]) as conn:
+        conn.execute("UPDATE access.entitlements SET status='revoked' WHERE id=%s",
+                     (newer_id,))
+    recovered = c["client"].get(path, headers=c["headers"])
+    assert recovered.status_code == 200, recovered.text
+    assert recovered.json()["id"] == old_id
+    assert recovered.json()["check"]["status"] == "expired"
+    assert [r["diagnostic"]["score"] for r in recovered.json()["history"]] == [80, 65]
+    assert c["client"].post(path + "/check", headers=c["headers"]).status_code == 403
+    with psycopg.connect(c["url"]) as conn:
+        assert conn.execute(
+            "SELECT COUNT(*) FROM privacy.entitled_plan_check WHERE entitled_plan_id=%s",
+            (new_plan_id,),
+        ).fetchone()[0] == 1
+        assert conn.execute(
+            "SELECT COUNT(*) FROM privacy.entitled_plan_check WHERE entitled_plan_id=%s",
+            (old_id,),
+        ).fetchone()[0] == 1
