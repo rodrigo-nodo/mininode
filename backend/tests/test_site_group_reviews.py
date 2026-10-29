@@ -9,8 +9,7 @@ from uuid import uuid4
 import psycopg
 import pytest
 
-from mininode_api.services import (access, billing, privacy_correction_plan,
-    privacy_correction_plan_order, privacy_diagnostic_snapshot,
+from mininode_api.services import (access, billing, privacy_diagnostic_snapshot,
     site_group_operator as operator, site_group_reviews as reviews)
 
 
@@ -30,8 +29,18 @@ def workspace_pair():
                      "20261020_access_site_group_operator.sql"):
             db.execute((Path(__file__).resolve().parents[1] / "migrations" / name).read_text())
     privacy_diagnostic_snapshot.initialize_database()
-    privacy_correction_plan.initialize_database()
-    privacy_correction_plan_order.initialize_database()
+    # Residual historical rows remain a concern until PW-03C3 inventory.
+    # Test-only schema, never initialized by the running backend.
+    with psycopg.connect(url) as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS privacy.correction_plan_order (
+                id UUID PRIMARY KEY,
+                diagnostic_id UUID NOT NULL REFERENCES privacy.diagnostic(id),
+                site_url TEXT NOT NULL, email TEXT NOT NULL,
+                product_code TEXT NOT NULL, amount INTEGER NOT NULL,
+                currency TEXT NOT NULL, status TEXT NOT NULL
+            )
+        """)
 
     user, other, workspace, foreign_workspace = (uuid4() for _ in range(4))
     first_site, second_site, foreign_site = (uuid4() for _ in range(3))
