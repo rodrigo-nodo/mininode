@@ -164,7 +164,7 @@ Pregunta: **¿Estoy mejorando?**
 
 ### Brechas técnicas conocidas y secuencia propuesta
 
-El Plan actual prioriza score inicial y acciones originales; el endpoint autenticado devuelve solo `latest_check`, aunque las revisiones se almacenan en PostgreSQL. Antes de implementar el historial completo, detalle actual por control, prioridades dinámicas y estados por área, revisar contratos/snapshots existentes y definir los ajustes backend necesarios, evitando inferir datos inexistentes.
+El contrato C4a del Plan autenticado entrega historial completo (diagnóstico inicial y revisiones), comparaciones frente al inicial y anterior, y comparabilidad por versiones. C4b ya está integrado y validado visualmente en DEV: 47/100 en las cuatro mediciones (21, 26, 27 y 28 oct 2026), historial expandible y gráfico sin variaciones. El backend DEV debió desplegarse manualmente porque su autodespliegue está desactivado; confirmar siempre el SHA publicado antes de una validación. El recorrido legado por token no entrega este historial y conserva su presentación anterior.
 
 | Tramo | Alcance propuesto | Estado |
 |---|---|---|
@@ -173,7 +173,8 @@ El Plan actual prioriza score inicial y acciones originales; el endpoint autenti
 | C2b | Frontend: estado actual, cinco áreas y controles expandibles | **PASS visual en DEV (PRs #401 y #402)** |
 | C3a | Backend: contrato de acciones vigentes y pendientes de verificación | **Mergeado en DEV, PR #403; Reviewer PASS y CI verde** |
 | C3b | Frontend: recomendaciones dinámicas y actualización tras revisión | **PASS final DEV 28-oct-2026; PRs #404–#407 mergeados; 47→47, cero corregidas, dos pendientes; recarga y nombres UX PRV-003 validados visualmente** |
-| C4 | Historial completo, gráfico, comparaciones y nueva revisión | **Diseño UX aprobado (gráfico compacto al final); C4a historial backend en implementación** |
+| C4 | Historial completo, gráfico, comparaciones y nueva revisión | **C4a backend PR #408 y C4b frontend PR #409 mergeados a DEV; Reviewer PASS y validación visual funcional de historial, comparaciones y gráfico** |
+| C4c | Ajuste UX de «Mis avances»: eliminar score duplicado, etiquetar gráfico y señalar filas expandibles | **En PR hacia DEV; pendiente CI, validación visual y merge autorizado** |
 
 Implementar en PRs pequeños, enfocados y con tests por comportamiento. Revisar CI del último commit, validar en DEV y no mergear sin autorización. Considerar Reviewer independiente cuando se alteren contratos, autorización, BD o comparabilidad. No cambiar scoring, controles ni versiones por razones cosméticas.
 
