@@ -12,7 +12,9 @@ const future = new Date(Date.now() + 3600000).toISOString();
 const past = new Date(Date.now() - 3600000).toISOString();
 
 class Node {
-  constructor() {
+  constructor(tagName = '') {
+    this.tagName = tagName;
+    this.classList = { add: (name) => { this.className = name; } };
     this.textContent = '';
     this.hidden = true;
     this.disabled = false;
@@ -100,7 +102,8 @@ function mount(handler, { legacy = false } = {}) {
   const context = {
     document: {
       querySelector: (selector) => selector.startsWith('#') ? nodes.get(selector.slice(1)) || null : null,
-      createElement: () => new Node(),
+      createElement: (tag) => new Node(tag),
+      createElementNS: (_, tag) => new Node(tag),
     },
     window: {
       location: legacy
@@ -599,4 +602,100 @@ test('C3 progress supports prior control_code snapshots and unknown historical I
   assert.equal(items[1].children[1].textContent, 'Nombre histórico');
   assert.equal(items[1].children[1].children[0].textContent, 'No fue posible evaluarlo');
   assert.equal(items[2].children[1].textContent, 'Control sin catálogo UX');
+});
+
+const comparison = (scoreChange = 0, status = 'comparable') => ({
+  comparability: { status },
+  score_change: status === 'comparable' ? scoreChange : null,
+  changes: [],
+});
+const progressHistory = () => [
+  { kind: 'review', created_at: '2026-10-28T13:00:00Z',
+    diagnostic: { score: 75 },
+    vs_initial: comparison(10), vs_previous: comparison(0) },
+  { kind: 'review', created_at: '2026-10-27T13:00:00Z',
+    diagnostic: { score: 75 },
+    vs_initial: comparison(10), vs_previous: comparison(10) },
+  { kind: 'initial', created_at: '2026-10-25T12:00:00Z',
+    diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
+];
+
+test('C4c retains one visible score summary, detailed corrections and accessible history', async () => {
+  const data = payload('available', true);
+  data.history = progressHistory();
+  data.check.latest_check.result = {
+    comparability: { status: 'comparable' },
+    original_score: 65, current_score: 75, score_change: 10,
+    corrected_count: 1, pending_count: 1,
+    items: [{control_id:'PRV-001', name:'Política visible', status:'corrected'}],
+  };
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(ui.nodes.get('progress-summary').hidden, false);
+  assert.equal(ui.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'true');
+  assert.equal(ui.nodes.get('check-result').hidden, false);
+  assert.equal(ui.nodes.get('check-corrected').textContent, 1);
+  assert.equal(ui.nodes.get('check-items').children.length, 1);
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 3);
+  assert.equal(ui.nodes.get('progress-chart-section').hidden, false);
+  const svg = ui.nodes.get('progress-chart').children[0];
+  assert.equal(svg.tagName, 'svg');
+  const labels = svg.children.filter((node) => node.tagName === 'text');
+  assert.ok(labels.some((node) => node.textContent === '75'));
+  assert.ok(labels.some((node) => /28 oct/.test(node.textContent)));
+  assert.equal(svg.children.filter((node) => node.tagName === 'line').length, 2);
+});
+
+test('C4c keeps initial-only history compact and legacy score comparison available', async () => {
+  const data = payload('available');
+  data.history = [progressHistory().at(-1)];
+  const initial = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  assert.equal(initial.nodes.get('progress-summary').hidden, false);
+  assert.equal(initial.nodes.get('progress-chart-section').hidden, true);
+  assert.equal(initial.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'true');
+  const old = payload('available', true);
+  const legacy = mount(() => ({ ok: true, status: 200, json: async () => old }), {legacy: true});
+  await flush();
+  assert.equal(legacy.nodes.get('progress-summary').hidden, true);
+  assert.equal(legacy.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'false');
+  assert.equal(legacy.nodes.get('check-result').hidden, false);
+});
+
+test('C4c labels points but never connects incompatible diagnostic versions', async () => {
+  const data = payload('available', true);
+  data.history = progressHistory();
+  data.history[0].vs_previous = comparison(0, 'not_comparable');
+  const ui = mount(() => ({ ok: true, status: 200, json: async () => data }));
+  await flush();
+  const svg = ui.nodes.get('progress-chart').children[0];
+  assert.equal(svg.children.filter((node) => node.tagName === 'line').length, 1);
+  assert.equal(svg.children.filter((node) => node.tagName === 'circle').length, 3);
+});
+
+test('C4c exposes saved review detail if refreshing history fails after POST', async () => {
+  let reviewed = false;
+  const ui = mount((url) => {
+    if (url.endsWith('/check')) {
+      reviewed = true;
+      return { ok: true, status: 200, json: async () => ({
+        created_at: '2026-10-29T13:00:00Z', expires_at: future,
+        result: {comparability:{status:'not_comparable'},current_score:76,items:[]},
+      }) };
+    }
+    if (reviewed) return { ok: false, status: 503 };
+    const data = payload('available', true);
+    data.history = progressHistory();
+    return {ok:true,status:200,json:async () => data};
+  });
+  await flush();
+  assert.equal(ui.nodes.get('progress-summary').hidden, false);
+  ui.nodes.get('check-start').click();
+  ui.nodes.get('check-submit').click();
+  await flush();
+  assert.equal(ui.nodes.get('progress-summary').hidden, true);
+  assert.equal(ui.nodes.get('progress-chart-section').hidden, true);
+  assert.equal(ui.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'false');
+  assert.equal(ui.nodes.get('check-result').hidden, false);
+  assert.match(ui.nodes.get('progress-history-list').children[0].textContent, /Recarga la página/);
 });
