@@ -288,12 +288,12 @@ def _current_actions(
 
 
 
-def _history_entries(cur, site_id: UUID) -> list[dict]:
-    """Authorized site history across every entitlement period, newest first.
+def _history_entries(cur, site_id: UUID, authorized_entitlement_id: UUID) -> list[dict]:
+    """Site history bounded by the entitlement that authorized this read.
 
-    Each stored observation is shown only once, even when the next period
-    reuses the previous period's last diagnostic as its frozen baseline.
-    Reading prior plans never changes their entitlements or snapshots.
+    With an active entitlement the full site history is readable. When only
+    a naturally expired entitlement authorizes read-only recovery, later
+    revoked periods must never become visible through that older grant.
     """
     cur.execute("""
         SELECT p.id, p.original_diagnostic_id, d.diagnostic_snapshot,
@@ -302,11 +302,25 @@ def _history_entries(cur, site_id: UUID) -> list[dict]:
         JOIN access.entitlements e ON e.id=p.entitlement_id
                                  AND e.workspace_site_id=p.workspace_site_id
                                  AND e.product_code=%s
+        JOIN access.entitlements authorized
+          ON authorized.id=%s
+         AND authorized.workspace_site_id=p.workspace_site_id
+         AND authorized.product_code=%s
+         AND authorized.status='active'
         JOIN privacy.diagnostic d ON d.id=p.original_diagnostic_id
                                  AND d.workspace_site_id=p.workspace_site_id
         WHERE p.workspace_site_id=%s
+          AND (
+            e.active_from < authorized.active_from OR e.id=authorized.id
+            OR (
+              authorized.active_from <= CURRENT_TIMESTAMP
+              AND (authorized.active_until IS NULL
+                   OR authorized.active_until > CURRENT_TIMESTAMP)
+              AND e.active_from <= CURRENT_TIMESTAMP
+            )
+          )
         ORDER BY e.active_from ASC, p.created_at ASC, p.id ASC
-    """, (billing.PRODUCT, site_id))
+    """, (billing.PRODUCT, authorized_entitlement_id, billing.PRODUCT, site_id))
     periods = cur.fetchall()
     if not periods:
         return []
@@ -406,7 +420,7 @@ def _response(cur, entitlement, plan) -> dict:
                 current_snapshot, current_at, source="review" if latest else "initial"
             ),
         },
-        "history": _history_entries(cur, site_id),
+        "history": _history_entries(cur, site_id, entitlement[0]),
         "check": {
             "status": ("expired" if entitlement[1] is not None
                        and datetime.now(timezone.utc) >= entitlement[1] else "available"),
