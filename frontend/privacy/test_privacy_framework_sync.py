@@ -81,8 +81,8 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
 
     def test_sync_runs_after_app_and_updates_visible_scope(self):
         # Cache-busting versions change independently of script order.
-        app_tag = re.search(r'<script src="app\\.js\\?v=[^"]+" defer></script>', HTML)
-        sync_tag = re.search(r'<script src="framework-v0\\.6\\.js\\?v=[^"]+" defer></script>', HTML)
+        app_tag = re.search(r'<script src="app\.js\?v=[^"]+" defer></script>', HTML)
+        sync_tag = re.search(r'<script src="framework-v0\.6\.js\?v=[^"]+" defer></script>', HTML)
         self.assertIsNotNone(app_tag)
         self.assertIsNotNone(sync_tag)
         self.assertLess(app_tag.start(), sync_tag.start())
