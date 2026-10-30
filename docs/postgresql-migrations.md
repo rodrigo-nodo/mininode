@@ -134,3 +134,29 @@ Tras ambas tandas, retirar/limpiar `MIGRATION_APPROVED_FILES` y verificar entorn
 - **O3 — Ruta alternativa bloqueada:** `.github/workflows/production-db-migration.yml` rechaza expresamente los siete nombres de la promoción antes de ejecutar `scripts/run_migration.py`. El único procedimiento autorizado para este alcance será el runner canónico `scripts/predeploy_migrations.py` con checksums y allowlist exacta, en tandas separadas.
 
 **Estado operativo:** el cierre en código y el resultado de CI NO autorizan ejecutar migraciones en PROD. Pendiente verificar respaldo restaurable, identidad de conexión, configuración efectiva de Pre-deploy y aprobación específica de cada tanda. No habilitar automáticamente un deploy funcional, no registrar falsamente las migraciones como aplicadas y no autorizar merge sin revisión de CI del PR.
+
+## PW-03 / PROD - PR 1: esquema aditivo preparado (sin ejecución)
+
+El archivo `20261026_privacy_entitled_plans.sql` se incorpora **idéntico al validado en DEV** y al catálogo SHA-256 del runner. El workflow manual legado `.github/workflows/production-db-migration.yml` rechaza explícitamente este archivo (y variantes de ruta) antes de cualquier conexión; el test del guard verifica el rechazo real de estos argumentos. El único camino admitido para aplicar este SQL, tras aprobación operativa separada, es `scripts/predeploy_migrations.py`. Crear `privacy.entitled_plan` y `privacy.entitled_plan_check` no elimina ni transforma `privacy.correction_plan`, `privacy.correction_plan_order`, `privacy.correction_plan_check` ni `privacy.diagnostic`. El backend actual de `main` debe seguir funcionando con el esquema ampliado. El modelo nuevo solo será consumido por una promoción posterior de PW-03.
+
+**Estado:** preparado en GitHub; no se ha cambiado ninguna base, variable de Render ni allowlist. El merge del PR no autoriza ejecutar la migración. Mientras `MIGRATION_APPROVED_FILES` permanezca vacío, Pre-deploy no se conecta a PostgreSQL.
+
+### Preflight obligatorio, SOLO lectura, antes de ejecutar en PROD
+
+1. Identificar servicio Render PROD, base actual (`current_database()`), versión PostgreSQL, SHA backend y configuración efectiva del Pre-deploy; nunca deducirlos solo de `render.yaml`.
+2. Revisar `to_regclass` para `access.workspace_sites`, `access.entitlements`, `privacy.diagnostic`, ambas tablas nuevas y las tres tablas legadas; revisar columnas necesarias, PK, FK, historial en `public.schema_migrations` y permisos DDL del usuario de migración.
+3. Registrar recuentos de diagnósticos, entitlements, `billing.orders`, planes y órdenes comerciales antiguos, así como dependencias externas. Contrastar con la última auditoría, que podría estar desactualizada.
+4. Confirmar respaldo **recuperable** y procedimiento de recuperación; no suponer que un backup no ensayado permite restore.
+5. Verificar que la migración ya no figure como aplicada en el historial (o que su checksum coincida exactamente), CI verde y Reviewer PASS; obtener autorización separada de ejecución en PROD.
+
+### Orden autorizado solo después del preflight y aprobación operativa
+
+Configurar y ejecutar exclusivamente `20261026_privacy_entitled_plans.sql` en el runner con allowlist exacta por entorno; no reactivar tandas A/B anteriores ni mezclar DDL destructivo. Confirmar las dos tablas nuevas, cinco FK, índices, checksum en `public.schema_migrations`, cero registros nuevos, y recuentos históricos intactos. Vaciar otra vez la allowlist tras la ventana aprobada. La configuración efectiva del servicio y el despliegue no se cambian en este PR.
+
+**Rollback:** una aplicación transaccional fallida se revierte automáticamente junto a su registro de historial. Si la migración ya fue confirmada, volver al backend anterior **no** elimina las tablas: conservar el esquema expandido para compatibilidad y usar corrección forward-only ante problemas. No hacer `DROP` ni restaurar sobre una base con datos nuevos como respuesta automática.
+
+### Próximas etapas
+
+**Riesgo observado por Reviewer (O1, requisito PR 2):** las FK individuales del esquema nuevo verifican existencia pero no que `entitlement_id` y `original_diagnostic_id` correspondan al mismo `workspace_site_id`. Antes de habilitar la API en PROD, sus rutas de escritura **y lectura** deben verificar la pertenencia y contar con tests negativos de asociaciones cruzadas. Esta verificación no se sustituye por la aplicación de la migración.
+
+PR 2 habilitará el backend nuevo, PR 3 el frontend, PR 4 retirará código legado y PR 5 preparará la eliminación física de tres tablas comerciales antiguas de PROD **solo después** de demostrar que no existen pagos ni derechos comerciales pendientes, preservar evidencia necesaria y obtener autorización destructiva independiente. No transportar `20261029_pw03c3_retire_legacy_dev.sql` a PROD. PW-04 Mercado Pago queda fuera de la etapa 1.
