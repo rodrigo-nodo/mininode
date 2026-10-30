@@ -74,6 +74,9 @@ Antes del piloto, fijar criterios de éxito, participantes, modalidad gratuita o
 | PW-13 | Definir e implementar personalización Partner: logo, colores y límites de identidad Mininode | Pendiente |
 | PW-14 | Definir soporte, conciliación, reembolsos e incidencias de cobro/activación | Pendiente |
 | PW-15 | QA de lanzamiento con versión/SHA congelado, criterios PASS previos y autorización de publicación | Pendiente |
+| PW-22 | Definir precios por **superficie web efectivamente inspeccionada** (páginas únicas, profundidad, formularios, subdominios y frecuencia de revisión), con plan base y reglas de volumen multisitio; medir cobertura y costos en pilotos | **Por definir** (sin cambiar la tarifa actual) |
+
+**Roadmap transversal:** `qa.mininode.io` (MIN-01), política de visibilidad del repositorio (MIN-02) y el detalle de precios por superficie (PW-22) están en [`docs/roadmap.md`](../roadmap.md). Son iniciativas por definir, no implementación ni precios aprobados.
 
 **Modelo comercial vigente:** Privacy Web activo por **CLP $9.900**, durante **un mes calendario**, sin renovación automática, con revisiones manuales durante la vigencia.
 
