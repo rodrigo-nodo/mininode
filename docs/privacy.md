@@ -295,3 +295,18 @@ En Access, si hay un diagnóstico pendiente, el guardado continúa automáticame
 Al mostrar un resultado, Privacy Web diferencia entre un diagnóstico **anónimo asociable** (contiene `claim_token`: ofrece activar o guardar gratis vía Access) y un diagnóstico **ya guardado en un workspace** (contiene `diagnostic_id` y `workspace_site_id`, o se abrió desde un sitio autenticado: confirma «Diagnóstico guardado» y no ofrece volver a guardarlo). La opción **Activar Privacy Web** se conserva en ambos recorridos cuando el diagnóstico puede activar; desde un resultado guardado abre el aviso del siguiente paso comercial pendiente, sin afirmar que hubo compra ni activar prestaciones. El flujo completo de solicitud autenticada sigue siendo trabajo posterior.
 
 La opción gratuita y la confirmación «Diagnóstico guardado» utilizan una fila responsive equivalente. En el estado guardado, la acción «Mis sitios» es un botón de navegación a la lista de sitios en Access (no vuelve a guardar el diagnóstico).
+
+
+### PW-03 — Backend de Plan por entitlement (promoción selectiva)
+
+El contrato nuevo (en PR 2 hasta su merge) conserva el diagnóstico original por entitlement en `privacy.entitled_plan` y guarda revisiones sucesivas en `privacy.entitled_plan_check` sin depender de órdenes antiguas ni tokens de Plan. Reutiliza `access.workspace_sites`, `access.entitlements` y `privacy.diagnostic`, así como las versiones canónicas existentes del framework/scoring; este PR no cambia controles ni scoring y no requiere nueva versión de esos catálogos.
+
+- `POST /privacy/workspace-sites/{id}/plan`: prepara Plan una vez por entitlement activo usando el último diagnóstico guardado del mismo sitio; no reinspecciona.
+- `GET /privacy/workspace-sites/{id}/plan`: lee Plan e historial autorizado, incluyendo períodos anteriores del mismo `workspace_site`; un período expirado naturalmente admite recuperación de solo lectura, nunca uno revocado.
+- `POST /privacy/workspace-sites/{id}/plan/check`: inspección pública pasiva, nueva evidencia y comparación atómica. Una revocación, expiración, desvinculación o membresía ajena debe denegar acceso; al fallar se revierte la transacción.
+- `POST /privacy/workspace-sites/{id}/prepare-activation`: reutiliza diagnóstico reciente o inspecciona de nuevo un sitio propio cuando venció su ventana de compra; no crea orden, entitlement ni pago.
+- `GET /billing/workspaces/{id}/entitlements`: lista identificadores de sitios con derecho vigente para usuarios miembros.
+
+**Aislamiento O1:** las lecturas del Plan verifican que el entitlement y el diagnóstico de origen pertenezcan al mismo `workspace_site_id`; la creación y las revisiones derivan los identificadores del sitio autorizado y almacenado. Tests negativos cubren referencias cruzadas, junto con aislamiento entre workspaces y revocaciones. Las FK individuales por sí solas no garantizan esta igualdad.
+
+La promoción conserva temporalmente los endpoints y tablas comerciales antiguos hasta los PR 4/5 para no romper la UI pública actual. El proxy Cloudflare y el frontend renovado corresponden al PR 3. No se habilitan Mercado Pago, checkout ni webhooks. El backend exige el esquema migrado y lo inspecciona al iniciar **sin DDL**.

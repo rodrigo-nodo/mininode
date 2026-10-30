@@ -535,3 +535,10 @@ Billing también comprueba los períodos futuros sin distinguir el origen: una c
 confirmada comienza al finalizar el período activo (gratuito o pagado), sin
 superposición; no se permite comprar otro período cuando ya hay uno futuro reservado.
 La duración pagada es un mes calendario mediante `add_calendar_month`.
+
+
+### PW-03 — Entitlement, Plan e historial (backend preparado para PROD)
+
+El Plan privado pertenece a un entitlement de `privacy_web` **vinculado al `workspace_site`**, nunca únicamente al hostname. Miembros autorizados de un workspace pueden compartir sus revisiones; otro workspace con el mismo hostname no puede verlas. Las consultas de Plan corroboran que el entitlement, el Plan y los diagnósticos asociados correspondan a la misma asociación. Toda revocación y desvinculación debe cortar acceso; un entitlement expirado naturalmente solo permite recuperar su último Plan e historial autorizado.
+
+El backend incluye rutas de Plan y preparación de activación sin pagos. La vista agrupada de sitios vigentes se obtiene de `GET /billing/workspaces/{workspace_id}/entitlements` previa comprobación de membresía. El frontend consumidor y el proxy se promueven separadamente. No hay migración automática de órdenes antiguas a entitlements.

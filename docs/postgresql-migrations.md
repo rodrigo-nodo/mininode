@@ -160,3 +160,12 @@ Configurar y ejecutar exclusivamente `20261026_privacy_entitled_plans.sql` en el
 **Riesgo observado por Reviewer (O1, requisito PR 2):** las FK individuales del esquema nuevo verifican existencia pero no que `entitlement_id` y `original_diagnostic_id` correspondan al mismo `workspace_site_id`. Antes de habilitar la API en PROD, sus rutas de escritura **y lectura** deben verificar la pertenencia y contar con tests negativos de asociaciones cruzadas. Esta verificación no se sustituye por la aplicación de la migración.
 
 PR 2 habilitará el backend nuevo, PR 3 el frontend, PR 4 retirará código legado y PR 5 preparará la eliminación física de tres tablas comerciales antiguas de PROD **solo después** de demostrar que no existen pagos ni derechos comerciales pendientes, preservar evidencia necesaria y obtener autorización destructiva independiente. No transportar `20261029_pw03c3_retire_legacy_dev.sql` a PROD. PW-04 Mercado Pago queda fuera de la etapa 1.
+
+
+## PW-03 PROD — Ejecución de esquema verificada (30-10-2026)
+
+Tras autorización operativa expresa del Product Owner, se aplicó exclusivamente `20261026_privacy_entitled_plans.sql` en PostgreSQL PROD `mininode`, mediante el runner Pre-deploy en Render. `public.schema_migrations` registra una aplicación con SHA-256 `40e0b711771de5ae7441a522392a0ef928453845d0971ee69d2c0f3433354597`. Verificadas: dos tablas, cinco claves foráneas, dos índices auxiliares, y cero registros iniciales en ellas. Los recuentos antiguos (294 diagnósticos, 2 entitlements, 2 planes antiguos, 3 órdenes antiguas, 1 revisión antigua) permanecieron intactos. Se retiró inmediatamente `MIGRATION_APPROVED_FILES` y el siguiente Pre-deploy confirmó `No migrations approved for this environment; skip`; el deploy terminó LIVE en SHA `78eb82ec`.
+
+**Riesgo aceptado:** el Product Owner optó por no realizar respaldo adicional y asumió expresamente el riesgo de pérdida irrecuperable de datos de PROD; DEV representa el comportamiento de referencia, **no** una copia restaurable de PROD. Esta aceptación no autoriza borrados futuros: PR 5 requerirá aprobación destructiva específica.
+
+Para el PR 2, la comprobación del esquema nuevo al iniciar es solo SELECT, no CREATE/ALTER; el backend antiguo permanece operativo hasta su retiro independiente. No reactivar la migración ni cambiar allowlist durante PR 2.
