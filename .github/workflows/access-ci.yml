@@ -125,7 +125,8 @@ jobs:
 
       - name: Run PW-03 new and legacy Plan tests
         run: |
-          pytest -q frontend/privacy/plan/test_plan_static.py frontend/privacy/mi-plan/test_plan_static.py frontend/privacy/plan-demo/test_plan_demo_static.py
+          pytest -q frontend/privacy/plan/test_plan_static.py frontend/privacy/plan-demo/test_plan_demo_static.py
+          pytest -q frontend/privacy/mi-plan/test_plan_static.py
           node --test frontend/privacy/mi-plan/test_entitled_client.mjs
 
       - name: Run Privacy Web static tests
