@@ -428,3 +428,87 @@ def test_public_diagnosis_records_original_input_not_redirect_destination(monkey
     assert result["site_url"] == "https://rust-lang.org/"
     assert "requested_url" not in result
     assert "requested_url" not in final
+
+
+# PW-03 promotion: activation preparation must not create billing orders.
+from datetime import datetime, timedelta, timezone
+
+
+def test_prepare_activation_requires_authenticated_site_and_saved_diagnostic(monkeypatch):
+    client, _ = _client(monkeypatch)
+    site = uuid4()
+    called = []
+    monkeypatch.setattr(access, "get_authorized_site", lambda *_: None)
+    monkeypatch.setattr(
+        privacy_api.privacy_diagnostic_snapshot, "get_latest_for_workspace_site",
+        lambda *_: called.append("read"),
+    )
+    url = f"/privacy/workspace-sites/{site}/prepare-activation"
+    assert client.post(url).status_code == 401
+    assert client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"}).status_code == 404
+    assert called == []
+
+
+def test_prepare_activation_reuses_recent_snapshot_without_inspection(monkeypatch):
+    client, _ = _client(monkeypatch)
+    site, diagnostic_id = uuid4(), uuid4()
+    monkeypatch.setattr(access, "get_authorized_site", lambda *_: SimpleNamespace(id=site))
+    called = []
+    now = datetime.now(timezone.utc)
+    stored = SimpleNamespace(
+        id=diagnostic_id, diagnostic_snapshot={"score": 73, "site_url": "https://stored.example"},
+        created_at=now, purchase_expires_at=now + timedelta(hours=5),
+    )
+    monkeypatch.setattr(privacy_api.privacy_diagnostic_snapshot,
+                        "get_latest_for_workspace_site", lambda *_: stored)
+    monkeypatch.setattr(privacy_api, "diagnose_workspace_site",
+                        lambda *_: called.append("inspected"))
+    result = client.post(f"/privacy/workspace-sites/{site}/prepare-activation",
+                         headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert result.status_code == 200, result.text
+    assert result.json()["refreshed"] is False
+    assert result.json()["diagnostic"]["diagnostic_id"] == str(diagnostic_id)
+    assert result.json()["diagnostic"]["workspace_site_id"] == str(site)
+    assert called == []
+
+
+def test_prepare_activation_requires_saved_diagnostic(monkeypatch):
+    client, _ = _client(monkeypatch)
+    site = uuid4()
+    monkeypatch.setattr(access, "get_authorized_site", lambda *_: SimpleNamespace(id=site))
+    def missing(_):
+        raise privacy_api.privacy_diagnostic_snapshot.PrivacyDiagnosticSnapshotNotFoundError()
+    monkeypatch.setattr(privacy_api.privacy_diagnostic_snapshot,
+                        "get_latest_for_workspace_site", missing)
+    result = client.post(f"/privacy/workspace-sites/{site}/prepare-activation",
+                         headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert result.status_code == 409
+
+
+def test_prepare_activation_refreshes_stale_snapshot_and_requires_persistence(monkeypatch):
+    client, user = _client(monkeypatch)
+    site = uuid4()
+    monkeypatch.setattr(access, "get_authorized_site", lambda *_: SimpleNamespace(id=site))
+    now = datetime.now(timezone.utc)
+    stale = SimpleNamespace(
+        id=uuid4(), diagnostic_snapshot={"score": 53},
+        created_at=now - timedelta(days=4),
+        purchase_expires_at=now - timedelta(days=3),
+    )
+    monkeypatch.setattr(privacy_api.privacy_diagnostic_snapshot,
+                        "get_latest_for_workspace_site", lambda *_: stale)
+    called = []
+    def inspect(site_id, request, authenticated):
+        called.append((site_id, authenticated.id))
+        return {"score": 78, "diagnostic_id": uuid4(),
+                "purchase_expires_at": now + timedelta(hours=24)}
+    monkeypatch.setattr(privacy_api, "diagnose_workspace_site", inspect)
+    url = f"/privacy/workspace-sites/{site}/prepare-activation"
+    response = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert response.status_code == 200, response.text
+    assert response.json()["refreshed"] is True
+    assert called == [(site, user.id)]
+    assert response.json()["diagnostic"]["workspace_site_id"] == str(site)
+    monkeypatch.setattr(privacy_api, "diagnose_workspace_site", lambda *_: {"score": 78})
+    failed = client.post(url, headers={"Cf-Access-Jwt-Assertion": "signed-token"})
+    assert failed.status_code == 503
