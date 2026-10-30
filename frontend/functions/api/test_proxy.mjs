@@ -384,3 +384,43 @@ test('PW-02 overview route exists consistently in client, API, and proxy', async
   assert.ok(backend.includes('@router.get("/operator/grants/overview")'));
   assert.ok(source.includes("destPathPublic === 'access/operator/grants/overview'"));
 });
+
+
+test('PW-03 private Plan, entitlement and activation paths use Bearer without server key', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const paths = [
+    [`/api/privacy/workspace-sites/${id}/plan`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/plan`, 'POST'],
+    [`/api/privacy/workspace-sites/${id}/plan/check`, 'POST'],
+    [`/api/privacy/workspace-sites/${id}/prepare-activation`, 'POST'],
+    [`/api/billing/sites/${id}/entitlement`, 'GET'],
+    [`/api/billing/workspaces/${id}/entitlements`, 'GET'],
+  ];
+  for (const [path, method] of paths) {
+    const { response, calls } = await request(path, method, {
+      withoutApiKey: true, headers: { Authorization: 'Bearer signed-clerk-token' },
+    });
+    assert.equal(response.status, 200, path);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://backend.example' + path.slice(4));
+    assert.equal(calls[0].init.method, method);
+    assert.equal(calls[0].init.headers.get('Authorization'), 'Bearer signed-clerk-token');
+    assert.equal(calls[0].init.headers.has('X-Api-Key'), false);
+  }
+  for (const [path, method] of [
+    [`/api/privacy/workspace-sites/${id}/plan/check`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/plan`, 'PATCH'],
+    [`/api/privacy/workspace-sites/${id}/prepare-activation`, 'GET'],
+    [`/api/billing/sites/${id}/entitlement`, 'POST'],
+    [`/api/billing/workspaces/${id}/entitlements`, 'POST'],
+    ['/api/privacy/workspace-sites/bad%2Fid/plan', 'GET'],
+    [`/api/privacy/workspace-sites/${id}/plan/private`, 'GET'],
+  ]) {
+    await assertRejected(path, method);
+  }
+  const publicDiagnostic = await request('/api/privacy/diagnose', 'POST');
+  assert.equal(publicDiagnostic.calls[0].init.headers.has('Authorization'), false);
+  assert.equal(publicDiagnostic.calls[0].init.headers.get('X-Api-Key'), API_KEY);
+  const legacy = await request('/api/privacy/correction-plans/ABC123', 'GET', { withoutApiKey: true });
+  assert.equal(legacy.response.status, 200);
+});
