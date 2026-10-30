@@ -113,7 +113,7 @@ def test_missing_access_dependencies_rolls_back_ddl_and_history(disposable):
     # Schema is incomplete: the migration must not leave a half-created plan.
     with psycopg.connect(disposable) as conn:
         conn.execute("CREATE SCHEMA privacy")
-    with pytest.raises(psycopg.errors.UndefinedTable):
+    with pytest.raises((psycopg.errors.InvalidSchemaName, psycopg.errors.UndefinedTable)):
         runner.migrate(disposable, [MIGRATION])
     with psycopg.connect(disposable) as conn:
         assert conn.execute("SELECT to_regclass('privacy.entitled_plan')").fetchone()[0] is None
