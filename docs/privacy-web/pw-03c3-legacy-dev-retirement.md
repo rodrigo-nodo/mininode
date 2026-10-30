@@ -1,12 +1,13 @@
-# PW-03C3 — Preparación de limpieza física DEV (sin ejecutar)
+# PW-03C3 — Retiro de tablas comerciales legadas en DEV
 
-**Estado:** migración propuesta en PR; ninguna eliminación autorizada ni ejecutada.
-**Alcance exclusivo:** Render DEV, PostgreSQL `mininode_db_dev`.
-**PROD:** fuera de alcance; `main` todavía inicializa y consulta el flujo antiguo.
+**Estado:** cerrado y validado funcionalmente en DEV el **29-oct-2026 (Chile)**.  
+**Ejecución:** Render Shell de `mininode-backend-dev`, BD `mininode_db_dev`.  
+**Código:** [PR #414](https://github.com/rodrigo-nodo/mininode/pull/414), merge a `dev` `503f65d70dd2b691e2fd3a8a3585469e199a20b8`.  
+**PROD:** sin cambios: conserva tablas y registros históricos; `main` continúa utilizando el flujo comercial legado.
 
-## Evidencia previa (29-oct-2026)
+## Inventario previo, verificado en ambas bases
 
-| Relación | DEV (consulta interna) | PROD (consulta read-only) |
+| Relación | DEV previo | PROD (solo lectura) |
 |---|---:|---:|
 | `privacy.correction_plan` | 0 | 2 |
 | `privacy.correction_plan_order` | 0 | 3 |
@@ -14,38 +15,28 @@
 | `privacy.entitled_plan` | 3 | No existe |
 | `privacy.entitled_plan_check` | 3 | No existe |
 
-PROD: dos órdenes antiguas marcadas `paid` y una `pending_payment`; una revisión histórica. No suponer cobros reales. Los registros y dependencias comerciales se conservan. Los snapshots en `privacy.diagnostic` no se eliminan.
+Las tres órdenes legadas de PROD incluyen dos marcadas `paid` y una `pending_payment`; no inferir cobros reales. Conservar todos estos registros y sus dependencias en PROD.
 
-## Código y dependencias
+## Operación realizada en DEV
 
-- En `dev` el backend del modelo comercial antiguo ya fue retirado (PW-03C2); la migración preparada no lo restaura.
-- `site_group_operator.py` conserva intencionalmente el control de órdenes antiguas: lee/retiene un candado de `privacy.correction_plan_order` **si existe**. Si la migración elimina tablas verificadas vacías, el control no pierde ninguna orden histórica; sigue comprobando Billing y entitlements.
-- En `main` el backend aún usa las tablas antiguas, por lo tanto **no aplicar este retiro ni promoverlo a PROD**.
-- El modelo nuevo, `privacy.diagnostic`, Access y Billing quedan fuera de la limpieza.
+1. Revisión independiente del PR #414: **PASS**; Access CI: **SUCCESS**. PR preparado, sin ejecución automática.
+2. Merge autorizado a `dev`; despliegue manual a Render DEV del SHA `503f65d` confirmado **LIVE**.
+3. Render Shell (consulta de solo lectura): verificó `mininode_db_dev`, las tres tablas legadas con **0 filas**, las dos tablas nuevas con **3 filas cada una**, y el archivo `/app/migrations/20261029_pw03c3_retire_legacy_dev.sql` presente.
+4. Comprobación de dependencias SQL en DEV: **0 FK externas, 0 vistas dependientes, 0 funciones relacionadas y 0 triggers de usuario**.
+5. El Product Owner eligió como referencia el respaldo del **28-oct-2026** y **aceptó expresamente el riesgo de no haber comprobado su restauración**. No se verificó un restore ni se debe describir ese respaldo como probado.
+6. Tras autorización específica de la limpieza en DEV, se ejecutó **manualmente en Render Shell** `python scripts/run_migration.py migrations/20261029_pw03c3_retire_legacy_dev.sql`. El comando devolvió `Migration applied: 20261029_pw03c3_retire_legacy_dev.sql`.
+7. Verificación posterior de solo lectura: las tres tablas legadas **ya no existen**; `privacy.entitled_plan` = **3**, `privacy.entitled_plan_check` = **3** y `privacy.diagnostic` = **67**. Resultado mostrado: **PASS**.
+8. El Product Owner confirmó que `dev.mininode.io` se ve y funciona como antes. No se identificó regresión visible en el Plan. **PW-03C3 cerrado funcionalmente en DEV**.
 
-## Archivo preparado, deshabilitado por defecto
+## Salvaguardas que se aplicaron
 
-`backend/migrations/20261029_pw03c3_retire_legacy_dev.sql`:
+La migración exige el nombre exacto de BD `mininode_db_dev`, la existencia de las tres tablas legadas y de las dos tablas nuevas, toma bloqueos `ACCESS EXCLUSIVE ... NOWAIT` antes del examen de filas, rechaza cualquier contenido legado y usa `DROP TABLE ... RESTRICT` sin `CASCADE`. El runner ejecutó el SQL dentro de una transacción, con rollback ante error. La migración **no** figura en `APPROVED_CHECKSUMS`, por lo que no se ejecuta automáticamente mediante Pre-deploy.
 
-1. Exige el nombre exacto de BD `mininode_db_dev`; en otras bases falla.
-2. Exige las tres tablas legadas y las dos tablas del Plan nuevo.
-3. Bloquea las tres tablas `ACCESS EXCLUSIVE ... NOWAIT` **antes** de consultar registros; falla ante actividad concurrente.
-4. Rechaza la operación si **cualquier tabla** contiene un solo registro.
-5. Usa `DROP TABLE ... RESTRICT`, **sin CASCADE**: una dependencia inesperada cancela toda la transacción.
+`site_group_operator.py` conserva la protección de órdenes históricas **cuando existe** `privacy.correction_plan_order`. Al estar comprobada vacía antes de eliminarla en DEV, no se perdió evidencia de órdenes en ese ambiente. La validación de Billing, entitlements y la autorización por sitio permanece; no trasladar esta conclusión a PROD, donde existen órdenes legadas.
 
-No está registrado en `APPROVED_CHECKSUMS`; Render Pre-deploy no puede ejecutarlo por allowlist. Su mera presencia en `dev` **no aplica DDL**.
+## Límites y próximos pasos
 
-## Checklist antes de una ejecución futura (otra autorización)
-
-1. Confirmar SHA de `dev` y Render DEV en servicio, y que el backend antiguo no se ejecute en ese ambiente.
-2. Volver a inspeccionar **en la sesión de ejecución**, mediante solo lectura, las cinco tablas, filas y referencias; no confiar únicamente en las cifras del 29-oct.
-3. Preparar **respaldo/exportación verificable** de la estructura, constraints, índices y cualquier contenido de las tres tablas, en almacenamiento protegido. Verificar recuperación en una BD aislada (restore de prueba). No suponer que el plan básico de Render ofrece PITR.
-4. Revisar dependencias de claves foráneas, vistas, funciones, permisos y procesos externos; comprobar especialmente la guarda `site_group_operator.py`.
-5. Obtener **autorización explícita separada** para ejecutar la migración DEV. Elegir exclusivamente el workflow manual `Development DB Migration`, con secreto del entorno development y confirmación consciente. No ejecutar en PROD, desde Shell ni mediante predeploy automático como parte de este PR.
-6. Tras ejecutar, comprobar ausencia exclusiva de las tres tablas, integridad de `privacy.diagnostic`, `entitled_plan` y `entitled_plan_check`, y flujo de agrupación/Billing/Plan en DEV.
-
-**Rollback:** si falla cualquier verificación SQL, la transacción revierte y no se elimina tabla alguna. Si el DDL terminara correctamente y se detectara después un problema, no existe un down-migration que regenere evidencia. Restaurar **únicamente** las tres tablas desde el respaldo probado en un entorno aislado y con nueva autorización, respetando claves foráneas e historial; no restaurar toda la BD sobre datos nuevos. Sin respaldo comprobado, **no ejecutar**.
-
-## Decisión pendiente
-
-Este PR **solo prepara** el archivo y sus pruebas: no cambia la guarda actual, no registra la migración para Pre-deploy, no toca datos y no autoriza ejecución. El paso siguiente es validar el runbook, verificar respaldos y decidir una operación separada sobre DEV.
+- **Sin restauración ensayada:** el éxito del DDL no demuestra recuperabilidad del respaldo elegido. Si se descubriera un problema posterior, el rollback transaccional ya no aplica; requeriría restauración selectiva y autorizada, sin sobreescribir la BD actual.
+- **PROD excluido:** no ejecutar este SQL en PROD ni promover su borrado. La base PROD no tiene las tablas del Plan nuevo; antes de cualquier cambio debe promoverse y validarse el modelo nuevo, definir compatibilidad histórica y un plan de respaldo/restauración específico.
+- **PW-04:** siguiente frente en DEV, integración de checkout, confirmación de pago por proveedor, creación de entitlement y validación de punta a punta. No se habilitan pagos reales por documentar este cierre.
+- La migración es de **un solo uso**: después de ejecutarla, fallará deliberadamente por ausencia de tablas. Mantener su historial en este documento; no reintentarla.
