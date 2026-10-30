@@ -1,0 +1,6 @@
+# Authentication-bound PW-03 Plan HTML is always revalidated.
+/privacy/mi-plan/
+  Cache-Control: no-cache, must-revalidate
+
+/privacy/mi-plan/*
+  Cache-Control: no-cache, must-revalidate
