@@ -26,6 +26,9 @@ Privacy Web realiza diagnósticos orientativos de señales públicas de privacid
 
 **Evidencia de publicación:** [PR #379](https://github.com/rodrigo-nodo/mininode/pull/379), [promoción funcional](../privacy-web-prod-promotion.md), [contrato Access/Admin](../access.md) y [flujo DEV → PROD](../dev-prod-release.md).
 
+
+**Promoción PW-03 a PROD (iniciada, PR 1):** se prepara en `main` el esquema aditivo `privacy.entitled_plan` y `privacy.entitled_plan_check` y su validación de compatibilidad PostgreSQL; **no se ha ejecutado en PROD** ni se ha publicado el backend/frontend renovado. Secuencia aprobada: PR 1 esquema → PR 2 backend → PR 3 frontend → PR 4 retiro del código legado → PR 5 preparación y autorización separada de eliminación física de tablas históricas en PROD. Antes del PR 5 verificar que no haya pagos o prestaciones reales pendientes y conservar la evidencia necesaria mediante respaldo recuperable. La antigua decisión de conservar indefinidamente las tres tablas comerciales queda reemplazada por su eliminación controlada al final de PW-03, nunca automática con la migración aditiva. PW-04 y Mercado Pago permanecen fuera de alcance.
+
 ## 3. Etapa 1 - Preparación del producto (P1)
 
 **Objetivo:** producto preparado para pruebas internas y piloto.
