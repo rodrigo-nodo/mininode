@@ -156,22 +156,32 @@ No se prepara pago/activación hasta que la verificación se complete.
 
 Esta rama no habilita Mercado Pago ni cobros nuevos.
 
-**PW-03C — retiro total del modelo comercial legado:** no hay compatibilidad
-funcional futura para órdenes o tokens antiguos. En **C1** el Plan por
-entitlement usa una comparación determinista neutral en
-`domain_packs/privacy/diagnostic_comparison.py` y la comparabilidad canónica
-de `versioning.py`; el código heredado permaneció intacto hasta **C2**, sin
-adaptarlo ni extenderlo. **C2** retira endpoints, servicios, formulario de orden, rutas por token,
-proxy e inicializaciones sin eliminar registros. La comprobación histórica de
-órdenes en la agrupación de sitios permanece temporalmente como protección
-hasta validar los datos en ambas BD. **C3** inventarió DEV (0 registros
-legados, 3 Planes y 3 revisiones nuevas) y PROD (2 Planes, 3 órdenes, 1
-revisión legada). Se preparó una migración **exclusiva DEV, no ejecutada ni
-habilitada en Pre-deploy**, con guarda de BD, filas vacías, bloqueo y
-RESTRICT; ver [runbook PW-03C3](privacy-web/pw-03c3-legacy-dev-retirement.md).
-Cualquier retiro exige respaldo verificable y autorización separada.
-La limpieza futura se limitará a las tres tablas legadas. Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
-planes y revisiones nuevos. No realizar DROP en PROD sin aprobación expresa.
+**PW-03C — retiro del modelo comercial legado en DEV (cerrado):** no se
+mantiene compatibilidad funcional futura para órdenes o tokens antiguos.
+En **C1** el Plan por entitlement adoptó una comparación determinista neutral
+en `domain_packs/privacy/diagnostic_comparison.py` y la comparabilidad
+canónica de `versioning.py`; en **C2** se retiraron endpoints, servicios,
+formulario de orden, rutas por token, proxy e inicializaciones legadas.
+**C3** confirmó las tres tablas legadas vacías en DEV y sus dependencias SQL
+externas ausentes. Tras PR #414, Reviewer PASS, despliegue de `503f65d`
+en Render DEV y autorización específica, el **29-oct-2026** se ejecutó
+manualmente el retiro `DROP TABLE ... RESTRICT` exclusivamente en DEV.
+La verificación posterior confirmó las tres tablas eliminadas,
+`privacy.entitled_plan` = 3, `privacy.entitled_plan_check` = 3
+y `privacy.diagnostic` = 67. El Product Owner confirmó que el Plan
+en DEV se ve y funciona igual: **PW-03C3 PASS funcional**.
+
+**Excepción de respaldo aceptada:** se eligió como referencia el respaldo
+del 28-oct-2026, pero **su restauración no fue probada**; el riesgo fue
+aceptado expresamente antes de ejecutar. Ver [registro de cierre PW-03C3](privacy-web/pw-03c3-legacy-dev-retirement.md).
+
+**PROD permanece sin cambios:** conserva 2 Planes, 3 órdenes y 1 revisión
+legadas, y `main` todavía ejecuta código heredado. La comprobación de
+órdenes históricas en agrupación de sitios se mantiene condicionada a la
+presencia de la tabla. No eliminar tablas en PROD ni promover la migración
+DEV: requeriría decisión, migración, respaldo y autorización independientes.
+Se preservan diagnósticos/snapshots, Access, Billing, entitlements,
+planes y revisiones nuevos.
 C1 no modifica BD, scoring, controles, API ni comportamiento público.
 La UX C1–C4c está validada en DEV (C4c: PR #410); aún no está en PROD.
 
