@@ -44,3 +44,9 @@ No sincronizar las ramas masivamente para eliminar diferencias de historial. Res
 - **Reviewer independiente (opcional):** revisar cambios relevantes de backend, seguridad, contratos, base de datos o lógica crítica sin implementar modificaciones.
 
 Este procedimiento complementa la arquitectura de `docs/architecture.md` y no sustituye los controles específicos de cada producto.
+
+## Roadmap compartido y QA propuesto
+
+Las iniciativas estratégicas son independientes de DEV/PROD y tienen una única referencia en `docs/roadmap.md` de `main`, con réplica textual en `dev`. La evidencia de implementación y los estados por entorno pueden diferir; sincronizar decisiones mediante PR documental sin sobrescribir el trabajo técnico específico de cada rama.
+
+Se evalúa `qa.mininode.io` como preproducción para un SHA candidato congelado. **No existe como entorno habilitado por esta decisión**. Hasta contar con QA autorizado, un Branch Preview `*.pages.dev` puede comprobar build/maquetación, no el E2E autenticado con Clerk/Render PROD. Revalidar solo en DEV tampoco acredita la publicación selectiva sobre `main`. Mantener CI, revisión, autorización de merge, comprobación del destino y rollback cuando aplique.
