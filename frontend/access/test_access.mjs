@@ -502,7 +502,7 @@ test('PW-03 Access only links entitled sites and stays fail-closed on lookup fai
     { id: 'site-a', hostname: 'a.example' },
     { id: 'site-b', hostname: 'b.example' },
   ];
-  const build = (rights) => {
+  const build = (rights, { withSavedResult = false } = {}) => {
     const nodes = new Map();
     const calls = [];
     const context = {
@@ -514,7 +514,15 @@ test('PW-03 Access only links entitled sites and stays fail-closed on lookup fai
         }),
       },
       renderSites: () => new Map(sites.map(site => {
-        const node = { links: [], append(link) { this.links.push(link); } };
+        const original = withSavedResult && site.id === 'site-a'
+          ? { href: '/privacy/?workspace_site_id=site-a&view=latest', textContent: 'Ver resultado →',
+            setAttribute(name, value) { this[name] = value; } }
+          : null;
+        const node = {
+          links: original ? [original] : [],
+          querySelector(selector) { return selector === '.site-review-link' ? (this.links[0] || null) : null; },
+          append(link) { this.links.push(link); },
+        };
         nodes.set(site.id, node);
         return [site.id, node];
       })),
@@ -531,16 +539,24 @@ test('PW-03 Access only links entitled sites and stays fail-closed on lookup fai
     return { context, nodes, calls };
   };
   const workspace = { id: 'workspace-1', sites };
-  const active = build(['site-a', 'foreign-site']);
+  const active = build(['site-a', 'foreign-site'], { withSavedResult: true });
   await active.context.load(workspace);
   assert.equal(active.nodes.get('site-a').links.length, 1);
   assert.equal(active.nodes.get('site-a').links[0].href,
     '/privacy/mi-plan/?workspace_site_id=site-a');
+  assert.equal(active.nodes.get('site-a').links[0].textContent, 'Abrir Privacy Web →');
   assert.equal(active.nodes.get('site-b').links.length, 0);
+  // A site without any saved review still gets exactly one Plan link.
+  const noPriorReview = build(['site-a']);
+  await noPriorReview.context.load(workspace);
+  assert.equal(noPriorReview.nodes.get('site-a').links.length, 1);
+  assert.equal(noPriorReview.nodes.get('site-a').links[0].href,
+    '/privacy/mi-plan/?workspace_site_id=site-a');
   assert.ok(active.calls.some(url => url.includes('/billing/workspaces/workspace-1/entitlements')));
 
-  const failed = build(null);
+  const failed = build(null, { withSavedResult: true });
   await failed.context.load(workspace);
-  assert.equal(failed.nodes.get('site-a').links.length, 0);
+  assert.equal(failed.nodes.get('site-a').links.length, 1);
+  assert.equal(failed.nodes.get('site-a').links[0].textContent, 'Ver resultado →');
   assert.equal(failed.nodes.get('site-b').links.length, 0);
 });
