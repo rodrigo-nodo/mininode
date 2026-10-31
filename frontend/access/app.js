@@ -334,12 +334,14 @@ async function loadLatestReviews(workspace) {
     if (!entitledIds.has(site.id)) continue;
     const row = rows.get(site.id);
     if (!row) continue;
-    const link = document.createElement('a');
+    // Reuse the saved-result CTA: one primary action per site, as in DEV.
+    const existingLink = row.querySelector('.site-review-link');
+    const link = existingLink || document.createElement('a');
     link.className = 'site-review-link';
     link.href = `/privacy/mi-plan/?workspace_site_id=${encodeURIComponent(site.id)}`;
     link.textContent = 'Abrir Privacy Web →';
     link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
-    row.append(link);
+    if (!existingLink) row.append(link);
   }
 }
 
