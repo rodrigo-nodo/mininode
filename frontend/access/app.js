@@ -202,6 +202,7 @@ function updateSiteReviewButton(siteCount) {
 
 function renderSites(workspace, reviews = [], groupReviews = []) {
   siteList.replaceChildren();
+  const siteRows = new Map();
   const sites = Array.isArray(workspace?.sites) ? workspace.sites : [];
   const reviewsBySite = new Map(
     (Array.isArray(reviews) ? reviews : [])
@@ -302,23 +303,46 @@ function renderSites(workspace, reviews = [], groupReviews = []) {
     });
     row.append(unlink);
     siteList.append(row);
+    siteRows.set(site.id, row);
   });
   setVisible(siteEmpty, sites.length === 0);
   updateSiteReviewButton(sites.length);
+  return siteRows;
 }
 
 async function loadLatestReviews(workspace) {
   const requestId = ++latestReviewsRequestId;
+  // A failed entitlement lookup is unknown, never proof of no subscription.
+  const rightsRequest = api(`/api/billing/workspaces/${encodeURIComponent(workspace.id)}/entitlements`).catch(() => null);
   const [latest, grouping] = await Promise.allSettled([
     api(`/api/privacy/workspaces/${encodeURIComponent(workspace.id)}/latest-reviews`),
     api(`/api/access/workspaces/${encodeURIComponent(workspace.id)}/site-group-reviews`),
   ]);
   if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
-  renderSites(
+  const rows = renderSites(
     workspace,
     latest.status === 'fulfilled' && Array.isArray(latest.value.reviews) ? latest.value.reviews : [],
     grouping.status === 'fulfilled' && Array.isArray(grouping.value.reviews) ? grouping.value.reviews : [],
   );
+  const rights = await rightsRequest;
+  if (requestId !== latestReviewsRequestId || activeWorkspaceId !== workspace.id) return;
+  if (!Array.isArray(rights?.active_site_ids) || !rights.active_site_ids.every((id) => typeof id === 'string')) {
+    return; // Keep existing saved results, without claiming Plan access.
+  }
+  const entitledIds = new Set(rights.active_site_ids);
+  for (const site of (Array.isArray(workspace.sites) ? workspace.sites : [])) {
+    if (!entitledIds.has(site.id)) continue;
+    const row = rows.get(site.id);
+    if (!row) continue;
+    // Reuse the saved-result CTA: one primary action per site, as in DEV.
+    const existingLink = row.querySelector('.site-review-link');
+    const link = existingLink || document.createElement('a');
+    link.className = 'site-review-link';
+    link.href = `/privacy/mi-plan/?workspace_site_id=${encodeURIComponent(site.id)}`;
+    link.textContent = 'Abrir Privacy Web →';
+    link.setAttribute('aria-label', `Abrir Privacy Web para ${site.hostname}`);
+    if (!existingLink) row.append(link);
+  }
 }
 
 function renderHome() {

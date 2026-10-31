@@ -310,3 +310,11 @@ El contrato nuevo (en PR 2 hasta su merge) conserva el diagnóstico original por
 **Aislamiento O1:** las lecturas del Plan verifican que el entitlement y el diagnóstico de origen pertenezcan al mismo `workspace_site_id`; la creación y las revisiones derivan los identificadores del sitio autorizado y almacenado. Tests negativos cubren referencias cruzadas, junto con aislamiento entre workspaces y revocaciones. Las FK individuales por sí solas no garantizan esta igualdad.
 
 La promoción conserva temporalmente los endpoints y tablas comerciales antiguos hasta los PR 4/5 para no romper la UI pública actual. El proxy Cloudflare y el frontend renovado corresponden al PR 3. No se habilitan Mercado Pago, checkout ni webhooks. El backend exige el esquema migrado y lo inspecciona al iniciar **sin DDL**.
+
+### Frontend Privacy Web PW-03 — acceso al Plan renovado
+
+La interfaz privada del Plan se presenta temporalmente en `/privacy/mi-plan/?workspace_site_id=<uuid>`, con pestañas **Estado de mi sitio**, **Qué debo mejorar** y **Mis avances**. Consulta exclusivamente las rutas autenticadas `/privacy/workspace-sites/{id}/plan` (GET/POST) y `/plan/check` (POST), con JWT de Clerk obtenido mediante la API compartida de Mininode. El backend mantiene la decisión final de autorización por workspace y entitlement.
+
+`/access/` muestra el enlace al Plan solo tras recibir `active_site_ids` desde `/billing/workspaces/{id}/entitlements`. Un error de consulta no debe tratarse como derecho inactivo. Las revisiones usan los snapshots ya almacenados y la comparación versionada del backend; no almacenan el JWT, snapshots ni resultados sensibles en el navegador.
+
+**Transición:** esta nueva página no reemplaza `/privacy/plan/:token` ni sus servicios o proxy hasta la retirada comercial de PR 4; por ello usa una ruta distinta. No cambia el diagnóstico público, Content Reader V1, Mercado Pago, controles ni scoring.

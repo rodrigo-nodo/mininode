@@ -492,3 +492,71 @@ test('workspace switch during review submission discards stale success', async (
   assert.deepEqual(h.seen.loads, []);
   assert.equal(h.siteReviewNotice.textContent, '');
 });
+
+
+test('PW-03 Access only links entitled sites and stays fail-closed on lookup failures', async () => {
+  const start = app.indexOf('async function loadLatestReviews(workspace) {');
+  const end = app.indexOf('\nfunction renderHome()', start);
+  assert.ok(start >= 0 && end > start);
+  const sites = [
+    { id: 'site-a', hostname: 'a.example' },
+    { id: 'site-b', hostname: 'b.example' },
+  ];
+  const build = (rights, { withSavedResult = false } = {}) => {
+    const nodes = new Map();
+    const calls = [];
+    const context = {
+      latestReviewsRequestId: 0,
+      activeWorkspaceId: 'workspace-1',
+      document: {
+        createElement: () => ({
+          setAttribute(name, value) { this[name] = value; },
+        }),
+      },
+      renderSites: () => new Map(sites.map(site => {
+        const original = withSavedResult && site.id === 'site-a'
+          ? { href: '/privacy/?workspace_site_id=site-a&view=latest', textContent: 'Ver resultado →',
+            setAttribute(name, value) { this[name] = value; } }
+          : null;
+        const node = {
+          links: original ? [original] : [],
+          querySelector(selector) { return selector === '.site-review-link' ? (this.links[0] || null) : null; },
+          append(link) { this.links.push(link); },
+        };
+        nodes.set(site.id, node);
+        return [site.id, node];
+      })),
+      api: async (url) => {
+        calls.push(url);
+        if (url.includes('/entitlements')) {
+          if (rights === null) throw new Error('Network unavailable');
+          return { active_site_ids: rights };
+        }
+        return { reviews: [] };
+      },
+    };
+    vm.runInNewContext(app.slice(start, end) + '\nglobalThis.load = loadLatestReviews;', context);
+    return { context, nodes, calls };
+  };
+  const workspace = { id: 'workspace-1', sites };
+  const active = build(['site-a', 'foreign-site'], { withSavedResult: true });
+  await active.context.load(workspace);
+  assert.equal(active.nodes.get('site-a').links.length, 1);
+  assert.equal(active.nodes.get('site-a').links[0].href,
+    '/privacy/mi-plan/?workspace_site_id=site-a');
+  assert.equal(active.nodes.get('site-a').links[0].textContent, 'Abrir Privacy Web →');
+  assert.equal(active.nodes.get('site-b').links.length, 0);
+  // A site without any saved review still gets exactly one Plan link.
+  const noPriorReview = build(['site-a']);
+  await noPriorReview.context.load(workspace);
+  assert.equal(noPriorReview.nodes.get('site-a').links.length, 1);
+  assert.equal(noPriorReview.nodes.get('site-a').links[0].href,
+    '/privacy/mi-plan/?workspace_site_id=site-a');
+  assert.ok(active.calls.some(url => url.includes('/billing/workspaces/workspace-1/entitlements')));
+
+  const failed = build(null, { withSavedResult: true });
+  await failed.context.load(workspace);
+  assert.equal(failed.nodes.get('site-a').links.length, 1);
+  assert.equal(failed.nodes.get('site-a').links[0].textContent, 'Ver resultado →');
+  assert.equal(failed.nodes.get('site-b').links.length, 0);
+});

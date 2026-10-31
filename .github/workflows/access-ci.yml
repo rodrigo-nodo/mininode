@@ -67,6 +67,7 @@ on:
       - 'frontend/assets/css/components.css'
       - 'frontend/test_ui_foundations.py'
       - 'frontend/privacy/**'
+      - 'frontend/_headers'
       - 'frontend/partials/**'
       - 'frontend/test_head_common.py'
       - 'frontend/test_global_shell.py'
@@ -121,6 +122,11 @@ jobs:
 
       - name: Run Access client UI tests
         run: node --test frontend/access/test_access.mjs frontend/access/test_clerk_config.mjs frontend/admin/test_admin.mjs frontend/operator/site-reviews/test_operator.mjs
+
+      - name: Run PW-03 new and legacy Plan tests
+        run: |
+          pytest -q frontend/privacy/mi-plan/test_plan_static.py
+          node --test frontend/privacy/mi-plan/test_entitled_client.mjs
 
       - name: Run Privacy Web static tests
         run: pytest -q frontend/privacy/test_privacy_static.py
