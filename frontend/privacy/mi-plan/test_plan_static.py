@@ -1,5 +1,6 @@
 """PW-03 PROD: authenticated Plan coexists with the old token route."""
 from pathlib import Path
+from html.parser import HTMLParser
 
 FRONT = Path(__file__).resolve().parents[2]
 NEW = FRONT / "privacy" / "mi-plan"
@@ -63,3 +64,42 @@ def test_new_plan_does_not_use_commercial_tokens_or_checkout():
     assert "/api/privacy/correction-plan-orders" not in APP
     assert "localStorage.setItem" not in APP
     assert "checkout" not in APP.lower()
+
+
+class _PlanMarkup(HTMLParser):
+    """Collect real HTML ancestors; JS DOM tests alone don't model containment."""
+
+    VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input",
+            "link", "meta", "param", "source", "track", "wbr"}
+
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+        self.ancestors = {}
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        node = (tag, attrs.get("id"), set(attrs.get("class", "").split()))
+        if node[1]:
+            self.ancestors[node[1]] = tuple(self.stack)
+        if tag not in self.VOID:
+            self.stack.append(node)
+
+    def handle_endtag(self, tag):
+        # Fail on accidental mismatched close tags in the Plan's HTML.
+        assert self.stack and self.stack[-1][0] == tag, f"Unexpected closing </{tag}>"
+        self.stack.pop()
+
+
+def test_first_review_action_is_outside_hidden_comparison_detail():
+    markup = _PlanMarkup()
+    markup.feed(HTML)
+    assert not markup.stack
+    button_parents = markup.ancestors["check-start"]
+    assert any(node_id == "plan-panel-progress" for _, node_id, _ in button_parents)
+    assert any("plan-progress-review" in classes for _, _, classes in button_parents)
+    assert all(node_id != "improvement-check" for _, node_id, _ in button_parents)
+    assert any(node_id == "check-available" for _, node_id, _ in button_parents)
+    detail_parents = markup.ancestors["check-result"]
+    assert any(node_id == "improvement-check" for _, node_id, _ in detail_parents)
+    assert all("plan-progress-review" not in classes for _, _, classes in detail_parents)
