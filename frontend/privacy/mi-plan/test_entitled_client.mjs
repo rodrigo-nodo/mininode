@@ -637,6 +637,54 @@ test('C4c keeps initial-only history compact before first review', async () => {
   assert.equal(initial.nodes.get('progress-chart-section').hidden, true);
   assert.equal(initial.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'true');
   assert.equal(initial.nodes.get('improvement-check').hidden, true, 'no empty detail card before first review');
+  // The first-review action belongs to a separate section, not to the hidden detail card.
+  assert.equal(initial.nodes.get('check-start').hidden, false, 'active entitlement can start its first review');
+  assert.equal(initial.nodes.get('check-available').hidden, false);
+  initial.nodes.get('plan-tab-progress').click();
+  assert.equal(initial.nodes.get('plan-panel-progress').hidden, false);
+  assert.equal(initial.nodes.get('check-start').hidden, false);
+});
+
+test('first review remains actionable with initial-only history and refreshes the history', async () => {
+  let reviewed = false;
+  const baseline = progressHistory().at(-1);
+  const ui = mount((url, options) => {
+    if (url.endsWith('/plan/check') && options.method === 'POST') {
+      reviewed = true;
+      return { ok: true, status: 200, json: async () => ({
+        created_at: '2026-10-28T13:00:00Z', expires_at: future,
+        result: payload('available', true).check.latest_check.result,
+      }) };
+    }
+    const data = payload('available', reviewed);
+    data.history = reviewed
+      ? [{
+          kind: 'review', created_at: '2026-10-28T13:00:00Z',
+          diagnostic: { score: 75 },
+          vs_initial: comparison(10), vs_previous: comparison(10),
+        }, baseline]
+      : [baseline];
+    return { ok: true, status: 200, json: async () => data };
+  });
+  await flush();
+  assert.equal(ui.nodes.get('progress-summary').hidden, false);
+  assert.equal(ui.nodes.get('improvement-check').hidden, true);
+  ui.nodes.get('plan-tab-progress').click();
+  assert.equal(ui.nodes.get('plan-panel-progress').hidden, false);
+  assert.equal(ui.nodes.get('check-start').hidden, false);
+  ui.nodes.get('check-start').click();
+  assert.equal(ui.nodes.get('check-confirm').hidden, false);
+  ui.nodes.get('check-submit').click();
+  await flush();
+  assert.deepEqual(ui.calls.map(call => [call.options.method, call.url]), [
+    ['GET', path], ['POST', path + '/check'], ['GET', path],
+  ]);
+  assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 2);
+  assert.equal(ui.nodes.get('progress-chart-section').hidden, false);
+  assert.equal(ui.nodes.get('progress-current').textContent, '75/100');
+  assert.equal(ui.nodes.get('check-result').hidden, false);
+  assert.equal(ui.nodes.get('check-start').hidden, false);
 });
 
 test('C4c labels points but never connects incompatible diagnostic versions', async () => {
