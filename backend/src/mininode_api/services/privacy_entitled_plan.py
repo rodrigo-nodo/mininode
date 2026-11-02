@@ -482,6 +482,62 @@ def get_plan(user_id: UUID, site_id: UUID) -> dict:
             return _response(cur, entitlement, current)
 
 
+
+def previous_linked_diagnostics(user_id: UUID, site_id: UUID) -> dict:
+    """Read pre-Plan diagnostic metadata for the authorized workspace-site only.
+
+    No hostname matching or anonymous claim; no comparison with Plan reviews.
+    The first Plan baseline defines a stable historical boundary across renewals.
+    """
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            entitlement = _entitlement(cur, user_id, site_id, allow_expired=True)
+            if _plan(cur, entitlement[0], site_id) is None:
+                raise PlanNotFound()
+            cur.execute("""
+                WITH first_baseline AS (
+                    SELECT d.created_at, d.id
+                    FROM privacy.entitled_plan p
+                    JOIN access.entitlements e
+                      ON e.id=p.entitlement_id AND e.workspace_site_id=p.workspace_site_id
+                     AND e.product_code=%s
+                    JOIN privacy.diagnostic d
+                      ON d.id=p.original_diagnostic_id
+                     AND d.workspace_site_id=p.workspace_site_id
+                    WHERE p.workspace_site_id=%s
+                    ORDER BY d.created_at ASC, d.id ASC
+                    LIMIT 1
+                )
+                SELECT d.created_at, d.score,
+                       d.diagnostic_snapshot->>'framework_version',
+                       d.diagnostic_snapshot->>'scoring_version'
+                FROM privacy.diagnostic d
+                CROSS JOIN first_baseline b
+                WHERE d.workspace_site_id=%s
+                  AND (d.created_at, d.id)<(b.created_at,b.id)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM privacy.entitled_plan p
+                      WHERE p.workspace_site_id=%s AND p.original_diagnostic_id=d.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM privacy.entitled_plan_check ch
+                      JOIN privacy.entitled_plan p ON p.id=ch.entitled_plan_id
+                      WHERE p.workspace_site_id=%s AND ch.check_diagnostic_id=d.id
+                  )
+                ORDER BY d.created_at DESC, d.id DESC
+                LIMIT 101
+            """, (billing.PRODUCT, site_id, site_id, site_id, site_id))
+            rows = cur.fetchall()
+            return {
+                "diagnostics": [
+                    {"created_at": row[0], "score": row[1],
+                     "framework_version": row[2], "scoring_version": row[3]}
+                    for row in rows[:100]
+                ],
+                "truncated": len(rows) > 100,
+            }
+
+
 def _ensure_time_window(cur, until: datetime | None) -> None:
     """Use real DB wall-clock, not transaction-start CURRENT_TIMESTAMP."""
     if until is None:

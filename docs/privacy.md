@@ -318,3 +318,9 @@ La interfaz privada del Plan se presenta temporalmente en `/privacy/mi-plan/?wor
 `/access/` muestra el enlace al Plan solo tras recibir `active_site_ids` desde `/billing/workspaces/{id}/entitlements`. Un error de consulta no debe tratarse como derecho inactivo. Las revisiones usan los snapshots ya almacenados y la comparación versionada del backend; no almacenan el JWT, snapshots ni resultados sensibles en el navegador.
 
 **Transición:** esta nueva página no reemplaza `/privacy/plan/:token` ni sus servicios o proxy hasta la retirada comercial de PR 4; por ello usa una ruta distinta. No cambia el diagnóstico público, Content Reader V1, Mercado Pago, controles ni scoring.
+
+### Privacy Web — diagnósticos anteriores vinculados (lectura)
+
+`GET /privacy/workspace-sites/{id}/diagnostics/previous` devuelve **solo metadatos** (fecha, score y versiones), mediante Clerk/Access y la misma autorización de Plan por `workspace_site_id` y entitlement vigente o naturalmente expirado. Requiere un Plan ya existente; una revocación o desvinculación impide la consulta. El resultado, como máximo 100 filas con indicador de truncamiento, incluye exclusivamente diagnósticos vinculados directamente a ese `workspace_site_id` **anteriores a la primera línea base del Plan**; excluye todas las líneas base y revisiones vinculadas al Plan, y no une URL/hostname, ni reclama diagnósticos anónimos. La sección UI es desplegable y consulta los datos solo al abrirla; una falla de consulta no bloquea «Mis avances».
+
+Los diagnósticos anteriores son antecedentes, **no revisiones del Plan**: no participan del gráfico, comparaciones ni conteos de corrección. Si el Plan aún no tiene revisiones, la tarjeta indica **«Sin revisiones»** en lugar de repetir el score inicial bajo «Última revisión». No modifica tablas, entitlements, scoring ni registros históricos.

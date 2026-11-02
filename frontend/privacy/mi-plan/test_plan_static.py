@@ -31,7 +31,8 @@ def test_shell_styles_and_private_cache_are_complete():
     assert '/include.js?v=pw03-prod3-1' in HTML
     for file in ("app.js", "base.css", "layout.css", "tabs.css"):
         assert (NEW / file).is_file()
-        assert f"/privacy/mi-plan/{file}?v=pw03-prod3-1" in HTML
+        version = "pw03-history1" if file in {"app.js", "tabs.css"} else "pw03-prod3-1"
+        assert f"/privacy/mi-plan/{file}?v={version}" in HTML
     assert (FRONT / "privacy" / "control-ux.js").is_file()
     headers = (FRONT / "_headers").read_text(encoding="utf-8")
     assert "/privacy/mi-plan/\n  Cache-Control: no-cache, must-revalidate" in headers
@@ -103,3 +104,14 @@ def test_first_review_action_is_outside_hidden_comparison_detail():
     detail_parents = markup.ancestors["check-result"]
     assert any(node_id == "improvement-check" for _, node_id, _ in detail_parents)
     assert all("plan-progress-review" not in classes for _, _, classes in detail_parents)
+
+
+def test_previous_diagnostics_stays_outside_plan_history():
+    markup = _PlanMarkup()
+    markup.feed(HTML)
+    parents = markup.ancestors["prior-diagnostics"]
+    assert any(node_id == "plan-panel-progress" for _, node_id, _ in parents)
+    assert all(node_id != "progress-history-list" for _, node_id, _ in parents)
+    assert 'id="progress-current-label"' in HTML
+    assert "/diagnostics/previous" in APP
+    assert "previousUI.section.addEventListener('toggle'" in APP

@@ -10,11 +10,11 @@
   <link rel="stylesheet" href="/styles.css?v=c1-ui-3">
   <link rel="stylesheet" href="/privacy/mi-plan/layout.css?v=pw03-prod3-1">
   <link rel="stylesheet" href="/privacy/mi-plan/base.css?v=pw03-prod3-1">
-  <link rel="stylesheet" href="/privacy/mi-plan/tabs.css?v=pw03-prod3-1">
+  <link rel="stylesheet" href="/privacy/mi-plan/tabs.css?v=pw03-history1">
   <script src="/assets/js/core-head.js?v=286account1" defer></script>
   <script src="/include.js?v=pw03-prod3-1" defer></script>
   <script src="/privacy/control-ux.js?v=ux21-1" defer></script>
-  <script src="/privacy/mi-plan/app.js?v=pw03-prod3-1" defer></script>
+  <script src="/privacy/mi-plan/app.js?v=pw03-history1" defer></script>
 </head>
 <body>
   <div data-include="../../partials/header-nav.html"></div>
@@ -69,7 +69,7 @@
       <section class="plan-panel" id="plan-panel-progress" aria-labelledby="plan-tab-progress" hidden>
       <section class="plan-progress-summary" id="progress-summary" hidden>
 <h2>Mis avances</h2><p>Comparación con el diagnóstico inicial.</p>
-<div class="plan-progress-scores"><div>Diagnóstico inicial<strong id="progress-initial">—</strong><small id="progress-initial-date"></small></div><div>Última revisión<strong id="progress-current">—</strong><small id="progress-current-date"></small></div></div>
+<div class="plan-progress-scores"><div>Diagnóstico inicial<strong id="progress-initial">—</strong><small id="progress-initial-date"></small></div><div><span id="progress-current-label">Última revisión del Plan</span><strong id="progress-current">—</strong><small id="progress-current-date"></small></div></div>
 <p id="progress-delta"></p><p id="progress-counts"></p>
 </section>
       <section class="improvement-check" id="improvement-check" aria-labelledby="check-title">
@@ -92,6 +92,15 @@
         <a id="check-free" href="/privacy/" hidden>Realizar un nuevo diagnóstico gratuito</a>
       </section>
       <section class="plan-progress-history" aria-labelledby="progress-history-title"><h2 id="progress-history-title">Historial de revisiones</h2><div id="progress-history-list"></div></section>
+      <details class="plan-prior-diagnostics" id="prior-diagnostics">
+        <summary>Diagnósticos anteriores <span id="prior-diagnostics-count"></span></summary>
+        <div class="plan-prior-diagnostics__body">
+          <p>Diagnósticos guardados en este espacio antes del inicio del Plan. No son revisiones del Plan ni acreditan mejoras.</p>
+          <p id="prior-diagnostics-status" role="status"></p>
+          <ul id="prior-diagnostics-list"></ul>
+          <p class="plan-prior-diagnostics__note">Las versiones del análisis pueden ser distintas; no se comparan automáticamente estos resultados con el Privacy Score actual.</p>
+        </div>
+      </details>
       <section class="plan-progress-chart" id="progress-chart-section" aria-labelledby="progress-chart-title" hidden><h2 id="progress-chart-title">Evolución del Privacy Score</h2><div id="progress-chart"></div><p id="progress-chart-note"></p></section>
       <section class="improvement-check plan-progress-review" aria-label="Nueva revisión">
         <div id="check-available">
