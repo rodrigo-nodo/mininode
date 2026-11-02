@@ -603,8 +603,8 @@ const initializeAuthenticatedSite = async () => {
       }
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
-
-
+      loadingCard.hidden = true;
+      resultCard.hidden = false;
     }
   } catch (error) {
     reportFlowError('authenticated_site_init_failed', error);
