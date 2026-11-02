@@ -1,10 +1,9 @@
-"""PW-03 PROD: authenticated Plan coexists with the old token route."""
+"""PW-03: authenticated entitlement Plan without legacy commerce."""
 from pathlib import Path
 from html.parser import HTMLParser
 
 FRONT = Path(__file__).resolve().parents[2]
 NEW = FRONT / "privacy" / "mi-plan"
-LEGACY = FRONT / "privacy" / "plan"
 HTML = (NEW / "index.html").read_text(encoding="utf-8")
 APP = (NEW / "app.js").read_text(encoding="utf-8")
 ACCESS = (FRONT / "access" / "app.js").read_text(encoding="utf-8")
@@ -39,16 +38,11 @@ def test_shell_styles_and_private_cache_are_complete():
     assert "/privacy/mi-plan/*\n  Cache-Control: no-cache, must-revalidate" in headers
 
 
-def test_legacy_token_plan_remains_served_until_pr4():
-    old_html = (LEGACY / "index.html").read_text(encoding="utf-8")
-    old_app = (FRONT / "privacy" / "plan-assets" / "app.js").read_text(encoding="utf-8")
-    redirects = (FRONT / "_redirects").read_text(encoding="utf-8")
-    assert "/privacy/plan/:token /privacy/plan/ 200" in redirects
-    assert "accessTokenFromPath" in old_app
-    assert "/api/privacy/correction-plans/" in old_app
-    assert 'src="/privacy/plan-assets/app.js?v=7"' in old_html
-    assert "isAllowedCorrectionPlan" in PROXY
-    assert "isPublicOrderCreation" in PROXY
+def test_legacy_token_plan_is_retired():
+    assert not (FRONT / "privacy" / "plan" / "index.html").exists()
+    assert "/privacy/plan/:token" not in (FRONT / "_redirects").read_text(encoding="utf-8")
+    assert "isAllowedCorrectionPlan" not in PROXY
+    assert "isPublicOrderCreation" not in PROXY
 
 
 def test_account_entitlement_check_never_grants_cross_workspace_links():
