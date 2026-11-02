@@ -172,10 +172,7 @@ def test_initialize_database_executes_schema_once(monkeypatch):
 def _stub_other_database_initializers(monkeypatch):
     for module in (
         learn_feedback,
-        privacy_correction_plan,
         privacy_diagnostic_snapshot,
-        privacy_correction_plan_order,
-        privacy_correction_plan_check,
         data_maps,
     ):
         monkeypatch.setattr(module, "initialize_database", lambda: None)
