@@ -390,6 +390,7 @@ test('PW-03 private Plan, entitlement and activation paths use Bearer without se
   const id = '11111111-1111-4111-8111-111111111111';
   const paths = [
     [`/api/privacy/workspace-sites/${id}/plan`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/diagnostics/previous`, 'GET'],
     [`/api/privacy/workspace-sites/${id}/plan`, 'POST'],
     [`/api/privacy/workspace-sites/${id}/plan/check`, 'POST'],
     [`/api/privacy/workspace-sites/${id}/prepare-activation`, 'POST'],
@@ -409,6 +410,8 @@ test('PW-03 private Plan, entitlement and activation paths use Bearer without se
   }
   for (const [path, method] of [
     [`/api/privacy/workspace-sites/${id}/plan/check`, 'GET'],
+    [`/api/privacy/workspace-sites/${id}/diagnostics/previous`, 'POST'],
+    [`/api/privacy/workspace-sites/${id}/diagnostics/previous/more`, 'GET'],
     [`/api/privacy/workspace-sites/${id}/plan`, 'PATCH'],
     [`/api/privacy/workspace-sites/${id}/prepare-activation`, 'GET'],
     [`/api/billing/sites/${id}/entitlement`, 'POST'],

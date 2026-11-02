@@ -602,6 +602,65 @@ const progressHistory = () => [
     diagnostic: { score: 65 }, vs_initial: null, vs_previous: null },
 ];
 
+
+test('prior diagnostics load lazily, do not become Plan revisions and preserve first-review action', async () => {
+  const data = payload('available');
+  data.history = [progressHistory().at(-1)];
+  const previous = { diagnostics: [
+    { created_at: '2026-10-26T15:00:00Z', score: 47,
+      framework_version: '0.11', scoring_version: '0.3' },
+    { created_at: '2026-10-25T13:00:00Z', score: 33,
+      framework_version: '0.6', scoring_version: '0.1' },
+  ], truncated: false };
+  const ui = mount(url => url.endsWith('/diagnostics/previous')
+    ? {ok:true,status:200,json:async()=>previous}
+    : {ok:true,status:200,json:async()=>data});
+  await flush();
+  assert.equal(ui.calls.length, 1, 'collapsed panel cannot trigger a request');
+  assert.equal(ui.nodes.get('progress-current').textContent, 'Sin revisiones');
+  assert.equal(ui.nodes.get('progress-current-date').textContent, '');
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 1);
+  assert.equal(ui.nodes.get('check-start').hidden, false);
+  ui.nodes.get('prior-diagnostics').open = true;
+  ui.nodes.get('prior-diagnostics').listeners.get('toggle')();
+  await flush();
+  assert.deepEqual(ui.calls.map(call => [call.options.method, call.url]), [
+    ['GET', path], ['GET', path.replace('/plan', '/diagnostics/previous')],
+  ]);
+  assert.equal(ui.calls[1].options.headers.Authorization, 'Bearer clerk-test-token');
+  assert.equal(ui.nodes.get('prior-diagnostics-count').textContent, '(2)');
+  assert.equal(ui.nodes.get('prior-diagnostics-list').children.length, 2);
+  assert.equal(ui.nodes.get('prior-diagnostics-list').children[0].children[1].textContent, '47/100');
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 1);
+  assert.equal(ui.nodes.get('progress-chart-section').hidden, true);
+  ui.nodes.get('prior-diagnostics').listeners.get('toggle')();
+  await flush();
+  assert.equal(ui.calls.length, 2, 'successful result is cached in this page');
+});
+
+test('prior diagnostic read failure leaves Plan functional and permits retry', async () => {
+  let failing = true;
+  const data = payload('available', true);
+  data.history = progressHistory();
+  const ui = mount(url => url.endsWith('/diagnostics/previous')
+    ? failing
+      ? {ok:false,status:503,json:async()=>({})}
+      : {ok:true,status:200,json:async()=>({diagnostics:[],truncated:false})}
+    : {ok:true,status:200,json:async()=>data});
+  await flush();
+  assert.equal(ui.nodes.get('progress-current').textContent, '75/100');
+  ui.nodes.get('prior-diagnostics').open = true;
+  ui.nodes.get('prior-diagnostics').listeners.get('toggle')();
+  await flush();
+  assert.match(ui.nodes.get('prior-diagnostics-status').textContent, /No pudimos/);
+  assert.equal(ui.nodes.get('progress-history-list').children.length, 3);
+  failing = false;
+  ui.nodes.get('prior-diagnostics').listeners.get('toggle')();
+  await flush();
+  assert.match(ui.nodes.get('prior-diagnostics-status').textContent, /No hay diagnósticos/);
+  assert.equal(ui.nodes.get('prior-diagnostics-count').textContent, '(0)');
+});
+
 test('C4c retains one visible score summary, detailed corrections and accessible history', async () => {
   const data = payload('available', true);
   data.history = progressHistory();
@@ -635,6 +694,7 @@ test('C4c keeps initial-only history compact before first review', async () => {
   await flush();
   assert.equal(initial.nodes.get('progress-summary').hidden, false);
   assert.equal(initial.nodes.get('progress-chart-section').hidden, true);
+  assert.equal(initial.nodes.get('progress-current').textContent, 'Sin revisiones');
   assert.equal(initial.nodes.get('improvement-check').attributes.get('data-progress-summary'), 'true');
   assert.equal(initial.nodes.get('improvement-check').hidden, true, 'no empty detail card before first review');
   // The first-review action belongs to a separate section, not to the hidden detail card.

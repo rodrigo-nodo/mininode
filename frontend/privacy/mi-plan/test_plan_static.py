@@ -104,3 +104,14 @@ def test_first_review_action_is_outside_hidden_comparison_detail():
     detail_parents = markup.ancestors["check-result"]
     assert any(node_id == "improvement-check" for _, node_id, _ in detail_parents)
     assert all("plan-progress-review" not in classes for _, _, classes in detail_parents)
+
+
+def test_previous_diagnostics_stays_outside_plan_history():
+    markup = _PlanMarkup()
+    markup.feed(HTML)
+    parents = markup.ancestors["prior-diagnostics"]
+    assert any(node_id == "plan-panel-progress" for _, node_id, _ in parents)
+    assert all(node_id != "progress-history-list" for _, node_id, _ in parents)
+    assert 'id="progress-current-label"' in HTML
+    assert "/diagnostics/previous" in APP
+    assert "previousUI.section.addEventListener('toggle'" in APP

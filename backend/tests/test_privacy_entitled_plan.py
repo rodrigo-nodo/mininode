@@ -1115,3 +1115,72 @@ def test_cross_site_plan_references_fail_closed_for_reads_and_writes(context):
             conn.execute("DELETE FROM privacy.diagnostic WHERE id=%s", (foreign_diag,))
             conn.execute("DELETE FROM access.workspace_sites WHERE id=%s", (foreign_link,))
             conn.execute("DELETE FROM access.sites WHERE id=%s", (foreign_site,))
+
+
+def test_previous_diagnostics_only_linked_prebaseline_metadata_and_authorized(context, monkeypatch):
+    c = context
+    path = f"/privacy/workspace-sites/{c['site']}/diagnostics/previous"
+    assert c["client"].get(path).status_code == 401
+    assert c["client"].get(path, headers=c["headers"]).status_code == 409
+    assert c["client"].post(_path(c), headers=c["headers"]).status_code == 200
+
+    old_ids = [uuid4() for _ in range(3)]
+    anonymous_id, later_id = uuid4(), uuid4()
+    foreign_workspace, foreign_link, foreign_diag = (uuid4() for _ in range(3))
+    with psycopg.connect(c["url"]) as conn:
+        start_at = conn.execute("SELECT created_at FROM privacy.diagnostic WHERE id=%s",
+                                (c["original"],)).fetchone()[0]
+        site_id = conn.execute("SELECT site_id FROM access.workspace_sites WHERE id=%s",
+                               (c["site"],)).fetchone()[0]
+        conn.execute("INSERT INTO access.workspaces (id,name) VALUES (%s,'Foreign history')",
+                     (foreign_workspace,))
+        conn.execute("INSERT INTO access.workspace_sites (id,workspace_id,site_id) VALUES (%s,%s,%s)",
+                     (foreign_link, foreign_workspace, site_id))
+        for i, item in enumerate(old_ids):
+            snapshot = {**c["snapshot"], "score": 33 + i, "private": "never_return"}
+            conn.execute("""
+                INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,score,
+                                               created_at,workspace_site_id)
+                VALUES (%s,%s,%s,%s,%s,%s)
+            """, (item, c["snapshot"]["site_url"], Jsonb(snapshot), 33 + i,
+                  start_at - timedelta(hours=i + 1), c["site"]))
+        for item, link, timestamp in [
+            (anonymous_id, None, start_at - timedelta(days=5)),
+            (foreign_diag, foreign_link, start_at - timedelta(days=6)),
+            (later_id, c["site"], start_at + timedelta(hours=5)),
+        ]:
+            conn.execute("""
+                INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,score,
+                                               created_at,workspace_site_id)
+                VALUES (%s,%s,%s,99,%s,%s)
+            """, (item, c["snapshot"]["site_url"], Jsonb({**c["snapshot"],
+                  "score": 99, "private": "do not disclose"}), timestamp, link))
+    try:
+        response = c["client"].get(path, headers=c["headers"])
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["truncated"] is False
+        assert [item["score"] for item in data["diagnostics"]] == [33, 34, 35]
+        assert len(data["diagnostics"]) == 3
+        assert all(set(item) == {"created_at", "score", "framework_version",
+                                  "scoring_version"} for item in data["diagnostics"])
+        assert "private" not in response.text
+        assert len(c["client"].get(_path(c), headers=c["headers"]).json()["history"]) == 1
+        foreign = access.StoredUser(id=c["foreign"], email="foreign@example.test")
+        monkeypatch.setattr(access, "get_or_create_user", lambda _: foreign)
+        assert c["client"].get(path, headers=c["headers"]).status_code == 403
+        monkeypatch.setattr(access, "get_or_create_user", lambda _: c["user"])
+        with psycopg.connect(c["url"]) as conn:
+            conn.execute("UPDATE access.entitlements SET active_until=now()-interval '1 second' WHERE id=%s",
+                         (c["entitlement"],))
+        assert c["client"].get(path, headers=c["headers"]).status_code == 200
+        with psycopg.connect(c["url"]) as conn:
+            conn.execute("UPDATE access.entitlements SET status='revoked' WHERE id=%s",
+                         (c["entitlement"],))
+        assert c["client"].get(path, headers=c["headers"]).status_code == 403
+    finally:
+        with psycopg.connect(c["url"]) as conn:
+            conn.execute("DELETE FROM privacy.diagnostic WHERE id=ANY(%s)",
+                         (old_ids + [anonymous_id, later_id, foreign_diag],))
+            conn.execute("DELETE FROM access.workspace_sites WHERE id=%s", (foreign_link,))
+            conn.execute("DELETE FROM access.workspaces WHERE id=%s", (foreign_workspace,))
