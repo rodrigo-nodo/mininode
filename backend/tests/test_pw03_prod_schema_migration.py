@@ -1,6 +1,6 @@
 """PW-03 PROD promotion PR1: additive schema on disposable PostgreSQL 18.
 
-The old backend and its legacy commerce tables must remain usable after migration.
+Historical commerce tables and data remain intact after migration.
 No Render or PROD database connection is used.
 """
 import os
@@ -14,9 +14,7 @@ from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from mininode_api.services import access, billing, privacy_diagnostic_snapshot
-from mininode_api.services import (
-    privacy_correction_plan, privacy_correction_plan_order, privacy_correction_plan_check,
-)
+from tests.legacy_privacy_schema import LEGACY_PLAN_SQL, LEGACY_ORDER_SQL, LEGACY_CHECK_SQL
 
 BACKEND = Path(__file__).resolve().parents[1]
 MIGRATION = "20261026_privacy_entitled_plans.sql"
@@ -49,9 +47,9 @@ def _init_legacy(conn):
     conn.execute(access.INITIALIZE_SQL)
     conn.execute(privacy_diagnostic_snapshot.INITIALIZE_SQL)
     conn.execute(billing.SCHEMA_SQL)
-    conn.execute(privacy_correction_plan.INITIALIZE_SQL)
-    conn.execute(privacy_correction_plan_order.INITIALIZE_SQL)
-    conn.execute(privacy_correction_plan_check.INITIALIZE_SQL)
+    conn.execute(LEGACY_PLAN_SQL)
+    conn.execute(LEGACY_ORDER_SQL)
+    conn.execute(LEGACY_CHECK_SQL)
 
 
 def test_additive_migration_preserves_old_backend_and_historical_rows(disposable):
