@@ -97,18 +97,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
         self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
 
-    def test_past_purchase_deadline_cannot_show_pending_activation(self):
-        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
-        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
-        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
-
-    def test_commercial_notice_appears_only_inside_conditions(self):
-        intro = HTML.split('class="privacy-offer-details"', 1)[0]
-        self.assertNotIn("Sin renovación automática. El pago en línea", intro)
-        detail = HTML.split('class="privacy-offer-details"', 1)[1].split("</details>", 1)[0]
-        self.assertIn("El pago en línea estará disponible próximamente.", detail)
-        self.assertIn("Sin renovación automática.", detail)
-
     def test_free_anonymous_diagnostic_save_flow(self):
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
         account_html = (FRONTEND_DIR / "access" / "index.html").read_text(encoding="utf-8")
@@ -194,7 +182,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("$39.900", productive_content)
         self.assertIn("$9.900", HTML)
         self.assertTrue((PRIVACY_DIR / "index.html").is_file())
-        self.assertTrue((PRIVACY_DIR / "plan" / "index.html").is_file())
+        self.assertFalse((PRIVACY_DIR / "plan" / "index.html").exists())
 
         rules = [line.split() for line in REDIRECTS.splitlines() if line.strip()]
         obsolete_redirect = [
@@ -202,8 +190,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         ]
         plan_rewrite = ["/privacy/plan/:token", "/privacy/plan/", "200"]
         self.assertIn(obsolete_redirect, rules)
-        self.assertIn(plan_rewrite, rules)
-        self.assertLess(rules.index(obsolete_redirect), rules.index(plan_rewrite))
+        self.assertNotIn(plan_rewrite, rules)
+
         self.assertTrue((FRONTEND_DIR / "functions" / "api" / "[[path]].js").is_file())
 
     def test_human_status_uses_backend_score_boundaries(self):
@@ -404,28 +392,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         ):
             self.assertNotIn(technical_name, DATA_HTML)
 
-    def test_order_form_minimizes_data_and_keeps_commercial_fields_server_side(self):
-        order_form = HTML.split('id="correction-order-form"', 1)[1].split("</form>", 1)[0]
-        self.assertEqual(order_form.count("<input"), 1)
-        self.assertIn('name="email"', order_form)
-        for field in ('name="name"', 'name="empresa"', 'name="rut"', 'name="telefono"', 'name="site_url"'):
-            self.assertNotIn(field, order_form)
-
-        request = APP.split("fetch('/api/privacy/correction-plan-orders'", 1)[1].split("});", 1)[0]
-        self.assertIn("diagnostic_id: diagnosticId", request)
-        self.assertIn("email: orderEmail.value", request)
-        for field in ("site_url", "amount", "currency", "status", "product_code", "score", "snapshot"):
-            self.assertNotIn(f"{field}:", request)
-
-    def test_each_diagnosis_owns_and_resets_its_commercial_state(self):
-        submit_flow = APP.split("form.addEventListener('submit'", 1)[1]
-        self.assertIn("resetCommercialState();", submit_flow.split("fetch('/api/privacy/diagnose'", 1)[0])
-        self.assertIn("currentDiagnosticId = '';", APP)
-        self.assertIn("orderEmail.value = '';", APP)
-        self.assertIn("correctionOffer.hidden = true;", APP)
-        self.assertIn("const diagnosticId = currentDiagnosticId;", APP)
-        self.assertIn("if (!diagnosticId || correctionOffer.hidden)", APP)
-
     def test_unavailable_privacy_web_has_explanatory_state_instead_of_priced_card(self):
         unavailable = HTML.split('id="privacy-correction-unavailable"', 1)[1].split('</div>', 1)[0]
         self.assertIn("Privacy Web no disponible", unavailable)
@@ -433,12 +399,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Realizar nuevo diagnóstico", unavailable)
         self.assertNotIn("$49.900", unavailable)
         self.assertIn("correctionUnavailable.hidden = !hasPriorities || planAvailable;", APP)
-
-    def test_commercial_section_uses_privacy_identity_and_approved_copy(self):
-        commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
-        styles = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower()
-        self.assertIn("var(--color-primary)", styles)
-        self.assertNotRegex(commercial.lower(), r"violet|purple|#6c4df4")
 
     def test_api_and_backend_score_remain_inputs(self):
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
