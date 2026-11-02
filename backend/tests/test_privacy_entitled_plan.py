@@ -1140,8 +1140,8 @@ def test_previous_diagnostics_only_linked_prebaseline_metadata_and_authorized(co
             snapshot = {**c["snapshot"], "score": 33 + i, "private": "never_return"}
             conn.execute("""
                 INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,score,
-                                               created_at,workspace_site_id)
-                VALUES (%s,%s,%s,%s,%s,%s)
+                                               created_at,workspace_site_id,purchase_expires_at)
+                VALUES (%s,%s,%s,%s,%s,%s,now()+interval '1 day')
             """, (item, c["snapshot"]["site_url"], Jsonb(snapshot), 33 + i,
                   start_at - timedelta(hours=i + 1), c["site"]))
         for item, link, timestamp in [
@@ -1151,8 +1151,8 @@ def test_previous_diagnostics_only_linked_prebaseline_metadata_and_authorized(co
         ]:
             conn.execute("""
                 INSERT INTO privacy.diagnostic(id,site_url,diagnostic_snapshot,score,
-                                               created_at,workspace_site_id)
-                VALUES (%s,%s,%s,99,%s,%s)
+                                               created_at,workspace_site_id,purchase_expires_at)
+                VALUES (%s,%s,%s,99,%s,%s,now()+interval '1 day')
             """, (item, c["snapshot"]["site_url"], Jsonb({**c["snapshot"],
                   "score": 99, "private": "do not disclose"}), timestamp, link))
     try:
