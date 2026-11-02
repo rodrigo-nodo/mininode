@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from mininode_api.core.auth import require_api_key
 from mininode_api.core.access_auth import require_access_user
 from mininode_api.services import access
 from mininode_api.services.privacy_diagnostic import PrivacyInspectionError, diagnose_privacy_url
