@@ -31,7 +31,8 @@ def test_shell_styles_and_private_cache_are_complete():
     assert '/include.js?v=pw03-prod3-1' in HTML
     for file in ("app.js", "base.css", "layout.css", "tabs.css"):
         assert (NEW / file).is_file()
-        assert f"/privacy/mi-plan/{file}?v=pw03-prod3-1" in HTML
+        version = "pw03-history1" if file in {"app.js", "tabs.css"} else "pw03-prod3-1"
+        assert f"/privacy/mi-plan/{file}?v={version}" in HTML
     assert (FRONT / "privacy" / "control-ux.js").is_file()
     headers = (FRONT / "_headers").read_text(encoding="utf-8")
     assert "/privacy/mi-plan/\n  Cache-Control: no-cache, must-revalidate" in headers

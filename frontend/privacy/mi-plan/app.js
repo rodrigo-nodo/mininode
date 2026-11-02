@@ -365,6 +365,7 @@ const progressUI = {
   summary: document.querySelector('#progress-summary'),
   initial: document.querySelector('#progress-initial'),
   current: document.querySelector('#progress-current'),
+  currentLabel: document.querySelector('#progress-current-label'),
   initialDate: document.querySelector('#progress-initial-date'),
   currentDate: document.querySelector('#progress-current-date'),
   delta: document.querySelector('#progress-delta'),
@@ -487,9 +488,12 @@ const renderProgressHistory = (history) => {
   progressUI.summary.hidden = false;
   syncProgressDetail();
   progressUI.initial.textContent = `${initial.diagnostic.score}/100`;
-  progressUI.current.textContent = `${latest.diagnostic.score}/100`;
+  progressUI.currentLabel.textContent = latest.kind === 'initial' ? 'Última revisión del Plan'
+    : latest.kind === 'baseline' ? 'Diagnóstico de reactivación' : 'Última revisión del Plan';
+  progressUI.current.textContent = latest.kind === 'initial'
+    ? 'Sin revisiones' : `${latest.diagnostic.score}/100`;
   progressUI.initialDate.textContent = progressDate(initial.created_at);
-  progressUI.currentDate.textContent = progressDate(latest.created_at);
+  progressUI.currentDate.textContent = latest.kind === 'initial' ? '' : progressDate(latest.created_at);
   const compared = latest.kind === 'initial' ? null : latest.vs_initial;
   progressUI.delta.textContent = latest.kind === 'initial'
     ? 'Este es tu punto de partida. Todavía no hay revisiones adicionales.'
@@ -522,6 +526,56 @@ const renderProgressHistory = (history) => {
   });
   renderProgressChart([...history].reverse());
 };
+
+
+const previousUI = {
+  section: document.querySelector('#prior-diagnostics'),
+  count: document.querySelector('#prior-diagnostics-count'),
+  status: document.querySelector('#prior-diagnostics-status'),
+  list: document.querySelector('#prior-diagnostics-list'),
+};
+let previousLoaded = false;
+let previousLoading = false;
+const loadPreviousDiagnostics = async () => {
+  if (!previousUI.section.open || !entitledSiteId || previousLoaded || previousLoading) return;
+  previousLoading = true;
+  previousUI.status.textContent = 'Cargando diagnósticos anteriores…';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const response = await fetch(
+      `/api/privacy/workspace-sites/${encodeURIComponent(entitledSiteId)}/diagnostics/previous`,
+      { method: 'GET', headers: await authorizedHeaders(), signal: controller.signal },
+    );
+    if (!response.ok) throw new Error('previous_unavailable');
+    const data = await response.json();
+    if (!Array.isArray(data?.diagnostics) || typeof data.truncated !== 'boolean'
+        || !data.diagnostics.every(item => item && Number.isInteger(item.score)
+          && item.score >= 0 && item.score <= 100
+          && typeof item.created_at === 'string' && Number.isFinite(Date.parse(item.created_at))
+          && (item.framework_version == null || typeof item.framework_version === 'string')
+          && (item.scoring_version == null || typeof item.scoring_version === 'string'))) {
+      throw new Error('invalid_previous_diagnostics');
+    }
+    previousUI.list.replaceChildren();
+    data.diagnostics.forEach(item => {
+      const row = addText(previousUI.list, 'li', '', 'plan-prior-diagnostics__item');
+      addText(row, 'span', friendlyDate(item.created_at));
+      addText(row, 'strong', `${item.score}/100`);
+    });
+    previousUI.count.textContent = `(${data.diagnostics.length}${data.truncated ? '+' : ''})`;
+    previousUI.status.textContent = data.diagnostics.length === 0
+      ? 'No hay diagnósticos anteriores vinculados a este sitio.'
+      : data.truncated ? 'Mostrando los 100 diagnósticos más recientes.' : '';
+    previousLoaded = true;
+  } catch {
+    previousUI.status.textContent = 'No pudimos consultar los diagnósticos anteriores. Cierra y vuelve a abrir esta sección para reintentar.';
+  } finally {
+    clearTimeout(timeout);
+    previousLoading = false;
+  }
+};
+previousUI.section.addEventListener('toggle', loadPreviousDiagnostics);
 
 const render = ({ site_url: siteUrl, plan, check, diagnostic, current_actions: currentActions, history }) => {
   elements.site.textContent = friendlySite(siteUrl);

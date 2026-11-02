@@ -42,6 +42,15 @@ def get_plan(workspace_site_id: UUID, user: access.StoredUser = Depends(require_
         _problem(exc)
 
 
+
+@router.get("/{workspace_site_id}/diagnostics/previous", dependencies=[Depends(_ready)])
+def previous_diagnostics(workspace_site_id: UUID, user: access.StoredUser = Depends(require_access_user)):
+    try:
+        return privacy_entitled_plan.previous_linked_diagnostics(user.id, workspace_site_id)
+    except (privacy_entitled_plan.PlanUnavailable, privacy_entitled_plan.PlanNotFound) as exc:
+        _problem(exc)
+
+
 @router.post("/{workspace_site_id}/plan/check", dependencies=[Depends(_ready)])
 def review_plan(workspace_site_id: UUID, user: access.StoredUser = Depends(require_access_user)):
     try:
