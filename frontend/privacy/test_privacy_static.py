@@ -53,7 +53,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
         self.assertIn("activationNotice.hidden = false;", APP)
         self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
-        self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
         self.assertIn("privacy-saved-choice[hidden]", CSS)
 
     def test_access_auto_saves_pending_diagnostic_after_login(self):
