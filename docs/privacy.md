@@ -113,35 +113,8 @@ revisiones se conservan; la API expone la última revisión para la experiencia 
 No existe un estado de "comprobación utilizada" ni una regla especial de vigencia por
 monto histórico.
 
-La solicitud pública crea solamente una orden `pending_payment` con el identificador
-del snapshot y un email normalizado. El precio, la moneda, el producto y el estado son
-definidos por el backend. El snapshot permite solicitar la activación durante las 24
-horas posteriores al diagnóstico. Una vez vencida esa ventana, el snapshot y su
-resultado permanecen disponibles; la interfaz deja de ofrecer la activación sobre esa
-revisión y pide realizar una revisión reciente antes de continuar. Durante el Design
-Partner, la activación puede autorizarse manualmente mediante un endpoint interno protegido: usa el
-`diagnostic_snapshot` asociado, genera la estructura de mejoras, la vincula a la orden
-y registra `paid_at`. En esta etapa `paid` significa autorización manual; representará
-un pago confirmado cuando se integre posteriormente un proveedor de pagos.
+La activación comercial anterior por orden, correo y enlace de token fue retirada en PW-03 PR 4. El Plan autenticado se accede desde `/privacy/mi-plan/` usando membresía y entitlement por `workspace_site_id`. El historial de diagnósticos previos vinculados permanece separado del historial de revisiones del Plan. Los pagos no están habilitados: la integración comercial pertenece a PW-04. Las tablas históricas de Privacy continúan conservadas hasta una autorización destructiva posterior y separada. La preparación de activación y la ventana de 24 horas para un diagnóstico reciente siguen siendo parte del futuro recorrido Billing; no crean órdenes ni habilitan pagos por sí solas.
 
-El enlace de acceso se entrega manualmente y su token no se almacena en texto plano en
-la orden. Las revisiones se serializan por activación mediante un advisory lock para
-evitar ejecuciones concurrentes sobre el mismo sitio. El diagnóstico gratuito no queda
-limitado por la compra y puede volver a ejecutarse independientemente de Privacy Web
-activo.
-
-Internamente se conservan temporalmente nombres técnicos anteriores como
-`PRIVACY_CORRECTION_PLAN`, `correction_plan` y la ruta `/privacy/plan/`; son detalles
-de implementación y no forman parte del lenguaje público del producto. Renombrarlos
-queda fuera de este cambio para no mezclar un refactor estructural con el ajuste de
-comportamiento.
-
-La creación de la estructura de mejoras y la actualización de la orden usan actualmente
-conexiones separadas; por ello, un fallo de base de datos exactamente entre ambas
-operaciones podría dejar un registro huérfano sin exponer su token. La nueva inspección
-y su snapshot también usan conexiones separadas de la inserción final de la revisión;
-un fallo posterior puede dejar ese snapshot huérfano, pero la revisión no se considera
-registrada hasta guardar el resultado final.
 
 PRV-003 distingue de forma determinística una política propia del responsable de
 referencias a políticas generales de terceros. Un dominio externo no implica por sí

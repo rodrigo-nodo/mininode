@@ -9,9 +9,9 @@ from uuid import uuid4
 import psycopg
 import pytest
 
-from mininode_api.services import (access, billing, privacy_correction_plan,
-    privacy_correction_plan_order, privacy_diagnostic_snapshot,
+from mininode_api.services import (access, billing, privacy_diagnostic_snapshot,
     site_group_operator as operator, site_group_reviews as reviews)
+from tests.legacy_privacy_schema import LEGACY_PLAN_SQL, LEGACY_ORDER_SQL
 
 
 @pytest.fixture
@@ -30,8 +30,9 @@ def workspace_pair():
                      "20261020_access_site_group_operator.sql"):
             db.execute((Path(__file__).resolve().parents[1] / "migrations" / name).read_text())
     privacy_diagnostic_snapshot.initialize_database()
-    privacy_correction_plan.initialize_database()
-    privacy_correction_plan_order.initialize_database()
+    with psycopg.connect(url) as db:
+        db.execute(LEGACY_PLAN_SQL)
+        db.execute(LEGACY_ORDER_SQL)
 
     user, other, workspace, foreign_workspace = (uuid4() for _ in range(4))
     first_site, second_site, foreign_site = (uuid4() for _ in range(3))

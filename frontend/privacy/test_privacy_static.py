@@ -30,7 +30,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=2739bb4e161b', HTML)
+        self.assertIn('app.js?v=pw03-pr4-review-fixes', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -52,8 +52,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("savedStandaloneNote.hidden = hasOffer || !isSaved;", APP)
         self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
         self.assertIn("activationNotice.hidden = false;", APP)
-        self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
         self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
+        self.assertIn("!purchaseExpired && !correctionOffer.hidden", APP)
+        self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
         self.assertIn("privacy-saved-choice[hidden]", CSS)
 
     def test_access_auto_saves_pending_diagnostic_after_login(self):
@@ -96,18 +97,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("#privacy-correction-offer .privacy-saved-choice", CSS)
         self.assertIn("grid-template-columns: minmax(0, 1fr) 148px", CSS)
         self.assertIn(".privacy-saved-choice--standalone .btn.privacy-choice-button { width: 100%; }", CSS)
-
-    def test_past_purchase_deadline_cannot_show_pending_activation(self):
-        self.assertIn("const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();", APP)
-        self.assertIn("if (purchaseExpired && !correctionOffer.hidden)", APP)
-        self.assertIn("privacyQuery.get('activation') === 'pending' && !purchaseExpired", APP)
-
-    def test_commercial_notice_appears_only_inside_conditions(self):
-        intro = HTML.split('class="privacy-offer-details"', 1)[0]
-        self.assertNotIn("Sin renovación automática. El pago en línea", intro)
-        detail = HTML.split('class="privacy-offer-details"', 1)[1].split("</details>", 1)[0]
-        self.assertIn("El pago en línea estará disponible próximamente.", detail)
-        self.assertIn("Sin renovación automática.", detail)
 
     def test_free_anonymous_diagnostic_save_flow(self):
         account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
@@ -194,7 +183,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertNotIn("$39.900", productive_content)
         self.assertIn("$9.900", HTML)
         self.assertTrue((PRIVACY_DIR / "index.html").is_file())
-        self.assertTrue((PRIVACY_DIR / "plan" / "index.html").is_file())
+        self.assertFalse((PRIVACY_DIR / "plan" / "index.html").exists())
 
         rules = [line.split() for line in REDIRECTS.splitlines() if line.strip()]
         obsolete_redirect = [
@@ -202,8 +191,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         ]
         plan_rewrite = ["/privacy/plan/:token", "/privacy/plan/", "200"]
         self.assertIn(obsolete_redirect, rules)
-        self.assertIn(plan_rewrite, rules)
-        self.assertLess(rules.index(obsolete_redirect), rules.index(plan_rewrite))
+        self.assertNotIn(plan_rewrite, rules)
+
         self.assertTrue((FRONTEND_DIR / "functions" / "api" / "[[path]].js").is_file())
 
     def test_human_status_uses_backend_score_boundaries(self):
@@ -306,68 +295,18 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Ver qué revisamos", HTML)
         self.assertIn("19 puntos en 5 áreas", HTML)
 
-    def test_priorities_and_commercial_paths_are_preserved(self):
+    def test_priorities_and_new_activation_intent_are_preserved(self):
         self.assertIn(".slice(0, 3)", APP)
         self.assertIn("Array.isArray(priorities) && priorities.length > 0", APP)
-        self.assertNotIn("Plan de corrección", HTML)
+        self.assertIn("Activar Privacy Web", HTML)
         self.assertIn("$9.900", HTML)
-        self.assertNotIn("$49.900", HTML)
-        self.assertIn("nuevas revisiones durante un mes.", HTML)
-        self.assertNotIn("pago único", HTML)
-        self.assertIn("Vigencia de 1 mes desde la compra. Sin renovación automática.", HTML)
-        self.assertIn("Accede a todas las mejoras, instrucciones para corregirlas y nuevas revisiones durante un mes.", HTML)
-        self.assertIn("Todas las mejoras detectadas", HTML)
-        self.assertIn("Instrucciones concretas para cada mejora", HTML)
-        self.assertIn("Cómo comprobar los cambios", HTML)
-        self.assertIn("Comparación antes/después", HTML)
-        self.assertIn("Seguimiento de tus avances", HTML)
-        self.assertNotIn("1 comprobación", HTML)
-        self.assertNotIn("30 días", HTML)
-        self.assertIn('id="correction-order-open">Continuar →</button>', HTML)
-        self.assertIn("sin desbloquear las demás mejoras ni incluir nuevas revisiones.", HTML)
         self.assertIn("continueWithDiagnostic('activate')", APP)
         self.assertIn("continueWithDiagnostic('save')", APP)
-        account = (FRONTEND_DIR / "access" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("claim.intent === 'activate'", account)
-        self.assertEqual(HTML.count("Vigencia de 1 mes desde la compra. Sin renovación automática."), 2)
-        self.assertIn('id="correction-order-validity"', HTML)
-        self.assertIn('id="correction-order-expired-validity"', HTML)
-        self.assertNotIn("6 meses", HTML)
-        self.assertNotIn("suscripción automática", HTML.lower())
-        self.assertNotIn("billing", HTML.lower())
-        self.assertIn('name="email"', HTML)
-        self.assertIn("Se utilizará para gestionar la activación y entregar el acceso.", HTML)
-        self.assertIn("fetch('/api/privacy/correction-plan-orders'", APP)
-        self.assertIn("JSON.stringify({ diagnostic_id: diagnosticId, email: orderEmail.value })", APP)
-        self.assertNotIn("site_url:", APP)
-        self.assertNotIn("amount:", APP)
-        self.assertNotIn("currency:", APP)
-        self.assertNotIn("product_code:", APP)
-        self.assertIn("Solicitud preparada", HTML)
-        self.assertIn("El pago en línea estará disponible próximamente.", HTML)
-        self.assertIn("Disponible para activar durante 24 horas después de este diagnóstico.", HTML)
-        self.assertIn("Disponible para activar durante 24 horas después de este diagnóstico.", APP)
-        self.assertIn("Para activar Privacy Web necesitas una revisión reciente", HTML)
-        self.assertIn("Esta revisión sigue disponible.", HTML)
-        self.assertIn('id="correction-order-expired-date"', HTML)
-        self.assertIn("Revisar nuevamente", HTML)
-        self.assertIn(".privacy-next__action > [hidden]", CSS)
-        self.assertIn("display: none !important;", CSS)
-        self.assertIn("background: var(--color-primary-soft);", CSS)
-        self.assertNotIn("background: #f8fbfb;", CSS)
-        self.assertNotIn("La ventana de activación de este diagnóstico ya finalizó.", APP)
-        self.assertNotIn("Este diagnóstico tiene más de 24 horas.", HTML)
-        self.assertNotIn("countdown", APP.lower())
-        self.assertNotIn("recheck", APP.lower())
-        self.assertNotIn("recheck_expires_at", HTML)
-        self.assertNotIn("Le queda 1 revisión", HTML)
-        self.assertNotIn("Solo puede volver a analizar una vez", HTML)
-        self.assertIn("La implementación técnica no está incluida.", HTML)
-        self.assertNotIn("acompañamiento para resolver dudas", HTML.lower())
-        self.assertIn("¿Necesita ayuda para realizar los cambios?", HTML)
-        self.assertIn("ese servicio se evalúa por separado", HTML)
-        self.assertIn("Consultar apoyo técnico", HTML)
+        self.assertNotIn("/api/privacy/correction-plan-orders", APP)
+        self.assertNotIn('name="email"', HTML)
+        self.assertIn("Guardar diagnóstico gratis", HTML)
         self.assertIn('id="privacy-no-priorities"', HTML)
+        self.assertIn("Consultar apoyo técnico", HTML)
 
     def test_privacy_data_is_an_unconditional_next_step(self):
         self.assertIn('href="/privacy/data/">Conocer Privacy Data</a>', HTML)
@@ -404,28 +343,6 @@ class PrivacyResultStaticTests(unittest.TestCase):
         ):
             self.assertNotIn(technical_name, DATA_HTML)
 
-    def test_order_form_minimizes_data_and_keeps_commercial_fields_server_side(self):
-        order_form = HTML.split('id="correction-order-form"', 1)[1].split("</form>", 1)[0]
-        self.assertEqual(order_form.count("<input"), 1)
-        self.assertIn('name="email"', order_form)
-        for field in ('name="name"', 'name="empresa"', 'name="rut"', 'name="telefono"', 'name="site_url"'):
-            self.assertNotIn(field, order_form)
-
-        request = APP.split("fetch('/api/privacy/correction-plan-orders'", 1)[1].split("});", 1)[0]
-        self.assertIn("diagnostic_id: diagnosticId", request)
-        self.assertIn("email: orderEmail.value", request)
-        for field in ("site_url", "amount", "currency", "status", "product_code", "score", "snapshot"):
-            self.assertNotIn(f"{field}:", request)
-
-    def test_each_diagnosis_owns_and_resets_its_commercial_state(self):
-        submit_flow = APP.split("form.addEventListener('submit'", 1)[1]
-        self.assertIn("resetCommercialState();", submit_flow.split("fetch('/api/privacy/diagnose'", 1)[0])
-        self.assertIn("currentDiagnosticId = '';", APP)
-        self.assertIn("orderEmail.value = '';", APP)
-        self.assertIn("correctionOffer.hidden = true;", APP)
-        self.assertIn("const diagnosticId = currentDiagnosticId;", APP)
-        self.assertIn("if (!diagnosticId || correctionOffer.hidden)", APP)
-
     def test_unavailable_privacy_web_has_explanatory_state_instead_of_priced_card(self):
         unavailable = HTML.split('id="privacy-correction-unavailable"', 1)[1].split('</div>', 1)[0]
         self.assertIn("Privacy Web no disponible", unavailable)
@@ -433,12 +350,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Realizar nuevo diagnóstico", unavailable)
         self.assertNotIn("$49.900", unavailable)
         self.assertIn("correctionUnavailable.hidden = !hasPriorities || planAvailable;", APP)
-
-    def test_commercial_section_uses_privacy_identity_and_approved_copy(self):
-        commercial = HTML.split('id="privacy-correction-offer"', 1)[1].split('class="privacy-result__note"', 1)[0]
-        styles = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8").lower()
-        self.assertIn("var(--color-primary)", styles)
-        self.assertNotRegex(commercial.lower(), r"violet|purple|#6c4df4")
+        self.assertIn("correctionUnavailableRetry?.addEventListener('click'", APP)
+        self.assertIn("form.scrollIntoView({ behavior: 'smooth', block: 'start' });", APP)
+        self.assertIn("urlInput.focus();", APP)
 
     def test_api_and_backend_score_remain_inputs(self):
         self.assertIn("fetch('/api/privacy/diagnose'", APP)

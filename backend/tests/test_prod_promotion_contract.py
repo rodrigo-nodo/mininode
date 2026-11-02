@@ -20,12 +20,12 @@ def test_operator_fallback_points_at_production_admin():
     assert "https://dev.mininode.io/operator/site-reviews/" not in src
 
 
-def test_prod_promotion_preserves_old_paths_until_explicit_retirement():
+def test_pw03_retirement_disables_legacy_endpoints():
     from mininode_api.main import create_app
     app = create_app()
     routes = {(method, route.path) for route in app.routes
               for method in (getattr(route, "methods", set()) or set())}
-    assert ("POST", "/privacy/correction-plan-orders") in routes
+    assert not any(path.startswith("/privacy/correction-plan") for _, path in routes)
     assert ("GET", "/privacy/workspace-sites/{workspace_site_id}/plan") in routes
     assert ("POST", "/privacy/workspace-sites/{workspace_site_id}/plan") in routes
     assert ("POST", "/privacy/workspace-sites/{workspace_site_id}/plan/check") in routes
