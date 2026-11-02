@@ -552,6 +552,12 @@ const continueWithDiagnostic = (intent) => {
     setRequestError('No pudimos preparar el acceso en este navegador. Intenta nuevamente.');
   }
 };
+correctionUnavailableRetry?.addEventListener('click', () => {
+  // The diagnosis result may lack an id; return to the form to start again.
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  urlInput.focus();
+});
+
 orderOpenButton?.addEventListener('click', () => continueWithDiagnostic('activate'));
 saveDiagnostic?.addEventListener('click', () => continueWithDiagnostic('save'));
 saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('save'));
@@ -603,6 +609,13 @@ const initializeAuthenticatedSite = async () => {
       }
       resetCommercialState();
       renderDiagnostic(latestDiagnostic, latestDiagnostic.site_url || urlInput.value);
+      // Access redirects here after saving an anonymous diagnosis for activation.
+      // This is only a confirmation; no legacy order, payment, or entitlement is created.
+      const purchaseExpiry = Date.parse(latestDiagnostic.purchase_expires_at || '');
+      const purchaseExpired = Number.isFinite(purchaseExpiry) && purchaseExpiry <= Date.now();
+      if (privacyQuery.get('activation') === 'pending' && !purchaseExpired && !correctionOffer.hidden) {
+        activationNotice.hidden = false;
+      }
       loadingCard.hidden = true;
       resultCard.hidden = false;
     }

@@ -30,8 +30,8 @@ class Element {
   }
   querySelector() { return null; }
   querySelectorAll() { return []; }
-  scrollIntoView() {}
-  focus() {}
+  scrollIntoView() { this.scrolled = true; }
+  focus() { this.focused = true; }
 }
 
 const html = fs.readFileSync(`${__dirname}/index.html`, 'utf8');
@@ -188,6 +188,12 @@ assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-correction-unavailable').hidden, false);
 assert.match(html, /Privacy Web no disponible/);
 assert.match(html, /Realizar nuevo diagnóstico/);
+// B2: the recovery CTA must return to the diagnosis form and focus the URL.
+assert.equal(elements.get('privacy-form').scrolled, undefined);
+assert.equal(elements.get('site-url').focused, undefined);
+elements.get('correction-unavailable-retry').trigger('click');
+assert.equal(elements.get('privacy-form').scrolled, true);
+assert.equal(elements.get('site-url').focused, true);
 
 for (const score of [26, 100]) {
   assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, score, priorities: [] }, 'https://example.com'));
@@ -196,3 +202,74 @@ for (const score of [26, 100]) {
 }
 assert.equal(context.isValidDiagnosticResponseForTest({ score: 50, controls: null, priorities: null }), true);
 assert.equal(context.isValidDiagnosticResponseForTest({ score: null }), false);
+
+
+// B1: simulate the actual Access handoff to a saved site, without contacting APIs.
+const savedSite = 'SITE-TEST-1';
+const makeSavedReviewHarness = (search, review) => {
+  const nodes = new Map(ids.map((id) => [id, new Element()]));
+  const doc = {
+    body: new Element('body'),
+    querySelector: (selector) => selector.startsWith('#') ? nodes.get(selector.slice(1)) ?? null : null,
+    addEventListener() {},
+    createElement: (tagName) => new Element(tagName),
+  };
+  const responses = [];
+  const auth = { ready: async () => {}, getToken: async () => 'test-token' };
+  const sandbox = {
+    document: doc, URL, URLSearchParams,
+    sessionStorage: { setItem() {}, removeItem() {}, getItem() { return null; } },
+    window: { location: { search, assign() {} }, MininodeAuth: auth, addEventListener() {} },
+    fetch: async (url) => {
+      responses.push(url);
+      if (url === '/api/access/context') {
+        return { ok: true, json: async () => ({ workspaces: [
+          { sites: [{ id: savedSite, hostname: 'example.com' }] },
+        ] }) };
+      }
+      if (url === `/api/privacy/workspace-sites/${savedSite}/latest-review`) {
+        return { ok: true, json: async () => review };
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  };
+  vm.runInNewContext(`${source}\nglobalThis.runSavedReviewForTest = initializeAuthenticatedSite;`, sandbox);
+  return { nodes, sandbox, responses };
+};
+
+const testActivationAfterLogin = async () => {
+  const fresh = { ...baseDiagnostic, workspace_site_id: savedSite,
+    purchase_expires_at: '2999-01-01T00:00:00Z' };
+  const pending = makeSavedReviewHarness(
+    `?workspace_site_id=${savedSite}&view=latest&activation=pending`, fresh);
+  await pending.sandbox.runSavedReviewForTest();
+  assert.equal(pending.nodes.get('privacy-result').hidden, false);
+  assert.equal(pending.nodes.get('privacy-activation-notice').hidden, false,
+    'B1: Access activation intent must show confirmation after saving');
+  assert.deepEqual(pending.responses, ['/api/access/context',
+    `/api/privacy/workspace-sites/${savedSite}/latest-review`]);
+
+  const ordinary = makeSavedReviewHarness(`?workspace_site_id=${savedSite}&view=latest`, fresh);
+  await ordinary.sandbox.runSavedReviewForTest();
+  assert.equal(ordinary.nodes.get('privacy-activation-notice').hidden, true,
+    'Ordinary saved review must not announce an activation attempt');
+
+  const noOffer = makeSavedReviewHarness(
+    `?workspace_site_id=${savedSite}&view=latest&activation=pending`,
+    { ...fresh, priorities: [] });
+  await noOffer.sandbox.runSavedReviewForTest();
+  assert.equal(noOffer.nodes.get('privacy-activation-notice').hidden, true,
+    'No action priorities means no activation intent can be confirmed');
+
+  const expired = makeSavedReviewHarness(
+    `?workspace_site_id=${savedSite}&view=latest&activation=pending`,
+    { ...fresh, purchase_expires_at: '2000-01-01T00:00:00Z' });
+  await expired.sandbox.runSavedReviewForTest();
+  assert.equal(expired.nodes.get('privacy-activation-notice').hidden, true,
+    'An expired activation window cannot claim preparation is still pending');
+};
+
+void testActivationAfterLogin().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

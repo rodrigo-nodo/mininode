@@ -30,7 +30,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=2739bb4e161b', HTML)
+        self.assertIn('app.js?v=pw03-pr4-review-fixes', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -52,6 +52,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("savedStandaloneNote.hidden = hasOffer || !isSaved;", APP)
         self.assertIn("if (intent === 'activate' && currentPersistedWorkspaceSiteId)", APP)
         self.assertIn("activationNotice.hidden = false;", APP)
+        self.assertIn("privacyQuery.get('activation') === 'pending'", APP)
+        self.assertIn("!purchaseExpired && !correctionOffer.hidden", APP)
         self.assertNotIn("intent === 'activate' && !currentClaimToken && authenticatedWorkspaceSiteId", APP)
         self.assertIn("privacy-saved-choice[hidden]", CSS)
 
@@ -348,6 +350,9 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Realizar nuevo diagnóstico", unavailable)
         self.assertNotIn("$49.900", unavailable)
         self.assertIn("correctionUnavailable.hidden = !hasPriorities || planAvailable;", APP)
+        self.assertIn("correctionUnavailableRetry?.addEventListener('click'", APP)
+        self.assertIn("form.scrollIntoView({ behavior: 'smooth', block: 'start' });", APP)
+        self.assertIn("urlInput.focus();", APP)
 
     def test_api_and_backend_score_remain_inputs(self):
         self.assertIn("fetch('/api/privacy/diagnose'", APP)
