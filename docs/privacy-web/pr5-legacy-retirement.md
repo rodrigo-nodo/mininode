@@ -36,23 +36,23 @@ Para este retiro puntual se eligió **Render Shell + ejecutor Python/`psycopg`**
 como mecanismo provisional de ejecución en cloud, **sin instalaciones en Windows**.
 No confundir esa decisión con autorización para borrar.
 
-**Limitación técnica actual:** el `backend/Dockerfile` copia `src/`,
-`migrations/` y `scripts/`, pero no `backend/operations/`; tampoco
-instala explícitamente `psql`. Por ello el SQL de este runbook **existe
-en GitHub, pero todavía no puede lanzarse directamente desde Render Shell**.
-El comando de un solo paso **no existe aún**. Hace falta un PR independiente
-que incorpore únicamente este SQL en la imagen y un ejecutor manual seguro
-con `psycopg`, sin activar Render Pre-deploy, sin modificar el backend
-funcional y sin iniciar la operación durante el despliegue.
+**Estado del ejecutor:** el PR #426 incorpora en Docker únicamente los dos
+SQL de PW-03 y `backend/scripts/pw03_retire_legacy_shell.py`. **Todavía
+no está desplegado en PROD**: los comandos de Render Shell estarán disponibles
+solo tras CI, revisión independiente, merge autorizado y confirmación del
+backend LIVE. El ejecutor usa Python/`psycopg`, sin instalar `psql`.
 
-El ejecutor propuesto deberá usar una única conexión/sesión, los permisos
-y la conexión interna del servicio PROD verificado, las dos huellas
-**previamente autorizadas** (clúster e inventario), las comprobaciones
-bajo `ACCESS EXCLUSIVE NOWAIT`, la secuencia transaccional íntegra y
-`DROP TABLE ... RESTRICT`. Debe fallar sin efectos si falta una
-aprobación, hay cambios en las filas o existen nuevas dependencias. Registrar
-solo PASS/FAIL y evidencia no sensible. No copiar o pegar el SQL por partes.
-**El merge de ese futuro PR tampoco autorizará ejecutarlo.**
+**Seguridad de destino (B1):** para conectar, el ejecutor exige el hostname
+interno **completo y exacto** `dpg-da5fjmbm8hqs73chdceg-a`, sin sufijos
+ni dominios alternativos, así como la base, usuario y puerto aprobados.
+Rechaza `hostaddr`, `service`, múltiples destinos y otros parámetros libpq
+no aprobados, y también cualquier variable de entorno `PG*` con valor,
+incluidas `PGHOSTADDR` y `PGSERVICE`. Debe contrastarse este hostname exacto
+contra **Internal Database URL** de la instancia Render primaria durante la
+validación real, sin publicar el URL ni desactivar controles si falla.
+La coincidencia de huellas por sí sola no identifica un clon físico.
+
+**El merge de este PR tampoco autoriza ejecutar el borrado.**
 
 Otras modalidades no elegidas para este caso: GitHub Actions manual
 (requeriría workflow nuevo y conexión externa validada), y el runner
@@ -80,10 +80,10 @@ identificadores de filas ni huellas. Antes de ejecutar deberán
 contrastarse de nuevo desde una vía independiente y aprobarse los
 valores exactos de forma privada.
 
-**Pendiente:** implementar y validar el ejecutor Render Shell, documentar
-identidad y huellas autorizadas para la sesión operativa, y obtener
-**autorización destructiva específica para PROD**. Hasta entonces,
-las tres tablas siguen intactas.
+**Pendiente:** completar la revisión/CI del ejecutor del PR #426,
+verificarlo en Render Shell una vez LIVE, aprobar privadamente destino,
+huellas y controles de logs, y obtener **autorización destructiva específica
+para PROD**. Hasta entonces, las tres tablas siguen intactas.
 
 ## Ejecutor Render Shell — implementación preparada (pendiente de CI/merge/autorización)
 
@@ -102,11 +102,13 @@ python scripts/pw03_retire_legacy_shell.py --check
 
 Este comando verifica las variables automáticas de Render (servicio PROD,
 rama `main`, repositorio, SHA desplegado), la URL interna de la BD sin
-mostrarla, y ejecuta únicamente el preflight SQL de lectura. Solo informa
-recuentos agregados; **no imprime huellas, IDs ni datos personales**.
-Requiere que el hostname interno de `DATABASE_URL` identifique explícitamente
-al recurso PostgreSQL Render aprobado; si Render cambió su formato,
-**detenerse y revisar, no desactivar el guard**.
+mostrarla, y ejecuta únicamente el preflight SQL de lectura. Además de
+recuentos 2/3/1, comprueba estados, enlaces e indicadores de pago del
+inventario esperado. **PASS significa solo que el preflight estructural
+coincide; NO significa que las huellas/filas se hayan aprobado
+independientemente ni que la operación destructiva esté autorizada.**
+No imprime huellas, IDs ni datos personales. Si el hostname interno exacto
+no coincide, **detenerse y revisar, no desactivar el guard**.
 
 **Ejecución destructiva, exclusivamente después de autorización PO separada
 y de la aprobación privada y previa de las dos huellas y SHA exacto:**
@@ -135,6 +137,28 @@ haber sucedido a pesar del mensaje `FAIL`; no asumir rollback.
 La verificación funcional y administrativa posterior continúa siendo
 obligatoria. Se requiere que el servicio permanezca LIVE.
 
+### Comprobación obligatoria de logs (O3, solo antes de ejecutar)
+
+No considerar las huellas invisibles para el servidor solo porque Python
+no las imprime: PostgreSQL podría registrar **parámetros de consultas**
+según su configuración. En el preflight de solo lectura de PROD del
+03-11-2026 se observaron `log_statement=none`,
+`log_min_duration_statement=2000` (ms),
+`log_parameter_max_length=-1` (sin límite de longitud) y
+`log_parameter_max_length_on_error=0`. Esto implica que una consulta
+lenta que establezca las huellas podría registrarlas completas en logs
+del servidor, aunque el programa no las muestre en consola.
+
+**Antes de autorizar `--execute`**, verificar de nuevo en la instancia
+primaria las configuraciones de logging (incluidos parámetros de consultas
+lentas, errores y muestreo), determinar si existe posibilidad de registrar
+las huellas y **resolver el riesgo** con una configuración de servidor
+compatible y aprobada. No cambiar ajustes de PostgreSQL por iniciativa
+del ejecutor ni afirmar que los logs están seguros sin esta comprobación.
+Si no puede garantizarse que no se registren las huellas, **detener el
+borrado y revisar el mecanismo**, sin rebajar el control de destino.
+Referencias: [PostgreSQL 18 — parámetros de logs](https://www.postgresql.org/docs/18/runtime-config-logging.html).
+
 ## Requisitos previos (obligatorios, no automatizados)
 
 1. Obtener **autorización destructiva específica** que identifique las tres tablas,
@@ -156,69 +180,32 @@ obligatoria. Se requiere que el servicio permanezca LIVE.
    una aceptación explícita y específica de pérdida irreversible. DEV no es un respaldo de PROD.
 5. Ensayar primero en PostgreSQL 18 desechable/DEV con datos sintéticos;
    conservar evidencia de las pruebas y revisión independiente.
-6. Asegurar que la operación se realice fuera de despliegues, con una conexión
-   identificada, usando `psql -X -v ON_ERROR_STOP=1`. No utilizar el conector de
-   consultas de solo lectura ni habilitar la migración en Render Pre-deploy.
+6. Asegurar que la operación se realice fuera de despliegues, en
+   **Render Shell** con el ejecutor Python/`psycopg` del PR #426, tras
+   comprobar el commit LIVE y sin acceso a una conexión de otro recurso.
+   No utilizar el conector de solo lectura para DDL ni habilitar la
+   migración en Render Pre-deploy.
+7. Revisar y resolver el riesgo de registros de parámetros sensibles
+   descrito en O3 antes de conectar para la ejecución destructiva.
 
-## Procedimiento SQL existente — referencia condicionada a autorización
+## SQL manual: contrato técnico, no una segunda ruta operativa
 
-**Importante:** la secuencia `psql` de abajo documenta el contrato
-del archivo SQL; **no** es una instrucción lista para ejecutar hoy
-desde Render Shell. Requiere un cliente `psql` y el SQL disponible
-en el entorno que lo ejecute. La vía elegida para este caso es el
-**ejecutor Python/`psycopg` pendiente de implementación y revisión**;
-mantener la secuencia como referencia técnica, sin usarla como atajo
-operativo. No se ejecutará desde el chat ni se añadirá a Pre-deploy.
+El archivo `backend/operations/pw03_pr5_retire_legacy_commerce.sql`
+permanece fuera de `backend/migrations/` y de Pre-deploy. El ejecutor
+Render Shell lo carga completo **en una única conexión y sesión**, carga
+las huellas aprobadas como variables de sesión, y respeta `BEGIN/COMMIT`,
+`ACCESS EXCLUSIVE NOWAIT`, recuentos, huella del inventario bajo lock
+y `DROP TABLE ... RESTRICT` sin cambios al SQL ya auditado.
+**No usar `psql` ni ejecutar manualmente comandos SQL parciales**; las
+instrucciones `psql` anteriores se retiraron porque no son la vía
+seleccionada para PW-03.
 
-
-Archivo **manual**: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`.
-Está deliberadamente fuera de `backend/migrations/`, del catálogo de checksums
-y de `MIGRATION_APPROVED_FILES`. No hay automatismo que lo ejecute.
-
-**Primero, en modo solo lectura:** ejecutar
-`backend/operations/pw03_pr5_readonly_preflight.sql` desde la instancia
-PostgreSQL de Render confirmada. Comprobar que `timezone` sea `UTC` o `Etc/UTC`.
-Su salida contiene: identificador de BD, huella SHA-256 de clúster y huella
-SHA-256 de **todas las filas antiguas**, más manifiestos con IDs y estados
-(no emails ni snapshots). Guardar el inventario completo en evidencia privada,
-con la identidad del recurso Render (postgresId) y la aprobación independiente.
-No publicar los manifiestos ni huellas aprobadas en el repositorio.
-
-**Solo después de autorización destructiva, ensayos y confirmación de respaldo
-o aceptación de riesgo**, en la **misma sesión psql** conectada al recurso
-previamente verificado:
-
-```sql
-SELECT current_database(); -- En PROD debe responder mininode
-SELECT set_config('mininode.pw03_pr5_target_database', 'mininode', false);
-SELECT set_config('mininode.pw03_pr5_target_cluster_sha256', '<HUELLA_CLUSTER_APROBADA>', false);
-SELECT set_config('mininode.pw03_pr5_approved_inventory_sha256', '<HUELLA_FILAS_APROBADA>', false);
-SELECT set_config('mininode.pw03_pr5_ack', 'DELETE_2_PAID_1_PENDING_LEGACY_ORDERS', false);
-```
-
-Las dos huellas deben provenir de la evidencia **previamente aprobada**, no de
-consultas a la conexión que se va a borrar en ese instante. Los valores vacíos
-o diferentes abortan la operación. El identificador físico de clúster puede
-compartirse entre clones o réplicas físicas: combinar siempre el hash con la
-identidad independiente del recurso Render y verificar que sea la instancia
-primaria adecuada.
-
-Luego, desde la raíz del repositorio, en esa **misma conexión psql**:
-
-```text
-\i backend/operations/pw03_pr5_retire_legacy_commerce.sql
-```
-
-Antes del script, la consola debe usar `ON_ERROR_STOP=1`; no ejecutar si la identidad
-o los recuentos difieren. El SQL usa una transacción, locks `NOWAIT`, validación de clúster,
-comprobaciones estrictas del inventario **bajo lock**, comparación del
-hash de todas las filas y `DROP TABLE ... RESTRICT` en orden de dependencias.
-Las variables de sesión son controles contra errores operativos, no un sistema
-de autorización que reemplace los permisos de la base. Los timestamps del
-inventario se normalizan con TimeZone UTC; el procedimiento configura UTC
-durante la transacción.
-Si algo falla **antes de COMMIT**, cerrar/abortar la transacción (no forzar commit).
-No ejecutar la sentencia por partes.
+El preflight privado independiente sigue disponible en
+`backend/operations/pw03_pr5_readonly_preflight.sql`. Ejecutarlo por
+la conexión Render **de lectura**, confirmar `UTC` y aprobar
+privadamente el inventario completo y ambas huellas (no volcarlas en
+GitHub, logs ni chat). El ejecutor **nunca obtiene esas huellas de la
+sesión a borrar para autoautorizarse**.
 
 ## Evidencias posteriores y recuperación
 
