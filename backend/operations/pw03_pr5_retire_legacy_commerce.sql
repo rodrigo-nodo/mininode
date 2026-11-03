@@ -5,12 +5,23 @@
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
+SET LOCAL TimeZone = 'UTC';
 
 DO $approval$
+DECLARE
+    actual_cluster_fingerprint text;
 BEGIN
     IF current_setting('mininode.pw03_pr5_target_database', true)
        IS DISTINCT FROM current_database() THEN
         RAISE EXCEPTION 'PW03 PR5: target database approval is missing or mismatched';
+    END IF;
+    -- Physical PostgreSQL cluster identity, independently compared with the
+    -- Render postgresId/resource and privately approved fingerprint.
+    SELECT encode(sha256(convert_to((SELECT system_identifier::text FROM pg_control_system()), 'UTF8')), 'hex')
+      INTO actual_cluster_fingerprint;
+    IF current_setting('mininode.pw03_pr5_target_cluster_sha256', true)
+       IS DISTINCT FROM actual_cluster_fingerprint THEN
+        RAISE EXCEPTION 'PW03 PR5: approved PostgreSQL cluster fingerprint missing or mismatched';
     END IF;
     IF current_setting('mininode.pw03_pr5_ack', true)
        IS DISTINCT FROM 'DELETE_2_PAID_1_PENDING_LEGACY_ORDERS' THEN
@@ -33,6 +44,7 @@ DECLARE
     paid_orders bigint;
     pending_orders bigint;
     total_checks bigint;
+    actual_inventory_fingerprint text;
 BEGIN
     SELECT count(*), count(*) FILTER (WHERE status = 'active')
       INTO total_plans, active_plans
@@ -52,6 +64,26 @@ BEGIN
        OR total_orders <> 3 OR paid_orders <> 2 OR pending_orders <> 1
        OR total_checks <> 1 THEN
         RAISE EXCEPTION 'PW03 PR5: legacy inventory differs from approved 2 plans / 3 orders / 1 check; abort';
+    END IF;
+    -- Recheck every historical row, including IDs, statuses and relationships,
+    -- while all three tables are locked. A changed but equally sized inventory
+    -- is rejected; SHA-256 value must be independently reviewed beforehand.
+    SELECT encode(sha256(convert_to(
+        jsonb_build_object(
+            'plans', COALESCE(
+                (SELECT jsonb_agg(to_jsonb(p) ORDER BY p.id) FROM privacy.correction_plan p),
+                '[]'::jsonb),
+            'orders', COALESCE(
+                (SELECT jsonb_agg(to_jsonb(o) ORDER BY o.id) FROM privacy.correction_plan_order o),
+                '[]'::jsonb),
+            'checks', COALESCE(
+                (SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM privacy.correction_plan_check c),
+                '[]'::jsonb)
+        )::text, 'UTF8')), 'hex')
+      INTO actual_inventory_fingerprint;
+    IF current_setting('mininode.pw03_pr5_approved_inventory_sha256', true)
+       IS DISTINCT FROM actual_inventory_fingerprint THEN
+        RAISE EXCEPTION 'PW03 PR5: approved legacy row fingerprint missing or mismatched; abort';
     END IF;
 END
 $inventory$;
