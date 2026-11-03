@@ -1,15 +1,28 @@
 # PW-03 — Retiro de tres tablas antiguas de Privacy Web
 
-**Estado:** limpieza física pendiente. El ejecutor actual (#426, #427, #428)
-está desplegado en producción, pero **no se ha ejecutado el borrado**.
-Este documento describe la versión simplificada propuesta en un PR posterior.
-**Aprobar o integrar el PR NO autoriza ejecutar `--execute`.**
+**Estado final: COMPLETADO en PostgreSQL PROD (03-11-2026).**
+El Product Owner autorizó explícitamente el borrado irreversible de las
+tres tablas, sus 6 registros y la ausencia de respaldo adicional, aceptando
+el riesgo residual de no contrastar el contenido completo contra un
+inventario histórico de IDs. El ejecutor manual simplificado del PR #429,
+desplegado LIVE en SHA `66ea22f166385aa88ef7d9b479b371e979dc6bca`,
+devolvió `PASS: retiro manual confirmado; 3 tablas antiguas ausentes`.
+
+**Verificación independiente posterior de solo lectura (Render PostgreSQL):**
+`to_regclass` confirmó que las tres tablas ya **no existen**. Se
+confirmaron intactas las tablas y los recuentos conservados:
+`privacy.diagnostic=298`, `privacy.entitled_plan=2`,
+`privacy.entitled_plan_check=1`, `access.entitlements=2`,
+`billing.orders=0`. Render confirmó que el mismo SHA continuaba
+**LIVE**. **No volver a ejecutar `--execute`; la operación terminó.**
+La descripción a continuación se conserva como procedimiento auditado
+de esta operación ya cerrada, no como instrucción para repetirla.
 
 ## Alcance exacto
 
-Se eliminan **solamente** estas tres tablas de datos de prueba:
+Se eliminaron **solamente** estas tres tablas de datos de prueba:
 
-| Tabla | Filas esperadas |
+| Tabla retirada | Filas al aprobar la operación |
 | --- | ---: |
 | `privacy.correction_plan` | 2 (`active`) |
 | `privacy.correction_plan_order` | 3 (2 `paid`, 1 `pending_payment`) |
@@ -51,9 +64,9 @@ explícita y verificaciones estructurales y de destino.
   Los valores de destino y acuse enviados al servidor son constantes
   públicas, no credenciales.
 
-## Procedimiento manual — tres pasos
+## Procedimiento manual utilizado — tres pasos (histórico; no repetir)
 
-**1. Verificar.** Confirmar con el conector Render de solo lectura el recurso
+**1. Verificar (realizado).** Confirmar con el conector Render de solo lectura el recurso
 PostgreSQL primario `mininode-db` (`dpg-da5fjmbm8hqs73chdceg-a`),
 sin réplicas, y el inventario comercial. **Antes de autorizar el borrado,
 contrastar por una vía independiente y privada la identidad de los seis
@@ -75,14 +88,14 @@ Esperado: PASS con **2 planes / 3 órdenes / 1 revisión** y sin
 acciones destructivas. El control es solo lectura y no otorga autorización.
 Si falla o cambian los registros, **detenerse, no reintentar a ciegas**.
 
-**2. Autorizar.** Tras revisar el resultado, obtener **una autorización
+**2. Autorizar (realizado).** Tras revisar el resultado, obtener **una autorización
 posterior, específica y explícita del Product Owner** para eliminar
 las tres tablas concretas en PostgreSQL PROD, confirmando que los seis
 registros siguen siendo pruebas descartables, que las dos órdenes
 `paid` no son cobros reales y que se acepta no hacer respaldo adicional.
 El permiso para crear o mergear el PR **no es este permiso**.
 
-**3. Ejecutar y comprobar.** Solo con esa autorización y la versión LIVE
+**3. Ejecutar y comprobar (realizado).** Solo con esa autorización y la versión LIVE
 validada, en la misma Render Shell invocar **una única línea**:
 
 ```sh

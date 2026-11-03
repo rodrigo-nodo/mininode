@@ -2,6 +2,17 @@
 
 ## Procedimiento operativo PostgreSQL — PW-03 actualizado
 
+**PW-03 finalizado en PROD (03-11-2026).** PR #429 fusionado,
+backend `66ea22f166385aa88ef7d9b479b371e979dc6bca` LIVE,
+`--check` PASS (2 planes, 3 órdenes, 1 revisión), seguido de autorización
+destructiva separada del Product Owner y `--execute` PASS. Confirmación
+independiente posterior por SELECT: las tres tablas `privacy.correction_plan`,
+`privacy.correction_plan_order`, `privacy.correction_plan_check` ya no
+existen. Permanecen 298 diagnósticos, 2 planes vigentes, 1 revisión vigente,
+2 entitlements y 0 órdenes de billing. El procedimiento descrito abajo
+se conserva como registro; **no repetir `--execute`**.
+
+
 **Decisión del PO:** no instalar `psql`, PostgreSQL ni Docker localmente en
 Windows; las operaciones se realizan con GitHub, Render y recursos cloud.
 La inspección del estado real se hace mediante el conector Render **solo
@@ -15,7 +26,7 @@ entran automáticamente en el Pre-deploy.
 | Migración ordinaria | GitHub PR/CI → Render Pre-deploy con allowlist exacta | Aprobación del cambio |
 | PW-03 retiro de tres tablas de prueba | Render Shell + ejecutor manual `psycopg` | **Autorización destructiva adicional después del merge y del `--check`** |
 
-### PW-03 — procedimiento simplificado
+### PW-03 — procedimiento simplificado ejecutado (histórico; no repetir)
 
 Solo se retiran `privacy.correction_plan`,
 `privacy.correction_plan_order` y `privacy.correction_plan_check`
@@ -223,11 +234,21 @@ Tras autorización operativa expresa del Product Owner, se aplicó exclusivament
 Para el PR 2, la comprobación del esquema nuevo al iniciar es solo SELECT, no CREATE/ALTER; el backend antiguo permanece operativo hasta su retiro independiente. No reactivar la migración ni cambiar allowlist durante PR 2.
 
 
-## PW-03 PR 5 — Preparación de retiro comercial legado (03-11-2026)
+## PW-03 PR 5 — Retiro comercial legado completado (03-11-2026)
 
-El procedimiento destructivo está **solo preparado**, no aprobado para ejecución ni aplicado a PROD. Archivo: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`, fuera de la lista de migraciones permitidas en Render. Preflight de base PostgreSQL 18 y sus recuentos, seguridad, dependencias, precondiciones, prueba y recuperación: [runbook de PR 5](privacy-web/pr5-legacy-retirement.md). El borrado requiere autorización operativa destructiva independiente, con respaldo verificable o aceptación específica de pérdida irreversible. No activar el archivo en `MIGRATION_APPROVED_FILES` ni ejecutarlo junto al deploy.
+Tras validación estructural independiente (2 / 3 / 1), autorización
+destructiva específica del Product Owner y aceptación expresa de pérdida
+sin respaldo adicional, el ejecutor simplificado del PR #429 retiró
+las tres tablas manualmente desde Render Shell sobre el backend
+`66ea22f166385aa88ef7d9b479b371e979dc6bca` LIVE.
+El comando devolvió PASS y la consulta independiente posterior confirmó
+ausencia de las tres tablas y conservación de diagnósticos, planes nuevos,
+entitlements y billing. El archivo SQL sigue fuera de la lista de
+migraciones permitidas: **no activarlo en `MIGRATION_APPROVED_FILES`
+ni repetir el borrado**. Ver [registro de verificación y procedimiento
+histórico](privacy-web/pr5-legacy-retirement.md).
 
 
 ## PW-03 — Cierre de observaciones O1/O2 (03-11-2026)
 
-**Nota histórica (PR #423, posteriormente reemplazada):** el diseño original exigía dos huellas SHA-256 aprobadas, una del clúster (`pg_control_system()`) y otra de las filas antiguas. El diseño simplificado de PW-03 **retiró esa exigencia y no envía huellas privadas a PostgreSQL**. El control vigente es identidad estricta del destino, verificación estructural bajo locks, revisión privada y previa de los seis IDs y sus relaciones, confirmación manual y autorización destructiva separada. El preflight de solo lectura sigue en `backend/operations/pw03_pr5_readonly_preflight.sql`. **El borrado de PROD aún no está autorizado ni ejecutado.** Consultar únicamente [el procedimiento vigente](privacy-web/pr5-legacy-retirement.md).
+**Nota histórica (PR #423, posteriormente reemplazada):** el diseño original exigía dos huellas SHA-256 aprobadas, una del clúster (`pg_control_system()`) y otra de las filas antiguas. El diseño simplificado de PW-03 **retiró esa exigencia y no envía huellas privadas a PostgreSQL**. El control vigente es identidad estricta del destino, verificación estructural bajo locks, revisión privada y previa de los seis IDs y sus relaciones, confirmación manual y autorización destructiva separada. El preflight de solo lectura sigue en `backend/operations/pw03_pr5_readonly_preflight.sql`. **Esta restricción era válida antes del retiro; el borrado fue autorizado y completado el 03-11-2026.** Consultar únicamente [el procedimiento vigente](privacy-web/pr5-legacy-retirement.md).
