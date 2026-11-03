@@ -25,6 +25,13 @@ RETIREMENT_SQL = ROOT / "operations" / "pw03_pr5_retire_legacy_commerce.sql"
 
 EXPECTED_SERVICE_ID = "srv-d3p5n1je5dus738gi5mg"
 EXPECTED_POSTGRES_ID = "dpg-da5fjmbm8hqs73chdceg-a"
+# Exact private endpoint expected from Render Internal Database URL. No
+# prefix matching, alternate domains, external endpoints or IP overrides.
+# If Render changes this hostname, stop and re-review the endpoint in a PR.
+EXPECTED_INTERNAL_HOST = "dpg-da5fjmbm8hqs73chdceg-a"
+ALLOWED_CONNINFO = frozenset({
+    "host", "port", "dbname", "user", "password", "sslmode",
+})
 EXPECTED_DATABASE = "mininode"
 EXPECTED_DB_USER = "mininode_user"
 DELETE_ACK = "DELETE_2_PAID_1_PENDING_LEGACY_ORDERS"
@@ -70,21 +77,37 @@ def validate_render_env(env: dict[str, str]) -> str:
     return deployed_sha
 
 
-def validate_database_url(url: str) -> None:
-    if not url:
-        raise GuardError("DATABASE_URL interno no disponible")
+def validate_database_url(url: str, env: dict[str, str]) -> None:
+    """Reject every libpq routing override before opening any DB connection.
+
+    The exact internal hostname is pinned independently of the resource-ID
+    prompt and the SQL cluster/row fingerprints; none is sufficient alone.
+    No client defaults, connection services, IP routing, multi-host failover,
+    Unix socket paths, alternate ports or unexpected URI options are allowed.
+    """
+    if not url or not url.startswith(("postgresql://", "postgres://")):
+        raise GuardError("DATABASE_URL interno no disponible o no es URL PostgreSQL")
+    # libpq reads PGHOSTADDR even when host was set explicitly in the URI.
+    # Reject all PG* environment variables, not just known routing flags:
+    # future libpq versions may introduce additional connection overrides.
+    if any(name.startswith("PG") and value for name, value in env.items()):
+        raise GuardError("Variables PG* de libpq no permitidas en esta operación")
     try:
         info = conninfo_to_dict(url)
     except Exception as exc:
         raise GuardError("DATABASE_URL tiene formato no válido") from exc
+    if set(info) - ALLOWED_CONNINFO:
+        raise GuardError("DATABASE_URL contiene parámetros libpq no autorizados")
     if info.get("dbname") != EXPECTED_DATABASE or info.get("user") != EXPECTED_DB_USER:
         raise GuardError("Base o usuario PostgreSQL no coinciden con PROD")
-    # Render's internal hostname contains the specific DB resource ID.
-    # This is an additional check, not a replacement for independent
-    # verification of the resource (physical clones can share fingerprints).
-    host = info.get("host", "").split(".")[0]
-    if host != EXPECTED_POSTGRES_ID:
-        raise GuardError("Host PostgreSQL no coincide con el recurso Render aprobado")
+    if not info.get("password"):
+        raise GuardError("DATABASE_URL debe incluir la contraseña administrada por Render")
+    if info.get("host") != EXPECTED_INTERNAL_HOST:
+        raise GuardError("Host PostgreSQL interno completo no coincide con Render")
+    if info.get("port", "5432") != "5432":
+        raise GuardError("Puerto PostgreSQL no autorizado")
+    if info.get("sslmode") not in (None, "require"):
+        raise GuardError("Modo TLS PostgreSQL no autorizado")
 
 
 def _require_interactive_tty() -> None:
@@ -132,10 +155,42 @@ def check_only(conn: psycopg.Connection) -> dict[str, int]:
     if (not row or not row["cluster_fingerprint_sha256"]
             or not row["legacy_inventory_sha256"]):
         raise GuardError("Preflight incompleto; abortar")
+    # This is an expected-structure check, NOT independent approval of the
+    # full row fingerprint or evidence of rights/payouts.
+    plans, orders, checks = (
+        row["plans_manifest"], row["orders_manifest"], row["checks_manifest"],
+    )
+    if len(plans) != 2 or any(p["status"] != "active" for p in plans):
+        raise GuardError("Preflight: inventario de planes inesperado")
+    plan_ids = {p["id"] for p in plans}
+    if len(plan_ids) != 2 or len(orders) != 3 or len(checks) != 1:
+        raise GuardError("Preflight: recuentos o IDs inesperados")
+    paid = [o for o in orders if o["status"] == "paid"]
+    pending = [o for o in orders if o["status"] == "pending_payment"]
+    if (len(paid) != 2 or len(pending) != 1
+            or len({o["id"] for o in orders}) != 3
+            or any(
+                not o["paid_at_present"]
+                or o["correction_plan_id"] not in plan_ids
+                or not o["diagnostic_id"]
+                for o in paid
+            )
+            or any(
+                o["paid_at_present"] or o["correction_plan_id"] is not None
+                or not o["diagnostic_id"]
+                for o in pending
+            )):
+        raise GuardError("Preflight: órdenes antiguas no coinciden")
+    check = checks[0]
+    if (not check["id"] or check["order_id"] not in {o["id"] for o in paid}
+            or check["correction_plan_id"] not in plan_ids
+            or not check["original_diagnostic_id"]
+            or not check["check_diagnostic_id"]):
+        raise GuardError("Preflight: revisión antigua inconsistente")
     return {
-        "planes_antiguos": len(row["plans_manifest"]),
-        "ordenes_antiguas": len(row["orders_manifest"]),
-        "revisiones_antiguas": len(row["checks_manifest"]),
+        "planes_antiguos": len(plans),
+        "ordenes_antiguas": len(orders),
+        "revisiones_antiguas": len(checks),
     }
 
 
@@ -190,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         env = dict(os.environ)
         sha = validate_render_env(env)
-        validate_database_url(env.get("DATABASE_URL", ""))
+        validate_database_url(env.get("DATABASE_URL", ""), env)
         approved = None
         if args.execute:
             _require_interactive_tty()
@@ -203,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
         ) as conn:
             if args.check:
                 summary = check_only(conn)
-                print("PASS: preflight solo lectura, commit LIVE " + sha[:12])
+                print("PASS: lectura e inventario estructural esperado; no es autorización para borrar. " + sha[:12])
                 print(" / ".join(f"{key}={value}" for key, value in summary.items()))
             else:
                 execute_retirement(conn, *approved)
