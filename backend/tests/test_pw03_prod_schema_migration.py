@@ -586,11 +586,90 @@ def test_pr5_shell_readonly_preflight_rejects_missing_paid_at(pr5_shell_data):
             shell.check_only(conn)
 
 
+def test_pr5_logging_guard_prevents_hash_binding_and_ddl_when_unsafe(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET log_parameter_max_length = -1")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        assert not shell.approval_logging_is_safe(conn)
+        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+            shell.execute_retirement(conn, "a" * 64, "b" * 64)
+        assert conn.execute(
+            "SELECT current_setting('mininode.pw03_pr5_target_cluster_sha256',true) AS v"
+        ).fetchone()["v"] is None
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS v", (name,)).fetchone()["v"]
+            for name in shell.OLD_TABLES
+        )
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 1")
+        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+            shell.require_safe_approval_logging(conn)
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        assert shell.approval_logging_is_safe(conn)
+        shell.require_safe_approval_logging(conn)
+
+
+def test_pr5_shell_main_blocks_unsafe_logging_before_approvals(pr5_shell_data, monkeypatch, capsys):
+    p = pr5_shell_data
+    env = {
+        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
+        "DATABASE_URL": "postgresql://postgres:synthetic@"
+                        + shell.EXPECTED_POSTGRES_ID + "/"
+                        + conninfo_to_dict(p["url"])["dbname"],
+    }
+    real_connect = psycopg.connect
+
+    def connect_unsafe(url, **options):
+        assert url == env["DATABASE_URL"]
+        conn = real_connect(p["url"], **options)
+        conn.execute("SET log_parameter_max_length = -1")
+        return conn
+
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
+    monkeypatch.setattr(shell, "_require_interactive_tty", lambda: None)
+    monkeypatch.setattr(shell, "read_approved_values",
+                        lambda sha: pytest.fail("must not ask for approvals"))
+    assert shell.main(["--execute"]) == 1
+    assert "FAIL" in capsys.readouterr().err
+    with real_connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_shell_check_warns_unsafe_logging_without_failing(pr5_shell_data, monkeypatch, capsys):
+    p = pr5_shell_data
+    env = {
+        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
+        "DATABASE_URL": "postgresql://postgres:synthetic@"
+                        + shell.EXPECTED_POSTGRES_ID + "/"
+                        + conninfo_to_dict(p["url"])["dbname"],
+    }
+    real_connect = psycopg.connect
+
+    def connect_unsafe(url, **options):
+        conn = real_connect(p["url"], **options)
+        conn.execute("SET log_parameter_max_length = -1")
+        return conn
+
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
+    assert shell.main(["--check"]) == 0
+    output = capsys.readouterr().out
+    assert "PASS: lectura e inventario estructural esperado" in output
+    assert "BLOQUEADO: --execute" in output
+    with real_connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
 def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_shell_data):
     from psycopg.rows import dict_row
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         # Synthetic fixture only: production approvals must come from an INDEPENDENT preflight.
         shell.execute_retirement(
@@ -611,6 +690,8 @@ def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_shell_data):
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
             shell.execute_retirement(conn, approved["cluster_fingerprint_sha256"], "0" * 64)
@@ -626,6 +707,8 @@ def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_shell_data):
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
             shell.execute_retirement(conn, "0" * 64, approved["legacy_inventory_sha256"])
@@ -655,6 +738,8 @@ def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatc
     sha = "a" * 40
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
     env = {
         **shell.EXPECTED_RENDER,
@@ -671,7 +756,11 @@ def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatc
     def connect_once(url, **options):
         assert url == env["DATABASE_URL"]
         connections.append(True)
-        return original_connect(p["url"], **options)
+        conn = original_connect(p["url"], **options)
+        # Only in disposable PG18: emulate logging already secured by the DBA.
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        return conn
 
     monkeypatch.setattr(shell.os, "environ", env)
     monkeypatch.setattr(shell.psycopg, "connect", connect_once)
