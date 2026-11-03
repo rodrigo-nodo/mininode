@@ -432,15 +432,58 @@ def test_pr5_shell_rejects_wrong_runtime_and_wrong_url():
             shell.validate_render_env(wrong)
     with pytest.raises(shell.GuardError, match="commit desplegado"):
         shell.validate_render_env(dict(env, RENDER_GIT_COMMIT="invalid"))
-    shell.validate_database_url(env["DATABASE_URL"])
-    with pytest.raises(shell.GuardError, match="Host PostgreSQL"):
-        shell.validate_database_url(
-            "postgresql://mininode_user@dpg-wrong-id/mininode")
+    shell.validate_database_url(env["DATABASE_URL"], env)
+    for invalid_url in (
+        "postgresql://mininode_user:fake@dpg-wrong-id/mininode",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + ".attacker.example/mininode",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + ".oregon-postgres.render.com/mininode",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + ",dpg-wrong-id/mininode",
+        "postgresql://mininode_user:fake@localhost/mininode",
+    ):
+        with pytest.raises(shell.GuardError, match="Host PostgreSQL"):
+            shell.validate_database_url(invalid_url, env)
+    for invalid_url in (
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + "/mininode?hostaddr=127.0.0.1",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + "/mininode?service=evil",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + "/mininode?target_session_attrs=any",
+        "postgresql://mininode_user:fake@" + shell.EXPECTED_POSTGRES_ID
+            + "/mininode?options=-c%20search_path%3Dpublic",
+    ):
+        with pytest.raises(shell.GuardError, match="parámetros libpq"):
+            shell.validate_database_url(invalid_url, env)
+    for setting in ("PGHOSTADDR", "PGHOST", "PGSERVICE", "PGSERVICEFILE",
+                    "PGOPTIONS", "PGPASSWORD", "PGLOADBALANCEHOSTS",
+                    "PGFUTURE_NETWORK_OVERRIDE"):
+        with pytest.raises(shell.GuardError, match="PG\\*"):
+            shell.validate_database_url(env["DATABASE_URL"], {**env, setting: "redirect"})
     with pytest.raises(shell.GuardError, match="usuario"):
         shell.validate_database_url(
-            "postgresql://another_user@" + shell.EXPECTED_POSTGRES_ID + "/mininode")
+            "postgresql://another_user:fake@" + shell.EXPECTED_POSTGRES_ID + "/mininode", env)
+    with pytest.raises(shell.GuardError, match="contraseña"):
+        shell.validate_database_url(
+            "postgresql://mininode_user@" + shell.EXPECTED_POSTGRES_ID + "/mininode", env)
+    with pytest.raises(shell.GuardError, match="Puerto"):
+        shell.validate_database_url(env["DATABASE_URL"] + "?port=5433", env)
+    with pytest.raises(shell.GuardError, match="TLS"):
+        shell.validate_database_url(env["DATABASE_URL"] + "?sslmode=disable", env)
+    shell.validate_database_url(env["DATABASE_URL"] + "?sslmode=require", env)
     with pytest.raises(shell.GuardError, match="DATABASE_URL"):
-        shell.validate_database_url("")
+        shell.validate_database_url("", env)
+
+
+def test_pr5_shell_rejects_libpq_hostaddr_before_connect(monkeypatch, capsys):
+    env = {**_synthetic_render_env(), "PGHOSTADDR": "127.0.0.1"}
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect",
+                        lambda *args, **kw: pytest.fail("must not connect"))
+    assert shell.main(["--check"]) == 1
+    assert "FAIL" in capsys.readouterr().err
 
 
 def test_pr5_shell_execute_refuses_non_tty_before_connect(monkeypatch, capsys):
@@ -500,6 +543,40 @@ def test_pr5_shell_readonly_preflight_never_drops(pr5_shell_data):
             conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
             for name in shell.OLD_TABLES
         )
+
+
+def test_pr5_shell_readonly_preflight_rejects_wrong_order_status(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"]) as conn:
+        # Counts remain 2 / 3 / 1, but payment state no longer matches approval.
+        conn.execute("""
+            UPDATE privacy.correction_plan_order
+            SET status = 'pending_payment'
+            WHERE id = (SELECT id FROM privacy.correction_plan_order
+                        WHERE status = 'paid' LIMIT 1)
+        """)
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        with pytest.raises(shell.GuardError, match="órdenes"):
+            shell.check_only(conn)
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
+            for name in shell.OLD_TABLES
+        )
+
+
+def test_pr5_shell_readonly_preflight_rejects_missing_paid_at(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("""
+            UPDATE privacy.correction_plan_order SET paid_at = NULL
+            WHERE id = (SELECT id FROM privacy.correction_plan_order
+                        WHERE status = 'paid' LIMIT 1)
+        """)
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        with pytest.raises(shell.GuardError, match="órdenes"):
+            shell.check_only(conn)
 
 
 def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_shell_data):
