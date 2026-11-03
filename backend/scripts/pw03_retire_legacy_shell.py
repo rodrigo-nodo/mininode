@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import warnings
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
@@ -91,6 +92,13 @@ def _require_interactive_tty() -> None:
         raise GuardError("La ejecución destructiva requiere una terminal interactiva")
 
 
+def _hidden_input(prompt: str) -> str:
+    # Never fall back to echoing authorization fingerprints in the terminal.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", getpass.GetPassWarning)
+        return getpass.getpass(prompt).strip()
+
+
 def read_approved_values(deployed_sha: str) -> tuple[str, str]:
     """Read a prior external approval; never derive it from this connection."""
     print("REQUIERE autorización destructiva específica previa, fuera de esta consola.")
@@ -98,11 +106,11 @@ def read_approved_values(deployed_sha: str) -> tuple[str, str]:
     approved_sha = input("SHA completo del backend LIVE aprobado: ").strip()
     if render_id != EXPECTED_POSTGRES_ID or approved_sha != deployed_sha:
         raise GuardError("Identidad del recurso/commit no coincide con la aprobación")
-    cluster = getpass.getpass("Huella SHA-256 de clúster aprobada (oculta): ").strip()
-    inventory = getpass.getpass("Huella SHA-256 de filas aprobada (oculta): ").strip()
+    cluster = _hidden_input("Huella SHA-256 de clúster aprobada (oculta): ")
+    inventory = _hidden_input("Huella SHA-256 de filas aprobada (oculta): ")
     if not HEX64.fullmatch(cluster) or not HEX64.fullmatch(inventory):
         raise GuardError("Faltan huellas SHA-256 aprobadas válidas")
-    phrase = getpass.getpass("Autorización destructiva específica (oculta): ").strip()
+    phrase = _hidden_input("Autorización destructiva específica (oculta): ")
     if phrase != EXPLICIT_APPROVAL:
         raise GuardError("Falta la autorización destructiva específica")
     return cluster, inventory
@@ -201,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
                 execute_retirement(conn, *approved)
                 print("PASS: retiro manual confirmado; 3 tablas antiguas ausentes")
         return 0
-    except (GuardError, psycopg.Error, OSError, EOFError, KeyboardInterrupt):
+    except (GuardError, psycopg.Error, OSError, EOFError, KeyboardInterrupt,
+            getpass.GetPassWarning):
         # Do not leak DSNs, hashes or data in exception diagnostics.
         print(
             "FAIL: operación no confirmada. No reintentar automáticamente; "
