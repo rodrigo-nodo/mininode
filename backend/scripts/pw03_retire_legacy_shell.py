@@ -147,24 +147,92 @@ def _validate_connected_database(conn: psycopg.Connection) -> None:
         raise GuardError("La sesión no corresponde a la base/rol autorizado")
 
 
-def approval_logging_is_safe(conn: psycopg.Connection) -> bool:
-    """Inspect the actual session BEFORE transmitting any approved fingerprint.
+# Known preload modules with reviewed effects on bind-parameter confidentiality.
+# Any additional loaded library is a separate, unreviewed logging surface.
+ALLOWED_PRELOAD_LIBRARIES = frozenset({
+    "pg_stat_statements", "auto_explain", "pgaudit",
+})
+PRELOAD_SETTINGS = (
+    "shared_preload_libraries", "session_preload_libraries",
+    "local_preload_libraries",
+)
+STANDARD_LOGGING_SETTINGS = (
+    "log_parameter_max_length", "log_parameter_max_length_on_error",
+)
 
-    PostgreSQL may log bind values of slow statements when
-    log_parameter_max_length != 0. Error messages have a separate limit.
-    Never attempt to change managed-DB configuration from this executor.
+
+def _approval_logging_settings_are_safe(settings: dict[str, str]) -> bool:
+    """Conservative test of *effective* session settings, never a global promise.
+
+    PG hides some pg_settings from unprivileged roles. Missing preload
+    entries are UNKNOWN, not empty. Reject them rather than assume no modules.
+    Also detect modules loaded with LOAD instead of only via preload.
     """
-    # pg_settings.setting is the canonical unit-free value (unlike SHOW /
-    # current_setting, which can return strings such as '1B').
-    row = conn.execute("""
-        SELECT
-            (SELECT setting FROM pg_settings
-             WHERE name = 'log_parameter_max_length') AS normal_limit,
-            (SELECT setting FROM pg_settings
-             WHERE name = 'log_parameter_max_length_on_error') AS error_limit
-    """).fetchone()
-    return row is not None and row["normal_limit"] == "0" and row["error_limit"] == "0"
+    if any(settings.get(name) != "0" for name in STANDARD_LOGGING_SETTINGS):
+        return False
+    if any(name not in settings for name in PRELOAD_SETTINGS):
+        return False
+    loaded = set()
+    for name in PRELOAD_SETTINGS:
+        value = settings[name]
+        if not isinstance(value, str):
+            return False
+        for raw in value.split(","):
+            module = raw.strip().strip("'\"")
+            if module:
+                loaded.add(module)
+    if loaded - ALLOWED_PRELOAD_LIBRARIES:
+        return False
+    auto_settings = any(name.startswith("auto_explain.") for name in settings)
+    audit_settings = any(name.startswith("pgaudit.") for name in settings)
+    if "auto_explain" in loaded and not auto_settings:
+        return False
+    if "pgaudit" in loaded and not audit_settings:
+        return False
+    # auto_explain has its own parameter limit independent of the core GUC.
+    # Require zero even when its plan-logging threshold appears disabled.
+    if auto_settings and settings.get("auto_explain.log_parameter_max_length") != "0":
+        return False
+    # pgAudit's logging of bind values is independent of both core limits.
+    if audit_settings and settings.get("pgaudit.log_parameter") != "off":
+        return False
+    # The audit extension could exist without visible settings. Fail closed.
+    if settings.get("__pgaudit_extension_installed__") == "yes" and not audit_settings:
+        return False
+    return True
 
+
+def approval_logging_is_safe(conn: psycopg.Connection) -> bool:
+    """Inspect loaded libraries, core, auto_explain, pgAudit and audit extension.
+
+    All reads use the SAME psycopg session as the future SQL. pg_settings
+    suppresses privileged GUC rows rather than returning empty values; thus
+    a missing preload row blocks execution. No SQL writes or GUC mutations.
+    """
+    try:
+        rows = conn.execute("""
+            SELECT name, setting
+              FROM pg_settings
+             WHERE name IN (
+                 'log_parameter_max_length',
+                 'log_parameter_max_length_on_error',
+                 'shared_preload_libraries',
+                 'session_preload_libraries',
+                 'local_preload_libraries'
+             )
+                OR name LIKE 'auto_explain.%'
+                OR name LIKE 'pgaudit.%'
+            UNION ALL
+            SELECT '__pgaudit_extension_installed__', 'yes'
+              FROM pg_extension WHERE extname = 'pgaudit'
+        """).fetchall()
+        settings = {
+            row["name"]: row["setting"] for row in rows
+        }
+        return _approval_logging_settings_are_safe(settings)
+    except (psycopg.Error, TypeError, KeyError, ValueError):
+        # Unreadable GUCs, query failures and unexpected results fail closed.
+        return False
 
 def require_safe_approval_logging(conn: psycopg.Connection) -> None:
     if not approval_logging_is_safe(conn):
@@ -291,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("PASS: lectura e inventario estructural esperado; no es autorización para borrar. " + sha[:12])
                 print(" / ".join(f"{key}={value}" for key, value in summary.items()))
                 if not approval_logging_is_safe(conn):
-                    print("BLOQUEADO: --execute exige protección de huellas en logs PostgreSQL")
+                    print("BLOQUEADO: --execute exige verificación completa de logs y módulos PostgreSQL")
                 else:
                     print("Logs: protección de parámetros comprobada en esta sesión; NO autoriza borrar")
             else:
