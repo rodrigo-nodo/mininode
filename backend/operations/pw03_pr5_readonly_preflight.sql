@@ -2,15 +2,15 @@
 -- Execute on the Render-selected Postgres resource BEFORE seeking destructive approval.
 -- No secrets or customer email values are returned. Store IDs/manifests in private evidence.
 -- Fingerprints must be reviewed outside the execution session and remain unchanged.
--- TimeZone must be UTC (the destructive script fixes it to UTC).
+-- TimeZone must be UTC or Etc/UTC (the destructive script fixes it to UTC).
 SELECT
     current_database() AS database_name,
     current_user AS database_user,
     current_setting('TimeZone') AS timezone,
-    CASE WHEN current_setting('TimeZone') = 'UTC'
+    CASE WHEN current_setting('TimeZone') IN ('UTC', 'Etc/UTC')
          THEN encode(sha256(convert_to((SELECT system_identifier::text FROM pg_control_system()), 'UTF8')), 'hex')
          ELSE NULL END AS cluster_fingerprint_sha256,
-    CASE WHEN current_setting('TimeZone') = 'UTC'
+    CASE WHEN current_setting('TimeZone') IN ('UTC', 'Etc/UTC')
          THEN encode(sha256(convert_to(
         jsonb_build_object(
             'plans', COALESCE(
