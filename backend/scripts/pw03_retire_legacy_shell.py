@@ -2,8 +2,8 @@
 
 This module is NOT imported by the app and is NEVER a Render Pre-deploy step.
 Its only destructive entry point requires --execute, an interactive terminal,
-independently approved fingerprints and a separate operator authorization.
-No CLI argument, environment variable or log contains the approval fingerprints.
+an explicit operator confirmation and separate PO authorization.
+No authorization fingerprint is calculated or sent to PostgreSQL.
 """
 from __future__ import annotations
 
@@ -37,7 +37,6 @@ EXPECTED_DB_USER = "mininode_user"
 DELETE_ACK = "DELETE_2_PAID_1_PENDING_LEGACY_ORDERS"
 EXPLICIT_APPROVAL = "ELIMINAR_3_TABLAS_LEGACY_PROD_SIN_RESPALDO"
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
-HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 # The Render human-readable service name is not an immutable identity:
 # production is pinned by RENDER_SERVICE_ID plus repo, branch, type,
@@ -82,8 +81,8 @@ def validate_render_env(env: dict[str, str]) -> str:
 def validate_database_url(url: str, env: dict[str, str]) -> None:
     """Reject every libpq routing override before opening any DB connection.
 
-    The exact internal hostname is pinned independently of the resource-ID
-    prompt and the SQL cluster/row fingerprints; none is sufficient alone.
+    The exact internal hostname is pinned independently of the resource ID
+    entered interactively. A matching DB name alone is not sufficient.
     No client defaults, connection services, IP routing, multi-host failover,
     Unix socket paths, alternate ports or unexpected URI options are allowed.
     """
@@ -118,141 +117,46 @@ def _require_interactive_tty() -> None:
 
 
 def _hidden_input(prompt: str) -> str:
-    # Never fall back to echoing authorization fingerprints in the terminal.
+    # Do not display an explicit destructive confirmation in the terminal.
     with warnings.catch_warnings():
         warnings.simplefilter("error", getpass.GetPassWarning)
         return getpass.getpass(prompt).strip()
 
 
-def read_approved_values(deployed_sha: str) -> tuple[str, str]:
-    """Read a prior external approval; never derive it from this connection."""
+def confirm_destructive_approval(deployed_sha: str) -> None:
+    """Requires prior explicit authorization from the PO, outside this tool."""
     print("REQUIERE autorización destructiva específica previa, fuera de esta consola.")
     render_id = input("postgresId Render primario aprobado: ").strip()
     approved_sha = input("SHA completo del backend LIVE aprobado: ").strip()
     if render_id != EXPECTED_POSTGRES_ID or approved_sha != deployed_sha:
         raise GuardError("Identidad del recurso/commit no coincide con la aprobación")
-    cluster = _hidden_input("Huella SHA-256 de clúster aprobada (oculta): ")
-    inventory = _hidden_input("Huella SHA-256 de filas aprobada (oculta): ")
-    if not HEX64.fullmatch(cluster) or not HEX64.fullmatch(inventory):
-        raise GuardError("Faltan huellas SHA-256 aprobadas válidas")
     phrase = _hidden_input("Autorización destructiva específica (oculta): ")
     if phrase != EXPLICIT_APPROVAL:
         raise GuardError("Falta la autorización destructiva específica")
-    return cluster, inventory
 
 
 def _validate_connected_database(conn: psycopg.Connection) -> None:
-    row = conn.execute("SELECT current_database() AS db, current_user AS db_user").fetchone()
-    if row["db"] != EXPECTED_DATABASE or row["db_user"] != EXPECTED_DB_USER:
-        raise GuardError("La sesión no corresponde a la base/rol autorizado")
+    row = conn.execute("""
+        SELECT current_database() AS db, current_user AS db_user,
+               pg_is_in_recovery() AS is_replica
+    """).fetchone()
+    if (not row or row["db"] != EXPECTED_DATABASE
+            or row["db_user"] != EXPECTED_DB_USER or row["is_replica"]):
+        raise GuardError("La sesión no corresponde a la base/rol primario autorizado")
 
 
-# Known preload modules with reviewed effects on bind-parameter confidentiality.
-# Any additional loaded library is a separate, unreviewed logging surface.
-ALLOWED_PRELOAD_LIBRARIES = frozenset({
-    "pg_stat_statements", "auto_explain", "pgaudit",
-})
-PRELOAD_SETTINGS = (
-    "shared_preload_libraries", "session_preload_libraries",
-    "local_preload_libraries",
-)
-STANDARD_LOGGING_SETTINGS = (
-    "log_parameter_max_length", "log_parameter_max_length_on_error",
-)
-
-
-def _approval_logging_settings_are_safe(settings: dict[str, str]) -> bool:
-    """Conservative test of *effective* session settings, never a global promise.
-
-    PG hides some pg_settings from unprivileged roles. Missing preload
-    entries are UNKNOWN, not empty. Reject them rather than assume no modules.
-    Also detect modules loaded with LOAD instead of only via preload.
-    """
-    if any(settings.get(name) != "0" for name in STANDARD_LOGGING_SETTINGS):
-        return False
-    if any(name not in settings for name in PRELOAD_SETTINGS):
-        return False
-    loaded = set()
-    for name in PRELOAD_SETTINGS:
-        value = settings[name]
-        if not isinstance(value, str):
-            return False
-        for raw in value.split(","):
-            module = raw.strip().strip("'\"")
-            if module:
-                loaded.add(module)
-    if loaded - ALLOWED_PRELOAD_LIBRARIES:
-        return False
-    auto_settings = any(name.startswith("auto_explain.") for name in settings)
-    audit_settings = any(name.startswith("pgaudit.") for name in settings)
-    if "auto_explain" in loaded and not auto_settings:
-        return False
-    if "pgaudit" in loaded and not audit_settings:
-        return False
-    # auto_explain has its own parameter limit independent of the core GUC.
-    # Require zero even when its plan-logging threshold appears disabled.
-    if auto_settings and settings.get("auto_explain.log_parameter_max_length") != "0":
-        return False
-    # pgAudit's logging of bind values is independent of both core limits.
-    if audit_settings and settings.get("pgaudit.log_parameter") != "off":
-        return False
-    # The audit extension could exist without visible settings. Fail closed.
-    if settings.get("__pgaudit_extension_installed__") == "yes" and not audit_settings:
-        return False
-    return True
-
-
-def approval_logging_is_safe(conn: psycopg.Connection) -> bool:
-    """Inspect loaded libraries, core, auto_explain, pgAudit and audit extension.
-
-    All reads use the SAME psycopg session as the future SQL. pg_settings
-    suppresses privileged GUC rows rather than returning empty values; thus
-    a missing preload row blocks execution. No SQL writes or GUC mutations.
-    """
-    try:
-        rows = conn.execute("""
-            SELECT name, setting
-              FROM pg_settings
-             WHERE name IN (
-                 'log_parameter_max_length',
-                 'log_parameter_max_length_on_error',
-                 'shared_preload_libraries',
-                 'session_preload_libraries',
-                 'local_preload_libraries'
-             )
-                OR name LIKE 'auto_explain.%'
-                OR name LIKE 'pgaudit.%'
-            UNION ALL
-            SELECT '__pgaudit_extension_installed__', 'yes'
-              FROM pg_extension WHERE extname = 'pgaudit'
-        """).fetchall()
-        settings = {
-            row["name"]: row["setting"] for row in rows
-        }
-        return _approval_logging_settings_are_safe(settings)
-    except (psycopg.Error, TypeError, KeyError, ValueError):
-        # Unreadable GUCs, query failures and unexpected results fail closed.
-        return False
-
-def require_safe_approval_logging(conn: psycopg.Connection) -> None:
-    if not approval_logging_is_safe(conn):
-        raise GuardError(
-            "Logs PostgreSQL no protegen huellas; ejecución destructiva bloqueada"
-        )
-
-
-def check_only(conn: psycopg.Connection) -> dict[str, int]:
-    """Read-only summary; no IDs, email addresses or fingerprints in output."""
-    conn.execute("SET default_transaction_read_only = on")
+def inspect_inventory(conn: psycopg.Connection) -> dict[str, int]:
+    """Read current structural inventory; never print IDs or personal data."""
     _validate_connected_database(conn)
     with conn.cursor() as cur:
         cur.execute(PREFLIGHT_SQL.read_text(encoding="utf-8"))
         row = cur.fetchone()
-    if (not row or not row["cluster_fingerprint_sha256"]
-            or not row["legacy_inventory_sha256"]):
+    if (not row or row["plans_manifest"] is None
+            or row["orders_manifest"] is None
+            or row["checks_manifest"] is None):
         raise GuardError("Preflight incompleto; abortar")
-    # This is an expected-structure check, NOT independent approval of the
-    # full row fingerprint or evidence of rights/payouts.
+    # The shape/status checks are intentional: they do NOT protect against
+    # row content changes that preserve all counts and relationships.
     plans, orders, checks = (
         row["plans_manifest"], row["orders_manifest"], row["checks_manifest"],
     )
@@ -278,8 +182,11 @@ def check_only(conn: psycopg.Connection) -> dict[str, int]:
             )):
         raise GuardError("Preflight: órdenes antiguas no coinciden")
     check = checks[0]
-    if (not check["id"] or check["order_id"] not in {o["id"] for o in paid}
-            or check["correction_plan_id"] not in plan_ids
+    paid_by_id = {o["id"]: o for o in paid}
+    if (len({o["correction_plan_id"] for o in paid}) != 2
+            or not check["id"] or check["order_id"] not in paid_by_id
+            or check["correction_plan_id"] !=
+                paid_by_id[check["order_id"]]["correction_plan_id"]
             or not check["original_diagnostic_id"]
             or not check["check_diagnostic_id"]):
         raise GuardError("Preflight: revisión antigua inconsistente")
@@ -290,31 +197,31 @@ def check_only(conn: psycopg.Connection) -> dict[str, int]:
     }
 
 
-def execute_retirement(conn: psycopg.Connection, cluster: str, inventory: str) -> None:
-    """Execute the exact reviewed SQL once, in the same validated DB session.
+def check_only(conn: psycopg.Connection) -> dict[str, int]:
+    """Read-only mode: no DDL and no authorization payloads."""
+    conn.execute("SET default_transaction_read_only = on")
+    return inspect_inventory(conn)
 
-    The SQL file owns BEGIN / COMMIT and ACCESS EXCLUSIVE NOWAIT. An exception
-    aborts before COMMIT; an error during verification AFTER COMMIT must be
-    investigated, not blindly retried.
+
+def execute_retirement(conn: psycopg.Connection) -> None:
+    """Run guarded, atomic legacy retirement only after manual confirmation.
+
+    The reviewed SQL owns BEGIN/COMMIT, short locks, live inventory checks
+    and the three exact DROP RESTRICT statements. Post-commit errors require
+    independent read-only investigation; never retry automatically.
     """
-    if not HEX64.fullmatch(cluster) or not HEX64.fullmatch(inventory):
-        raise GuardError("Huella aprobada inválida")
     if not conn.autocommit:
         raise GuardError("Se requiere conexión autocommit para la transacción SQL manual")
-    # Revalidate in the SAME session, immediately before the first bind of
-    # the approved SHA-256 values. Unsafe logging must block all DDL.
-    require_safe_approval_logging(conn)
     _validate_connected_database(conn)
+    # Only public target/acknowledgement constants are bound to PostgreSQL.
+    # No private SHA-256 fingerprint or customer data is transmitted.
     for name, value in (
         ("mininode.pw03_pr5_target_database", EXPECTED_DATABASE),
-        ("mininode.pw03_pr5_target_cluster_sha256", cluster),
-        ("mininode.pw03_pr5_approved_inventory_sha256", inventory),
+        ("mininode.pw03_pr5_target_user", EXPECTED_DB_USER),
         ("mininode.pw03_pr5_ack", DELETE_ACK),
     ):
         conn.execute("SELECT set_config(%s, %s, false)", (name, value))
     try:
-        # No server-side bindings: psycopg sends multiple statements from
-        # the reviewed SQL file in one command on the SAME connection.
         conn.execute(RETIREMENT_SQL.read_text(encoding="utf-8"))
     except Exception:
         try:
@@ -347,9 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         validate_database_url(env.get("DATABASE_URL", ""), env)
         if args.execute:
             _require_interactive_tty()
-        # One connection; no modification to the Render environment or
-        # migration catalog. The connection string is NEVER printed.
-        # Check session logging BEFORE prompting for private approvals.
+        # One exact internal connection. No environment or migration changes.
         with psycopg.connect(
             env["DATABASE_URL"], autocommit=True, row_factory=dict_row,
             connect_timeout=10,
@@ -358,15 +263,12 @@ def main(argv: list[str] | None = None) -> int:
                 summary = check_only(conn)
                 print("PASS: lectura e inventario estructural esperado; no es autorización para borrar. " + sha[:12])
                 print(" / ".join(f"{key}={value}" for key, value in summary.items()))
-                if not approval_logging_is_safe(conn):
-                    print("BLOQUEADO: --execute exige verificación completa de logs y módulos PostgreSQL")
-                else:
-                    print("Logs: protección de parámetros comprobada en esta sesión; NO autoriza borrar")
             else:
-                _validate_connected_database(conn)
-                require_safe_approval_logging(conn)
-                approved = read_approved_values(sha)
-                execute_retirement(conn, *approved)
+                summary = inspect_inventory(conn)
+                print("Inventario previo verificado: " +
+                      " / ".join(f"{key}={value}" for key, value in summary.items()))
+                confirm_destructive_approval(sha)
+                execute_retirement(conn)
                 print("PASS: retiro manual confirmado; 3 tablas antiguas ausentes")
         return 0
     except (GuardError, psycopg.Error, OSError, EOFError, KeyboardInterrupt,

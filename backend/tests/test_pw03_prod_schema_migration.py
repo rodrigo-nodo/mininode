@@ -198,18 +198,13 @@ def _pr5_preflight(conn):
     return conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
 
 
-def _ack_pr5(conn, database_name, *, cluster=None, inventory=None, include_ack=True):
-    # The test fixture approves fingerprints from the *unchanged* isolated DB.
-    # Never compute execution approvals this way for PROD.
-    preview = _pr5_preflight(conn)
-    assert preview[2] in ("UTC", "Etc/UTC")
+def _ack_pr5(conn, database_name, *, user_name=None, include_ack=True):
+    """Only public destination and approval constants; no fingerprint hashes."""
     conn.execute("SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
                  (database_name,))
-    conn.execute("SELECT set_config('mininode.pw03_pr5_target_cluster_sha256', %s, false)",
-                 (cluster if cluster is not None else preview[3],))
-    if inventory is not False:
-        conn.execute("SELECT set_config('mininode.pw03_pr5_approved_inventory_sha256', %s, false)",
-                     (inventory if inventory is not None else preview[4],))
+    conn.execute("SELECT set_config('mininode.pw03_pr5_target_user', %s, false)",
+                 (user_name if user_name is not None
+                  else conn.execute("SELECT current_user").fetchone()[0],))
     if include_ack:
         conn.execute("SELECT set_config('mininode.pw03_pr5_ack', %s, false)",
                      ("DELETE_2_PAID_1_PENDING_LEGACY_ORDERS",))
@@ -222,171 +217,130 @@ def _pr5_tables(conn):
     }
 
 
-def test_pr5_script_is_manual_not_predeploy_and_restrict_only():
+def test_pr5_script_manual_transaction_and_exact_drop_contract():
     body = RETIREMENT_SCRIPT.read_text(encoding="utf-8")
+    preflight = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
     assert not (BACKEND / "migrations" / RETIREMENT_SCRIPT.name).exists()
     assert RETIREMENT_SCRIPT.name not in runner.APPROVED_CHECKSUMS
     with pytest.raises(ValueError, match="not in reviewed catalog"):
         runner.load_sql(RETIREMENT_SCRIPT.name)
     assert body.count("DROP TABLE privacy.") == 3
     assert body.count(" RESTRICT;") == 3
+    assert body.count("COMMIT;") == 1
+    assert "BEGIN;" in body and "ACCESS EXCLUSIVE MODE NOWAIT" in body
     assert "CASCADE;" not in body
-    assert "pg_control_system()" in body
-    assert "pg_control_system()" in PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
-    assert "approved_inventory_sha256" in body
-    assert "DROP TABLE privacy.diagnostic" not in body
-    assert "DROP TABLE privacy.entitled_plan" not in body
-    assert "DROP TABLE access.entitlements" not in body
+    assert "approved_inventory_sha256" not in body
+    assert "fingerprint" not in body.lower()
+    assert "sha256(" not in body.lower()
+    assert "sha256(" not in preflight.lower()
+    assert "set_config" not in preflight.lower()
+    for protected in ("privacy.diagnostic", "privacy.entitled_plan",
+                      "privacy.entitled_plan_check", "billing.orders",
+                      "access.entitlements"):
+        assert "DROP TABLE " + protected not in body
 
 
-def test_pr5_without_explicit_approval_keeps_all_data(pr5_legacy_data):
+def test_pr5_without_any_approval_keeps_all_data(pr5_legacy_data):
     p = pr5_legacy_data
-    with pytest.raises(psycopg.errors.RaiseException, match="target database approval"):
+    with pytest.raises(psycopg.errors.RaiseException, match="database/user"):
         with psycopg.connect(p["url"], autocommit=True) as conn:
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+@pytest.mark.parametrize("bad", ["database", "user", "ack"])
+def test_pr5_sql_refuses_wrong_destination_or_ack(pr5_legacy_data, bad):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"], autocommit=True) as conn:
+        db = conn.execute("SELECT current_database()").fetchone()[0]
+        if bad == "database":
+            _ack_pr5(conn, "different_database")
+        elif bad == "user":
+            _ack_pr5(conn, db, user_name="other_user")
+        else:
+            _ack_pr5(conn, db, include_ack=False)
+        with pytest.raises(psycopg.errors.RaiseException,
+                           match="database/user|destructive acknowledgement"):
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_sql_rejects_changed_paid_status_without_partial_delete(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("UPDATE privacy.correction_plan_order SET status='cancelled' WHERE id=%s",
+                     (p["old_orders"][2],))
+    with psycopg.connect(p["url"], autocommit=True) as conn:
+        _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+        with pytest.raises(psycopg.errors.RaiseException, match="legacy inventory"):
             conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
     with psycopg.connect(p["url"]) as db:
         assert all(_pr5_tables(db).values())
         assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
-        assert db.execute("SELECT count(*) FROM privacy.entitled_plan").fetchone()[0] == 1
 
 
-
-def test_pr5_target_database_mismatch_fails_even_with_ack(pr5_legacy_data):
+def test_pr5_sql_rejects_broken_relation_with_unchanged_counts(pr5_legacy_data):
     p = pr5_legacy_data
-    with pytest.raises(psycopg.errors.RaiseException, match="target database approval"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, "a_different_database")
+    with psycopg.connect(p["url"]) as conn:
+        # Valid FK, invalid business link: review points to a different paid order.
+        conn.execute("UPDATE privacy.correction_plan_check SET order_id=%s",
+                     (p["old_orders"][1],))
+    with psycopg.connect(p["url"], autocommit=True) as conn:
+        _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+        with pytest.raises(psycopg.errors.RaiseException, match="legacy inventory"):
             conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
     with psycopg.connect(p["url"]) as db:
         assert all(_pr5_tables(db).values())
 
 
-def test_pr5_correct_database_without_destructive_ack_fails(pr5_legacy_data):
+def test_pr5_sql_restrict_rolls_back_all_drops(pr5_legacy_data):
     p = pr5_legacy_data
-    with pytest.raises(psycopg.errors.RaiseException, match="destructive acknowledgement"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
-                     include_ack=False)
-            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-
-
-def test_pr5_rejects_changed_inventory_without_partial_deletion(pr5_legacy_data):
-    p = pr5_legacy_data
-    with psycopg.connect(p["url"]) as db:
-        db.execute("UPDATE privacy.correction_plan_order SET status='cancelled' WHERE id=%s",
-                   (p["old_orders"][2],))
-    with pytest.raises(psycopg.errors.RaiseException, match="inventory differs"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
-            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-        assert db.execute("SELECT count(*) FROM privacy.correction_plan_check").fetchone()[0] == 1
-
-
-def test_pr5_restrict_rejects_external_dependency_atomically(pr5_legacy_data):
-    p = pr5_legacy_data
-    with psycopg.connect(p["url"]) as db:
-        db.execute("""CREATE TABLE public.external_legacy_reference (
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("""CREATE TABLE public.external_legacy_reference (
             plan_id uuid REFERENCES privacy.correction_plan(id))""")
-    with pytest.raises(psycopg.errors.DependentObjectsStillExist):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+    with psycopg.connect(p["url"], autocommit=True) as conn:
+        _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+        with pytest.raises(psycopg.errors.DependentObjectsStillExist):
             conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
     with psycopg.connect(p["url"]) as db:
         assert all(_pr5_tables(db).values())
         assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
 
 
-
-def test_pr5_preflight_is_readonly_and_matches_locked_inventory(pr5_legacy_data):
+def test_pr5_readonly_preflight_returns_only_structural_manifest(pr5_legacy_data):
     p = pr5_legacy_data
-    body = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
-    assert "DROP " not in body.upper()
-    assert "DELETE " not in body.upper()
-    assert "UPDATE " not in body.upper()
-    with psycopg.connect(p["url"]) as db:
-        preview = _pr5_preflight(db)
-        assert preview[0] == db.execute("SELECT current_database()").fetchone()[0]
-        assert preview[2] in ("UTC", "Etc/UTC")
-        assert len(preview[3]) == len(preview[4]) == 64
-        assert len(preview[5]) == 2 and len(preview[6]) == 3 and len(preview[7]) == 1
-        assert {v["id"] for v in preview[6]} == {str(x) for x in p["old_orders"]}
-        assert {v["status"] for v in preview[6]} == {"paid", "pending_payment"}
+    preflight = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
+    assert not any(x in preflight.upper() for x in
+                   ("DROP TABLE", "DELETE FROM", "TRUNCATE", "UPDATE "))
+    with psycopg.connect(p["url"]) as conn:
+        row = _pr5_preflight(conn)
+        assert row[0] == conn.execute("SELECT current_database()").fetchone()[0]
+        assert row[2] is False
+        assert len(row[3]) == 2 and len(row[4]) == 3 and len(row[5]) == 1
+        assert {v["id"] for v in row[4]} == {str(x) for x in p["old_orders"]}
+        assert {v["status"] for v in row[4]} == {"paid", "pending_payment"}
 
 
-def test_pr5_rejects_wrong_cluster_despite_correct_database_and_counts(pr5_legacy_data):
-    p = pr5_legacy_data
-    with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
-                     cluster="0" * 64)
-            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-
-
-def test_pr5_rejects_missing_inventory_approval(pr5_legacy_data):
-    p = pr5_legacy_data
-    with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
-                     inventory=False)
-            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-
-
-def test_pr5_rejects_replaced_row_with_same_counts_and_statuses(pr5_legacy_data):
-    p = pr5_legacy_data
-    with psycopg.connect(p["url"]) as db:
-        approved = _pr5_preflight(db)
-    # Replace a row's commercial identity, preserving ALL original counts/statuses.
-    with psycopg.connect(p["url"]) as db:
-        db.execute("UPDATE privacy.correction_plan_order SET email='other@example.invalid' WHERE id=%s",
-                   (p["old_orders"][0],))
-    with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
-        with psycopg.connect(p["url"], autocommit=True) as conn:
-            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
-                     inventory=approved[4])
-            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-        assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
-
-
-def test_pr5_preflight_changes_when_row_id_is_replaced(pr5_legacy_data):
-    p = pr5_legacy_data
-    with psycopg.connect(p["url"]) as db:
-        approved = _pr5_preflight(db)
-        db.execute("UPDATE privacy.correction_plan_order SET id=%s WHERE id=%s",
-                   (uuid4(), p["old_orders"][2]))
-    with psycopg.connect(p["url"]) as db:
-        refreshed = _pr5_preflight(db)
-    assert refreshed[4] != approved[4]
-    assert len(refreshed[6]) == len(approved[6]) == 3
-
-def test_pr5_retirement_preserves_diagnostics_billing_and_entitled_plan(pr5_legacy_data):
+def test_pr5_retirement_preserves_current_product_data(pr5_legacy_data):
     p = pr5_legacy_data
     with psycopg.connect(p["url"], autocommit=True) as conn:
         _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
         conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
-    with psycopg.connect(p["url"]) as db:
-        assert not any(_pr5_tables(db).values())
-        assert db.execute("SELECT id FROM privacy.diagnostic WHERE id=%s",
-                          (p["diagnostic"],)).fetchone()[0] == p["diagnostic"]
-        assert db.execute("SELECT id FROM access.entitlements WHERE id=%s",
-                          (p["entitlement"],)).fetchone()[0] == p["entitlement"]
-        assert db.execute("SELECT id FROM privacy.entitled_plan WHERE id=%s",
-                          (p["entitled_plan"],)).fetchone()[0] == p["entitled_plan"]
-        assert db.execute("SELECT id FROM privacy.entitled_plan_check WHERE id=%s",
-                          (p["entitled_check"],)).fetchone()[0] == p["entitled_check"]
-        assert db.execute("SELECT count(*) FROM billing.orders").fetchone()[0] == 0
-        # The site-group operator already handles an absent legacy table.
+    with psycopg.connect(p["url"]) as conn:
+        assert not any(_pr5_tables(conn).values())
+        assert conn.execute("SELECT id FROM privacy.diagnostic WHERE id=%s",
+                            (p["diagnostic"],)).fetchone()[0] == p["diagnostic"]
+        assert conn.execute("SELECT id FROM access.entitlements WHERE id=%s",
+                            (p["entitlement"],)).fetchone()[0] == p["entitlement"]
+        assert conn.execute("SELECT id FROM privacy.entitled_plan WHERE id=%s",
+                            (p["entitled_plan"],)).fetchone()[0] == p["entitled_plan"]
+        assert conn.execute("SELECT id FROM privacy.entitled_plan_check WHERE id=%s",
+                            (p["entitled_check"],)).fetchone()[0] == p["entitled_check"]
+        assert conn.execute("SELECT count(*) FROM billing.orders").fetchone()[0] == 0
         from mininode_api.services import site_group_operator
-        with db.cursor() as cur:
+        with conn.cursor() as cur:
             site_group_operator._require_no_legacy_orders(
                 cur, tuple(), frozenset(("pr5.example.invalid",))
             )
@@ -503,378 +457,164 @@ def test_pr5_shell_execute_refuses_non_tty_before_connect(monkeypatch, capsys):
     assert "FAIL" in capsys.readouterr().err
 
 
-def test_pr5_shell_prompt_rejects_wrong_hashes_sha_and_confirmation(monkeypatch):
+def test_pr5_shell_confirmation_rejects_wrong_sha_and_phrase(monkeypatch):
     sha = "a" * 40
     monkeypatch.setattr("builtins.input", lambda prompt: (
-        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
-    sequence = iter(("z" * 64, "b" * 64, shell.EXPLICIT_APPROVAL))
-    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(sequence))
-    with pytest.raises(shell.GuardError, match="huellas"):
-        shell.read_approved_values(sha)
-
-    monkeypatch.setattr("builtins.input", lambda prompt: (
         shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else "f" * 40))
+    monkeypatch.setattr(shell.getpass, "getpass",
+                        lambda prompt: shell.EXPLICIT_APPROVAL)
     with pytest.raises(shell.GuardError, match="Identidad"):
-        shell.read_approved_values(sha)
+        shell.confirm_destructive_approval(sha)
 
     monkeypatch.setattr("builtins.input", lambda prompt: (
         shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
-    sequence = iter(("b" * 64, "c" * 64, "wrong-phrase"))
-    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(sequence))
+    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: "incorrect")
     with pytest.raises(shell.GuardError, match="autorización destructiva"):
-        shell.read_approved_values(sha)
+        shell.confirm_destructive_approval(sha)
+    monkeypatch.setattr(shell.getpass, "getpass",
+                        lambda prompt: shell.EXPLICIT_APPROVAL)
+    assert shell.confirm_destructive_approval(sha) is None
 
 
-@pytest.fixture
-def pr5_shell_data(pr5_legacy_data, monkeypatch):
-    # Keep exact database/user guards enabled, but bind them to the disposable
-    # PostgreSQL 18 test database instead of production.
-    info = conninfo_to_dict(pr5_legacy_data["url"])
-    monkeypatch.setattr(shell, "EXPECTED_DATABASE", info["dbname"])
-    monkeypatch.setattr(shell, "EXPECTED_DB_USER", info.get("user", "postgres"))
-    return pr5_legacy_data
-
-
-def test_pr5_shell_readonly_preflight_never_drops(pr5_shell_data):
-    from psycopg.rows import dict_row
-    with psycopg.connect(pr5_shell_data["url"], autocommit=True,
-                         row_factory=dict_row) as conn:
-        counts = shell.check_only(conn)
-        assert counts == {
-            "planes_antiguos": 2, "ordenes_antiguas": 3, "revisiones_antiguas": 1,
-        }
-        assert conn.execute("SHOW default_transaction_read_only").fetchone() == {
-            "default_transaction_read_only": "on",
-        }
-        assert all(
-            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
-            for name in shell.OLD_TABLES
-        )
-
-
-def test_pr5_shell_readonly_preflight_rejects_wrong_order_status(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"]) as conn:
-        # Counts remain 2 / 3 / 1, but payment state no longer matches approval.
-        conn.execute("""
-            UPDATE privacy.correction_plan_order
-            SET status = 'pending_payment'
-            WHERE id = (SELECT id FROM privacy.correction_plan_order
-                        WHERE status = 'paid' LIMIT 1)
-        """)
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        with pytest.raises(shell.GuardError, match="órdenes"):
-            shell.check_only(conn)
-        assert all(
-            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
-            for name in shell.OLD_TABLES
-        )
-
-
-def test_pr5_shell_readonly_preflight_rejects_missing_paid_at(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"]) as conn:
-        conn.execute("""
-            UPDATE privacy.correction_plan_order SET paid_at = NULL
-            WHERE id = (SELECT id FROM privacy.correction_plan_order
-                        WHERE status = 'paid' LIMIT 1)
-        """)
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        with pytest.raises(shell.GuardError, match="órdenes"):
-            shell.check_only(conn)
-
-
-def _synthetic_safe_logging_settings():
-    """PostgreSQL session metadata with readable core/preload parameters."""
-    return {
-        "log_parameter_max_length": "0",
-        "log_parameter_max_length_on_error": "0",
-        "shared_preload_libraries": "",
-        "session_preload_libraries": "",
-        "local_preload_libraries": "",
-    }
-
-
-@pytest.mark.parametrize("change", [
-    {"log_parameter_max_length": "-1"},
-    {"log_parameter_max_length_on_error": "1"},
-    {"auto_explain.log_analyze": "on",
-     "auto_explain.log_parameter_max_length": "-1"},
-    {"auto_explain.log_parameter_max_length": "1"},
-    {"pgaudit.log_parameter": "on", "pgaudit.log": "all"},
-    {"pgaudit.log_parameter": ""},
-    {"shared_preload_libraries": "unknown_audit_module"},
-    {"shared_preload_libraries": "auto_explain"},
-    {"session_preload_libraries": "pgaudit"},
-    {"local_preload_libraries": "auto_explain"},
-    {"__pgaudit_extension_installed__": "yes"},
-])
-def test_pr5_logging_guard_rejects_additional_untrusted_logging(change):
-    settings = {**_synthetic_safe_logging_settings(), **change}
-    assert not shell._approval_logging_settings_are_safe(settings)
-
-
-def test_pr5_logging_guard_allows_reviewed_modules_only_with_safe_settings():
-    settings = _synthetic_safe_logging_settings()
-    assert shell._approval_logging_settings_are_safe(settings)
-    settings["shared_preload_libraries"] = "pg_stat_statements, pgaudit"
-    settings["pgaudit.log"] = "all"
-    settings["pgaudit.log_parameter"] = "off"
-    settings["__pgaudit_extension_installed__"] = "yes"
-    assert shell._approval_logging_settings_are_safe(settings)
-    settings["session_preload_libraries"] = "auto_explain"
-    settings["auto_explain.log_analyze"] = "on"
-    settings["auto_explain.log_parameter_max_length"] = "0"
-    assert shell._approval_logging_settings_are_safe(settings)
-    # Installed / loaded audit module but its effective GUC is hidden:
-    del settings["pgaudit.log_parameter"]
-    assert not shell._approval_logging_settings_are_safe(settings)
-
-
-def test_pr5_logging_guard_rejects_unreadable_preload_settings():
-    safe = _synthetic_safe_logging_settings()
-    for name in (*shell.PRELOAD_SETTINGS, *shell.STANDARD_LOGGING_SETTINGS):
-        hidden = dict(safe)
-        del hidden[name]
-        assert not shell._approval_logging_settings_are_safe(hidden)
-
-
-def test_pr5_logging_guard_fails_closed_when_query_errors():
-    class UnreadableConn:
-        def execute(self, _sql):
-            raise psycopg.OperationalError("Cannot inspect parameter settings")
-
-    assert not shell.approval_logging_is_safe(UnreadableConn())
-    with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
-        shell.require_safe_approval_logging(UnreadableConn())
-
-
-def test_pr5_logging_guard_detects_changed_conditions_before_first_hash_bind(
-        pr5_shell_data, monkeypatch):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        seen = []
-        original_execute = conn.execute
-
-        def execute_spy(query, *args, **kwargs):
-            if "set_config" in query:
-                pytest.fail("No approval fingerprint may reach PostgreSQL")
-            seen.append(query)
-            return original_execute(query, *args, **kwargs)
-
-        # Simulate an external change between the pre-prompt check and the
-        # in-session check at the start of execute_retirement().
-        outcomes = iter((True, False))
-        monkeypatch.setattr(shell, "approval_logging_is_safe",
-                            lambda _conn: next(outcomes))
-        shell.require_safe_approval_logging(conn)
-        monkeypatch.setattr(conn, "execute", execute_spy)
-        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
-            shell.execute_retirement(conn, "a" * 64, "b" * 64)
-        assert not any("DROP TABLE" in sql for sql in seen)
-        assert all(original_execute(
-            "SELECT to_regclass(%s) AS target", (table,)
-        ).fetchone()["target"] for table in shell.OLD_TABLES)
-
-
-def test_pr5_logging_guard_prevents_hash_binding_and_ddl_when_unsafe(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET log_parameter_max_length = -1")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        assert not shell.approval_logging_is_safe(conn)
-        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
-            shell.execute_retirement(conn, "a" * 64, "b" * 64)
-        assert conn.execute(
-            "SELECT current_setting('mininode.pw03_pr5_target_cluster_sha256',true) AS v"
-        ).fetchone()["v"] is None
-        assert all(
-            conn.execute("SELECT to_regclass(%s) AS v", (name,)).fetchone()["v"]
-            for name in shell.OLD_TABLES
-        )
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 1")
-        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
-            shell.require_safe_approval_logging(conn)
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        assert shell.approval_logging_is_safe(conn)
-        shell.require_safe_approval_logging(conn)
-
-
-def test_pr5_shell_main_blocks_unsafe_logging_before_approvals(pr5_shell_data, monkeypatch, capsys):
-    p = pr5_shell_data
-    env = {
-        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
-        "DATABASE_URL": "postgresql://postgres:synthetic@"
-                        + shell.EXPECTED_POSTGRES_ID + "/"
-                        + conninfo_to_dict(p["url"])["dbname"],
-    }
-    real_connect = psycopg.connect
-
-    def connect_unsafe(url, **options):
-        assert url == env["DATABASE_URL"]
-        conn = real_connect(p["url"], **options)
-        conn.execute("SET log_parameter_max_length = -1")
-        return conn
-
-    monkeypatch.setattr(shell.os, "environ", env)
-    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
-    monkeypatch.setattr(shell, "_require_interactive_tty", lambda: None)
-    monkeypatch.setattr(shell, "read_approved_values",
-                        lambda sha: pytest.fail("must not ask for approvals"))
-    assert shell.main(["--execute"]) == 1
-    assert "FAIL" in capsys.readouterr().err
-    with real_connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-
-
-def test_pr5_shell_check_warns_unsafe_logging_without_failing(pr5_shell_data, monkeypatch, capsys):
-    p = pr5_shell_data
-    env = {
-        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
-        "DATABASE_URL": "postgresql://postgres:synthetic@"
-                        + shell.EXPECTED_POSTGRES_ID + "/"
-                        + conninfo_to_dict(p["url"])["dbname"],
-    }
-    real_connect = psycopg.connect
-
-    def connect_unsafe(url, **options):
-        conn = real_connect(p["url"], **options)
-        conn.execute("SET log_parameter_max_length = -1")
-        return conn
-
-    monkeypatch.setattr(shell.os, "environ", env)
-    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
-    assert shell.main(["--check"]) == 0
-    output = capsys.readouterr().out
-    assert "PASS: lectura e inventario estructural esperado" in output
-    assert "BLOQUEADO: --execute" in output
-    with real_connect(p["url"]) as db:
-        assert all(_pr5_tables(db).values())
-
-
-def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET TIME ZONE 'UTC'")
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
-        # Synthetic fixture only: production approvals must come from an INDEPENDENT preflight.
-        shell.execute_retirement(
-            conn, approved["cluster_fingerprint_sha256"],
-            approved["legacy_inventory_sha256"],
-        )
-        assert not any(
-            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
-            for name in shell.OLD_TABLES
-        )
-        assert conn.execute("SELECT count(*) AS n FROM privacy.entitled_plan").fetchone()["n"] == 1
-        assert conn.execute("SELECT count(*) AS n FROM privacy.diagnostic").fetchone()["n"] == 1
-        assert conn.execute("SELECT count(*) AS n FROM billing.orders").fetchone()["n"] == 0
-
-
-def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET TIME ZONE 'UTC'")
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
-        with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
-            shell.execute_retirement(conn, approved["cluster_fingerprint_sha256"], "0" * 64)
-        assert all(
-            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
-            for name in shell.OLD_TABLES
-        )
-        assert conn.execute("SELECT count(*) AS n FROM privacy.correction_plan_order").fetchone()["n"] == 3
-
-
-def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_shell_data):
-    from psycopg.rows import dict_row
-    p = pr5_shell_data
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET TIME ZONE 'UTC'")
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
-        with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
-            shell.execute_retirement(conn, "0" * 64, approved["legacy_inventory_sha256"])
-        assert all(
-            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
-            for name in shell.OLD_TABLES
-        )
-
-
-def test_pr5_shell_never_echoes_hidden_approvals(monkeypatch):
+def test_pr5_shell_never_echoes_confirmation(monkeypatch):
     import warnings
     sha = "a" * 40
     monkeypatch.setattr("builtins.input", lambda prompt: (
         shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
 
     def unsafe_getpass(prompt):
-        warnings.warn("Echo fallback would expose approval", shell.getpass.GetPassWarning)
-
+        warnings.warn("Echo fallback", shell.getpass.GetPassWarning)
     monkeypatch.setattr(shell.getpass, "getpass", unsafe_getpass)
     with pytest.raises(shell.getpass.GetPassWarning):
-        shell.read_approved_values(sha)
+        shell.confirm_destructive_approval(sha)
+
+
+@pytest.fixture
+def pr5_shell_data(pr5_legacy_data, monkeypatch):
+    info = conninfo_to_dict(pr5_legacy_data["url"])
+    monkeypatch.setattr(shell, "EXPECTED_DATABASE", info["dbname"])
+    monkeypatch.setattr(shell, "EXPECTED_DB_USER", info.get("user", "postgres"))
+    return pr5_legacy_data
+
+
+def test_pr5_shell_check_is_readonly(pr5_shell_data):
+    from psycopg.rows import dict_row
+    with psycopg.connect(pr5_shell_data["url"], autocommit=True,
+                         row_factory=dict_row) as conn:
+        assert shell.check_only(conn) == {
+            "planes_antiguos": 2, "ordenes_antiguas": 3, "revisiones_antiguas": 1,
+        }
+        assert conn.execute("SHOW default_transaction_read_only").fetchone() == {
+            "default_transaction_read_only": "on",
+        }
+        assert all(conn.execute("SELECT to_regclass(%s) AS target",
+                                (name,)).fetchone()["target"]
+                   for name in shell.OLD_TABLES)
+
+
+def test_pr5_shell_check_rejects_incorrect_order_status(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("UPDATE privacy.correction_plan_order SET status='cancelled' WHERE id=%s",
+                     (p["old_orders"][2],))
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        with pytest.raises(shell.GuardError, match="órdenes"):
+            shell.check_only(conn)
+        assert all(conn.execute("SELECT to_regclass(%s) AS target",
+                                (name,)).fetchone()["target"]
+                   for name in shell.OLD_TABLES)
+
+
+def test_pr5_shell_check_rejects_wrong_review_link(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("UPDATE privacy.correction_plan_check SET order_id=%s",
+                     (p["old_orders"][1],))
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        with pytest.raises(shell.GuardError, match="revisión antigua"):
+            shell.check_only(conn)
+
+
+def test_pr5_shell_execute_requires_autocommit_and_primary(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"], row_factory=dict_row) as conn:
+        with pytest.raises(shell.GuardError, match="autocommit"):
+            shell.execute_retirement(conn)
+
+
+def test_pr5_shell_execute_reuses_connection_preserves_new_data(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        shell.execute_retirement(conn)
+        assert all(conn.execute("SELECT to_regclass(%s) AS target",
+                                (name,)).fetchone()["target"] is None
+                   for name in shell.OLD_TABLES)
+        assert conn.execute("SELECT count(*) AS n FROM privacy.entitled_plan").fetchone()["n"] == 1
+        assert conn.execute("SELECT count(*) AS n FROM privacy.diagnostic").fetchone()["n"] == 1
+        assert conn.execute("SELECT count(*) AS n FROM billing.orders").fetchone()["n"] == 0
+
+
+def test_pr5_shell_execute_rejects_bad_inventory_without_drops(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"]) as conn:
+        conn.execute("UPDATE privacy.correction_plan_order SET status='cancelled' WHERE id=%s",
+                     (p["old_orders"][2],))
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        with pytest.raises(psycopg.errors.RaiseException, match="legacy inventory"):
+            shell.execute_retirement(conn)
+        assert all(conn.execute("SELECT to_regclass(%s) AS target",
+                                (name,)).fetchone()["target"]
+                   for name in shell.OLD_TABLES)
 
 
 def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatch, capsys):
     from psycopg.rows import dict_row
     p = pr5_shell_data
     sha = "a" * 40
-    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
-        conn.execute("SET TIME ZONE 'UTC'")
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
     env = {
         **shell.EXPECTED_RENDER,
         "RENDER_GIT_COMMIT": sha,
-        # Simulate the well-formed Render resource connection in the CLI;
-        # the actual opened session is the isolated PostgreSQL CI fixture.
         "DATABASE_URL": "postgresql://postgres:synthetic@"
                         + shell.EXPECTED_POSTGRES_ID
                         + "/" + conninfo_to_dict(p["url"])["dbname"],
     }
-    original_connect = psycopg.connect
+    real_connect = psycopg.connect
     connections = []
 
     def connect_once(url, **options):
         assert url == env["DATABASE_URL"]
         connections.append(True)
-        conn = original_connect(p["url"], **options)
-        # Only in disposable PG18: emulate logging already secured by the DBA.
-        conn.execute("SET log_parameter_max_length = 0")
-        conn.execute("SET log_parameter_max_length_on_error = 0")
-        return conn
+        return real_connect(p["url"], **options)
 
     monkeypatch.setattr(shell.os, "environ", env)
     monkeypatch.setattr(shell.psycopg, "connect", connect_once)
     monkeypatch.setattr(shell, "_require_interactive_tty", lambda: None)
     monkeypatch.setattr("builtins.input", lambda prompt: (
         shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
-    answers = iter((
-        approved["cluster_fingerprint_sha256"],
-        approved["legacy_inventory_sha256"],
-        shell.EXPLICIT_APPROVAL,
-    ))
-    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(answers))
+    monkeypatch.setattr(shell.getpass, "getpass",
+                        lambda prompt: shell.EXPLICIT_APPROVAL)
     assert shell.main(["--execute"]) == 0
     output = capsys.readouterr().out
     assert "PASS: retiro manual confirmado" in output
-    assert approved["cluster_fingerprint_sha256"] not in output
-    assert approved["legacy_inventory_sha256"] not in output
+    assert "planes_antiguos=2" in output
     assert len(connections) == 1
-    with original_connect(p["url"]) as conn:
+    with real_connect(p["url"]) as conn:
         assert not any(_pr5_tables(conn).values())
         assert conn.execute("SELECT count(*) FROM privacy.entitled_plan").fetchone()[0] == 1
+
+
+def test_pr5_shell_no_hash_payloads_or_sensitive_logging_guard():
+    script = SHELL_SCRIPT.read_text(encoding="utf-8")
+    assert "approved_inventory_sha256" not in script
+    assert "cluster_fingerprint_sha256" not in script
+    assert "log_parameter_max_length" not in script
+    assert "read_approved_values" not in script
+    assert "EXPLICIT_APPROVAL" in script
+    assert "EXPECTED_INTERNAL_HOST" in script
+
+

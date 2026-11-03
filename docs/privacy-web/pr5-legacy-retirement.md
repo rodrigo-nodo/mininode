@@ -1,270 +1,129 @@
-# PW-03 PR 5 — Retiro físico del comercio antiguo (procedimiento manual)
+# PW-03 — Retiro de tres tablas antiguas de Privacy Web
 
-**Estado:** preparado en código; **NO ejecutado**. El merge del PR 5 no constituye autorización para borrar datos en ningún entorno.
+**Estado:** limpieza física pendiente. El ejecutor actual (#426, #427, #428)
+está desplegado en producción, pero **no se ha ejecutado el borrado**.
+Este documento describe la versión simplificada propuesta en un PR posterior.
+**Aprobar o integrar el PR NO autoriza ejecutar `--execute`.**
 
-## Alcance
+## Alcance exacto
 
-Borrar únicamente `privacy.correction_plan_check`, `privacy.correction_plan_order` y `privacy.correction_plan`.
-Conservar `privacy.diagnostic`, `privacy.entitled_plan`, `privacy.entitled_plan_check`,
-`access.entitlements`, `billing.orders`, usuarios, workspaces y sus historiales.
-El backend nuevo ya no utiliza las tablas antiguas; el operador de agrupación
-de sitios consulta su existencia y puede operar cuando desaparezcan.
+Se eliminan **solamente** estas tres tablas de datos de prueba:
 
-## Inventario auditado en PROD (2 de noviembre de 2026)
-
-| Tabla | Registros |
-|---|---:|
-| `privacy.correction_plan` | 2, ambos `active` |
-| `privacy.correction_plan_order` | 3: 2 `paid` con `paid_at` y Plan, 1 `pending_payment` sin Plan |
+| Tabla | Filas esperadas |
+| --- | ---: |
+| `privacy.correction_plan` | 2 (`active`) |
+| `privacy.correction_plan_order` | 3 (2 `paid`, 1 `pending_payment`) |
 | `privacy.correction_plan_check` | 1 |
-| `privacy.diagnostic` | 298 |
-| `privacy.entitled_plan` / `privacy.entitled_plan_check` | 2 / 1 |
-| `access.entitlements` / `billing.orders` | 2 (ambos `internal_grant`) / 0 |
 
-Las marcas `paid` **no prueban un cobro real**. El Product Owner confirmó
-posteriormente que ambas órdenes eran pruebas, sin pagos reales y que
-sus datos pueden descartarse. Se mantiene la verificación operativa
-de que no aparecieron nuevos derechos u obligaciones.
+Se conservan `privacy.diagnostic` (298 en el preflight del 03-11-2026),
+`privacy.entitled_plan`, `privacy.entitled_plan_check`,
+`access.entitlements`, `billing.orders` y todas las demás tablas.
+Las dos órdenes antiguas marcadas `paid` son pruebas **sin pagos reales**,
+según la confirmación previa del Product Owner. La decisión de esta operación
+es **no realizar un respaldo adicional de las tres tablas** y aceptar
+la pérdida irreversible de los seis registros. Esta decisión no se extiende
+a otros datos ni significa que existan pagos verificados por sistema.
 
-No se observaron vistas, funciones ni triggers SQL externos que dependan de las tablas.
-Se identificaron FK entre las tablas antiguas, y hacia `privacy.diagnostic`.
-Una FK externa agregada posteriormente abortará la operación por `RESTRICT`.
+## Decisión de simplificación
 
-## Decisión operativa — 03-11-2026
+La versión previa exigía dos huellas SHA-256 privadas de clúster y filas,
+cuya transmisión a PostgreSQL abría un riesgo de exposición en logs de
+sentencias lentas. Ese mecanismo se reemplaza por una autorización manual
+explícita y verificaciones estructurales y de destino.
 
-Para este retiro puntual se eligió **Render Shell + ejecutor Python/`psycopg`**
-como mecanismo provisional de ejecución en cloud, **sin instalaciones en Windows**.
-No confundir esa decisión con autorización para borrar.
+- Se **eliminan** la entrada y la transmisión de huellas privadas, y el
+  control especial de parámetros/módulos de logs asociado a esas huellas.
+  No se necesita pedir a Render que cambie la configuración de PostgreSQL.
+- Se **mantienen** identificación estricta del servicio Render PROD,
+  branch `main`, SHA LIVE, URL y host interno PostgreSQL exactos, rol/base
+  y comprobación de nodo primario.
+- Se **mantienen** recuentos, estados y relaciones de planes, órdenes y
+  revisiones, además de locks `NOWAIT`, una única transacción,
+  `DROP TABLE ... RESTRICT`, validación posterior y rollback por error
+  previo al `COMMIT`.
+- **Riesgo aceptado al simplificar:** ya no se detectan cambios en otras
+  columnas de filas que mantengan la misma cantidad, estados y relaciones.
+  Por eso hay que reconfirmar que continúan siendo datos descartables
+  antes de autorizar el borrado.
+- Ningún secreto, correo, huella o URL de conexión se imprime ni se
+  introduce como argumento de terminal. La frase destructiva se
+  introduce oculta por terminal interactiva y **no se envía a SQL**.
+  Los valores de destino y acuse enviados al servidor son constantes
+  públicas, no credenciales.
 
-**Estado real del ejecutor (03-11-2026):** PR #426 integrado y
-desplegado en PROD; PR #427 corrigió un rechazo por el nombre legible
-del servicio. `--check` **PASS** contra el commit LIVE `254c8800f58d`:
-2 planes / 3 órdenes / 1 revisión. El ejecutor Python/`psycopg`
-está disponible en Render Shell, sin `psql`. **No se ha ejecutado
-`--execute` y ninguna tabla fue eliminada.**
+## Procedimiento manual — tres pasos
 
-**Seguridad de destino (B1):** para conectar, el ejecutor exige el hostname
-interno **completo y exacto** `dpg-da5fjmbm8hqs73chdceg-a`, sin sufijos
-ni dominios alternativos, así como la base, usuario y puerto aprobados.
-Rechaza `hostaddr`, `service`, múltiples destinos y otros parámetros libpq
-no aprobados, y también cualquier variable de entorno `PG*` con valor,
-incluidas `PGHOSTADDR` y `PGSERVICE`. Debe contrastarse este hostname exacto
-contra **Internal Database URL** de la instancia Render primaria durante la
-validación real, sin publicar el URL ni desactivar controles si falla.
-La coincidencia de huellas por sí sola no identifica un clon físico.
-
-**El merge de este PR tampoco autoriza ejecutar el borrado.**
-
-Otras modalidades no elegidas para este caso: GitHub Actions manual
-(requeriría workflow nuevo y conexión externa validada), y el runner
-Render Pre-deploy (reservado para migraciones revisadas no incluidas en
-este retiro). Política general:
-[procedimiento operativo PostgreSQL](../postgresql-migrations.md).
-
-### Decisiones comerciales y de recuperación
-
-El Product Owner confirmó expresamente que las **dos órdenes antiguas
-marcadas `paid` fueron pruebas, sin pagos reales**, y que no desea
-conservarlas. También decidió **no efectuar un respaldo adicional
-de estas tres tablas**, aceptando el riesgo de pérdida irreversible
-de sus datos históricos. Ambas decisiones están limitadas a este
-retiro; no constituyen una renuncia general a respaldos ni prueban por
-sí solas la ausencia de otros derechos u obligaciones.
-
-**Estado de seguridad:** PR #423 y #424 integrados en `main`. Ensayo
-del SQL con datos sintéticos en PostgreSQL 18 desechable
-[PASS: 436 tests](https://github.com/rodrigo-nodo/mininode/actions/runs/41645175977/attempts/2).
-En preflight de PROD de solo lectura se identificaron la BD y el
-recurso Render primario, el inventario 2 planes / 3 órdenes / 1 revisión,
-las huellas y ausencia de FK externas inesperadas; no se registran aquí
-identificadores de filas ni huellas. Antes de ejecutar deberán
-contrastarse de nuevo desde una vía independiente y aprobarse los
-valores exactos de forma privada.
-
-**Pendiente:** aprobar y desplegar la protección adicional de logs
-del PR #428, resolver la falta de visibilidad de las bibliotecas PostgreSQL
-con Render, revalidar `--check`, aprobar privadamente destino e inventario,
-y obtener **autorización destructiva específica para PROD**. Hasta
-entonces, las tres tablas siguen intactas.
-
-## Ejecutor Render Shell — integrado; validar cada versión desplegada
-
-El PR #426 incorporó **solo** los dos SQL aprobados de PW-03 en la imagen
-Docker y `backend/scripts/pw03_retire_legacy_shell.py` con `psycopg`.
-No añade `psql`, no crea endpoint HTTP, no cambia Pre-deploy ni toca la base
-durante el despliegue. El primer `--check` en Shell detectó una divergencia
-en `RENDER_SERVICE_NAME` y abortó sin cambios de datos. PR #427 corrige ese
-control redundante. **No volver a probar `--check` hasta confirmar que
-la corrección esté integrada y el nuevo SHA esté LIVE en Render.**
-
-En **Render → `mininode-backend-prod` → Shell**, solo cuando el commit
-del PR aprobado esté desplegado y el backend esté LIVE.
-
-**Validación de identidad:** el ID inmutable `RENDER_SERVICE_ID` sigue
-siendo obligatorio y se contrasta con la rama, repositorio, tipo de servicio,
-hostname público y SHA desplegado. `RENDER_SERVICE_NAME` es un identificador
-legible que puede diferir del nombre mostrado en el Dashboard; no se usa
-para autorizar ni denegar una operación destructiva. El rechazo por ese
-nombre observado en la primera prueba `--check` se corrige en un PR
-independiente. La comprobación exacta del destino PostgreSQL permanece
-sin cambios.
-
-**Inspección, una sola línea de Render Shell:**
+**1. Verificar.** Confirmar con el conector Render de solo lectura el recurso
+PostgreSQL primario `mininode-db` (`dpg-da5fjmbm8hqs73chdceg-a`),
+sin réplicas, y el inventario comercial. **Antes de autorizar el borrado,
+contrastar por una vía independiente y privada la identidad de los seis
+registros (2 IDs de planes, 3 de órdenes y 1 de revisión), sus estados y
+relaciones.** En particular, verificar que los dos pagos de prueba se
+asocien a los planes esperados y que `original_diagnostic_id` de la revisión
+coincida con el `diagnostic_id` de su orden; este último vínculo **no está
+exigido en el SQL destructivo**. No publicar IDs ni datos personales en
+GitHub, logs o el chat. Si cambia algún registro, detenerse y reevaluar;
+los controles de recuentos por sí solos no detectan sustituciones.
+Confirmar que el nuevo backend está LIVE en Render en el último commit de `main`.
+En **Render → mininode-backend-prod → Shell**, ejecutar **una sola línea**:
 
 ```sh
 python scripts/pw03_retire_legacy_shell.py --check
 ```
 
-Este comando verifica las variables automáticas de Render (servicio PROD,
-rama `main`, repositorio, SHA desplegado), la URL interna de la BD sin
-mostrarla, y ejecuta únicamente el preflight SQL de lectura. Además de
-recuentos 2/3/1, comprueba estados, enlaces e indicadores de pago del
-inventario esperado. **PASS significa solo que el preflight estructural
-coincide; NO significa que las huellas/filas se hayan aprobado
-independientemente ni que la operación destructiva esté autorizada.**
-No imprime huellas, IDs ni datos personales. Si el hostname interno exacto
-no coincide, **detenerse y revisar, no desactivar el guard**.
+Esperado: PASS con **2 planes / 3 órdenes / 1 revisión** y sin
+acciones destructivas. El control es solo lectura y no otorga autorización.
+Si falla o cambian los registros, **detenerse, no reintentar a ciegas**.
 
-**Ejecución destructiva, exclusivamente después de autorización PO separada
-y de la aprobación privada y previa de las dos huellas y SHA exacto,
-y con la protección de logs confirmada:**
+**2. Autorizar.** Tras revisar el resultado, obtener **una autorización
+posterior, específica y explícita del Product Owner** para eliminar
+las tres tablas concretas en PostgreSQL PROD, confirmando que los seis
+registros siguen siendo pruebas descartables, que las dos órdenes
+`paid` no son cobros reales y que se acepta no hacer respaldo adicional.
+El permiso para crear o mergear el PR **no es este permiso**.
+
+**3. Ejecutar y comprobar.** Solo con esa autorización y la versión LIVE
+validada, en la misma Render Shell invocar **una única línea**:
 
 ```sh
 python scripts/pw03_retire_legacy_shell.py --execute
 ```
 
-El ejecutor exige una terminal interactiva: solicita `postgresId`,
-commit completo aprobado y, con entrada oculta, las dos huellas aprobadas
-y la frase destructiva específica. **No copiar aquí ni publicar las huellas,
-contraseñas o la cadena `DATABASE_URL`.** No se permite automatizar esa
-interacción mediante un pipe ni establecer aprobaciones en variables de
-entorno. Una vez confirmadas, el ejecutor abre **una única conexión**,
-carga las aprobaciones como variables de sesión, ejecuta el SQL íntegro
-con `BEGIN/COMMIT`, locks `NOWAIT` y `DROP RESTRICT`, y valida que
-las tablas antiguas hayan desaparecido mientras el esquema nuevo permanece.
-**No derivar ninguna de las huellas de la sesión a borrar:** deben provenir
-del preflight independiente ya revisado. Sin la autorización explícita
-adicional del PO, no invocar `--execute`.
+El ejecutor exige terminal interactiva, el **postgresId aprobado**, el
+**SHA completo del backend LIVE** y una **frase destructiva oculta**.
+No acepta confirmación automática por argumentos o variables de entorno.
+Revalida conexión y estructura antes de solicitar confirmación. Una vez
+confirmada, el SQL verifica la base/usuario/primaria, bloquea las tres
+tablas con `ACCESS EXCLUSIVE NOWAIT` y **reverifica los recuentos,
+estados y relaciones bajo esos locks** antes de ejecutar exactamente
+tres `DROP TABLE ... RESTRICT` dentro de `BEGIN/COMMIT`.
 
-La ejecución imprime solo `PASS` o `FAIL` sin datos sensibles.
-Ante `FAIL`, **no reintentar**: consultar estado real mediante conexión
-de solo lectura. Si hubo fallo después del `COMMIT`, el borrado podría
-haber sucedido a pesar del mensaje `FAIL`; no asumir rollback.
-La verificación funcional y administrativa posterior continúa siendo
-obligatoria. Se requiere que el servicio permanezca LIVE.
+No ejecutar el SQL parcial, no habilitarlo en Pre-deploy, ni crear
+endpoint HTTP o workflow automático. El SQL solo vive en
+`backend/operations/pw03_pr5_retire_legacy_commerce.sql`.
 
-### Protección de huellas ante logs PostgreSQL — bloqueo obligatorio
+Tras el resultado, comprobar por lectura que no existen las tres tablas
+y que permanecen diagnósticos, entitlements, planes actuales y billing.
+Comprobar que Privacy Web y `/privacy/mi-plan/` siguen funcionando.
+Si falla, **no reintentar**: si el fallo ocurrió antes del `COMMIT`, se
+revierte toda la transacción; después del `COMMIT` podría haber eliminado
+las tablas aunque el ejecutor haya mostrado FAIL en la comprobación final.
 
-**Resultado real en PROD (inspección pasiva 03-11-2026):**
-`log_parameter_max_length=-1` y `log_min_duration_statement=2000` ms;
-`log_parameter_max_length_on_error=0`. Los parámetros `pgaudit.*`
-son visibles, con `pgaudit.log_parameter=off`; **esto no demuestra por
-sí solo que el mecanismo completo de auditoría esté seguro**. El usuario
-`mininode_user` **no puede consultar** `shared_preload_libraries`,
-por falta de privilegio; las filas de `shared_preload_libraries` y
-`session_preload_libraries` no aparecieron en la vista `pg_settings`
-consultada. Si no se puede establecer qué módulos están cargados,
-el resultado es **no verificable = bloqueado**.
+## Evidencia y límites
 
-**Controles automáticos de `--execute`, dentro de la misma sesión:**
-
-- Exigir `log_parameter_max_length=0` y
-  `log_parameter_max_length_on_error=0`.
-- Si `auto_explain` está cargado o sus GUC son visibles, exigir
-  `auto_explain.log_parameter_max_length=0`. Si no es verificable,
-  bloquear.
-- Si `pgAudit` está cargado, instalado o sus GUC son visibles,
-  exigir `pgaudit.log_parameter=off`. Si no es verificable, bloquear.
-- Exigir visibilidad de `shared_preload_libraries`,
-  `session_preload_libraries` y `local_preload_libraries`.
-  Admitir únicamente bibliotecas conocidas/revisadas
-  (`pg_stat_statements`, `auto_explain` y `pgaudit`);
-  ante cualquier biblioteca nueva o desconocida, **bloquear** hasta
-  que sea auditada.
-- Ante error de lectura de GUC, falta de filas o configuración
-  inconsistente, **bloquear**.
-
-Se verifica **antes de solicitar huellas al operador** y otra vez
-**justo antes de transmitirlas** mediante `set_config`. El programa
-no cambia configuración administrada, privilegios ni SQL destructivo.
-`--check` sigue ofreciendo PASS del inventario en modo solo lectura,
-pero añade un estado de **bloqueo de ejecución** independiente.
-
-**Acción operativa antes del borrado:** verificar con Render Support
-cómo obtener visibilidad de `shared_preload_libraries` /
-`session_preload_libraries` y si es posible establecer de forma
-administrada y temporal `log_parameter_max_length=0`, sin debilitar
-observabilidad o seguridad. `mininode_user` no puede modificar el
-parámetro. Si la plataforma no ofrece un camino verificable,
-**no ejecutar**: requiere diseñar/revisar otro mecanismo seguro.
-El PASS del PR/CI, el merge y el PASS de `--check` jamás autorizan DDL.
-
-Referencias:
-[PostgreSQL 18 — auto_explain](https://www.postgresql.org/docs/18/auto-explain.html),
-[pgAudit — parámetros de registro](https://github.com/pgaudit/pgaudit#settings).
-
-## Requisitos previos (obligatorios, no automatizados)
-
-1. Obtener **autorización destructiva específica** que identifique las tres tablas,
-   el entorno y el tratamiento de las 2 órdenes `paid`.
-2. Identificar y confirmar en tiempo real el **recurso PostgreSQL exacto en Render**:
-   workspace, postgresId, tipo primary, ausencia de réplicas y base seleccionada.
-   Obtener la huella de cluster SHA-256 del archivo de preflight, contrastarla por
-   una segunda vía (Render PostgreSQL, no solo el cliente psql), y vincularla
-   expresamente a la autorización operativa. Un nombre de BD coincidente no basta.
-   Revisar dependencias, backend LIVE y derechos u obligaciones pendientes.
-3. Autorizar **un inventario privado de filas individuales**, con IDs, estados,
-   vínculos entre orden/Plan/revisión y la huella SHA-256 de las tres tablas.
-   El archivo de preflight produce estos manifiestos sin correos ni snapshots;
-   su huella incluye *todas* las columnas de las filas, incluido el contenido
-   sensible, sin exponerlo. El hash debe aprobarse de manera independiente y
-   permanecer fijo hasta la ejecución; no regenerarlo automáticamente justo
-   antes de borrar.
-4. Confirmar respaldo **restaurable y probado** de los datos relevantes, o documentar
-   una aceptación explícita y específica de pérdida irreversible. DEV no es un respaldo de PROD.
-5. Ensayar primero en PostgreSQL 18 desechable/DEV con datos sintéticos;
-   conservar evidencia de las pruebas y revisión independiente.
-6. Asegurar que la operación se realice fuera de despliegues, en
-   **Render Shell** con el ejecutor Python/`psycopg` del PR #426, tras
-   comprobar el commit LIVE y sin acceso a una conexión de otro recurso.
-   No utilizar el conector de solo lectura para DDL ni habilitar la
-   migración en Render Pre-deploy.
-7. Revisar y resolver el riesgo de registros de parámetros sensibles
-   descrito en O3 antes de conectar para la ejecución destructiva.
-
-## SQL manual: contrato técnico, no una segunda ruta operativa
-
-El archivo `backend/operations/pw03_pr5_retire_legacy_commerce.sql`
-permanece fuera de `backend/migrations/` y de Pre-deploy. El ejecutor
-Render Shell lo carga completo **en una única conexión y sesión**, carga
-las huellas aprobadas como variables de sesión, y respeta `BEGIN/COMMIT`,
-`ACCESS EXCLUSIVE NOWAIT`, recuentos, huella del inventario bajo lock
-y `DROP TABLE ... RESTRICT` sin cambios al SQL ya auditado.
-**No usar `psql` ni ejecutar manualmente comandos SQL parciales**; las
-instrucciones `psql` anteriores se retiraron porque no son la vía
-seleccionada para PW-03.
-
-El preflight privado independiente sigue disponible en
-`backend/operations/pw03_pr5_readonly_preflight.sql`. Ejecutarlo por
-la conexión Render **de lectura**, confirmar `UTC` y aprobar
-privadamente el inventario completo y ambas huellas (no volcarlas en
-GitHub, logs ni chat). El ejecutor **nunca obtiene esas huellas de la
-sesión a borrar para autoautorizarse**.
-
-## Evidencias posteriores y recuperación
-
-Comprobar con SELECT que las tres tablas ya no existen; registrar diagnósticos,
-entitlements y nuevos Planes con los recuentos previos; verificar las APIs de
-diagnósticos, `/privacy/mi-plan/` y agrupación de sitios. Confirmar que el Plan
-nuevo sigue accesible y que el despliegue Render permanece LIVE.
-
-**Rollback:** antes de COMMIT, la transacción se revierte. Tras COMMIT, la eliminación
-de tablas y filas **no se deshace con un rollback de código**. Solo un respaldo
-restaurable adecuado puede recuperar ese contenido; si se aceptó el riesgo sin
-respaldo, no prometer reconstrucción. Nunca recrear automáticamente estas tablas
-en PROD desde fixtures de tests.
+- Último `--check` real (versión previa del ejecutor): PASS con commit
+  `b555f1fca9e1` y recuentos **2 / 3 / 1**; el bloqueo antiguo de logs
+  funcionó, y **no eliminó datos**.
+- La versión simplificada se debe ensayar en PostgreSQL 18 **desechable**
+  durante CI; después del merge, volver a validar la misma versión
+  desplegada en Render mediante `--check`.
+- El chequeo comercial de ausencia de pagos reales es una declaración
+  aprobada por el PO y debe seguir vigente; los estados `paid` en las
+  tablas antiguas **no demuestran por sí solos pagos realizados**.
+- Tras el `COMMIT`, estas tablas no se recuperan con un rollback de Git;
+  sin respaldo adicional, la pérdida de sus registros es irreversible.
 
 ## Relación con PW-04
 
-La limpieza de comercio legado no habilita checkout, no concede entitlements y
-no activa Mercado Pago. PW-04 es un trabajo separado.
+Este retiro **no** habilita checkout, no concede entitlements y no integra
+Mercado Pago. PW-04 es independiente.
