@@ -549,3 +549,63 @@ def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_shell_data):
             conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
             for name in shell.OLD_TABLES
         )
+
+
+def test_pr5_shell_never_echoes_hidden_approvals(monkeypatch):
+    import warnings
+    sha = "a" * 40
+    monkeypatch.setattr("builtins.input", lambda prompt: (
+        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
+
+    def unsafe_getpass(prompt):
+        warnings.warn("Echo fallback would expose approval", shell.getpass.GetPassWarning)
+
+    monkeypatch.setattr(shell.getpass, "getpass", unsafe_getpass)
+    with pytest.raises(shell.getpass.GetPassWarning):
+        shell.read_approved_values(sha)
+
+
+def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatch, capsys):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    sha = "a" * 40
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET TIME ZONE 'UTC'")
+        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
+    env = {
+        **shell.EXPECTED_RENDER,
+        "RENDER_GIT_COMMIT": sha,
+        # Simulate the well-formed Render resource connection in the CLI;
+        # the actual opened session is the isolated PostgreSQL CI fixture.
+        "DATABASE_URL": "postgresql://postgres:synthetic@"
+                        + shell.EXPECTED_POSTGRES_ID
+                        + "/" + conninfo_to_dict(p["url"])["dbname"],
+    }
+    original_connect = psycopg.connect
+    connections = []
+
+    def connect_once(url, **options):
+        assert url == env["DATABASE_URL"]
+        connections.append(True)
+        return original_connect(p["url"], **options)
+
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect", connect_once)
+    monkeypatch.setattr(shell, "_require_interactive_tty", lambda: None)
+    monkeypatch.setattr("builtins.input", lambda prompt: (
+        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
+    answers = iter((
+        approved["cluster_fingerprint_sha256"],
+        approved["legacy_inventory_sha256"],
+        shell.EXPLICIT_APPROVAL,
+    ))
+    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(answers))
+    assert shell.main(["--execute"]) == 0
+    output = capsys.readouterr().out
+    assert "PASS: retiro manual confirmado" in output
+    assert approved["cluster_fingerprint_sha256"] not in output
+    assert approved["legacy_inventory_sha256"] not in output
+    assert len(connections) == 1
+    with original_connect(p["url"]) as conn:
+        assert not any(_pr5_tables(conn).values())
+        assert conn.execute("SELECT count(*) FROM privacy.entitled_plan").fetchone()[0] == 1
