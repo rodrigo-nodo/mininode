@@ -46,13 +46,17 @@ huellas autorizadas previamente, controles de inventario y dependencias bajo
 lock, abortos seguros y resultado PASS/FAIL sin exponer secretos ni filas.
 Probarlo en PostgreSQL 18 desechable; revisar CI, diff y, por tratarse de
 DDL destructivo, solicitar revisión independiente. Antes de la ejecución,
-el programa exige en **su propia sesión** `log_parameter_max_length=0`
-y `log_parameter_max_length_on_error=0`, bloqueando `--execute` antes
-de solicitar aprobaciones si no se cumple. El control no cambia la
-configuración administrada. Como la configuración actual de PROD
-no cumple, **el borrado sigue BLOQUEADO** hasta resolverla por vía
-aprobada o desarrollar otro mecanismo seguro. **Merge no equivale a
-permiso para ejecutarlo.**
+el programa exige dentro de la **misma sesión** ambos parámetros
+estándar de logging de bind values en `0`, `auto_explain` con límite
+`0`, `pgaudit.log_parameter=off`, visibilidad de las bibliotecas
+preload y ausencia de módulos desconocidos. **La omisión de información
+por privilegios también provoca bloqueo.** Hay doble verificación,
+antes de solicitar huellas y justo antes de transmitirlas. En PROD
+falta permiso para inspeccionar las bibliotecas compartidas, además
+de presentar `log_parameter_max_length=-1`; por tanto
+**la ejecución sigue BLOQUEADA** hasta resolverlo de forma aprobada
+con Render o desarrollar un mecanismo seguro alternativo.
+**Merge no equivale a permiso para ejecutarlo.**
 
 ### Secuencia operativa obligatoria
 

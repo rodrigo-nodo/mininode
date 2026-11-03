@@ -36,11 +36,12 @@ Para este retiro puntual se eligió **Render Shell + ejecutor Python/`psycopg`**
 como mecanismo provisional de ejecución en cloud, **sin instalaciones en Windows**.
 No confundir esa decisión con autorización para borrar.
 
-**Estado del ejecutor:** el PR #426 incorpora en Docker únicamente los dos
-SQL de PW-03 y `backend/scripts/pw03_retire_legacy_shell.py`. **Todavía
-no está desplegado en PROD**: los comandos de Render Shell estarán disponibles
-solo tras CI, revisión independiente, merge autorizado y confirmación del
-backend LIVE. El ejecutor usa Python/`psycopg`, sin instalar `psql`.
+**Estado real del ejecutor (03-11-2026):** PR #426 integrado y
+desplegado en PROD; PR #427 corrigió un rechazo por el nombre legible
+del servicio. `--check` **PASS** contra el commit LIVE `254c8800f58d`:
+2 planes / 3 órdenes / 1 revisión. El ejecutor Python/`psycopg`
+está disponible en Render Shell, sin `psql`. **No se ha ejecutado
+`--execute` y ninguna tabla fue eliminada.**
 
 **Seguridad de destino (B1):** para conectar, el ejecutor exige el hostname
 interno **completo y exacto** `dpg-da5fjmbm8hqs73chdceg-a`, sin sufijos
@@ -80,10 +81,11 @@ identificadores de filas ni huellas. Antes de ejecutar deberán
 contrastarse de nuevo desde una vía independiente y aprobarse los
 valores exactos de forma privada.
 
-**Pendiente:** completar la revisión/CI del ejecutor del PR #426,
-verificarlo en Render Shell una vez LIVE, aprobar privadamente destino,
-huellas y controles de logs, y obtener **autorización destructiva específica
-para PROD**. Hasta entonces, las tres tablas siguen intactas.
+**Pendiente:** aprobar y desplegar la protección adicional de logs
+del PR #428, resolver la falta de visibilidad de las bibliotecas PostgreSQL
+con Render, revalidar `--check`, aprobar privadamente destino e inventario,
+y obtener **autorización destructiva específica para PROD**. Hasta
+entonces, las tres tablas siguen intactas.
 
 ## Ejecutor Render Shell — integrado; validar cada versión desplegada
 
@@ -153,43 +155,53 @@ obligatoria. Se requiere que el servicio permanezca LIVE.
 
 ### Protección de huellas ante logs PostgreSQL — bloqueo obligatorio
 
-En PROD, la inspección de solo lectura del 03-11-2026 encontró
-`log_min_duration_statement=2000` ms y `log_parameter_max_length=-1`
-(parámetros completos en sentencias lentas);
-`log_parameter_max_length_on_error=0` (parámetros de error ocultos).
-La plataforma Render [registra consultas lentas](https://render.com/docs/postgresql-creating-connecting).
-Las huellas SHA-256 privadas deben permanecer fuera de esos logs.
+**Resultado real en PROD (inspección pasiva 03-11-2026):**
+`log_parameter_max_length=-1` y `log_min_duration_statement=2000` ms;
+`log_parameter_max_length_on_error=0`. Los parámetros `pgaudit.*`
+son visibles, con `pgaudit.log_parameter=off`; **esto no demuestra por
+sí solo que el mecanismo completo de auditoría esté seguro**. El usuario
+`mininode_user` **no puede consultar** `shared_preload_libraries`,
+por falta de privilegio; las filas de `shared_preload_libraries` y
+`session_preload_libraries` no aparecieron en la vista `pg_settings`
+consultada. Si no se puede establecer qué módulos están cargados,
+el resultado es **no verificable = bloqueado**.
 
-**Control automático del ejecutor:** `--execute` exige, en la **misma sesión
-de PostgreSQL que recibiría las huellas**, ambas configuraciones efectivas:
+**Controles automáticos de `--execute`, dentro de la misma sesión:**
 
-- `log_parameter_max_length = 0` (no registrar valores de parámetros).
-- `log_parameter_max_length_on_error = 0` (tampoco en errores).
+- Exigir `log_parameter_max_length=0` y
+  `log_parameter_max_length_on_error=0`.
+- Si `auto_explain` está cargado o sus GUC son visibles, exigir
+  `auto_explain.log_parameter_max_length=0`. Si no es verificable,
+  bloquear.
+- Si `pgAudit` está cargado, instalado o sus GUC son visibles,
+  exigir `pgaudit.log_parameter=off`. Si no es verificable, bloquear.
+- Exigir visibilidad de `shared_preload_libraries`,
+  `session_preload_libraries` y `local_preload_libraries`.
+  Admitir únicamente bibliotecas conocidas/revisadas
+  (`pg_stat_statements`, `auto_explain` y `pgaudit`);
+  ante cualquier biblioteca nueva o desconocida, **bloquear** hasta
+  que sea auditada.
+- Ante error de lectura de GUC, falta de filas o configuración
+  inconsistente, **bloquear**.
 
-La comprobación sucede **antes de solicitar las huellas al operador** y
-se repite justo antes de transmitirlas al servidor. Si no se cumplen
-ambas, falla sin enviar aprobaciones, sin abrir una transacción
-destructiva y sin hacer DDL. El comando `--check` sigue devolviendo PASS
-para el inventario y añade `BLOQUEADO: --execute ...` cuando los logs
-no están protegidos. El PASS de inventario **no equivale a aprobación**.
+Se verifica **antes de solicitar huellas al operador** y otra vez
+**justo antes de transmitirlas** mediante `set_config`. El programa
+no cambia configuración administrada, privilegios ni SQL destructivo.
+`--check` sigue ofreciendo PASS del inventario en modo solo lectura,
+pero añade un estado de **bloqueo de ejecución** independiente.
 
-**Estado operativo:** `mininode_user` no dispone de privilegios `SET`
-sobre esos parámetros. El ejecutor **nunca** modifica la configuración
-de PostgreSQL. No se ha verificado un control autoservicio de Render
-que permita modificar esos ajustes. Consultar con Render Support
-sobre una configuración administrada y revisada (considerando su
-impacto sobre observabilidad), o diseñar y revisar otra forma de
-transmitir las autorizaciones que no exponga sus valores. **No ejecutar
-`--execute` con la configuración actual**, no intentar cambiar
-permisos ni eliminar el guard.
+**Acción operativa antes del borrado:** verificar con Render Support
+cómo obtener visibilidad de `shared_preload_libraries` /
+`session_preload_libraries` y si es posible establecer de forma
+administrada y temporal `log_parameter_max_length=0`, sin debilitar
+observabilidad o seguridad. `mininode_user` no puede modificar el
+parámetro. Si la plataforma no ofrece un camino verificable,
+**no ejecutar**: requiere diseñar/revisar otro mecanismo seguro.
+El PASS del PR/CI, el merge y el PASS de `--check` jamás autorizan DDL.
 
-La seguridad efectiva debe volverse a comprobar en Render PROD después
-del merge y la promoción LIVE del PR de protección de logs. La revisión
-de parámetros no reemplaza las aprobaciones privadas, la identidad de
-recurso ni la autorización destructiva específica.
-
-Referencia:
-[PostgreSQL 18 — reporte de parámetros en logs](https://www.postgresql.org/docs/18/runtime-config-logging.html).
+Referencias:
+[PostgreSQL 18 — auto_explain](https://www.postgresql.org/docs/18/auto-explain.html),
+[pgAudit — parámetros de registro](https://github.com/pgaudit/pgaudit#settings).
 
 ## Requisitos previos (obligatorios, no automatizados)
 
