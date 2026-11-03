@@ -1,95 +1,56 @@
-# Mininode - Migraciones PostgreSQL con Render Pre-deploy
+# Mininode — Migraciones PostgreSQL con Render Pre-deploy
 
-## Procedimiento operativo provisional de PostgreSQL — 03-11-2026
+## Procedimiento operativo PostgreSQL — PW-03 actualizado
 
-**Decisión del Product Owner:** ninguna instalación local de `psql`, PostgreSQL,
-Docker ni otras herramientas en Windows. Las consultas, pruebas y operaciones se
-ejecutan en servicios cloud ya utilizados por Mininode. Este procedimiento es el
-estándar **provisional** hasta que se revise una alternativa definitiva. No
-autoriza ninguna modificación de bases de datos por sí mismo.
+**Decisión del PO:** no instalar `psql`, PostgreSQL ni Docker localmente en
+Windows; las operaciones se realizan con GitHub, Render y recursos cloud.
+La inspección del estado real se hace mediante el conector Render **solo
+lectura**; las migraciones aprobadas siguen el catálogo de checksums con
+Render Pre-deploy; las operaciones destructivas excepcionales **nunca**
+entran automáticamente en el Pre-deploy.
 
-| Situación | Ruta preferida | Requisito de autorización |
+| Situación | Procedimiento | Autorización |
 | --- | --- | --- |
-| Inspección de esquema, datos y estado | Conector Render para consultas **solo lectura** | Respetar límites de privacidad; no escribir datos |
-| Migración ordinaria revisada | GitHub PR/CI → Render **Pre-deploy** con `APPROVED_CHECKSUMS` + `MIGRATION_APPROVED_FILES` exacta | Aprobar explícitamente SQL, entorno, tanda y activación; limpiar allowlist después |
-| Operación excepcional/destructiva, por ejemplo PW-03 PR 5 | GitHub PR/CI → **Render Shell** → ejecutor manual controlado mediante `psycopg` y conexión interna | Autorización destructiva **adicional y específica**, posterior a revisión y preflight |
-| Contingencia, si Render Shell no es viable | GitHub Actions manual con runner temporal, conexión externa, secretos y controles equivalentes | Decisión y autorización separadas; **no** usar automáticamente el workflow legado |
+| Consultas de estado y esquema | Conector Render, **solo SELECT** | Sin modificación |
+| Migración ordinaria | GitHub PR/CI → Render Pre-deploy con allowlist exacta | Aprobación del cambio |
+| PW-03 retiro de tres tablas de prueba | Render Shell + ejecutor manual `psycopg` | **Autorización destructiva adicional después del merge y del `--check`** |
 
-**GitHub Actions vs Render Shell:** ambos pueden ejecutar automáticamente las
-validaciones y el SQL una vez iniciado un *ejecutor* implementado. GitHub Actions
-automatiza además la orquestación (disparo manual, job, logs y resultado) y
-necesita una conexión de runner a BD; Render Shell exige abrir la terminal
-en el navegador y lanzar manualmente un comando, pero puede usar la conexión
-interna ya configurada. Render Pre-deploy es otro mecanismo: corre al
-desplegar, exclusivamente con SQL catalogado y allowlist autorizada. No usar
-Pre-deploy para el retiro destructivo de PW-03.
+### PW-03 — procedimiento simplificado
 
-### Estado y controles del ejecutor Render Shell
+Solo se retiran `privacy.correction_plan`,
+`privacy.correction_plan_order` y `privacy.correction_plan_check`
+(2 / 3 / 1 registros esperados).
 
-La imagen Docker del backend incluye `src/`, `migrations/`, `scripts/`
-y **únicamente los dos SQL manuales de PW-03** bajo `operations/`.
-El ejecutor Python/`psycopg` se integró en el PR #426; el ajuste de
-identidad del servicio del PR #427 está LIVE en Render y pasó `--check`
-contra PROD. No se instala `psql` y Render Shell **no** es una consola
-SQL directa. La ejecución destructiva sigue bloqueada hasta cumplir
-las aprobaciones privadas y la protección de logs.
-El ejecutor exige host PostgreSQL privado exacto (no prefijo), solo
-parámetros URI aprobados y ausencia de variables `PG*` que puedan
-cambiar la conexión efectiva en libpq. Si falla por host o variables
-de Render inesperadas, revisar la configuración real en lugar de
-deshabilitar controles. Ver el runbook específico.
+1. **Verificación:** confirmar PostgreSQL PROD primario, commit LIVE y
+   ejecutar `python scripts/pw03_retire_legacy_shell.py --check` en
+   Render Shell. Verificar 2 planes, 3 órdenes y 1 revisión con sus
+   estados y enlaces correctos. Confirmar que no existen pagos reales.
+2. **Autorización:** PO autoriza por separado la eliminación de estas
+   tres tablas sin respaldo adicional. Aprobar el PR o merge NO equivale
+   a autorizar el borrado.
+3. **Ejecución manual:** solo tras el punto anterior ejecutar
+   `python scripts/pw03_retire_legacy_shell.py --execute`, con terminal
+   interactiva, identidad del recurso, SHA LIVE y frase destructiva
+   oculta. El programa vuelve a validar base/usuario/primaria,
+   inventario bajo locks, `DROP RESTRICT` en única transacción y ausencia
+   posterior de tablas antiguas. Si se produce FAIL no reintentar sin
+   comprobar estado por lectura independiente.
 
-El PR del ejecutor es independiente y acotado: incorpora únicamente el SQL manual necesario (no todas las
-operaciones indiscriminadamente) y un ejecutor con `psycopg` que use una
-**única conexión/sesión y transacción**, identidad de recurso confirmada,
-huellas autorizadas previamente, controles de inventario y dependencias bajo
-lock, abortos seguros y resultado PASS/FAIL sin exponer secretos ni filas.
-Probarlo en PostgreSQL 18 desechable; revisar CI, diff y, por tratarse de
-DDL destructivo, solicitar revisión independiente. Antes de la ejecución,
-el programa exige dentro de la **misma sesión** ambos parámetros
-estándar de logging de bind values en `0`, `auto_explain` con límite
-`0`, `pgaudit.log_parameter=off`, visibilidad de las bibliotecas
-preload y ausencia de módulos desconocidos. **La omisión de información
-por privilegios también provoca bloqueo.** Hay doble verificación,
-antes de solicitar huellas y justo antes de transmitirlas. En PROD
-falta permiso para inspeccionar las bibliotecas compartidas, además
-de presentar `log_parameter_max_length=-1`; por tanto
-**la ejecución sigue BLOQUEADA** hasta resolverlo de forma aprobada
-con Render o desarrollar un mecanismo seguro alternativo.
-**Merge no equivale a permiso para ejecutarlo.**
+Se reemplazaron las huellas privadas de aprobación por controles
+estructurales y confirmación manual. **No se envían huellas privadas a
+PostgreSQL**, por lo que no es necesario cambiar logs ni permisos de Render
+para proteger esas huellas. La contrapartida explícita es que un cambio
+en otros campos con iguales recuentos/estados/relaciones no se detectará
+automáticamente. El ejecutor no altera el servidor salvo en el paso
+destructivo autorizado.
 
-### Secuencia operativa obligatoria
+El SQL de retiro permanece en `backend/operations/`, fuera del
+catálogo de migraciones y de cualquier proceso desatendido. No se habilita
+un endpoint ni un workflow de ejecución automática. Tras el `COMMIT`,
+solo un respaldo restaurable podría recuperar los registros; el PO ya
+aceptó no crear respaldo adicional **para estas tres tablas**.
 
-1. Revisar `main`, SQL exacto, CI, pruebas, impacto y runbook del caso.
-   Verificar desde Render el workspace, servicio, recurso PostgreSQL
-   primario, versión del backend y que no haya despliegues simultáneos.
-2. Hacer el preflight de **solo lectura** y aprobar la identidad y el
-   inventario exacto fuera del ejecutor. Definir explícitamente respaldo
-   recuperable o aceptación de pérdida irreversible **para esa operación**;
-   verificar pagos, derechos y obligaciones de terceros.
-3. Si requiere código de ejecución, crear un PR específico; validar con CI
-   y, cuando aplique, Reviewer; solicitar autorización **solo para merge**.
-4. Solicitar una segunda autorización **para ejecutar** en el entorno y
-   tablas aprobados. No reutilizar un permiso de merge o de otra migración.
-5. Ejecutar una sola vez desde la ruta aprobada; si falla cualquier guard,
-   abortar sin forzar COMMIT. Nunca pegar SQL parcial en la terminal ni
-   registrar URLs, tokens, huellas de autorización o datos personales en
-   logs, PRs o documentación pública.
-6. Confirmar estado de tablas, recuentos de datos que deben preservarse,
-   servicio LIVE, logs y comportamiento funcional. Registrar únicamente
-   evidencia no sensible y cerrar la operación.
-
-**Alternativas preservadas:** el workflow
-`.github/workflows/production-db-migration.yml` es histórico, requiere una
-conexión externa y acepta solo archivos de `backend/migrations/`: **no
-sirve como ejecutor del SQL de `backend/operations/`**. Un workflow nuevo
-requeriría revisión de acceso externo y de secretos del environment
-`production`, además de sus propios controles. No usarlo como atajo.
-Las secciones históricas de este documento conservan el estado y decisiones
-de las fechas indicadas; este apartado define la política operativa actual.
-
-Para el caso destructivo concreto, seguir el
-[runbook de retiro PW-03](privacy-web/pr5-legacy-retirement.md).
+[Runbook detallado de PW-03](privacy-web/pr5-legacy-retirement.md).
 
 ## Decisión
 La imagen Docker incluye `backend/scripts/predeploy_migrations.py` y `backend/migrations/`.
