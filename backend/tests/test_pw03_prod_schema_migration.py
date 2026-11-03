@@ -586,11 +586,186 @@ def test_pr5_shell_readonly_preflight_rejects_missing_paid_at(pr5_shell_data):
             shell.check_only(conn)
 
 
+def _synthetic_safe_logging_settings():
+    """PostgreSQL session metadata with readable core/preload parameters."""
+    return {
+        "log_parameter_max_length": "0",
+        "log_parameter_max_length_on_error": "0",
+        "shared_preload_libraries": "",
+        "session_preload_libraries": "",
+        "local_preload_libraries": "",
+    }
+
+
+@pytest.mark.parametrize("change", [
+    {"log_parameter_max_length": "-1"},
+    {"log_parameter_max_length_on_error": "1"},
+    {"auto_explain.log_analyze": "on",
+     "auto_explain.log_parameter_max_length": "-1"},
+    {"auto_explain.log_parameter_max_length": "1"},
+    {"pgaudit.log_parameter": "on", "pgaudit.log": "all"},
+    {"pgaudit.log_parameter": ""},
+    {"shared_preload_libraries": "unknown_audit_module"},
+    {"shared_preload_libraries": "auto_explain"},
+    {"session_preload_libraries": "pgaudit"},
+    {"local_preload_libraries": "auto_explain"},
+    {"__pgaudit_extension_installed__": "yes"},
+])
+def test_pr5_logging_guard_rejects_additional_untrusted_logging(change):
+    settings = {**_synthetic_safe_logging_settings(), **change}
+    assert not shell._approval_logging_settings_are_safe(settings)
+
+
+def test_pr5_logging_guard_allows_reviewed_modules_only_with_safe_settings():
+    settings = _synthetic_safe_logging_settings()
+    assert shell._approval_logging_settings_are_safe(settings)
+    settings["shared_preload_libraries"] = "pg_stat_statements, pgaudit"
+    settings["pgaudit.log"] = "all"
+    settings["pgaudit.log_parameter"] = "off"
+    settings["__pgaudit_extension_installed__"] = "yes"
+    assert shell._approval_logging_settings_are_safe(settings)
+    settings["session_preload_libraries"] = "auto_explain"
+    settings["auto_explain.log_analyze"] = "on"
+    settings["auto_explain.log_parameter_max_length"] = "0"
+    assert shell._approval_logging_settings_are_safe(settings)
+    # Installed / loaded audit module but its effective GUC is hidden:
+    del settings["pgaudit.log_parameter"]
+    assert not shell._approval_logging_settings_are_safe(settings)
+
+
+def test_pr5_logging_guard_rejects_unreadable_preload_settings():
+    safe = _synthetic_safe_logging_settings()
+    for name in (*shell.PRELOAD_SETTINGS, *shell.STANDARD_LOGGING_SETTINGS):
+        hidden = dict(safe)
+        del hidden[name]
+        assert not shell._approval_logging_settings_are_safe(hidden)
+
+
+def test_pr5_logging_guard_fails_closed_when_query_errors():
+    class UnreadableConn:
+        def execute(self, _sql):
+            raise psycopg.OperationalError("Cannot inspect parameter settings")
+
+    assert not shell.approval_logging_is_safe(UnreadableConn())
+    with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+        shell.require_safe_approval_logging(UnreadableConn())
+
+
+def test_pr5_logging_guard_detects_changed_conditions_before_first_hash_bind(
+        pr5_shell_data, monkeypatch):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        seen = []
+        original_execute = conn.execute
+
+        def execute_spy(query, *args, **kwargs):
+            if "set_config" in query:
+                pytest.fail("No approval fingerprint may reach PostgreSQL")
+            seen.append(query)
+            return original_execute(query, *args, **kwargs)
+
+        # Simulate an external change between the pre-prompt check and the
+        # in-session check at the start of execute_retirement().
+        outcomes = iter((True, False))
+        monkeypatch.setattr(shell, "approval_logging_is_safe",
+                            lambda _conn: next(outcomes))
+        shell.require_safe_approval_logging(conn)
+        monkeypatch.setattr(conn, "execute", execute_spy)
+        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+            shell.execute_retirement(conn, "a" * 64, "b" * 64)
+        assert not any("DROP TABLE" in sql for sql in seen)
+        assert all(original_execute(
+            "SELECT to_regclass(%s) AS target", (table,)
+        ).fetchone()["target"] for table in shell.OLD_TABLES)
+
+
+def test_pr5_logging_guard_prevents_hash_binding_and_ddl_when_unsafe(pr5_shell_data):
+    from psycopg.rows import dict_row
+    p = pr5_shell_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET log_parameter_max_length = -1")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        assert not shell.approval_logging_is_safe(conn)
+        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+            shell.execute_retirement(conn, "a" * 64, "b" * 64)
+        assert conn.execute(
+            "SELECT current_setting('mininode.pw03_pr5_target_cluster_sha256',true) AS v"
+        ).fetchone()["v"] is None
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS v", (name,)).fetchone()["v"]
+            for name in shell.OLD_TABLES
+        )
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 1")
+        with pytest.raises(shell.GuardError, match="Logs PostgreSQL"):
+            shell.require_safe_approval_logging(conn)
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        assert shell.approval_logging_is_safe(conn)
+        shell.require_safe_approval_logging(conn)
+
+
+def test_pr5_shell_main_blocks_unsafe_logging_before_approvals(pr5_shell_data, monkeypatch, capsys):
+    p = pr5_shell_data
+    env = {
+        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
+        "DATABASE_URL": "postgresql://postgres:synthetic@"
+                        + shell.EXPECTED_POSTGRES_ID + "/"
+                        + conninfo_to_dict(p["url"])["dbname"],
+    }
+    real_connect = psycopg.connect
+
+    def connect_unsafe(url, **options):
+        assert url == env["DATABASE_URL"]
+        conn = real_connect(p["url"], **options)
+        conn.execute("SET log_parameter_max_length = -1")
+        return conn
+
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
+    monkeypatch.setattr(shell, "_require_interactive_tty", lambda: None)
+    monkeypatch.setattr(shell, "read_approved_values",
+                        lambda sha: pytest.fail("must not ask for approvals"))
+    assert shell.main(["--execute"]) == 1
+    assert "FAIL" in capsys.readouterr().err
+    with real_connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_shell_check_warns_unsafe_logging_without_failing(pr5_shell_data, monkeypatch, capsys):
+    p = pr5_shell_data
+    env = {
+        **shell.EXPECTED_RENDER, "RENDER_GIT_COMMIT": "a" * 40,
+        "DATABASE_URL": "postgresql://postgres:synthetic@"
+                        + shell.EXPECTED_POSTGRES_ID + "/"
+                        + conninfo_to_dict(p["url"])["dbname"],
+    }
+    real_connect = psycopg.connect
+
+    def connect_unsafe(url, **options):
+        conn = real_connect(p["url"], **options)
+        conn.execute("SET log_parameter_max_length = -1")
+        return conn
+
+    monkeypatch.setattr(shell.os, "environ", env)
+    monkeypatch.setattr(shell.psycopg, "connect", connect_unsafe)
+    assert shell.main(["--check"]) == 0
+    output = capsys.readouterr().out
+    assert "PASS: lectura e inventario estructural esperado" in output
+    assert "BLOQUEADO: --execute" in output
+    with real_connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
 def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_shell_data):
     from psycopg.rows import dict_row
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         # Synthetic fixture only: production approvals must come from an INDEPENDENT preflight.
         shell.execute_retirement(
@@ -611,6 +786,8 @@ def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_shell_data):
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
             shell.execute_retirement(conn, approved["cluster_fingerprint_sha256"], "0" * 64)
@@ -626,6 +803,8 @@ def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_shell_data):
     p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
             shell.execute_retirement(conn, "0" * 64, approved["legacy_inventory_sha256"])
@@ -655,6 +834,8 @@ def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatc
     sha = "a" * 40
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
     env = {
         **shell.EXPECTED_RENDER,
@@ -671,7 +852,11 @@ def test_pr5_shell_full_manual_execute_one_connection(pr5_shell_data, monkeypatc
     def connect_once(url, **options):
         assert url == env["DATABASE_URL"]
         connections.append(True)
-        return original_connect(p["url"], **options)
+        conn = original_connect(p["url"], **options)
+        # Only in disposable PG18: emulate logging already secured by the DBA.
+        conn.execute("SET log_parameter_max_length = 0")
+        conn.execute("SET log_parameter_max_length_on_error = 0")
+        return conn
 
     monkeypatch.setattr(shell.os, "environ", env)
     monkeypatch.setattr(shell.psycopg, "connect", connect_once)
