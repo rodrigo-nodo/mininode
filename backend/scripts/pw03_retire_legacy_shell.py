@@ -147,6 +147,27 @@ def _validate_connected_database(conn: psycopg.Connection) -> None:
         raise GuardError("La sesión no corresponde a la base/rol autorizado")
 
 
+def approval_logging_is_safe(conn: psycopg.Connection) -> bool:
+    """Inspect the actual session BEFORE transmitting any approved fingerprint.
+
+    PostgreSQL may log bind values of slow statements when
+    log_parameter_max_length != 0. Error messages have a separate limit.
+    Never attempt to change managed-DB configuration from this executor.
+    """
+    row = conn.execute("""
+        SELECT current_setting('log_parameter_max_length')::integer AS normal_limit,
+               current_setting('log_parameter_max_length_on_error')::integer AS error_limit
+    """).fetchone()
+    return row is not None and row["normal_limit"] == 0 and row["error_limit"] == 0
+
+
+def require_safe_approval_logging(conn: psycopg.Connection) -> None:
+    if not approval_logging_is_safe(conn):
+        raise GuardError(
+            "Logs PostgreSQL no protegen huellas; ejecución destructiva bloqueada"
+        )
+
+
 def check_only(conn: psycopg.Connection) -> dict[str, int]:
     """Read-only summary; no IDs, email addresses or fingerprints in output."""
     conn.execute("SET default_transaction_read_only = on")
@@ -207,6 +228,9 @@ def execute_retirement(conn: psycopg.Connection, cluster: str, inventory: str) -
         raise GuardError("Huella aprobada inválida")
     if not conn.autocommit:
         raise GuardError("Se requiere conexión autocommit para la transacción SQL manual")
+    # Revalidate in the SAME session, immediately before the first bind of
+    # the approved SHA-256 values. Unsafe logging must block all DDL.
+    require_safe_approval_logging(conn)
     _validate_connected_database(conn)
     for name, value in (
         ("mininode.pw03_pr5_target_database", EXPECTED_DATABASE),
@@ -248,12 +272,11 @@ def main(argv: list[str] | None = None) -> int:
         env = dict(os.environ)
         sha = validate_render_env(env)
         validate_database_url(env.get("DATABASE_URL", ""), env)
-        approved = None
         if args.execute:
             _require_interactive_tty()
-            approved = read_approved_values(sha)
         # One connection; no modification to the Render environment or
         # migration catalog. The connection string is NEVER printed.
+        # Check session logging BEFORE prompting for private approvals.
         with psycopg.connect(
             env["DATABASE_URL"], autocommit=True, row_factory=dict_row,
             connect_timeout=10,
@@ -262,7 +285,14 @@ def main(argv: list[str] | None = None) -> int:
                 summary = check_only(conn)
                 print("PASS: lectura e inventario estructural esperado; no es autorización para borrar. " + sha[:12])
                 print(" / ".join(f"{key}={value}" for key, value in summary.items()))
+                if not approval_logging_is_safe(conn):
+                    print("BLOQUEADO: --execute exige protección de huellas en logs PostgreSQL")
+                else:
+                    print("Logs: protección de parámetros comprobada en esta sesión; NO autoriza borrar")
             else:
+                _validate_connected_database(conn)
+                require_safe_approval_logging(conn)
+                approved = read_approved_values(sha)
                 execute_retirement(conn, *approved)
                 print("PASS: retiro manual confirmado; 3 tablas antiguas ausentes")
         return 0
