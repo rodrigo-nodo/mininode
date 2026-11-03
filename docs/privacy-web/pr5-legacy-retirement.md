@@ -124,7 +124,8 @@ No imprime huellas, IDs ni datos personales. Si el hostname interno exacto
 no coincide, **detenerse y revisar, no desactivar el guard**.
 
 **Ejecución destructiva, exclusivamente después de autorización PO separada
-y de la aprobación privada y previa de las dos huellas y SHA exacto:**
+y de la aprobación privada y previa de las dos huellas y SHA exacto,
+y con la protección de logs confirmada:**
 
 ```sh
 python scripts/pw03_retire_legacy_shell.py --execute
@@ -150,27 +151,45 @@ haber sucedido a pesar del mensaje `FAIL`; no asumir rollback.
 La verificación funcional y administrativa posterior continúa siendo
 obligatoria. Se requiere que el servicio permanezca LIVE.
 
-### Comprobación obligatoria de logs (O3, solo antes de ejecutar)
+### Protección de huellas ante logs PostgreSQL — bloqueo obligatorio
 
-No considerar las huellas invisibles para el servidor solo porque Python
-no las imprime: PostgreSQL podría registrar **parámetros de consultas**
-según su configuración. En el preflight de solo lectura de PROD del
-03-11-2026 se observaron `log_statement=none`,
-`log_min_duration_statement=2000` (ms),
-`log_parameter_max_length=-1` (sin límite de longitud) y
-`log_parameter_max_length_on_error=0`. Esto implica que una consulta
-lenta que establezca las huellas podría registrarlas completas en logs
-del servidor, aunque el programa no las muestre en consola.
+En PROD, la inspección de solo lectura del 03-11-2026 encontró
+`log_min_duration_statement=2000` ms y `log_parameter_max_length=-1`
+(parámetros completos en sentencias lentas);
+`log_parameter_max_length_on_error=0` (parámetros de error ocultos).
+La plataforma Render [registra consultas lentas](https://render.com/docs/postgresql-creating-connecting).
+Las huellas SHA-256 privadas deben permanecer fuera de esos logs.
 
-**Antes de autorizar `--execute`**, verificar de nuevo en la instancia
-primaria las configuraciones de logging (incluidos parámetros de consultas
-lentas, errores y muestreo), determinar si existe posibilidad de registrar
-las huellas y **resolver el riesgo** con una configuración de servidor
-compatible y aprobada. No cambiar ajustes de PostgreSQL por iniciativa
-del ejecutor ni afirmar que los logs están seguros sin esta comprobación.
-Si no puede garantizarse que no se registren las huellas, **detener el
-borrado y revisar el mecanismo**, sin rebajar el control de destino.
-Referencias: [PostgreSQL 18 — parámetros de logs](https://www.postgresql.org/docs/18/runtime-config-logging.html).
+**Control automático del ejecutor:** `--execute` exige, en la **misma sesión
+de PostgreSQL que recibiría las huellas**, ambas configuraciones efectivas:
+
+- `log_parameter_max_length = 0` (no registrar valores de parámetros).
+- `log_parameter_max_length_on_error = 0` (tampoco en errores).
+
+La comprobación sucede **antes de solicitar las huellas al operador** y
+se repite justo antes de transmitirlas al servidor. Si no se cumplen
+ambas, falla sin enviar aprobaciones, sin abrir una transacción
+destructiva y sin hacer DDL. El comando `--check` sigue devolviendo PASS
+para el inventario y añade `BLOQUEADO: --execute ...` cuando los logs
+no están protegidos. El PASS de inventario **no equivale a aprobación**.
+
+**Estado operativo:** `mininode_user` no dispone de privilegios `SET`
+sobre esos parámetros. El ejecutor **nunca** modifica la configuración
+de PostgreSQL. No se ha verificado un control autoservicio de Render
+que permita modificar esos ajustes. Consultar con Render Support
+sobre una configuración administrada y revisada (considerando su
+impacto sobre observabilidad), o diseñar y revisar otra forma de
+transmitir las autorizaciones que no exponga sus valores. **No ejecutar
+`--execute` con la configuración actual**, no intentar cambiar
+permisos ni eliminar el guard.
+
+La seguridad efectiva debe volverse a comprobar en Render PROD después
+del merge y la promoción LIVE del PR de protección de logs. La revisión
+de parámetros no reemplaza las aprobaciones privadas, la identidad de
+recurso ni la autorización destructiva específica.
+
+Referencia:
+[PostgreSQL 18 — reporte de parámetros en logs](https://www.postgresql.org/docs/18/runtime-config-logging.html).
 
 ## Requisitos previos (obligatorios, no automatizados)
 

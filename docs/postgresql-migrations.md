@@ -26,14 +26,13 @@ Pre-deploy para el retiro destructivo de PW-03.
 
 ### Estado y controles del ejecutor Render Shell
 
-En `backend/Dockerfile`, la imagen actual copia `src/`, `migrations/` y
-`scripts/`, **no** `backend/operations/`. Sí dispone de Python y
-`psycopg` por las dependencias del backend; **no** incluye explícitamente
-el cliente `psql`. Render Shell es una consola del contenedor Linux,
-**no** una consola SQL de PostgreSQL. El PR de ejecutor PW-03 incorpora
-**solo** los dos SQL históricos necesarios y un comando Python manual.
-**El ejecutor aún no está disponible en PROD**: requiere CI, revisión,
-merge autorizado y desplegar la imagen correspondiente LIVE.
+La imagen Docker del backend incluye `src/`, `migrations/`, `scripts/`
+y **únicamente los dos SQL manuales de PW-03** bajo `operations/`.
+El ejecutor Python/`psycopg` se integró en el PR #426; el ajuste de
+identidad del servicio del PR #427 está LIVE en Render y pasó `--check`
+contra PROD. No se instala `psql` y Render Shell **no** es una consola
+SQL directa. La ejecución destructiva sigue bloqueada hasta cumplir
+las aprobaciones privadas y la protección de logs.
 El ejecutor exige host PostgreSQL privado exacto (no prefijo), solo
 parámetros URI aprobados y ausencia de variables `PG*` que puedan
 cambiar la conexión efectiva en libpq. Si falla por host o variables
@@ -46,11 +45,14 @@ operaciones indiscriminadamente) y un ejecutor con `psycopg` que use una
 huellas autorizadas previamente, controles de inventario y dependencias bajo
 lock, abortos seguros y resultado PASS/FAIL sin exponer secretos ni filas.
 Probarlo en PostgreSQL 18 desechable; revisar CI, diff y, por tratarse de
-DDL destructivo, solicitar revisión independiente. Antes de la ejecución
-revisar parámetros de logging del PostgreSQL de destino: las huellas
-de autorización enviadas mediante parámetros podrían quedar registradas
-por el servidor en consultas lentas. Si el riesgo no puede mitigarse,
-no ejecutar. **Merge del ejecutor no equivale a permiso para ejecutarlo.**
+DDL destructivo, solicitar revisión independiente. Antes de la ejecución,
+el programa exige en **su propia sesión** `log_parameter_max_length=0`
+y `log_parameter_max_length_on_error=0`, bloqueando `--execute` antes
+de solicitar aprobaciones si no se cumple. El control no cambia la
+configuración administrada. Como la configuración actual de PROD
+no cumple, **el borrado sigue BLOQUEADO** hasta resolverla por vía
+aprobada o desarrollar otro mecanismo seguro. **Merge no equivale a
+permiso para ejecutarlo.**
 
 ### Secuencia operativa obligatoria
 
