@@ -55,8 +55,16 @@ explícita y verificaciones estructurales y de destino.
 
 **1. Verificar.** Confirmar con el conector Render de solo lectura el recurso
 PostgreSQL primario `mininode-db` (`dpg-da5fjmbm8hqs73chdceg-a`),
-sin réplicas, y el inventario comercial. Confirmar que el nuevo backend está
-LIVE en Render en el último commit de `main`.
+sin réplicas, y el inventario comercial. **Antes de autorizar el borrado,
+contrastar por una vía independiente y privada la identidad de los seis
+registros (2 IDs de planes, 3 de órdenes y 1 de revisión), sus estados y
+relaciones.** En particular, verificar que los dos pagos de prueba se
+asocien a los planes esperados y que `original_diagnostic_id` de la revisión
+coincida con el `diagnostic_id` de su orden; este último vínculo **no está
+exigido en el SQL destructivo**. No publicar IDs ni datos personales en
+GitHub, logs o el chat. Si cambia algún registro, detenerse y reevaluar;
+los controles de recuentos por sí solos no detectan sustituciones.
+Confirmar que el nuevo backend está LIVE en Render en el último commit de `main`.
 En **Render → mininode-backend-prod → Shell**, ejecutar **una sola línea**:
 
 ```sh
