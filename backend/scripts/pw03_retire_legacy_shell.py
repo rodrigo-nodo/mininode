@@ -154,11 +154,16 @@ def approval_logging_is_safe(conn: psycopg.Connection) -> bool:
     log_parameter_max_length != 0. Error messages have a separate limit.
     Never attempt to change managed-DB configuration from this executor.
     """
+    # pg_settings.setting is the canonical unit-free value (unlike SHOW /
+    # current_setting, which can return strings such as '1B').
     row = conn.execute("""
-        SELECT current_setting('log_parameter_max_length')::integer AS normal_limit,
-               current_setting('log_parameter_max_length_on_error')::integer AS error_limit
+        SELECT
+            (SELECT setting FROM pg_settings
+             WHERE name = 'log_parameter_max_length') AS normal_limit,
+            (SELECT setting FROM pg_settings
+             WHERE name = 'log_parameter_max_length_on_error') AS error_limit
     """).fetchone()
-    return row is not None and row["normal_limit"] == 0 and row["error_limit"] == 0
+    return row is not None and row["normal_limit"] == "0" and row["error_limit"] == "0"
 
 
 def require_safe_approval_logging(conn: psycopg.Connection) -> None:
