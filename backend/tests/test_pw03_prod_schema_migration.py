@@ -231,6 +231,30 @@ def test_pr5_without_explicit_approval_keeps_all_data(pr5_legacy_data):
         assert db.execute("SELECT count(*) FROM privacy.entitled_plan").fetchone()[0] == 1
 
 
+
+def test_pr5_target_database_mismatch_fails_even_with_ack(pr5_legacy_data):
+    p = pr5_legacy_data
+    with pytest.raises(psycopg.errors.RaiseException, match="target database approval"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, "a_different_database")
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_correct_database_without_destructive_ack_fails(pr5_legacy_data):
+    p = pr5_legacy_data
+    with pytest.raises(psycopg.errors.RaiseException, match="destructive acknowledgement"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            conn.execute(
+                "SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
+                (conn.execute("SELECT current_database()").fetchone()[0],),
+            )
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
 def test_pr5_rejects_changed_inventory_without_partial_deletion(pr5_legacy_data):
     p = pr5_legacy_data
     with psycopg.connect(p["url"]) as db:
