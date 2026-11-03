@@ -94,7 +94,18 @@ durante el despliegue. Hasta completar CI, revisión y merge del PR, **no
 es posible ejecutar los comandos siguientes en el servicio PROD**.
 
 En **Render → `mininode-backend-prod` → Shell**, solo cuando el commit
-del PR aprobado esté desplegado y el backend esté LIVE:
+del PR aprobado esté desplegado y el backend esté LIVE.
+
+**Validación de identidad:** el ID inmutable `RENDER_SERVICE_ID` sigue
+siendo obligatorio y se contrasta con la rama, repositorio, tipo de servicio,
+hostname público y SHA desplegado. `RENDER_SERVICE_NAME` es un identificador
+legible que puede diferir del nombre mostrado en el Dashboard; no se usa
+para autorizar ni denegar una operación destructiva. El rechazo por ese
+nombre observado en la primera prueba `--check` se corrige en un PR
+independiente. La comprobación exacta del destino PostgreSQL permanece
+sin cambios.
+
+**Inspección, una sola línea de Render Shell:**
 
 ```sh
 python scripts/pw03_retire_legacy_shell.py --check

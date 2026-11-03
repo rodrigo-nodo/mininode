@@ -430,6 +430,13 @@ def test_pr5_shell_rejects_wrong_runtime_and_wrong_url():
         wrong = dict(env, **{key: "incorrect"})
         with pytest.raises(shell.GuardError, match="Render PROD"):
             shell.validate_render_env(wrong)
+    # A display name can differ from the dashboard name or change. It
+    # must not gate an otherwise verified service, unlike the immutable ID.
+    assert shell.validate_render_env({**env, "RENDER_SERVICE_NAME": "other-display-name"}) == "a" * 40
+    assert shell.validate_render_env({k: v for k, v in env.items()
+                                      if k != "RENDER_SERVICE_NAME"}) == "a" * 40
+    with pytest.raises(shell.GuardError, match="RENDER_SERVICE_ID"):
+        shell.validate_render_env({**env, "RENDER_SERVICE_ID": "srv-other"})
     with pytest.raises(shell.GuardError, match="commit desplegado"):
         shell.validate_render_env(dict(env, RENDER_GIT_COMMIT="invalid"))
     shell.validate_database_url(env["DATABASE_URL"], env)
