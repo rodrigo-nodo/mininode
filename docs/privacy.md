@@ -98,6 +98,27 @@ PRV-101 y PRV-104 sin cambios, prioriza un control determinista de transporte de
 formulario y posterga conclusiones sobre minimización, consentimiento, menores o datos
 de riesgo elevado cuando la evidencia pública no permite evitar falsos positivos.
 
+## Privacy Web: presentación de Score y cobertura
+
+El diagnóstico público presenta los 21 controles de cinco áreas desde un único renderizador,
+con textos del catálogo compartido `frontend/privacy/control-ux.js` y tests de
+consistencia con `controls.json`. Los controles contextuales son informativos y no
+determinan el estado del área ni el Privacy Score.
+
+El `score` numérico del backend **no cambia**. Cuando
+`evaluated_controls < applicable_controls` se presenta «Evaluación parcial» y
+el número de controles evaluados/aplicables. Si ningún control pudo evaluarse,
+la UI no muestra el `0/100` técnico como una calificación negativa.
+Los snapshots históricos sin metadatos de cobertura muestran su Score pero
+advierten que no hay cobertura disponible. Las áreas tampoco indican «Bien»
+cuando controles puntuables adicionales no pudieron evaluarse; las áreas
+solo informativas se muestran neutrales.
+
+Este ajuste de presentación no modifica evaluator, controles, pesos,
+cobertura calculada, reglas de scoring, contratos de API,
+`framework_version` ni `scoring_version`. No cambia el historial o
+comparaciones del Plan autenticado; su UX se revisará de forma independiente.
+
 ## Privacy Web activo: frontera comercial
 
 El diagnóstico Privacy Web es gratuito. En modo autenticado, un sitio ya guardado usa `workspace_site_id`: Access autoriza al miembro del workspace y el backend obtiene desde allí la URL a inspeccionar. Para una URL nueva, Privacy Web recibe el workspace autorizado, ejecuta primero el diagnóstico y, solo si éste resulta exitoso, crea o reutiliza automáticamente el `workspace_site` y vincula el snapshot. Los usuarios no crean sitios manualmente desde la cuenta. El endpoint público existente continúa disponible para diagnósticos anónimos. Privacy Web activo cuesta CLP $9.900 por un
