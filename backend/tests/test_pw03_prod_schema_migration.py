@@ -486,7 +486,10 @@ def test_pr5_shell_readonly_preflight_never_drops(pr5_legacy_data):
         assert conn.execute("SHOW default_transaction_read_only").fetchone() == {
             "default_transaction_read_only": "on",
         }
-        assert all(_pr5_tables(conn).values())
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
+            for name in shell.OLD_TABLES
+        )
 
 
 def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_legacy_data):
@@ -500,7 +503,10 @@ def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_dat
             conn, approved["cluster_fingerprint_sha256"],
             approved["legacy_inventory_sha256"],
         )
-        assert not any(_pr5_tables(conn).values())
+        assert not any(
+            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
+            for name in shell.OLD_TABLES
+        )
         assert conn.execute("SELECT count(*) AS n FROM privacy.entitled_plan").fetchone()["n"] == 1
         assert conn.execute("SELECT count(*) AS n FROM privacy.diagnostic").fetchone()["n"] == 1
         assert conn.execute("SELECT count(*) AS n FROM billing.orders").fetchone()["n"] == 0
@@ -514,7 +520,10 @@ def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_legacy_data):
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
             shell.execute_retirement(conn, approved["cluster_fingerprint_sha256"], "0" * 64)
-        assert all(_pr5_tables(conn).values())
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
+            for name in shell.OLD_TABLES
+        )
         assert conn.execute("SELECT count(*) AS n FROM privacy.correction_plan_order").fetchone()["n"] == 3
 
 
@@ -526,4 +535,7 @@ def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_legacy_data):
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
         with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
             shell.execute_retirement(conn, "0" * 64, approved["legacy_inventory_sha256"])
-        assert all(_pr5_tables(conn).values())
+        assert all(
+            conn.execute("SELECT to_regclass(%s) AS target", (name,)).fetchone()["target"]
+            for name in shell.OLD_TABLES
+        )
