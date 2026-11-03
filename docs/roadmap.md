@@ -11,7 +11,7 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 | ID | Ámbito | Iniciativa | Estado | Momento |
 |---|---|---|---|---|
 | MIN-01 | Plataforma / calidad | Evaluar preproducción estable `qa.mininode.io` para validar el SHA candidato a PROD | **Por definir** | Tras estabilizar PW-03; priorizar según frecuencia de releases |
-| MIN-02 | Gobierno / propiedad intelectual | Decidir política de repositorio público/privado y eventual separación de código abierto/propietario | **Por definir** | Antes de escalar pilotos, partners y distribución |
+| MIN-02 | Gobierno / propiedad intelectual | Modelo híbrido: producto comercial privado y presencia pública selectiva | **Política aprobada; transición pendiente** | Antes de escalar pilotos, partners y distribución |
 | PW-22 | Privacy Web / negocio | Definir tarifas según la superficie web efectivamente evaluada, con entrada simple y volumen multisitio | **Por definir** | Medir en pilotos antes de aprobar nuevas tarifas |
 
 ### MIN-01 — Entorno QA / preproducción
@@ -26,11 +26,13 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 
 ### MIN-02 — Visibilidad del repositorio
 
-**Situación verificada:** `rodrigo-nodo/mininode` es público (30-10-2026).
+**Situación verificada (03-11-2026):** `rodrigo-nodo/mininode` es público; el archivo `LICENSE` de `main` contiene licencia MIT y aviso de copyright 2025 a nombre de Rodrigo.
 
-**Evaluar:** mantenerlo público, privatizarlo o separar un repositorio público de portafolio/documentación/componentes seleccionados y uno privado para lógica comercial y propiedad intelectual. Revisar licencias existentes, dependencias, forks/historial público, secretos, CI/CD, colaboradores, acceso de partners, costos y mantenimiento.
+**Política de producto aprobada:** adoptar el modelo **híbrido**, con desarrollo comercial futuro de Privacy Web, Privacy Data, Capture, Access, Billing y lógica de scoring en repositorio privado; mantener presencia pública para portafolio, documentación seleccionada y componentes publicables bajo licencia expresa, según [política de código y licencias](code-visibility-license-policy.md).
 
-**No decidido:** ningún cambio de visibilidad ni partición de repositorios. Un cambio a privado no elimina copias o accesos históricos. Evitar secretos y datos personales en ambas modalidades. Cualquier cambio requiere plan de continuidad y aprobación expresa.
+**Límite legal y técnico:** la decisión **no elimina ni revoca** derechos MIT sobre copias y versiones ya publicadas bajo esa licencia; un repositorio privado no protege contenido ya distribuido. No basta con quitar `LICENSE` o cambiar un permiso. Revisar titularidad y condiciones de aportes antes de declarar nuevos módulos propietarios. La empresa debe proteger secretos y datos personales sin depender de la visibilidad.
+
+**Transición pendiente de aprobación operativa:** inventario de licencias y dependencias, historial/forks, revisión de derechos y titularidad, nueva estructura de repositorios, CI/CD, Cloudflare/Render, colaboradores y costos. **No se autoriza por este roadmap** cambiar visibilidad, mover código, transferir titularidad, cambiar la licencia MIT vigente ni modificar despliegues; cada operación tendrá alcance, pruebas y autorización específicos.
 
 ### PW-22 — Precio según superficie del sitio
 
@@ -47,4 +49,4 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 - **Estrategia única:** este archivo en `main` es la referencia oficial; `dev` contiene una **copia idéntica**. Primero se aprueban/mergean cambios estratégicos a `main` y luego se sincronizan por PR documental enfocado hacia `dev`, sin merge masivo de ramas.
 - **Seguimiento por entorno:** los roadmaps de ejecución y sus estados en DEV/PROD pueden diferir porque describen hechos distintos. No reemplazar `docs/privacy-web/roadmap.md` de una rama por el de otra; conciliar decisiones y conservar evidencias propias.
 - **Página pública:** `frontend/roadmap/index.html` es una pieza editorial diferente, no un espejo automático de este documento ni anuncio de funciones pendientes.
-- **Estados:** `Por definir` (hipótesis registrada), `Planificado` (alcance aprobado), `En curso`, `Validado` y `Publicado`. Las iniciativas aquí siguen **Por definir**.
+- **Estados:** `Por definir` (hipótesis registrada), `Planificado` (alcance aprobado), `En curso`, `Validado` y `Publicado`. MIN-01 y PW-22 siguen **Por definir**; MIN-02 tiene política híbrida aprobada y ejecución de transición pendiente.
