@@ -85,16 +85,29 @@ verificarlo en Render Shell una vez LIVE, aprobar privadamente destino,
 huellas y controles de logs, y obtener **autorización destructiva específica
 para PROD**. Hasta entonces, las tres tablas siguen intactas.
 
-## Ejecutor Render Shell — implementación preparada (pendiente de CI/merge/autorización)
+## Ejecutor Render Shell — integrado; validar cada versión desplegada
 
-El PR de ejecutor incorpora **solo** los dos SQL aprobados de PW-03 en la
-imagen Docker y `backend/scripts/pw03_retire_legacy_shell.py` con `psycopg`.
+El PR #426 incorporó **solo** los dos SQL aprobados de PW-03 en la imagen
+Docker y `backend/scripts/pw03_retire_legacy_shell.py` con `psycopg`.
 No añade `psql`, no crea endpoint HTTP, no cambia Pre-deploy ni toca la base
-durante el despliegue. Hasta completar CI, revisión y merge del PR, **no
-es posible ejecutar los comandos siguientes en el servicio PROD**.
+durante el despliegue. El primer `--check` en Shell detectó una divergencia
+en `RENDER_SERVICE_NAME` y abortó sin cambios de datos. PR #427 corrige ese
+control redundante. **No volver a probar `--check` hasta confirmar que
+la corrección esté integrada y el nuevo SHA esté LIVE en Render.**
 
 En **Render → `mininode-backend-prod` → Shell**, solo cuando el commit
-del PR aprobado esté desplegado y el backend esté LIVE:
+del PR aprobado esté desplegado y el backend esté LIVE.
+
+**Validación de identidad:** el ID inmutable `RENDER_SERVICE_ID` sigue
+siendo obligatorio y se contrasta con la rama, repositorio, tipo de servicio,
+hostname público y SHA desplegado. `RENDER_SERVICE_NAME` es un identificador
+legible que puede diferir del nombre mostrado en el Dashboard; no se usa
+para autorizar ni denegar una operación destructiva. El rechazo por ese
+nombre observado en la primera prueba `--check` se corrige en un PR
+independiente. La comprobación exacta del destino PostgreSQL permanece
+sin cambios.
+
+**Inspección, una sola línea de Render Shell:**
 
 ```sh
 python scripts/pw03_retire_legacy_shell.py --check

@@ -39,10 +39,12 @@ EXPLICIT_APPROVAL = "ELIMINAR_3_TABLAS_LEGACY_PROD_SIN_RESPALDO"
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
+# The Render human-readable service name is not an immutable identity:
+# production is pinned by RENDER_SERVICE_ID plus repo, branch, type,
+# public hostname and deployed SHA. Do not fail on RENDER_SERVICE_NAME.
 EXPECTED_RENDER = {
     "RENDER": "true",
     "RENDER_SERVICE_ID": EXPECTED_SERVICE_ID,
-    "RENDER_SERVICE_NAME": "mininode-backend-prod",
     "RENDER_SERVICE_TYPE": "web",
     "RENDER_GIT_BRANCH": "main",
     "RENDER_GIT_REPO_SLUG": "rodrigo-nodo/mininode",
