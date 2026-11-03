@@ -62,7 +62,7 @@ y de `MIGRATION_APPROVED_FILES`. No hay automatismo que lo ejecute.
 
 **Primero, en modo solo lectura:** ejecutar
 `backend/operations/pw03_pr5_readonly_preflight.sql` desde la instancia
-PostgreSQL de Render confirmada. Comprobar que `timezone` sea `UTC`.
+PostgreSQL de Render confirmada. Comprobar que `timezone` sea `UTC` o `Etc/UTC`.
 Su salida contiene: identificador de BD, huella SHA-256 de clúster y huella
 SHA-256 de **todas las filas antiguas**, más manifiestos con IDs y estados
 (no emails ni snapshots). Guardar el inventario completo en evidencia privada,
