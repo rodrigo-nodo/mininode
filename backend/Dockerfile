@@ -28,6 +28,9 @@ RUN "$VIRTUAL_ENV/bin/pip" install --upgrade pip \
 COPY src ./src
 COPY migrations ./migrations
 COPY scripts ./scripts
+# A single manually invoked, reviewed PW-03 retirement operation (never Pre-deploy).
+COPY operations/pw03_pr5_retire_legacy_commerce.sql ./operations/pw03_pr5_retire_legacy_commerce.sql
+COPY operations/pw03_pr5_readonly_preflight.sql ./operations/pw03_pr5_readonly_preflight.sql
 
 # Create non-root user and fix ownership
 RUN useradd -m -u 10001 appuser \

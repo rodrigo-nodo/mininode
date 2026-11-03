@@ -24,24 +24,33 @@ interna ya configurada. Render Pre-deploy es otro mecanismo: corre al
 desplegar, exclusivamente con SQL catalogado y allowlist autorizada. No usar
 Pre-deploy para el retiro destructivo de PW-03.
 
-### Estado real de Render Shell, antes de implementar el ejecutor
+### Estado y controles del ejecutor Render Shell
 
 En `backend/Dockerfile`, la imagen actual copia `src/`, `migrations/` y
 `scripts/`, **no** `backend/operations/`. Sí dispone de Python y
 `psycopg` por las dependencias del backend; **no** incluye explícitamente
 el cliente `psql`. Render Shell es una consola del contenedor Linux,
-**no** una consola SQL de PostgreSQL. Por tanto, **hoy no existe un comando
-operativo validado en Shell para ejecutar el SQL de PW-03**.
+**no** una consola SQL de PostgreSQL. El PR de ejecutor PW-03 incorpora
+**solo** los dos SQL históricos necesarios y un comando Python manual.
+**El ejecutor aún no está disponible en PROD**: requiere CI, revisión,
+merge autorizado y desplegar la imagen correspondiente LIVE.
+El ejecutor exige host PostgreSQL privado exacto (no prefijo), solo
+parámetros URI aprobados y ausencia de variables `PG*` que puedan
+cambiar la conexión efectiva en libpq. Si falla por host o variables
+de Render inesperadas, revisar la configuración real en lugar de
+deshabilitar controles. Ver el runbook específico.
 
-Cuando se acuerde implementar el ejecutor, preparar **otro PR independiente**
-y acotado: incorporar únicamente el SQL manual necesario (no todas las
+El PR del ejecutor es independiente y acotado: incorpora únicamente el SQL manual necesario (no todas las
 operaciones indiscriminadamente) y un ejecutor con `psycopg` que use una
 **única conexión/sesión y transacción**, identidad de recurso confirmada,
 huellas autorizadas previamente, controles de inventario y dependencias bajo
 lock, abortos seguros y resultado PASS/FAIL sin exponer secretos ni filas.
 Probarlo en PostgreSQL 18 desechable; revisar CI, diff y, por tratarse de
-DDL destructivo, solicitar revisión independiente. **Merge del ejecutor
-no equivale a permiso para ejecutarlo.**
+DDL destructivo, solicitar revisión independiente. Antes de la ejecución
+revisar parámetros de logging del PostgreSQL de destino: las huellas
+de autorización enviadas mediante parámetros podrían quedar registradas
+por el servidor en consultas lentas. Si el riesgo no puede mitigarse,
+no ejecutar. **Merge del ejecutor no equivale a permiso para ejecutarlo.**
 
 ### Secuencia operativa obligatoria
 

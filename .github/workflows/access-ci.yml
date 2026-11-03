@@ -23,6 +23,8 @@ on:
       - 'backend/requirements.txt'
       - 'backend/Dockerfile'
       - 'backend/scripts/**'
+      - 'backend/operations/pw03_pr5_retire_legacy_commerce.sql'
+      - 'backend/operations/pw03_pr5_readonly_preflight.sql'
       - 'backend/migrations/**'
       - 'backend/tests/test_migration_runner.py'
       - 'backend/tests/test_predeploy_migrations.py'
@@ -145,4 +147,4 @@ jobs:
 
       - name: Verify migration tooling in image
         run: |
-          docker run --rm --entrypoint sh mininode-backend-ci -c 'test -f /app/scripts/run_migration.py && test -f /app/scripts/predeploy_migrations.py && test -f /app/migrations/20260928_access_a2_1_workspace_sites.sql'
+          docker run --rm --entrypoint sh mininode-backend-ci -c 'test -f /app/scripts/run_migration.py && test -f /app/scripts/predeploy_migrations.py && test -f /app/migrations/20260928_access_a2_1_workspace_sites.sql && test -f /app/scripts/pw03_retire_legacy_shell.py && test -f /app/operations/pw03_pr5_retire_legacy_commerce.sql && test -f /app/operations/pw03_pr5_readonly_preflight.sql'
