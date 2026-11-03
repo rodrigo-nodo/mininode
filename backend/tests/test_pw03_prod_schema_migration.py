@@ -202,7 +202,7 @@ def _ack_pr5(conn, database_name, *, cluster=None, inventory=None, include_ack=T
     # The test fixture approves fingerprints from the *unchanged* isolated DB.
     # Never compute execution approvals this way for PROD.
     preview = _pr5_preflight(conn)
-    assert preview[2] == "UTC"
+    assert preview[2] in ("UTC", "Etc/UTC")
     conn.execute("SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
                  (database_name,))
     conn.execute("SELECT set_config('mininode.pw03_pr5_target_cluster_sha256', %s, false)",
@@ -310,7 +310,7 @@ def test_pr5_preflight_is_readonly_and_matches_locked_inventory(pr5_legacy_data)
     with psycopg.connect(p["url"]) as db:
         preview = _pr5_preflight(db)
         assert preview[0] == db.execute("SELECT current_database()").fetchone()[0]
-        assert preview[2] == "UTC"
+        assert preview[2] in ("UTC", "Etc/UTC")
         assert len(preview[3]) == len(preview[4]) == 64
         assert len(preview[5]) == 2 and len(preview[6]) == 3 and len(preview[7]) == 1
         assert {v["id"] for v in preview[6]} == {str(x) for x in p["old_orders"]}
