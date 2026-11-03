@@ -135,6 +135,7 @@ def test_pw03_migration_is_reviewed_additive_and_requires_explicit_approval(monk
 
 # PW-03 PR5 is an explicitly manual operation, NEVER a pre-deploy migration.
 RETIREMENT_SCRIPT = BACKEND / "operations" / "pw03_pr5_retire_legacy_commerce.sql"
+PREFLIGHT_SCRIPT = BACKEND / "operations" / "pw03_pr5_readonly_preflight.sql"
 
 
 @pytest.fixture
@@ -192,11 +193,26 @@ def pr5_legacy_data(disposable):
                 old_plans=old_plans, old_orders=old_orders)
 
 
-def _ack_pr5(conn, database_name):
+def _pr5_preflight(conn):
+    """Synthetic-only preflight. PROD fingerprints require independent review."""
+    return conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
+
+
+def _ack_pr5(conn, database_name, *, cluster=None, inventory=None, include_ack=True):
+    # The test fixture approves fingerprints from the *unchanged* isolated DB.
+    # Never compute execution approvals this way for PROD.
+    preview = _pr5_preflight(conn)
+    assert preview[2] in ("UTC", "Etc/UTC")
     conn.execute("SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
                  (database_name,))
-    conn.execute("SELECT set_config('mininode.pw03_pr5_ack', %s, false)",
-                 ("DELETE_2_PAID_1_PENDING_LEGACY_ORDERS",))
+    conn.execute("SELECT set_config('mininode.pw03_pr5_target_cluster_sha256', %s, false)",
+                 (cluster if cluster is not None else preview[3],))
+    if inventory is not False:
+        conn.execute("SELECT set_config('mininode.pw03_pr5_approved_inventory_sha256', %s, false)",
+                     (inventory if inventory is not None else preview[4],))
+    if include_ack:
+        conn.execute("SELECT set_config('mininode.pw03_pr5_ack', %s, false)",
+                     ("DELETE_2_PAID_1_PENDING_LEGACY_ORDERS",))
 
 
 def _pr5_tables(conn):
@@ -215,6 +231,9 @@ def test_pr5_script_is_manual_not_predeploy_and_restrict_only():
     assert body.count("DROP TABLE privacy.") == 3
     assert body.count(" RESTRICT;") == 3
     assert "CASCADE;" not in body
+    assert "pg_control_system()" in body
+    assert "pg_control_system()" in PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
+    assert "approved_inventory_sha256" in body
     assert "DROP TABLE privacy.diagnostic" not in body
     assert "DROP TABLE privacy.entitled_plan" not in body
     assert "DROP TABLE access.entitlements" not in body
@@ -246,10 +265,8 @@ def test_pr5_correct_database_without_destructive_ack_fails(pr5_legacy_data):
     p = pr5_legacy_data
     with pytest.raises(psycopg.errors.RaiseException, match="destructive acknowledgement"):
         with psycopg.connect(p["url"], autocommit=True) as conn:
-            conn.execute(
-                "SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
-                (conn.execute("SELECT current_database()").fetchone()[0],),
-            )
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
+                     include_ack=False)
             conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
     with psycopg.connect(p["url"]) as db:
         assert all(_pr5_tables(db).values())
@@ -282,6 +299,74 @@ def test_pr5_restrict_rejects_external_dependency_atomically(pr5_legacy_data):
         assert all(_pr5_tables(db).values())
         assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
 
+
+
+def test_pr5_preflight_is_readonly_and_matches_locked_inventory(pr5_legacy_data):
+    p = pr5_legacy_data
+    body = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
+    assert "DROP " not in body.upper()
+    assert "DELETE " not in body.upper()
+    assert "UPDATE " not in body.upper()
+    with psycopg.connect(p["url"]) as db:
+        preview = _pr5_preflight(db)
+        assert preview[0] == db.execute("SELECT current_database()").fetchone()[0]
+        assert preview[2] in ("UTC", "Etc/UTC")
+        assert len(preview[3]) == len(preview[4]) == 64
+        assert len(preview[5]) == 2 and len(preview[6]) == 3 and len(preview[7]) == 1
+        assert {v["id"] for v in preview[6]} == {str(x) for x in p["old_orders"]}
+        assert {v["status"] for v in preview[6]} == {"paid", "pending_payment"}
+
+
+def test_pr5_rejects_wrong_cluster_despite_correct_database_and_counts(pr5_legacy_data):
+    p = pr5_legacy_data
+    with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
+                     cluster="0" * 64)
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_rejects_missing_inventory_approval(pr5_legacy_data):
+    p = pr5_legacy_data
+    with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
+                     inventory=False)
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+
+
+def test_pr5_rejects_replaced_row_with_same_counts_and_statuses(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"]) as db:
+        approved = _pr5_preflight(db)
+    # Replace a row's commercial identity, preserving ALL original counts/statuses.
+    with psycopg.connect(p["url"]) as db:
+        db.execute("UPDATE privacy.correction_plan_order SET email='other@example.invalid' WHERE id=%s",
+                   (p["old_orders"][0],))
+    with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0],
+                     inventory=approved[4])
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+        assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
+
+
+def test_pr5_preflight_changes_when_row_id_is_replaced(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"]) as db:
+        approved = _pr5_preflight(db)
+        db.execute("UPDATE privacy.correction_plan_order SET id=%s WHERE id=%s",
+                   (uuid4(), p["old_orders"][2]))
+    with psycopg.connect(p["url"]) as db:
+        refreshed = _pr5_preflight(db)
+    assert refreshed[4] != approved[4]
+    assert len(refreshed[6]) == len(approved[6]) == 3
 
 def test_pr5_retirement_preserves_diagnostics_billing_and_entitled_plan(pr5_legacy_data):
     p = pr5_legacy_data

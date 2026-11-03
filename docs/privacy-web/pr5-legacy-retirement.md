@@ -33,14 +33,24 @@ Una FK externa agregada posteriormente abortará la operación por `RESTRICT`.
 
 1. Obtener **autorización destructiva específica** que identifique las tres tablas,
    el entorno y el tratamiento de las 2 órdenes `paid`.
-2. Identificar y confirmar en tiempo real la BD de destino, responsable operativo,
-   registro de recuentos/estados, dependencias, versión desplegada y ausencia de
-   nuevos derechos u obligaciones pendientes. Volver a ejecutar el inventario.
-3. Confirmar respaldo **restaurable y probado** de los datos relevantes, o documentar
+2. Identificar y confirmar en tiempo real el **recurso PostgreSQL exacto en Render**:
+   workspace, postgresId, tipo primary, ausencia de réplicas y base seleccionada.
+   Obtener la huella de cluster SHA-256 del archivo de preflight, contrastarla por
+   una segunda vía (Render PostgreSQL, no solo el cliente psql), y vincularla
+   expresamente a la autorización operativa. Un nombre de BD coincidente no basta.
+   Revisar dependencias, backend LIVE y derechos u obligaciones pendientes.
+3. Autorizar **un inventario privado de filas individuales**, con IDs, estados,
+   vínculos entre orden/Plan/revisión y la huella SHA-256 de las tres tablas.
+   El archivo de preflight produce estos manifiestos sin correos ni snapshots;
+   su huella incluye *todas* las columnas de las filas, incluido el contenido
+   sensible, sin exponerlo. El hash debe aprobarse de manera independiente y
+   permanecer fijo hasta la ejecución; no regenerarlo automáticamente justo
+   antes de borrar.
+4. Confirmar respaldo **restaurable y probado** de los datos relevantes, o documentar
    una aceptación explícita y específica de pérdida irreversible. DEV no es un respaldo de PROD.
-4. Ensayar primero en PostgreSQL 18 desechable/DEV con datos sintéticos;
+5. Ensayar primero en PostgreSQL 18 desechable/DEV con datos sintéticos;
    conservar evidencia de las pruebas y revisión independiente.
-5. Asegurar que la operación se realice fuera de despliegues, con una conexión
+6. Asegurar que la operación se realice fuera de despliegues, con una conexión
    identificada, usando `psql -X -v ON_ERROR_STOP=1`. No utilizar el conector de
    consultas de solo lectura ni habilitar la migración en Render Pre-deploy.
 
@@ -50,13 +60,33 @@ Archivo **manual**: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`.
 Está deliberadamente fuera de `backend/migrations/`, del catálogo de checksums
 y de `MIGRATION_APPROVED_FILES`. No hay automatismo que lo ejecute.
 
-En la **misma sesión psql** conectada a la base explícitamente validada:
+**Primero, en modo solo lectura:** ejecutar
+`backend/operations/pw03_pr5_readonly_preflight.sql` desde la instancia
+PostgreSQL de Render confirmada. Comprobar que `timezone` sea `UTC` o `Etc/UTC`.
+Su salida contiene: identificador de BD, huella SHA-256 de clúster y huella
+SHA-256 de **todas las filas antiguas**, más manifiestos con IDs y estados
+(no emails ni snapshots). Guardar el inventario completo en evidencia privada,
+con la identidad del recurso Render (postgresId) y la aprobación independiente.
+No publicar los manifiestos ni huellas aprobadas en el repositorio.
+
+**Solo después de autorización destructiva, ensayos y confirmación de respaldo
+o aceptación de riesgo**, en la **misma sesión psql** conectada al recurso
+previamente verificado:
 
 ```sql
-SELECT current_database(); -- En PROD, debe responder mininode
+SELECT current_database(); -- En PROD debe responder mininode
 SELECT set_config('mininode.pw03_pr5_target_database', 'mininode', false);
+SELECT set_config('mininode.pw03_pr5_target_cluster_sha256', '<HUELLA_CLUSTER_APROBADA>', false);
+SELECT set_config('mininode.pw03_pr5_approved_inventory_sha256', '<HUELLA_FILAS_APROBADA>', false);
 SELECT set_config('mininode.pw03_pr5_ack', 'DELETE_2_PAID_1_PENDING_LEGACY_ORDERS', false);
 ```
+
+Las dos huellas deben provenir de la evidencia **previamente aprobada**, no de
+consultas a la conexión que se va a borrar en ese instante. Los valores vacíos
+o diferentes abortan la operación. El identificador físico de clúster puede
+compartirse entre clones o réplicas físicas: combinar siempre el hash con la
+identidad independiente del recurso Render y verificar que sea la instancia
+primaria adecuada.
 
 Luego, desde la raíz del repositorio, en esa **misma conexión psql**:
 
@@ -65,8 +95,13 @@ Luego, desde la raíz del repositorio, en esa **misma conexión psql**:
 ```
 
 Antes del script, la consola debe usar `ON_ERROR_STOP=1`; no ejecutar si la identidad
-o los recuentos difieren. El SQL usa una transacción, locks `NOWAIT`, comprobaciones
-estrictas del inventario y `DROP TABLE ... RESTRICT` en orden de dependencias.
+o los recuentos difieren. El SQL usa una transacción, locks `NOWAIT`, validación de clúster,
+comprobaciones estrictas del inventario **bajo lock**, comparación del
+hash de todas las filas y `DROP TABLE ... RESTRICT` en orden de dependencias.
+Las variables de sesión son controles contra errores operativos, no un sistema
+de autorización que reemplace los permisos de la base. Los timestamps del
+inventario se normalizan con TimeZone UTC; el procedimiento configura UTC
+durante la transacción.
 Si algo falla **antes de COMMIT**, cerrar/abortar la transacción (no forzar commit).
 No ejecutar la sentencia por partes.
 

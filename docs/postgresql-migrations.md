@@ -174,3 +174,8 @@ Para el PR 2, la comprobación del esquema nuevo al iniciar es solo SELECT, no C
 ## PW-03 PR 5 — Preparación de retiro comercial legado (03-11-2026)
 
 El procedimiento destructivo está **solo preparado**, no aprobado para ejecución ni aplicado a PROD. Archivo: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`, fuera de la lista de migraciones permitidas en Render. Preflight de base PostgreSQL 18 y sus recuentos, seguridad, dependencias, precondiciones, prueba y recuperación: [runbook de PR 5](privacy-web/pr5-legacy-retirement.md). El borrado requiere autorización operativa destructiva independiente, con respaldo verificable o aceptación específica de pérdida irreversible. No activar el archivo en `MIGRATION_APPROVED_FILES` ni ejecutarlo junto al deploy.
+
+
+## PW-03 — Cierre de observaciones O1/O2 (03-11-2026)
+
+La operación manual del PR #423 exige ahora dos huellas previamente autorizadas: del clúster PostgreSQL (función `pg_control_system()` y SHA-256) y de todas las filas antiguas (SHA-256 de JSONB ordenado por IDs), cotejadas bajo locks antes del `DROP TABLE ... RESTRICT`. El preflight de **solo lectura** está en `backend/operations/pw03_pr5_readonly_preflight.sql`, sin emails ni snapshots en su salida, y debe vincularse por separado al postgresId primario de Render. La disponibilidad de la función se confirmó en PROD mediante SELECT; la ejecución destructiva **no** ha sido aprobada ni realizada. Ver [runbook actualizado](privacy-web/pr5-legacy-retirement.md).
