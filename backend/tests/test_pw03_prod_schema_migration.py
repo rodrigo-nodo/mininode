@@ -475,9 +475,19 @@ def test_pr5_shell_prompt_rejects_wrong_hashes_sha_and_confirmation(monkeypatch)
         shell.read_approved_values(sha)
 
 
-def test_pr5_shell_readonly_preflight_never_drops(pr5_legacy_data):
+@pytest.fixture
+def pr5_shell_data(pr5_legacy_data, monkeypatch):
+    # Keep exact database/user guards enabled, but bind them to the disposable
+    # PostgreSQL 18 test database instead of production.
+    info = conninfo_to_dict(pr5_legacy_data["url"])
+    monkeypatch.setattr(shell, "EXPECTED_DATABASE", info["dbname"])
+    monkeypatch.setattr(shell, "EXPECTED_DB_USER", info.get("user", "postgres"))
+    return pr5_legacy_data
+
+
+def test_pr5_shell_readonly_preflight_never_drops(pr5_shell_data):
     from psycopg.rows import dict_row
-    with psycopg.connect(pr5_legacy_data["url"], autocommit=True,
+    with psycopg.connect(pr5_shell_data["url"], autocommit=True,
                          row_factory=dict_row) as conn:
         counts = shell.check_only(conn)
         assert counts == {
@@ -492,9 +502,9 @@ def test_pr5_shell_readonly_preflight_never_drops(pr5_legacy_data):
         )
 
 
-def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_legacy_data):
+def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_shell_data):
     from psycopg.rows import dict_row
-    p = pr5_legacy_data
+    p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
@@ -512,9 +522,9 @@ def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_dat
         assert conn.execute("SELECT count(*) AS n FROM billing.orders").fetchone()["n"] == 0
 
 
-def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_legacy_data):
+def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_shell_data):
     from psycopg.rows import dict_row
-    p = pr5_legacy_data
+    p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
@@ -527,9 +537,9 @@ def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_legacy_data):
         assert conn.execute("SELECT count(*) AS n FROM privacy.correction_plan_order").fetchone()["n"] == 3
 
 
-def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_legacy_data):
+def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_shell_data):
     from psycopg.rows import dict_row
-    p = pr5_legacy_data
+    p = pr5_shell_data
     with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
         conn.execute("SET TIME ZONE 'UTC'")
         approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
