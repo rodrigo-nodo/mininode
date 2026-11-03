@@ -85,6 +85,56 @@ identidad y huellas autorizadas para la sesión operativa, y obtener
 **autorización destructiva específica para PROD**. Hasta entonces,
 las tres tablas siguen intactas.
 
+## Ejecutor Render Shell — implementación preparada (pendiente de CI/merge/autorización)
+
+El PR de ejecutor incorpora **solo** los dos SQL aprobados de PW-03 en la
+imagen Docker y `backend/scripts/pw03_retire_legacy_shell.py` con `psycopg`.
+No añade `psql`, no crea endpoint HTTP, no cambia Pre-deploy ni toca la base
+durante el despliegue. Hasta completar CI, revisión y merge del PR, **no
+es posible ejecutar los comandos siguientes en el servicio PROD**.
+
+En **Render → `mininode-backend-prod` → Shell**, solo cuando el commit
+del PR aprobado esté desplegado y el backend esté LIVE:
+
+```sh
+python scripts/pw03_retire_legacy_shell.py --check
+```
+
+Este comando verifica las variables automáticas de Render (servicio PROD,
+rama `main`, repositorio, SHA desplegado), la URL interna de la BD sin
+mostrarla, y ejecuta únicamente el preflight SQL de lectura. Solo informa
+recuentos agregados; **no imprime huellas, IDs ni datos personales**.
+Requiere que el hostname interno de `DATABASE_URL` identifique explícitamente
+al recurso PostgreSQL Render aprobado; si Render cambió su formato,
+**detenerse y revisar, no desactivar el guard**.
+
+**Ejecución destructiva, exclusivamente después de autorización PO separada
+y de la aprobación privada y previa de las dos huellas y SHA exacto:**
+
+```sh
+python scripts/pw03_retire_legacy_shell.py --execute
+```
+
+El ejecutor exige una terminal interactiva: solicita `postgresId`,
+commit completo aprobado y, con entrada oculta, las dos huellas aprobadas
+y la frase destructiva específica. **No copiar aquí ni publicar las huellas,
+contraseñas o la cadena `DATABASE_URL`.** No se permite automatizar esa
+interacción mediante un pipe ni establecer aprobaciones en variables de
+entorno. Una vez confirmadas, el ejecutor abre **una única conexión**,
+carga las aprobaciones como variables de sesión, ejecuta el SQL íntegro
+con `BEGIN/COMMIT`, locks `NOWAIT` y `DROP RESTRICT`, y valida que
+las tablas antiguas hayan desaparecido mientras el esquema nuevo permanece.
+**No derivar ninguna de las huellas de la sesión a borrar:** deben provenir
+del preflight independiente ya revisado. Sin la autorización explícita
+adicional del PO, no invocar `--execute`.
+
+La ejecución imprime solo `PASS` o `FAIL` sin datos sensibles.
+Ante `FAIL`, **no reintentar**: consultar estado real mediante conexión
+de solo lectura. Si hubo fallo después del `COMMIT`, el borrado podría
+haber sucedido a pesar del mensaje `FAIL`; no asumir rollback.
+La verificación funcional y administrativa posterior continúa siendo
+obligatoria. Se requiere que el servicio permanezca LIVE.
+
 ## Requisitos previos (obligatorios, no automatizados)
 
 1. Obtener **autorización destructiva específica** que identifique las tres tablas,

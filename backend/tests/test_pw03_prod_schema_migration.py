@@ -390,3 +390,140 @@ def test_pr5_retirement_preserves_diagnostics_billing_and_entitled_plan(pr5_lega
             site_group_operator._require_no_legacy_orders(
                 cur, tuple(), frozenset(("pr5.example.invalid",))
             )
+
+
+# PW-03 Render Shell executable: manual CLI + actual SQL on disposable PG18.
+SHELL_SCRIPT = BACKEND / "scripts" / "pw03_retire_legacy_shell.py"
+shell_spec = importlib.util.spec_from_file_location("pw03_shell", SHELL_SCRIPT)
+shell = importlib.util.module_from_spec(shell_spec)
+shell_spec.loader.exec_module(shell)
+
+
+def _synthetic_render_env(commit="a" * 40):
+    return {
+        **shell.EXPECTED_RENDER,
+        "RENDER_GIT_COMMIT": commit,
+        "DATABASE_URL": "postgresql://mininode_user:fake@"
+                        + shell.EXPECTED_POSTGRES_ID + "/mininode",
+    }
+
+
+def test_pr5_shell_only_check_or_execute_and_image_copy_contract(monkeypatch, capsys):
+    assert shell.main([]) == 0
+    assert "Sin operación" in capsys.readouterr().out
+    assert "operations/pw03_pr5_retire_legacy_commerce.sql" in (
+        BACKEND / "Dockerfile").read_text(encoding="utf-8")
+    assert "operations/pw03_pr5_readonly_preflight.sql" in (
+        BACKEND / "Dockerfile").read_text(encoding="utf-8")
+    assert "scripts/pw03_retire_legacy_shell.py" not in (
+        BACKEND / "scripts" / "predeploy_migrations.py").read_text(encoding="utf-8")
+    assert shell.OLD_TABLES == (
+        "privacy.correction_plan", "privacy.correction_plan_order",
+        "privacy.correction_plan_check",
+    )
+
+
+def test_pr5_shell_rejects_wrong_runtime_and_wrong_url():
+    env = _synthetic_render_env()
+    assert shell.validate_render_env(env) == "a" * 40
+    for key in shell.EXPECTED_RENDER:
+        wrong = dict(env, **{key: "incorrect"})
+        with pytest.raises(shell.GuardError, match="Render PROD"):
+            shell.validate_render_env(wrong)
+    with pytest.raises(shell.GuardError, match="commit desplegado"):
+        shell.validate_render_env(dict(env, RENDER_GIT_COMMIT="invalid"))
+    shell.validate_database_url(env["DATABASE_URL"])
+    with pytest.raises(shell.GuardError, match="Host PostgreSQL"):
+        shell.validate_database_url(
+            "postgresql://mininode_user@dpg-wrong-id/mininode")
+    with pytest.raises(shell.GuardError, match="usuario"):
+        shell.validate_database_url(
+            "postgresql://another_user@" + shell.EXPECTED_POSTGRES_ID + "/mininode")
+    with pytest.raises(shell.GuardError, match="DATABASE_URL"):
+        shell.validate_database_url("")
+
+
+def test_pr5_shell_execute_refuses_non_tty_before_connect(monkeypatch, capsys):
+    monkeypatch.setattr(shell.os, "environ", _synthetic_render_env())
+    monkeypatch.setattr(shell, "_require_interactive_tty", lambda: (_ for _ in ()).throw(
+        shell.GuardError("No TTY")))
+    monkeypatch.setattr(shell.psycopg, "connect",
+                        lambda *a, **kw: pytest.fail("must not connect"))
+    assert shell.main(["--execute"]) == 1
+    assert "FAIL" in capsys.readouterr().err
+
+
+def test_pr5_shell_prompt_rejects_wrong_hashes_sha_and_confirmation(monkeypatch):
+    sha = "a" * 40
+    monkeypatch.setattr("builtins.input", lambda prompt: (
+        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
+    sequence = iter(("z" * 64, "b" * 64, shell.EXPLICIT_APPROVAL))
+    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(sequence))
+    with pytest.raises(shell.GuardError, match="huellas"):
+        shell.read_approved_values(sha)
+
+    monkeypatch.setattr("builtins.input", lambda prompt: (
+        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else "f" * 40))
+    with pytest.raises(shell.GuardError, match="Identidad"):
+        shell.read_approved_values(sha)
+
+    monkeypatch.setattr("builtins.input", lambda prompt: (
+        shell.EXPECTED_POSTGRES_ID if "postgresId" in prompt else sha))
+    sequence = iter(("b" * 64, "c" * 64, "wrong-phrase"))
+    monkeypatch.setattr(shell.getpass, "getpass", lambda prompt: next(sequence))
+    with pytest.raises(shell.GuardError, match="autorización destructiva"):
+        shell.read_approved_values(sha)
+
+
+def test_pr5_shell_readonly_preflight_never_drops(pr5_legacy_data):
+    from psycopg.rows import dict_row
+    with psycopg.connect(pr5_legacy_data["url"], autocommit=True,
+                         row_factory=dict_row) as conn:
+        counts = shell.check_only(conn)
+        assert counts == {
+            "planes_antiguos": 2, "ordenes_antiguas": 3, "revisiones_antiguas": 1,
+        }
+        assert conn.execute("SHOW default_transaction_read_only").fetchone() == {
+            "default_transaction_read_only": "on",
+        }
+        assert all(_pr5_tables(conn).values())
+
+
+def test_pr5_shell_execute_retirement_uses_existing_connection_and_preserves_data(pr5_legacy_data):
+    from psycopg.rows import dict_row
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET TIME ZONE 'UTC'")
+        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
+        # Synthetic fixture only: production approvals must come from an INDEPENDENT preflight.
+        shell.execute_retirement(
+            conn, approved["cluster_fingerprint_sha256"],
+            approved["legacy_inventory_sha256"],
+        )
+        assert not any(_pr5_tables(conn).values())
+        assert conn.execute("SELECT count(*) AS n FROM privacy.entitled_plan").fetchone()["n"] == 1
+        assert conn.execute("SELECT count(*) AS n FROM privacy.diagnostic").fetchone()["n"] == 1
+        assert conn.execute("SELECT count(*) AS n FROM billing.orders").fetchone()["n"] == 0
+
+
+def test_pr5_shell_wrong_inventory_aborts_without_deleting(pr5_legacy_data):
+    from psycopg.rows import dict_row
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET TIME ZONE 'UTC'")
+        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
+        with pytest.raises(psycopg.errors.RaiseException, match="row fingerprint"):
+            shell.execute_retirement(conn, approved["cluster_fingerprint_sha256"], "0" * 64)
+        assert all(_pr5_tables(conn).values())
+        assert conn.execute("SELECT count(*) AS n FROM privacy.correction_plan_order").fetchone()["n"] == 3
+
+
+def test_pr5_shell_wrong_cluster_aborts_without_deleting(pr5_legacy_data):
+    from psycopg.rows import dict_row
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"], autocommit=True, row_factory=dict_row) as conn:
+        conn.execute("SET TIME ZONE 'UTC'")
+        approved = conn.execute(PREFLIGHT_SCRIPT.read_text(encoding="utf-8")).fetchone()
+        with pytest.raises(psycopg.errors.RaiseException, match="cluster fingerprint"):
+            shell.execute_retirement(conn, "0" * 64, approved["legacy_inventory_sha256"])
+        assert all(_pr5_tables(conn).values())

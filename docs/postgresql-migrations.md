@@ -30,11 +30,12 @@ En `backend/Dockerfile`, la imagen actual copia `src/`, `migrations/` y
 `scripts/`, **no** `backend/operations/`. Sí dispone de Python y
 `psycopg` por las dependencias del backend; **no** incluye explícitamente
 el cliente `psql`. Render Shell es una consola del contenedor Linux,
-**no** una consola SQL de PostgreSQL. Por tanto, **hoy no existe un comando
-operativo validado en Shell para ejecutar el SQL de PW-03**.
+**no** una consola SQL de PostgreSQL. El PR de ejecutor PW-03 incorpora
+**solo** los dos SQL históricos necesarios y un comando Python manual.
+Hasta pasar CI, revisión, merge y desplegarlo LIVE, ese comando **no**
+está disponible en el servicio Render. Ver el runbook específico.
 
-Cuando se acuerde implementar el ejecutor, preparar **otro PR independiente**
-y acotado: incorporar únicamente el SQL manual necesario (no todas las
+El PR del ejecutor es independiente y acotado: incorpora únicamente el SQL manual necesario (no todas las
 operaciones indiscriminadamente) y un ejecutor con `psycopg` que use una
 **única conexión/sesión y transacción**, identidad de recurso confirmada,
 huellas autorizadas previamente, controles de inventario y dependencias bajo
