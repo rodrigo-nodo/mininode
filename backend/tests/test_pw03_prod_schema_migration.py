@@ -131,3 +131,153 @@ def test_pw03_migration_is_reviewed_additive_and_requires_explicit_approval(monk
     monkeypatch.delenv("MIGRATION_APPROVED_FILES", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert runner.main() == 0
+
+
+# PW-03 PR5 is an explicitly manual operation, NEVER a pre-deploy migration.
+RETIREMENT_SCRIPT = BACKEND / "operations" / "pw03_pr5_retire_legacy_commerce.sql"
+
+
+@pytest.fixture
+def pr5_legacy_data(disposable):
+    """Realistic historical and new Plan rows in a disposable PostgreSQL 18 DB."""
+    with psycopg.connect(disposable) as db:
+        _init_legacy(db)
+    runner.migrate(disposable, [MIGRATION])
+    user, workspace, site, site_link, diagnostic = (uuid4() for _ in range(5))
+    old_plans = [uuid4(), uuid4()]
+    old_orders = [uuid4(), uuid4(), uuid4()]
+    old_check, entitlement, entitled_plan, entitled_check = (uuid4() for _ in range(4))
+    with psycopg.connect(disposable) as db:
+        db.execute("INSERT INTO access.users(id,email) VALUES (%s,'pr5@example.invalid')", (user,))
+        db.execute("INSERT INTO access.workspaces(id,name) VALUES (%s,'PR5 isolated')", (workspace,))
+        db.execute("INSERT INTO access.sites(id,hostname) VALUES (%s,'pr5.example.invalid')", (site,))
+        db.execute("INSERT INTO access.workspace_sites(id,workspace_id,site_id) VALUES (%s,%s,%s)",
+                   (site_link, workspace, site))
+        db.execute("""INSERT INTO privacy.diagnostic
+            (id,site_url,diagnostic_snapshot,score,purchase_expires_at,workspace_site_id)
+            VALUES (%s,'https://pr5.example.invalid','{}'::jsonb,60,now()+interval '1 day',%s)""",
+                   (diagnostic, site_link))
+        for number, old_plan in enumerate(old_plans):
+            db.execute("""INSERT INTO privacy.correction_plan
+                (id,site_url,token_hash,plan_snapshot,plan_version,actions_version,initial_score)
+                VALUES (%s,'https://pr5.example.invalid',%s,'{}'::jsonb,'old','old',60)""",
+                       (old_plan, f"pr5-test-token-{number}"))
+        for number, old_order in enumerate(old_orders):
+            paid = number < 2
+            db.execute("""INSERT INTO privacy.correction_plan_order
+                (id,diagnostic_id,correction_plan_id,site_url,email,product_code,amount,currency,status,paid_at)
+                VALUES (%s,%s,%s,'https://pr5.example.invalid','pr5@example.invalid',
+                        'PRIVACY_CORRECTION_PLAN',9900,'CLP',%s,
+                        CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END)""",
+                       (old_order, diagnostic, old_plans[number] if paid else None,
+                        'paid' if paid else 'pending_payment', paid))
+        db.execute("""INSERT INTO privacy.correction_plan_check
+            (id,correction_plan_id,order_id,original_diagnostic_id,check_diagnostic_id,result_snapshot)
+            VALUES (%s,%s,%s,%s,%s,'{}'::jsonb)""",
+                   (old_check, old_plans[0], old_orders[0], diagnostic, diagnostic))
+        db.execute("""INSERT INTO access.entitlements
+            (id,workspace_site_id,product_code,active_from,active_until,status,source)
+            VALUES (%s,%s,'privacy_web',now(),now()+interval '1 month','active','internal_grant')""",
+                   (entitlement, site_link))
+        db.execute("""INSERT INTO privacy.entitled_plan
+            (id,workspace_site_id,entitlement_id,original_diagnostic_id,plan_snapshot)
+            VALUES (%s,%s,%s,%s,'{}'::jsonb)""",
+                   (entitled_plan, site_link, entitlement, diagnostic))
+        db.execute("""INSERT INTO privacy.entitled_plan_check
+            (id,entitled_plan_id,check_diagnostic_id,result_snapshot)
+            VALUES (%s,%s,%s,'{}'::jsonb)""",
+                   (entitled_check, entitled_plan, diagnostic))
+    return dict(url=disposable, diagnostic=diagnostic, entitlement=entitlement,
+                entitled_plan=entitled_plan, entitled_check=entitled_check,
+                old_plans=old_plans, old_orders=old_orders)
+
+
+def _ack_pr5(conn, database_name):
+    conn.execute("SELECT set_config('mininode.pw03_pr5_target_database', %s, false)",
+                 (database_name,))
+    conn.execute("SELECT set_config('mininode.pw03_pr5_ack', %s, false)",
+                 ("DELETE_2_PAID_1_PENDING_LEGACY_ORDERS",))
+
+
+def _pr5_tables(conn):
+    return {
+        name: conn.execute("SELECT to_regclass(%s)", ("privacy." + name,)).fetchone()[0]
+        for name in ("correction_plan", "correction_plan_order", "correction_plan_check")
+    }
+
+
+def test_pr5_script_is_manual_not_predeploy_and_restrict_only():
+    body = RETIREMENT_SCRIPT.read_text(encoding="utf-8")
+    assert not (BACKEND / "migrations" / RETIREMENT_SCRIPT.name).exists()
+    assert RETIREMENT_SCRIPT.name not in runner.APPROVED_CHECKSUMS
+    with pytest.raises(ValueError, match="not in reviewed catalog"):
+        runner.load_sql(RETIREMENT_SCRIPT.name)
+    assert body.count("DROP TABLE privacy.") == 3
+    assert body.count(" RESTRICT;") == 3
+    assert "CASCADE;" not in body
+    assert "DROP TABLE privacy.diagnostic" not in body
+    assert "DROP TABLE privacy.entitled_plan" not in body
+    assert "DROP TABLE access.entitlements" not in body
+
+
+def test_pr5_without_explicit_approval_keeps_all_data(pr5_legacy_data):
+    p = pr5_legacy_data
+    with pytest.raises(psycopg.errors.RaiseException, match="target database approval"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+        assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
+        assert db.execute("SELECT count(*) FROM privacy.entitled_plan").fetchone()[0] == 1
+
+
+def test_pr5_rejects_changed_inventory_without_partial_deletion(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"]) as db:
+        db.execute("UPDATE privacy.correction_plan_order SET status='cancelled' WHERE id=%s",
+                   (p["old_orders"][2],))
+    with pytest.raises(psycopg.errors.RaiseException, match="inventory differs"):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+        assert db.execute("SELECT count(*) FROM privacy.correction_plan_check").fetchone()[0] == 1
+
+
+def test_pr5_restrict_rejects_external_dependency_atomically(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"]) as db:
+        db.execute("""CREATE TABLE public.external_legacy_reference (
+            plan_id uuid REFERENCES privacy.correction_plan(id))""")
+    with pytest.raises(psycopg.errors.DependentObjectsStillExist):
+        with psycopg.connect(p["url"], autocommit=True) as conn:
+            _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+            conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert all(_pr5_tables(db).values())
+        assert db.execute("SELECT count(*) FROM privacy.correction_plan_order").fetchone()[0] == 3
+
+
+def test_pr5_retirement_preserves_diagnostics_billing_and_entitled_plan(pr5_legacy_data):
+    p = pr5_legacy_data
+    with psycopg.connect(p["url"], autocommit=True) as conn:
+        _ack_pr5(conn, conn.execute("SELECT current_database()").fetchone()[0])
+        conn.execute(RETIREMENT_SCRIPT.read_text(encoding="utf-8"))
+    with psycopg.connect(p["url"]) as db:
+        assert not any(_pr5_tables(db).values())
+        assert db.execute("SELECT id FROM privacy.diagnostic WHERE id=%s",
+                          (p["diagnostic"],)).fetchone()[0] == p["diagnostic"]
+        assert db.execute("SELECT id FROM access.entitlements WHERE id=%s",
+                          (p["entitlement"],)).fetchone()[0] == p["entitlement"]
+        assert db.execute("SELECT id FROM privacy.entitled_plan WHERE id=%s",
+                          (p["entitled_plan"],)).fetchone()[0] == p["entitled_plan"]
+        assert db.execute("SELECT id FROM privacy.entitled_plan_check WHERE id=%s",
+                          (p["entitled_check"],)).fetchone()[0] == p["entitled_check"]
+        assert db.execute("SELECT count(*) FROM billing.orders").fetchone()[0] == 0
+        # The site-group operator already handles an absent legacy table.
+        from mininode_api.services import site_group_operator
+        with db.cursor() as cur:
+            site_group_operator._require_no_legacy_orders(
+                cur, tuple(), frozenset(("pr5.example.invalid",))
+            )
