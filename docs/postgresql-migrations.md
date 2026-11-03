@@ -169,3 +169,8 @@ Tras autorización operativa expresa del Product Owner, se aplicó exclusivament
 **Riesgo aceptado:** el Product Owner optó por no realizar respaldo adicional y asumió expresamente el riesgo de pérdida irrecuperable de datos de PROD; DEV representa el comportamiento de referencia, **no** una copia restaurable de PROD. Esta aceptación no autoriza borrados futuros: PR 5 requerirá aprobación destructiva específica.
 
 Para el PR 2, la comprobación del esquema nuevo al iniciar es solo SELECT, no CREATE/ALTER; el backend antiguo permanece operativo hasta su retiro independiente. No reactivar la migración ni cambiar allowlist durante PR 2.
+
+
+## PW-03 PR 5 — Preparación de retiro comercial legado (03-11-2026)
+
+El procedimiento destructivo está **solo preparado**, no aprobado para ejecución ni aplicado a PROD. Archivo: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`, fuera de la lista de migraciones permitidas en Render. Preflight de base PostgreSQL 18 y sus recuentos, seguridad, dependencias, precondiciones, prueba y recuperación: [runbook de PR 5](privacy-web/pr5-legacy-retirement.md). El borrado requiere autorización operativa destructiva independiente, con respaldo verificable o aceptación específica de pérdida irreversible. No activar el archivo en `MIGRATION_APPROVED_FILES` ni ejecutarlo junto al deploy.
