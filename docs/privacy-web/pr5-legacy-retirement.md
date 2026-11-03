@@ -21,13 +21,69 @@ de sitios consulta su existencia y puede operar cuando desaparezcan.
 | `privacy.entitled_plan` / `privacy.entitled_plan_check` | 2 / 1 |
 | `access.entitlements` / `billing.orders` | 2 (ambos `internal_grant`) / 0 |
 
-Las marcas `paid` **no prueban un cobro real**. El Product Owner ha indicado que no existen
-clientes comerciales, pero antes de ejecutar debe confirmar expresamente el
-tratamiento de las dos órdenes marcadas como pagadas.
+Las marcas `paid` **no prueban un cobro real**. El Product Owner confirmó
+posteriormente que ambas órdenes eran pruebas, sin pagos reales y que
+sus datos pueden descartarse. Se mantiene la verificación operativa
+de que no aparecieron nuevos derechos u obligaciones.
 
 No se observaron vistas, funciones ni triggers SQL externos que dependan de las tablas.
 Se identificaron FK entre las tablas antiguas, y hacia `privacy.diagnostic`.
 Una FK externa agregada posteriormente abortará la operación por `RESTRICT`.
+
+## Decisión operativa — 03-11-2026
+
+Para este retiro puntual se eligió **Render Shell + ejecutor Python/`psycopg`**
+como mecanismo provisional de ejecución en cloud, **sin instalaciones en Windows**.
+No confundir esa decisión con autorización para borrar.
+
+**Limitación técnica actual:** el `backend/Dockerfile` copia `src/`,
+`migrations/` y `scripts/`, pero no `backend/operations/`; tampoco
+instala explícitamente `psql`. Por ello el SQL de este runbook **existe
+en GitHub, pero todavía no puede lanzarse directamente desde Render Shell**.
+El comando de un solo paso **no existe aún**. Hace falta un PR independiente
+que incorpore únicamente este SQL en la imagen y un ejecutor manual seguro
+con `psycopg`, sin activar Render Pre-deploy, sin modificar el backend
+funcional y sin iniciar la operación durante el despliegue.
+
+El ejecutor propuesto deberá usar una única conexión/sesión, los permisos
+y la conexión interna del servicio PROD verificado, las dos huellas
+**previamente autorizadas** (clúster e inventario), las comprobaciones
+bajo `ACCESS EXCLUSIVE NOWAIT`, la secuencia transaccional íntegra y
+`DROP TABLE ... RESTRICT`. Debe fallar sin efectos si falta una
+aprobación, hay cambios en las filas o existen nuevas dependencias. Registrar
+solo PASS/FAIL y evidencia no sensible. No copiar o pegar el SQL por partes.
+**El merge de ese futuro PR tampoco autorizará ejecutarlo.**
+
+Otras modalidades no elegidas para este caso: GitHub Actions manual
+(requeriría workflow nuevo y conexión externa validada), y el runner
+Render Pre-deploy (reservado para migraciones revisadas no incluidas en
+este retiro). Política general:
+[procedimiento operativo PostgreSQL](../postgresql-migrations.md).
+
+### Decisiones comerciales y de recuperación
+
+El Product Owner confirmó expresamente que las **dos órdenes antiguas
+marcadas `paid` fueron pruebas, sin pagos reales**, y que no desea
+conservarlas. También decidió **no efectuar un respaldo adicional
+de estas tres tablas**, aceptando el riesgo de pérdida irreversible
+de sus datos históricos. Ambas decisiones están limitadas a este
+retiro; no constituyen una renuncia general a respaldos ni prueban por
+sí solas la ausencia de otros derechos u obligaciones.
+
+**Estado de seguridad:** PR #423 y #424 integrados en `main`. Ensayo
+del SQL con datos sintéticos en PostgreSQL 18 desechable
+[PASS: 436 tests](https://github.com/rodrigo-nodo/mininode/actions/runs/41645175977/attempts/2).
+En preflight de PROD de solo lectura se identificaron la BD y el
+recurso Render primario, el inventario 2 planes / 3 órdenes / 1 revisión,
+las huellas y ausencia de FK externas inesperadas; no se registran aquí
+identificadores de filas ni huellas. Antes de ejecutar deberán
+contrastarse de nuevo desde una vía independiente y aprobarse los
+valores exactos de forma privada.
+
+**Pendiente:** implementar y validar el ejecutor Render Shell, documentar
+identidad y huellas autorizadas para la sesión operativa, y obtener
+**autorización destructiva específica para PROD**. Hasta entonces,
+las tres tablas siguen intactas.
 
 ## Requisitos previos (obligatorios, no automatizados)
 
@@ -54,7 +110,16 @@ Una FK externa agregada posteriormente abortará la operación por `RESTRICT`.
    identificada, usando `psql -X -v ON_ERROR_STOP=1`. No utilizar el conector de
    consultas de solo lectura ni habilitar la migración en Render Pre-deploy.
 
-## Procedimiento de operación, solo después de la autorización
+## Procedimiento SQL existente — referencia condicionada a autorización
+
+**Importante:** la secuencia `psql` de abajo documenta el contrato
+del archivo SQL; **no** es una instrucción lista para ejecutar hoy
+desde Render Shell. Requiere un cliente `psql` y el SQL disponible
+en el entorno que lo ejecute. La vía elegida para este caso es el
+**ejecutor Python/`psycopg` pendiente de implementación y revisión**;
+mantener la secuencia como referencia técnica, sin usarla como atajo
+operativo. No se ejecutará desde el chat ni se añadirá a Pre-deploy.
+
 
 Archivo **manual**: `backend/operations/pw03_pr5_retire_legacy_commerce.sql`.
 Está deliberadamente fuera de `backend/migrations/`, del catálogo de checksums
