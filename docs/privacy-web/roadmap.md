@@ -1,6 +1,6 @@
 # Privacy Web - Roadmap
 
-**Estado:** Plan aprobado; seguimiento actualizado al 03 de noviembre de 2026  
+**Estado:** Plan aprobado; decisión de presentación de Score registrada el 04 de noviembre de 2026 (QA aún pendiente)  
 **Producto:** Mininode Privacy Web  
 **Referencia oficial:** `main` (`docs/privacy-web/roadmap.md`)  
 **Integración y validación:** rama `dev` y entorno `dev.mininode.io`  
@@ -67,9 +67,9 @@ Antes del piloto, fijar criterios de éxito, participantes, modalidad gratuita o
 
 ### Puerta de QA para piloto gratuito controlado (pendiente de PASS)
 
-| Control | Evidencia requerida | Estado al 03-11-2026 |
+| Control | Evidencia requerida | Estado al 04-11-2026 |
 |---|---|---|
-| **PW-QA-01: comunicación de score y cobertura** | No presentar un 100/100 o «Bien» como evidencia suficiente cuando numerosos controles no pudieron evaluarse; definir y comprobar la experiencia sin cambiar el algoritmo de scoring implícitamente | **Por resolver**; QA exploratorio Work del 02-11 detectó el caso |
+| **PW-QA-01: comunicación de score y cobertura** | Evaluar suficiencia por **cobertura y peso/importancia/causa de datos faltantes**, no por porcentaje fijo aislado. Validar tres estados de presentación (limitada sin Score destacado; parcial con Score contextualizado; completa) y cuatro escenarios, incluido 100/100 con 100% de cobertura; conservar cálculo backend, hallazgos y advertencia legal. Ver [criterio y mockups acordados](../privacy.md#privacy-score--suficiencia-y-representatividad-de-la-evidencia). | **Diseño conceptual acordado; umbral y regla de suficiencia pendientes; implementación y QA no acreditados**. Caso 100/100 parcial observado en DEV 04-11-2026 |
 | **PW-QA-02: contrato visible de controles** | Conciliar los 21 controles del backend con el texto «19 puntos» y la enumeración del frontend; incluir tests que eviten divergencia y verificar PROD | **Por resolver**; [issue #204](https://github.com/rodrigo-nodo/mininode/issues/204) |
 | **PW-QA-03: E2E posterior a PW-03** | Congelar SHA, comprobar frontend Cloudflare y backend Render LIVE, guardar diagnóstico, autenticar, otorgar/revocar cortesía interna autorizada, leer Plan, repetir revisión, comparar historial y validar aislamiento por workspace y errores sin tablas legado | **No verificado** luego del retiro físico; no realizar diagnósticos externos no autorizados |
 | **PW-QA-04: experiencia y tratamiento mínimo** | Verificar flujo OTP, móvil, textos críticos, fallos detectables, soporte básico y datos/accesos/retención aplicables a pilotos | **Parcial / pendiente de evidencia**; coordinar con PW-05–PW-07 |
