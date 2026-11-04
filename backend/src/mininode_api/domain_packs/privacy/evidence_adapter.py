@@ -700,13 +700,16 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
         if start < 0 or start > 350:
             continue
         heading_window = visible[start + len(heading): start + len(heading) + 190]
-        if _POLICY_VERSION_PATTERN.search(heading_window) or (
+        has_version = bool(_POLICY_VERSION_PATTERN.search(heading_window))
+        has_date = bool(
             _POLICY_DATE_PATTERN.search(heading_window)
             and _contains_phrase(heading_window, _POLICY_DATE_CONTEXT_TERMS)
-        ):
+        )
+        if has_version or has_date:
             return {
                 **evidence, "policy_document_reference": "dated",
-                "reference_type": "heading", "confidence": "high",
+                "reference_type": "version" if has_version else "date",
+                "confidence": "high",
             }
     if _POLICY_VERSION_PATTERN.search(document):
         return {

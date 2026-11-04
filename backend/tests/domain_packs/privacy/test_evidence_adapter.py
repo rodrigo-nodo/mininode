@@ -604,6 +604,8 @@ def test_prv004_recognizes_version_in_selected_policy_header_only():
         ))
         result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})
         assert result["result"] == expected, visible
+        if expected == "detected":
+            assert adapted["PRV-004"]["reference_type"] == "version"
 
 
 def test_prv006_detects_rights_request_heading_without_using_generic_contact():
