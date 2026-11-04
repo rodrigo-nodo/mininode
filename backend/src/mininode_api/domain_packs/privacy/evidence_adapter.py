@@ -1334,49 +1334,46 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     else:
         prv001["technical_error"] = True
 
+    # PRV-002 and the documentary checks must refer to the same policy
+    # selected by PRV-003. A commercial /privacy/ page is not proof that
+    # a separately selected /legal/privacy/ document is accessible.
+    prv003 = _policy_attribution(contract, candidates)
+    if not sufficient:
+        prv003["technical_error"] = True
+        prv003["confidence"] = "low"
+
     prv002: dict = {
         "policy_link_found": bool(candidates),
         "confidence": policy_confidence if candidates else ("high" if sufficient else "low"),
     }
     if candidates:
-        successful_pages = {
-            _normalized_url(observed_url): page
-            for page in contract.pages
-            for observed_url in (page.url, page.requested_url)
-            if observed_url
-        }
-        error_urls = {_normalized_url(error["url"]) for error in contract.inspection.errors if error.get("url")}
-        candidate_urls = {_normalized_url(link.url) for link, _ in candidates}
-        successful_candidates = candidate_urls & successful_pages.keys()
-        failed_candidates = candidate_urls & error_urls
-        if successful_candidates:
+        selected_urls = prv003.get("source_urls") or []
+        selected_url = selected_urls[0] if selected_urls else None
+        selected_page = (
+            _selected_policy_page(contract, selected_url) if selected_url else None
+        )
+        if selected_page is not None:
             prv002["policy_accessible"] = True
-            # A candidate link establishes visibility, but an HTTP success alone does
-            # not establish that the obtained page is relevant.  v0.1 only confirms
-            # relevance when the obtained page title supplies a clear corroborating
-            # signal; it never examines or retains full page content.
-            relevant = any(
-                _normalized_url(link.url) in successful_pages
-                and _contains_phrase(
-                    successful_pages[_normalized_url(link.url)].title or "",
-                    _PRIVACY_TERMS,
-                )
-                for link, _ in candidates
+            # Preserve the established PRV-002 evidence rule: an accessible
+            # document needs a title clearly associated with privacy.
+            prv002["policy_content_relevant"] = _contains_phrase(
+                selected_page.title or "", _PRIVACY_TERMS
             )
-            prv002["policy_content_relevant"] = relevant
-        elif failed_candidates:
+        elif selected_url and any(
+            _normalized_url(_public_source_url(error["url"])) ==
+            _normalized_url(selected_url)
+            for error in contract.inspection.errors
+            if error.get("url") and _public_source_url(error["url"])
+        ):
             prv002["policy_accessible"] = False
             prv002["policy_content_relevant"] = False
         else:
+            # An unrelated inspected candidate cannot turn an uninspected
+            # or inaccessible selected policy into a positive result.
             prv002["technical_error"] = True
             prv002["confidence"] = "low"
     elif not sufficient:
         prv002["technical_error"] = True
-
-    prv003 = _policy_attribution(contract, candidates)
-    if not sufficient:
-        prv003["technical_error"] = True
-        prv003["confidence"] = "low"
 
     prv004 = _policy_date_or_version(contract, prv003)
     prv005 = _responsible_identification(contract, prv003)

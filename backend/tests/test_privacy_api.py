@@ -269,10 +269,10 @@ def test_coverage_100_does_not_stop_real_privacy_gap(monkeypatch):
     assert fake.calls == [[HOME], [privacy]]
 
 
-def test_failed_privacy_candidate_is_replaced_and_consumes_attempt(monkeypatch, caplog):
+def test_blocked_selected_privacy_candidate_does_not_borrow_other_page_success(monkeypatch, caplog):
     first, second = f"{HOME}privacy-a", f"{HOME}privacy-b"
     client, fake = client_with(monkeypatch, {
-        HOME: page(HOME, f'<a href="{second}">Privacy B</a><a href="{first}">Privacy A</a>'),
+        HOME: page(HOME, f'<a href="{second}">Privacy B</a><a href="{first}">Política de privacidad</a>'),
         first: failed_page(first, "robots_disallowed"),
         second: page(second, "<title>Privacy policy</title>"),
     })
@@ -298,7 +298,9 @@ def test_failed_privacy_candidate_is_replaced_and_consumes_attempt(monkeypatch, 
         )
         for result in map(real_privacy_diagnostic, contracts)
     ]
-    assert outcomes == ["not_evaluable", "partial", "detected"]
+    # PRV-002 must never mark a selected, blocked policy as accessible merely
+    # because another privacy candidate was eventually inspected.
+    assert outcomes == ["not_evaluable", "partial", "partial"]
     assert contracts[1].inspection.errors[0]["code"] == "robots_disallowed"
     assert contracts[1].inspection.pages_analyzed == 1
     assert contracts[-1].inspection.pages_requested == 3
@@ -410,6 +412,61 @@ def test_maximum_is_five_attempts_including_failed_candidates(monkeypatch, caplo
     assert event["stop_reason"] == "max_pages"
     assert event["remaining_gap_controls"] == ["PRV-002"]
     assert event["remaining_gap_categories"] == ["privacy"]
+
+
+def test_selected_legal_policy_is_fetched_before_four_earlier_privacy_candidates(monkeypatch):
+    """B1 regression: reserve the bounded page budget for the selected policy."""
+    legal = f"{HOME}legal/privacy/"
+    earlier = [f"{HOME}{letter}-privacy/" for letter in "abcd"]
+    links = "".join(
+        f'<a href="{url}">Privacy {i}</a>'
+        for i, url in enumerate(earlier)
+    ) + f'<a href="{legal}">Política de privacidad</a>'
+    policy_html = (
+        "<title>Política de privacidad</title>"
+        "<main><h1>Política de privacidad</h1>"
+        "<p>Versión 1.2. Example SpA es responsable del tratamiento.</p>"
+        "<p>Para ejercer derechos escriba a privacidad@example.com.</p></main>"
+    )
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, links),
+        legal: page(legal, policy_html),
+        **{url: page(url, "<title>Privacy Web</title>") for url in earlier},
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal]]
+    assert response.json()["scope"]["pages_requested"] == 2
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-003"]["source_url"] == legal
+    assert controls["PRV-002"]["result"] == "detected"
+    assert controls["PRV-004"]["result"] == "detected"
+    assert controls["PRV-005"]["result"] == "detected"
+
+
+def test_blocked_selected_legal_policy_is_not_rescued_by_commercial_privacy_page(monkeypatch):
+    """B2 regression: PRV-002 relates exclusively to PRV-003's selected URL."""
+    legal = f"{HOME}legal/privacy/"
+    commercial = f"{HOME}privacy/"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME,
+                   f'<a href="{commercial}">Privacy Web</a>'
+                   f'<a href="{legal}">Política de privacidad</a>'),
+        legal: failed_page(legal, "robots_disallowed"),
+        commercial: page(commercial, "<title>Privacy Web</title>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal], [commercial]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-003"]["source_url"] == legal
+    assert controls["PRV-002"]["result"] == "partial"
+    assert controls["PRV-004"]["result"] == "not_evaluable"
+    assert response.json()["scope"]["pages_requested"] == 3
 
 
 def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):

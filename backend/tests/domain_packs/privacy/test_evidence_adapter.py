@@ -397,6 +397,42 @@ def test_prv002_uninspected_policy_does_not_fake_inaccessibility():
     assert "policy_accessible" not in evidence
 
 
+def test_prv002_does_not_use_commercial_page_when_selected_legal_policy_is_blocked():
+    commercial = "https://example.com/privacy/"
+    selected = "https://example.com/legal/privacy/"
+    links = [
+        LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+        LinkEvidence(selected, "Política de privacidad", "https://example.com/"),
+    ]
+    commercial_page = PageEvidence(
+        commercial, 200, "Privacy Web", "text/html",
+        visible_text="Diagnóstico de privacidad para sitios web.",
+    )
+    adapted = adapt_evidence(contract(
+        links=links, pages=[commercial_page],
+        errors=[{"url": selected, "code": "robots_disallowed"}],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [selected]
+    assert adapted["PRV-002"]["policy_accessible"] is False
+    assert adapted["PRV-002"]["policy_content_relevant"] is False
+    assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "partial"
+
+
+def test_prv002_does_not_use_commercial_page_when_selected_policy_is_uninspected():
+    commercial = "https://example.com/privacy/"
+    selected = "https://example.com/legal/privacy/"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+            LinkEvidence(selected, "Política de privacidad", "https://example.com/"),
+        ],
+        pages=[PageEvidence(commercial, 200, "Privacy Web", "text/html")],
+    ))
+    assert adapted["PRV-002"].get("technical_error") is True
+    assert "policy_accessible" not in adapted["PRV-002"]
+    assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "not_evaluable"
+
+
 def test_prv003_same_site_policy_is_own():
     link = LinkEvidence("https://example.com/privacy", "Privacidad", "https://example.com/")
     evidence = adapt_evidence(contract(links=[link]))["PRV-003"]

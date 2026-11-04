@@ -232,8 +232,20 @@ def _needed_categories(diagnostic: dict) -> set[str]:
     }
 
 
+def _same_public_policy_url(candidate_url: str, selected_url: str) -> bool:
+    """Match a selected public source to an existing candidate without query data."""
+    candidate = urlsplit(candidate_url)
+    selected = urlsplit(selected_url)
+    return (
+        candidate.scheme.lower() == selected.scheme.lower()
+        and candidate.hostname == selected.hostname
+        and (candidate.path.rstrip("/") or "/") == (selected.path.rstrip("/") or "/")
+    )
+
+
 def _next_candidate(
-    candidates: list[PageCandidate], attempted_urls: set[str], needed: set[str]
+    candidates: list[PageCandidate], attempted_urls: set[str], needed: set[str],
+    *, selected_policy_url: str | None = None,
 ) -> PageCandidate | None:
     for category in _CATEGORY_ORDER:
         if category not in needed:
@@ -244,6 +256,15 @@ def _next_candidate(
             if candidate.category == category and candidate.url not in attempted_urls
         ]
         if available:
+            # Use the same policy as PRV-003 before spending the limited page
+            # budget on alphabetically earlier but unrelated privacy links.
+            if category == "privacy" and selected_policy_url:
+                selected = [
+                    item for item in available
+                    if _same_public_policy_url(item.url, selected_policy_url)
+                ]
+                if selected:
+                    return min(selected, key=lambda candidate: candidate.rank)
             return min(available, key=lambda candidate: candidate.rank)
     return None
 
@@ -312,7 +333,18 @@ def diagnose_privacy_url(
                 stop_reason = "deadline"
                 combined.limited = True
                 break
-            candidate = _next_candidate(candidates, attempted_urls, needed)
+            selected_policy_url = next(
+                (
+                    control.get("source_url")
+                    for control in diagnostic.get("controls", [])
+                    if control.get("control_code") == "PRV-003"
+                ),
+                None,
+            )
+            candidate = _next_candidate(
+                candidates, attempted_urls, needed,
+                selected_policy_url=selected_policy_url,
+            )
             if candidate is None:
                 stop_reason = "no_candidates"
                 break
