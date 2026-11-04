@@ -48,7 +48,7 @@ rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
 La versión vigente del framework en DEV es `0.13`; el scoring continúa en `0.3`.
-Framework `0.13` reconoce una fecha o versión cercana al encabezado de la política seleccionada, canales explícitos de derechos en contexto próximo a un correo y proveedores que tratan datos aunque no utilicen literalmente «compartir» o «transferir». Los controles conservan pruebas negativas y su dependencia de PRV-003; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
+Framework `0.13` reconoce fechas o versiones declaradas como metadatos en el encabezado HTML de la política seleccionada, canales explícitos de ejercicio de derechos en el mismo segmento o una frase inmediatamente adyacente y proveedores que declaran tratar datos aunque no usen «compartir» o «transferir». Excluye versiones de plataforma, correos comerciales sin relación con derechos y negaciones de tratamiento por proveedores. Los controles conservan PRV-003 como fuente exclusiva; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
 
 Framework `0.12` prioriza enlaces explícitos de política legal frente a páginas
 comerciales de Privacy Web, resuelve el documento seleccionado entre URLs
@@ -316,9 +316,11 @@ consideran de tercero y el texto del enlace no puede sobreescribir esa señal.
 
 PRV-004 detecta de forma determinística una fecha contextualizada de actualización,
 publicación o vigencia, o un identificador de versión, únicamente en la política
-seleccionada por PRV-003. También examina un tramo acotado tras el título de la
-política cuando el extractor excluyó el encabezado del contenido principal; no
-atribuye versiones genéricas de la plataforma. Es un control contextual de peso
+seleccionada por PRV-003. Cuando el extractor excluye el encabezado, usa solo
+metadatos explícitos dentro de un elemento `header` del documento principal,
+con un título propio de política. Ignora versiones de plataforma aunque aparezcan
+próximas a la palabra «privacidad» o en el texto documental. El metadato no se
+incluye en el contrato de evidencia publicado; es un control contextual de peso
 cero, sin solicitudes adicionales ni efecto directo sobre el Privacy Score.
 
 PRV-005 evalúa la identificación observable del responsable únicamente en el
@@ -326,11 +328,11 @@ documento seleccionado por PRV-003 y reutiliza su contenido ya inspeccionado, si
 realizar solicitudes adicionales ni usar referencias de políticas de terceros.
 
 PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
-seleccionado por PRV-003. Reconoce referencias explícitas a ejercicio de
-derechos próximas al correo en el texto documental limpio, aun cuando haya
-frases intermedias; no usa texto visible de cabeceras ni pies de página, ni
-una dirección genérica como prueba de canal de derechos. No toma contactos
-de otras páginas y sigue separado del contacto general de PRV-301.
+seleccionado por PRV-003. Requiere asociación explícita entre el canal y el
+ejercicio de derechos en el mismo segmento o una frase inmediatamente
+adyacente del texto documental limpio; no recorre ventanas retrospectivas de
+caracteres que puedan unir secciones diferentes. No usa cabeceras, pies de
+página ni contactos generales de otras páginas, y sigue separado de PRV-301.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
 documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
@@ -348,9 +350,10 @@ PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
 únicamente en el documento seleccionado por PRV-003. Usa señales textuales
 determinísticas de comunicación o de proveedores que tratan datos; admite
 categorías explícitas en hasta dos frases anteriores al tratamiento observable,
-sin aprobar menciones comerciales genéricas a proveedores. Conserva las
-declaraciones expresas de no compartir datos, no amplía la inspección ni
-evalúa jurídicamente esa comunicación.
+sin aprobar menciones comerciales genéricas a proveedores ni declaraciones
+negadas de tratamiento (por ejemplo, «los proveedores no tratan datos»).
+Conserva las declaraciones expresas de no compartir datos, no amplía la
+inspección ni evalúa jurídicamente esa comunicación.
 
 PRV-011 evalúa los derechos del titular únicamente en el documento seleccionado
 por PRV-003, reutilizando su contenido ya inspeccionado.

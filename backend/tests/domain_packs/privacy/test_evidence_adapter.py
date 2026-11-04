@@ -582,24 +582,29 @@ def test_policy_tracking_parameters_do_not_allow_other_functional_query():
     assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "not_evaluable"
 
 
-def test_prv004_recognizes_version_in_selected_policy_header_only():
+def test_prv004_recognizes_only_structural_policy_header_metadata():
     url = "https://example.com/legal/privacy/"
     link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
-    cases = [
-        ("Legal Política de privacidad Versión 1.2. Última actualización: septiembre de 2026.",
-         "detected"),
-        ("Plataforma Versión 8.2. Contacto · Política de privacidad Información general.",
-         "not_detected"),
+    cases = (
+        ("Política de privacidad Versión 1.2.", "Versión 1.2", "detected"),
+        ("Política de privacidad · Plataforma versión 8.2 · Información legal",
+         None, "not_detected"),
+        ("Plataforma versión 8.2 · Política de privacidad", None, "not_detected"),
         ("Política de privacidad Información de datos personales. Sitio actualizado.",
-         "not_detected"),
-    ]
-    for visible, expected in cases:
+         None, "not_detected"),
+    )
+    for visible, reference, expected in cases:
         adapted = adapt_evidence(contract(
             links=[link],
             pages=[PageEvidence(
                 url, 200, "Política de privacidad", "text/html",
                 visible_text=visible,
-                content_text="Esta política explica el tratamiento de datos personales.",
+                content_text=(
+                    "Política de privacidad · Plataforma versión 8.2 · Información legal"
+                    if "Plataforma versión 8.2" in visible
+                    else "Esta política explica el tratamiento de datos personales."
+                ),
+                policy_header_reference=reference,
             )],
         ))
         result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})
@@ -608,32 +613,72 @@ def test_prv004_recognizes_version_in_selected_policy_header_only():
             assert adapted["PRV-004"]["reference_type"] == "version"
 
 
-def test_prv006_detects_rights_request_heading_without_using_generic_contact():
+def test_prv004_header_metadata_is_structural_and_not_platform_version():
+    url = "https://example.com/legal/privacy/"
+    cases = [
+        (
+            '<header><p>Plataforma versión 8.2</p>'
+            '<a href="/legal/privacy/">Política de privacidad</a></header>'
+            '<main><header><h1>Política de privacidad</h1>'
+            '<p>Versión 1.2 · Última actualización: septiembre de 2026.</p>'
+            '</header><article><p>Tratamos datos personales.</p></article></main>',
+            "Versión 1.2 · Última actualización: septiembre de 2026.",
+        ),
+        (
+            '<main><header><h1>Política de privacidad · Plataforma versión 8.2'
+            ' · Información legal</h1></header>'
+            '<article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+        (
+            '<main><header><h1>Política de privacidad</h1>'
+            '<p>Plataforma versión 8.2 · Información legal</p></header>'
+            '<article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+        (
+            '<header><h1>Política de privacidad</h1><p>Versión 2.0</p></header>'
+            '<main><article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+    ]
+    for html, expected in cases:
+        extracted = extract_page(html, url)
+        assert extracted.policy_header_reference == expected
+        assert "policy_header_reference" not in contract(
+            pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                policy_header_reference=extracted.policy_header_reference,
+            )],
+        ).to_dict()["pages"][0]
+
+
+def test_prv006_rights_channel_association_does_not_cross_commercial_section():
     url = "https://example.com/legal/privacy/"
     link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
-    positive = adapt_evidence(contract(
-        links=[link],
-        pages=[PageEvidence(
-            url, 200, "Política de privacidad", "text/html",
-            visible_text="Ejercicio de derechos. Nuestro equipo recibe solicitudes de las personas. "
-                         "Puede escribir a contacto@example.com.",
-            content_text="Ejercicio de derechos. Nuestro equipo recibe solicitudes de las personas. "
-                         "Puede escribir a contacto@example.com.",
-        )],
-    ))
-    assert evaluate_control("PRV-006", positive["PRV-006"], {"PRV-003": "detected"})["result"] == "detected"
-    negative = adapt_evidence(contract(
-        links=[link],
-        pages=[PageEvidence(
-            url, 200, "Política de privacidad", "text/html",
-            visible_text="Política de privacidad. Contacto general: hola@example.com.",
-            content_text="Este documento explica el tratamiento. Contacto: hola@example.com.",
-        )],
-    ))
-    assert evaluate_control("PRV-006", negative["PRV-006"], {"PRV-003": "detected"})["result"] == "partial"
+    cases = (
+        ("Ejercicio de derechos. Para solicitar acceso escriba a contacto@example.com.",
+         "detected"),
+        ("Para ejercer derechos sobre sus datos personales escriba a privacidad@example.com.",
+         "detected"),
+        ("Ejercicio de derechos. Se describen los derechos disponibles, sin establecer un canal. "
+         "Contacto comercial. Escríbenos a ventas@example.com.",
+         "partial"),
+        ("Política de privacidad. Contacto general: hola@example.com.", "partial"),
+    )
+    for content, expected in cases:
+        adapted = adapt_evidence(contract(
+            links=[link],
+            pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                visible_text=content, content_text=content,
+            )],
+        ))
+        result = evaluate_control("PRV-006", adapted["PRV-006"], {"PRV-003": "detected"})
+        assert result["result"] == expected, content
 
 
-def test_prv010_recognizes_processors_across_sentences_not_bare_vendor_mentions():
+def test_prv010_recognizes_processors_but_rejects_negated_handling():
     url = "https://example.com/legal/privacy/"
     link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
     cases = (
@@ -643,21 +688,28 @@ def test_prv010_recognizes_processors_across_sentences_not_bare_vendor_mentions(
             "Estos proveedores pueden tratar datos únicamente para prestar el servicio.",
             "detected",
         ),
+        ("Nuestros proveedores tecnológicos no tratan datos personales.", "not_detected"),
+        ("Estos proveedores pueden no tratar datos personales.", "not_detected"),
+        ("Los proveedores tecnológicos nunca almacenan datos personales.", "not_detected"),
+        ("Our service providers do not process personal data.", "not_detected"),
         (
             "Nuestros proveedores tecnológicos ofrecen servicios informáticos. "
             "No vendemos datos personales.",
             "not_detected",
         ),
     )
-    for text, expected in cases:
+    for content, expected in cases:
         adapted = adapt_evidence(contract(
             links=[link], pages=[PageEvidence(
-                url, 200, "Política de privacidad", "text/html", visible_text=text,
+                url, 200, "Política de privacidad", "text/html",
+                visible_text=content,
             )],
         ))
-        assert evaluate_control(
+        result = evaluate_control(
             "PRV-010", adapted["PRV-010"], {"PRV-003": "detected"}
-        )["result"] == expected
+        )
+        assert result["result"] == expected, content
+
 
 
 def test_document_controls_ignore_emol_style_chrome_and_form_noise():

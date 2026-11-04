@@ -114,6 +114,9 @@ _POLICY_VERSION_PATTERN = re.compile(
     r"\b(?:politica de privacidad|privacy policy)\s+v\s*\d+(?:\.\d+)*\b",
     re.I,
 )
+_NON_POLICY_VERSION_TERMS = re.compile(
+    r"\b(?:plataforma|platform|software|sistema|system|aplicacion|app|producto)\b"
+)
 _RIGHTS_CONTEXT_TERMS = (
     "ejercer derechos", "ejercicio de derechos", "derechos de acceso",
     "derechos arcop", "derechos arco", "solicitudes de privacidad",
@@ -666,6 +669,19 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
     }
 
 
+def _has_policy_version(text: str) -> bool:
+    """Recognize a version without borrowing an adjacent platform's version."""
+    for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", text):
+        normalized = _normalize(segment)
+        for match in _POLICY_VERSION_PATTERN.finditer(normalized):
+            nearby = normalized[
+                max(0, match.start() - 50): min(len(normalized), match.end() + 50)
+            ]
+            if not _NON_POLICY_VERSION_TERMS.search(nearby):
+                return True
+    return False
+
+
 def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify dating/version signals only in PRV-003's selected policy."""
 
@@ -688,30 +704,22 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
 
     raw_document = f"{selected_page.title or ''}\n{_policy_document_text(selected_page)}"
     document = _normalize(raw_document)
-    # Page headers are intentionally excluded from cleaned main content.
-    # Capture only a nearby reference following the selected policy's visible
-    # heading, not generic site metadata, navigation or other pages.
-    visible = _normalize(selected_page.visible_text or "")
-    for heading in (
-        "politica de privacidad", "privacy policy",
-        "aviso de privacidad", "politica de proteccion de datos",
-    ):
-        start = visible.find(heading)
-        if start < 0 or start > 350:
-            continue
-        heading_window = visible[start + len(heading): start + len(heading) + 190]
-        has_version = bool(_POLICY_VERSION_PATTERN.search(heading_window))
-        has_date = bool(
-            _POLICY_DATE_PATTERN.search(heading_window)
-            and _contains_phrase(heading_window, _POLICY_DATE_CONTEXT_TERMS)
-        )
-        if has_version or has_date:
-            return {
-                **evidence, "policy_document_reference": "dated",
-                "reference_type": "version" if has_version else "date",
-                "confidence": "high",
-            }
-    if _POLICY_VERSION_PATTERN.search(document):
+    # The document extractor supplies only explicit metadata from the policy's
+    # own HTML header. Generic platform versions and navigation labels never
+    # contribute a date/version to this selected document.
+    header_reference = _normalize(selected_page.policy_header_reference or "")
+    has_header_version = _has_policy_version(header_reference)
+    has_header_date = bool(
+        _POLICY_DATE_PATTERN.search(header_reference)
+        and _contains_phrase(header_reference, _POLICY_DATE_CONTEXT_TERMS)
+    )
+    if has_header_version or has_header_date:
+        return {
+            **evidence, "policy_document_reference": "dated",
+            "reference_type": "version" if has_header_version else "date",
+            "confidence": "high",
+        }
+    if _has_policy_version(raw_document):
         return {
             **evidence, "policy_document_reference": "dated",
             "reference_type": "version", "confidence": "high",
@@ -781,20 +789,6 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
         for segment in channel_segments
     )
-    # The rights heading can be separated from its contact email by several
-    # sentences. Use only a short window of the selected policy's CLEANED
-    # content, never the wider visible page (header, navigation or footer).
-    if not explicit:
-        for email in _EMAIL_PATTERN.finditer(raw_document):
-            context = raw_document[max(0, email.start() - 240): email.end()]
-            if _contains_phrase(context, (
-                "ejercicio de derechos", "ejercer derechos",
-                "solicitudes de privacidad", "privacy requests",
-                "data subject rights", "data subject requests",
-                "consultas relacionadas con privacidad",
-            )):
-                explicit = True
-                break
     if explicit:
         channel, confidence = "explicit", "high"
     elif channel_segments:
@@ -911,6 +905,23 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
     return {**evidence, "declared_processing_basis": basis, "confidence": confidence}
 
 
+def _affirmative_processor_handling(segment: str) -> bool:
+    """Require an affirmative supplier-data-processing clause.
+
+    A negated claim about suppliers must not turn into positive evidence
+    of data recipients, even if their category is explicitly named.
+    """
+    normalized = _normalize(segment)
+    for match in _PROCESSOR_HANDLING_PATTERN.finditer(normalized):
+        matched = match.group(0)
+        # Conservatively reject a denial between the supplier and the
+        # handling verb, including modal constructions ("pueden no tratar").
+        if re.search(r"\b(?:no|nunca|jamas|not|never|sin|cannot)\b", matched):
+            continue
+        return True
+    return False
+
+
 def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify recipients only in PRV-003's selected inspected policy."""
 
@@ -953,7 +964,7 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
     processor_segments = [
         " ".join(segments[max(0, i - 2): i + 1])
         for i, segment in enumerate(segments)
-        if _PROCESSOR_HANDLING_PATTERN.search(_normalize(segment))
+        if _affirmative_processor_handling(segment)
     ]
     processor_segments = [
         segment for segment in processor_segments

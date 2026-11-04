@@ -44,6 +44,19 @@ _FORM_CONTEXT_FORBIDDEN = (
     "form", "input", "select", "textarea", "button", "label", "legend",
 )
 _SUBSTANTIVE_TEXT_LENGTH = 40
+_POLICY_HEADING_RE = re.compile(
+    r"\b(?:pol[ií]tica de privacidad|privacy policy|aviso de privacidad|"
+    r"pol[ií]tica de protecci[oó]n de datos)\b", re.I,
+)
+_POLICY_METADATA_START_RE = re.compile(
+    r"^(?:versi[oó]n|revisi[oó]n|[uú]ltima actualizaci[oó]n|"
+    r"fecha de (?:actualizaci[oó]n|publicaci[oó]n|vigencia)|"
+    r"vigente desde|last updated|effective date|revision)\b", re.I,
+)
+_PLATFORM_VERSION_RE = re.compile(
+    r"\b(?:plataforma|platform|software|sistema|system|aplicaci[oó]n|app|producto)\b",
+    re.I,
+)
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
 
 
@@ -58,6 +71,7 @@ class PageExtraction:
     preferences_detected: bool = False
     mixed_content: bool = False
     content_text: str | None = None
+    policy_header_reference: str | None = None
 
 
 def _text(tag: Tag) -> str:
@@ -87,6 +101,32 @@ def _clean_content_text(soup: BeautifulSoup) -> str | None:
         fallback = soup.body if isinstance(soup.body, Tag) else soup
         content = cleaned_text(fallback)
     return content[:CONTENT_TEXT_LIMIT] if len(content) >= _SUBSTANTIVE_TEXT_LENGTH else None
+
+
+def _policy_header_reference(soup: BeautifulSoup) -> str | None:
+    """Read explicit date/version metadata from a policy document's own header.
+
+    Only a standalone metadata element beneath a policy heading inside the
+    main document qualifies. Navigation text, platform versions, and headings
+    that merely link to a policy do not.
+    """
+    mains = soup.find_all("main")
+    if len(mains) != 1:
+        return None
+    for header in mains[0].find_all("header"):
+        if not isinstance(header.parent, Tag) or header.parent.name not in {"main", "article"}:
+            continue
+        title = header.find(["h1", "h2"], recursive=False)
+        if not isinstance(title, Tag) or not _POLICY_HEADING_RE.search(_text(title)):
+            continue
+        for metadata in header.find_all(["p", "small", "time"], recursive=False):
+            reference = _text(metadata)
+            if (
+                _POLICY_METADATA_START_RE.search(reference)
+                and not _PLATFORM_VERSION_RE.search(reference)
+            ):
+                return reference[:320]
+    return None
 
 
 def _label(control: Tag, soup: BeautifulSoup) -> str:
@@ -346,6 +386,7 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
         removable.decompose()
     visible_text = _text(soup)
     content_text = _clean_content_text(soup)
+    policy_header_reference = _policy_header_reference(soup)
     visible = visible_text.lower()
     return PageExtraction(
         title=title,
@@ -353,6 +394,7 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
         # without retaining the complete untrusted document.
         visible_text=visible_text[:4000],
         content_text=content_text,
+        policy_header_reference=policy_header_reference,
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -387,6 +429,7 @@ def build_evidence(
             requested_url=page.requested_url,
             visible_text=extracted.visible_text,
             content_text=extracted.content_text,
+            policy_header_reference=extracted.policy_header_reference,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)
