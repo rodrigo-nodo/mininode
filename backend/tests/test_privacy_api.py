@@ -639,6 +639,8 @@ def test_mininode_public_policy_content_is_used_for_document_controls(monkeypatc
         assert controls[code]["result"] != "not_evaluable", code
     assert controls["PRV-004"]["result"] == "detected"
     assert controls["PRV-005"]["result"] == "detected"
+    assert controls["PRV-006"]["result"] == "detected"
+    assert controls["PRV-010"]["result"] == "detected"
     assert controls["PRV-008"]["source_url"] == legal
     assert response.json()["coverage"] == 100
 

@@ -206,6 +206,16 @@ _EXPLICIT_RECIPIENT_CATEGORIES = (
     "entidades relacionadas", "related entities", "autoridades", "authorities",
     "socios comerciales", "business partners",
 )
+# Positive processing by identified providers is a recipient disclosure signal,
+# even without the literal verbs "share" or "transfer". A mere supplier
+# mention without data handling remains insufficient.
+_PROCESSOR_HANDLING_PATTERN = re.compile(
+    r"\b(?:proveedores?|encargados?|providers?|processors?)\b.{0,100}"
+    r"\b(?:(?:pueden|podran|podrian|may|can)\s+)?"
+    r"(?:tratar|procesar|almacenar|tratan|procesan|almacenan|treat|process|store|handle)\b"
+    r".{0,35}\b(?:datos|data|informacion|information)\b",
+    re.I,
+)
 _NEGATED_COMMUNICATION_PATTERN = re.compile(
     r"(?:^|\s)(?:(?:no|nunca|jamas)(?:\s+(?:los|las))?|do not|does not|"
     r"don t|doesn t|never)\s+(?:compartir|compartimos|compartirlos|"
@@ -678,6 +688,26 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
 
     raw_document = f"{selected_page.title or ''}\n{_policy_document_text(selected_page)}"
     document = _normalize(raw_document)
+    # Page headers are intentionally excluded from cleaned main content.
+    # Capture only a nearby reference following the selected policy's visible
+    # heading, not generic site metadata, navigation or other pages.
+    visible = _normalize(selected_page.visible_text or "")
+    for heading in (
+        "politica de privacidad", "privacy policy",
+        "aviso de privacidad", "politica de proteccion de datos",
+    ):
+        start = visible.find(heading)
+        if start < 0 or start > 350:
+            continue
+        heading_window = visible[start + len(heading): start + len(heading) + 190]
+        if _POLICY_VERSION_PATTERN.search(heading_window) or (
+            _POLICY_DATE_PATTERN.search(heading_window)
+            and _contains_phrase(heading_window, _POLICY_DATE_CONTEXT_TERMS)
+        ):
+            return {
+                **evidence, "policy_document_reference": "dated",
+                "reference_type": "heading", "confidence": "high",
+            }
     if _POLICY_VERSION_PATTERN.search(document):
         return {
             **evidence, "policy_document_reference": "dated",
@@ -748,6 +778,21 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
         for segment in channel_segments
     )
+    # A policy heading and rights-request email can be split into adjacent
+    # HTML nodes; examine a short window around an email on that same page.
+    # The context must explicitly refer to rights/privacy requests.
+    if not explicit and selected_page.visible_text:
+        visible = selected_page.visible_text
+        for email in _EMAIL_PATTERN.finditer(visible):
+            context = visible[max(0, email.start() - 220): email.end()]
+            if _contains_phrase(context, (
+                "ejercicio de derechos", "ejercer derechos",
+                "solicitudes de privacidad", "privacy requests",
+                "data subject rights", "data subject requests",
+                "consultas relacionadas con privacidad",
+            )):
+                explicit = True
+                break
     if explicit:
         channel, confidence = "explicit", "high"
     elif channel_segments:
@@ -900,6 +945,21 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         segment for segment in communication_segments
         if segment not in negated_segments
     ]
+    # A named processor may declare processing without saying "share".
+    # Link the processing sentence to at most two preceding sentences that
+    # identify the provider category, without inferring from bare vendor names.
+    processor_segments = [
+        " ".join(segments[max(0, i - 2): i + 1])
+        for i, segment in enumerate(segments)
+        if _PROCESSOR_HANDLING_PATTERN.search(_normalize(segment))
+    ]
+    processor_segments = [
+        segment for segment in processor_segments
+        if _contains_phrase(
+            segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
+        )
+    ]
+    positive_segments.extend(processor_segments)
     if any(
         _contains_phrase(segment, _EXPLICIT_RECIPIENT_CATEGORIES)
         for segment in positive_segments

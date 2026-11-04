@@ -47,7 +47,9 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework en DEV es `0.12`; el scoring continúa en `0.3`.
+La versión vigente del framework en DEV es `0.13`; el scoring continúa en `0.3`.
+Framework `0.13` reconoce una fecha o versión cercana al encabezado de la política seleccionada, canales explícitos de derechos en contexto próximo a un correo y proveedores que tratan datos aunque no utilicen literalmente «compartir» o «transferir». Los controles conservan pruebas negativas y su dependencia de PRV-003; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
+
 Framework `0.12` prioriza enlaces explícitos de política legal frente a páginas
 comerciales de Privacy Web, resuelve el documento seleccionado entre URLs
 solicitadas/finales equivalentes y permite inspeccionar candidatos adicionales
@@ -314,16 +316,20 @@ consideran de tercero y el texto del enlace no puede sobreescribir esa señal.
 
 PRV-004 detecta de forma determinística una fecha contextualizada de actualización,
 publicación o vigencia, o un identificador de versión, únicamente en la política
-seleccionada por PRV-003. Es un control contextual con peso cero: reutiliza contenido
-ya inspeccionado, no amplía el crawling y no modifica el Privacy Score.
+seleccionada por PRV-003. También examina un tramo acotado tras el título de la
+política cuando el extractor excluyó el encabezado del contenido principal; no
+atribuye versiones genéricas de la plataforma. Es un control contextual de peso
+cero, sin solicitudes adicionales ni efecto directo sobre el Privacy Score.
 
 PRV-005 evalúa la identificación observable del responsable únicamente en el
 documento seleccionado por PRV-003 y reutiliza su contenido ya inspeccionado, sin
 realizar solicitudes adicionales ni usar referencias de políticas de terceros.
 
 PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
-seleccionado por PRV-003. Reutiliza contenido ya inspeccionado y mantiene este
-canal separado del contacto general visible evaluado por PRV-301.
+seleccionado por PRV-003. Reconoce referencias explícitas a ejercicio de
+derechos cercanas al correo en el propio documento, aunque un encabezado o
+nodo HTML separe la señal; una dirección genérica no basta. No toma contactos
+de otras páginas y sigue separado del contacto general de PRV-301.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
 documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
@@ -339,9 +345,11 @@ Privacy Score ni las prioridades sustantivas.
 
 PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
 únicamente en el documento seleccionado por PRV-003. Usa señales textuales
-determinísticas en contexto de comunicación de datos, incluidas declaraciones
-explícitas de que no se comparten datos con terceros, sin ampliar la inspección ni
-evaluar jurídicamente esa comunicación.
+determinísticas de comunicación o de proveedores que tratan datos; admite
+categorías explícitas en hasta dos frases anteriores al tratamiento observable,
+sin aprobar menciones comerciales genéricas a proveedores. Conserva las
+declaraciones expresas de no compartir datos, no amplía la inspección ni
+evalúa jurídicamente esa comunicación.
 
 PRV-011 evalúa los derechos del titular únicamente en el documento seleccionado
 por PRV-003, reutilizando su contenido ya inspeccionado.
