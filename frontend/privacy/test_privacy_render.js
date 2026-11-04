@@ -53,9 +53,10 @@ const document = {
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
 const catalogSource = fs.readFileSync(`${__dirname}/control-ux.js`, 'utf8');
 const context = {
-  window: {},
+  window: { location: { search: '' }, addEventListener() {} },
   document,
   URL,
+  URLSearchParams,
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
@@ -63,7 +64,6 @@ vm.runInNewContext(catalogSource, context);
 vm.runInNewContext(`${source}
 globalThis.renderDiagnosticForTest = renderDiagnostic;
 globalThis.resetCommercialStateForTest = resetCommercialState;
-globalThis.showExpiredCommercialStateForTest = showExpiredCommercialState;
 globalThis.currentDiagnosticIdForTest = () => currentDiagnosticId;
 globalThis.isValidDiagnosticResponseForTest = isValidDiagnosticResponse;`, context);
 
@@ -82,6 +82,7 @@ const controls = codes.map((control_code, index) => ({
 }));
 const baseDiagnostic = {
   diagnostic_id: 'DIAG-A',
+  claim_token: 'test-pending-claim',
   score: 82,
   coverage: 79,
   evaluated_controls: 11,
@@ -209,65 +210,45 @@ assert.equal(elements.get('diagnostic-controls').children[2].children[1].childre
 assert.match(elements.get('diagnostic-controls').children[1].children[1].children[2]
   .children[0].children[1].textContent, /formulario/i);
 
-// Old saved diagnoses remain visible and retain the activation CTA.
-// The backend refreshes only when the customer actually chooses to activate.
+// DEV: saved reviews can still be opened, and old purchase timestamps
+// do not suppress their stored diagnosis or suggest a completed checkout.
 context.renderDiagnosticForTest({
   ...baseDiagnostic,
   diagnostic_id: 'DIAG-EXPIRED',
+  workspace_site_id: 'SITE-A',
   purchase_expires_at: '2026-10-01T21:57:00Z',
 }, 'https://expired.example');
 assert.equal(elements.get('correction-order-open').hidden, false);
-assert.equal(elements.get('correction-order-form').hidden, true);
-assert.equal(elements.get('correction-order-availability').hidden, false);
-assert.equal(elements.get('correction-order-expired').hidden, true);
+assert.equal(elements.get('correction-order-open').disabled, false);
+assert.equal(elements.get('privacy-saved-note').hidden, false);
+assert.equal(elements.get('privacy-save-note').hidden, true);
+assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-EXPIRED');
 
-// A new diagnosis removes every commercial state before its request starts.
-elements.get('correction-order-open').trigger('click');
-elements.get('correction-order-email').value = 'previous@example.com';
-elements.get('correction-order-error').textContent = 'Previous error';
-elements.get('correction-order-error').hidden = false;
-elements.get('correction-order-success').hidden = false;
+// Starting a new review clears prior commercial state without making orders.
 context.resetCommercialStateForTest();
 assert.equal(context.currentDiagnosticIdForTest(), '');
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
-assert.equal(elements.get('correction-order-form').hidden, true);
-assert.equal(elements.get('correction-order-email').value, '');
-assert.equal(elements.get('correction-order-error').hidden, true);
-assert.equal(elements.get('correction-order-success').hidden, true);
+assert.equal(elements.get('privacy-activation-notice').hidden, true);
 
-// The following result can only rebuild an offer for its own diagnostic id.
+// A fresh result restores only its own diagnostic id.
 context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: 'DIAG-B' }, 'https://site-b.example');
 assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-B');
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
 assert.equal(elements.get('correction-order-open').disabled, false);
 
-// A visual result without an id never reuses A and replaces the priced card
-// with a clear, non-technical recovery state.
+// No id: the offer is not available and the result cannot reuse old state.
 context.resetCommercialStateForTest();
 context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: undefined }, 'https://site-c.example');
 assert.equal(context.currentDiagnosticIdForTest(), '');
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-correction-unavailable').hidden, false);
 assert.match(html, /Privacy Web no disponible/);
-assert.match(html, /Realizar nuevo diagnóstico/);
-
-let orderRequests = [];
-context.fetch = async (url, options) => {
-  orderRequests.push({ url, body: JSON.parse(options.body) });
-  return { ok: true, status: 201 };
-};
-elements.get('correction-order-form').trigger('submit');
-assert.equal(orderRequests.length, 0);
-
-context.renderDiagnosticForTest({ ...baseDiagnostic, diagnostic_id: 'DIAG-B' }, 'https://site-b.example');
-elements.get('correction-order-email').value = 'buyer@example.com';
-elements.get('correction-order-form').hidden = false;
-elements.get('correction-order-form').trigger('submit');
-assert.equal(orderRequests.length, 1);
-assert.equal(orderRequests[0].body.diagnostic_id, 'DIAG-B');
 
 for (const score of [26, 100]) {
-  assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, score, priorities: [] }, 'https://example.com'));
+  assert.doesNotThrow(() => context.renderDiagnosticForTest({
+    ...baseDiagnostic, score, priorities: [], coverage: 100,
+    evaluated_controls: 14, applicable_controls: 14,
+  }, 'https://example.com'));
   assert.match(html, /<section class="privacy-data-next-step"/);
   assert.match(html, /href="\/privacy\/data\/">Conocer Privacy Data<\/a>/);
 }
