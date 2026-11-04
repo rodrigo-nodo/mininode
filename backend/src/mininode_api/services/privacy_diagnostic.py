@@ -9,6 +9,7 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
+from mininode_api.domain_packs.privacy.evidence_adapter import selected_policy_candidate_url
 from mininode_api.domain_packs.privacy.prv103_shadow import enqueue_prv103_shadow
 from mininode_api.web_inspector import (
     PageCandidate,
@@ -18,8 +19,9 @@ from mininode_api.web_inspector import (
     discover_include_links,
     extract_page,
 )
-from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
+from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS, normalize_url
 from mininode_api.web_inspector.models import EvidenceContract, InspectionFetchResult
+from mininode_api.web_inspector.selector import candidate_identity
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,8 @@ _CATEGORY_ORDER = ("privacy", "contact", "action")
 _EXPANDABLE_RESULTS_BY_CONTROL = {
     "PRV-002": frozenset({"partial", "not_evaluable"}),
     "PRV-003": frozenset({"partial", "not_evaluable"}),
+    # A policy link may be known before its document has been inspected.
+    "PRV-005": frozenset({"not_evaluable"}),
     "PRV-301": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),
@@ -35,6 +39,7 @@ _EXPANDABLE_RESULTS_BY_CONTROL = {
 _CATEGORIES_BY_EXPANDABLE_CONTROL = {
     "PRV-002": frozenset({"privacy"}),
     "PRV-003": frozenset({"privacy"}),
+    "PRV-005": frozenset({"privacy"}),
     "PRV-101": frozenset({"contact", "action"}),
     "PRV-104": frozenset({"contact", "action"}),
     "PRV-301": frozenset({"contact"}),
@@ -229,8 +234,14 @@ def _needed_categories(diagnostic: dict) -> set[str]:
     }
 
 
+def _same_policy_candidate(candidate_url: str, selected_url: str) -> bool:
+    """Match selector/fetcher URL identity, removing tracking but retaining functional query."""
+    return candidate_identity(normalize_url(candidate_url)) == candidate_identity(normalize_url(selected_url))
+
+
 def _next_candidate(
-    candidates: list[PageCandidate], attempted_urls: set[str], needed: set[str]
+    candidates: list[PageCandidate], attempted_urls: set[str], needed: set[str],
+    *, selected_policy_url: str | None = None,
 ) -> PageCandidate | None:
     for category in _CATEGORY_ORDER:
         if category not in needed:
@@ -241,6 +252,15 @@ def _next_candidate(
             if candidate.category == category and candidate.url not in attempted_urls
         ]
         if available:
+            # Use the same policy as PRV-003 before spending the limited page
+            # budget on alphabetically earlier but unrelated privacy links.
+            if category == "privacy" and selected_policy_url:
+                selected = [
+                    item for item in available
+                    if _same_policy_candidate(item.url, selected_policy_url)
+                ]
+                if selected:
+                    return min(selected, key=lambda candidate: candidate.rank)
             return min(available, key=lambda candidate: candidate.rank)
     return None
 
@@ -309,7 +329,16 @@ def diagnose_privacy_url(
                 stop_reason = "deadline"
                 combined.limited = True
                 break
-            candidate = _next_candidate(candidates, attempted_urls, needed)
+            # Diagnostic source_url is public and intentionally query-free.
+            # Match the candidate using the selected raw URL held only in memory.
+            selected_policy_url = (
+                selected_policy_candidate_url(latest_contract)
+                if latest_contract is not None else None
+            )
+            candidate = _next_candidate(
+                candidates, attempted_urls, needed,
+                selected_policy_url=selected_policy_url,
+            )
             if candidate is None:
                 stop_reason = "no_candidates"
                 break
