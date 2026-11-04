@@ -124,6 +124,12 @@ _RIGHTS_CONTEXT_TERMS = (
     "privacy", "privacy request",
     "data protection", "data subject rights",
 )
+_PRECEDING_RIGHTS_REQUEST_TERMS = (
+    "ejercicio de derechos", "ejercer derechos", "ejercicio de sus derechos",
+    "solicitudes de privacidad", "solicitud de derechos",
+    "solicitudes sobre datos personales", "privacy requests",
+    "data subject requests", "data subject rights",
+)
 _CONCRETE_CHANNEL_WORDS = (
     "formulario de contacto", "direccion postal", "domicilio", "escriba",
     "contacte", "contactenos",
@@ -781,7 +787,13 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         )
 
     channel_segments = [
-        f"{segments[index - 1]} {segment}" if index else segment
+        (
+            f"{segments[index - 1]} {segment}"
+            if index and _contains_phrase(
+                segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+            )
+            else segment
+        )
         for index, segment in enumerate(segments)
         if has_channel(segment)
     ]

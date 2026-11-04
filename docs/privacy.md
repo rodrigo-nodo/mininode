@@ -329,9 +329,11 @@ realizar solicitudes adicionales ni usar referencias de políticas de terceros.
 
 PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
 seleccionado por PRV-003. Requiere asociación explícita entre el canal y el
-ejercicio de derechos en el mismo segmento o una frase inmediatamente
-adyacente del texto documental limpio; no recorre ventanas retrospectivas de
-caracteres que puedan unir secciones diferentes. No usa cabeceras, pies de
+ejercicio de derechos en el mismo segmento o la frase inmediatamente
+anterior del texto documental limpio, siempre que esa frase mencione
+concretamente el ejercicio o la solicitud de derechos. El mero título
+«Política de privacidad» no asocia un correo general con ese canal; no
+se recorre una ventana retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
 página ni contactos generales de otras páginas, y sigue separado de PRV-301.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
