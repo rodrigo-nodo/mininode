@@ -47,7 +47,7 @@ La arquitectura busca mantener los productos simples, modulares, reutilizables y
 
 - GitHub es la fuente de verdad del código.
 - `main` representa la versión aprobada.
-- Los cambios deben realizarse mediante ramas y Pull Requests hacia `main`.
+- El desarrollo integrado se realiza mediante PRs enfocados hacia `dev`, con validación en `dev.mininode.io`; la publicación selectiva se prepara después desde una rama nueva de `main` en un PR propio. Cambios específicos de producción requieren su procedimiento y aprobación correspondientes.
 - El procedimiento oficial de desarrollo en DEV y publicación selectiva hacia PROD está en [`docs/dev-prod-release.md`](dev-prod-release.md). No fusionar `dev` completa por defecto ni interpretar commits divergentes como funcionalidades pendientes.
 - La validación debe privilegiar el resultado funcional/preview además de las pruebas técnicas.
 

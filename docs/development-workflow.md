@@ -6,6 +6,36 @@ Este documento define cómo se decide y ejecuta el trabajo de desarrollo de Mini
 
 ## 1. Workflows principales
 
+### Flujo C - ChatGPT → GitHub (predeterminado)
+
+```text
+PO acuerda objetivo y criterios
+    ↓
+ChatGPT revisa MAIN, DEV, PRs, tests y documentos pertinentes
+    ↓
+rama enfocada + implementación + PR a dev
+    ↓
+GitHub Actions CI → integración y validación en dev.mininode.io
+    ↓
+promoción selectiva de la funcionalidad desde main → PR a main
+    ↓
+CI, revisión de diff y preview aplicable → PO valida y autoriza merge
+    ↓
+merge autorizado → despliegue y verificación PROD
+```
+
+La unidad de entrega es un **objetivo funcional completo**, con las capas y tests
+necesarios. No dividir artificialmente componentes dependientes; tampoco mezclar
+mejoras ajenas al objetivo. El PR para DEV y el PR de promoción a MAIN son
+independientes. ChatGPT prepara y revisa ambos; nunca mergea sin autorización
+explícita del PO. Se cierra cada publicación dependiente antes de iniciar la
+siguiente promoción. El procedimiento técnico oficial es
+[`docs/dev-prod-release.md`](dev-prod-release.md).
+
+Los Flujos A (Codex API) y B (Codex directo) quedan disponibles cuando el PO
+los solicite; no sustituyen la validación y publicación selectiva anterior.
+
+
 ### Flujo A - Automático / Codex API
 
 ```text
