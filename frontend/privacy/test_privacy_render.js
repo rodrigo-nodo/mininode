@@ -71,7 +71,7 @@ const codes = [
   'PRV-001', 'PRV-002', 'PRV-003', 'PRV-004', 'PRV-005', 'PRV-006',
   'PRV-007', 'PRV-008', 'PRV-009', 'PRV-010', 'PRV-011', 'PRV-012',
   'PRV-013', 'PRV-014',
-  'PRV-101', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
+  'PRV-101', 'PRV-102', 'PRV-103', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
 ];
 const controls = codes.map((control_code, index) => ({
   control_code,
@@ -83,7 +83,9 @@ const controls = codes.map((control_code, index) => ({
 const baseDiagnostic = {
   diagnostic_id: 'DIAG-A',
   score: 82,
-  coverage: 94,
+  coverage: 79,
+  evaluated_controls: 11,
+  applicable_controls: 14,
   status: 'Preparación avanzada',
   controls,
   priorities: [{
@@ -101,6 +103,8 @@ const baseDiagnostic = {
 assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
+assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
 const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
 assert.equal(areaButtons.every((button) => button.tagName === 'BUTTON' && button.type === 'button'), true);
@@ -133,7 +137,7 @@ assert.match(policyControl.children[0].children[1].textContent, /empresa o entid
 
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  19,
+  21,
 );
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
@@ -156,7 +160,7 @@ assert.doesNotThrow(() => context.renderDiagnosticForTest({
 }, 'https://example.com'));
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  19,
+  21,
 );
 const transparencyItems = elements.get('diagnostic-controls').children[0].children[1].children;
 assert.equal(transparencyItems[1].children[1].children[0].textContent, 'No pudimos revisarlo');
@@ -167,6 +171,43 @@ assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No se identificaron acciones prioritarias/);
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-no-priorities').hidden, false);
+
+// Complete coverage retains the familiar score label.
+context.renderDiagnosticForTest({ ...baseDiagnostic, coverage: 100,
+  evaluated_controls: 14, applicable_controls: 14 }, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-status').textContent, 'Bien');
+assert.equal(elements.get('diagnostic-coverage').hidden, true);
+
+// Zero evaluated controls are not presented as 0/100 failure.
+context.renderDiagnosticForTest({ ...baseDiagnostic, score: 0, coverage: 0,
+  evaluated_controls: 0, applicable_controls: 12 }, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, '—');
+assert.equal(elements.get('score-status').textContent, 'Sin evidencia suficiente');
+assert.match(elements.get('diagnostic-coverage').textContent, /No es una calificación negativa/);
+
+// Historical snapshots with missing metadata remain readable.
+const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls: _applicable,
+  ...historical } = baseDiagnostic;
+context.renderDiagnosticForTest(historical, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, 82);
+assert.match(elements.get('diagnostic-coverage').textContent, /No hay información de cobertura/);
+
+// Some checks were evaluated, while others within the same area could not be.
+const partialAreaControls = controls.map((item) => item.control_code === 'PRV-005'
+  ? { ...item, result: 'not_evaluable' } : item);
+context.renderDiagnosticForTest({ ...baseDiagnostic, controls: partialAreaControls }, 'https://example.com');
+assert.equal(elements.get('diagnostic-areas').children[0].children[1].textContent, 'Evaluación parcial');
+
+// Context controls are neutral; the DEV catalog still displays descriptions.
+const cookieHistory = controls.map((item) => item.control_code === 'PRV-201'
+  ? { ...item, result: 'not_applicable' } : item);
+context.renderDiagnosticForTest({ ...baseDiagnostic, controls: cookieHistory }, 'https://example.com');
+assert.equal(elements.get('diagnostic-areas').children[2].children[1].textContent, 'Informativo');
+assert.equal(elements.get('diagnostic-controls').children[2].children[1].children[0]
+  .children[1].children[0].textContent, 'No detectado');
+assert.match(elements.get('diagnostic-controls').children[1].children[1].children[2]
+  .children[0].children[1].textContent, /formulario/i);
 
 // Old saved diagnoses remain visible and retain the activation CTA.
 // The backend refreshes only when the customer actually chooses to activate.

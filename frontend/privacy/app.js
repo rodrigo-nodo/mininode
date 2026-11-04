@@ -20,6 +20,7 @@ const analyzedUrl = document.querySelector('#analyzed-url');
 const privacyScore = document.querySelector('#privacy-score');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
+const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
 const diagnosticScope = document.querySelector('#diagnostic-scope');
 const diagnosticAreas = document.querySelector('#diagnostic-areas');
 const diagnosticControls = document.querySelector('#diagnostic-controls');
@@ -60,35 +61,23 @@ let authenticatedWorkspaceSiteId = '';
 const genericDiagnosticError = 'No pudimos completar el diagnóstico. Intenta nuevamente en unos minutos.';
 const renderDiagnosticError = 'Recibimos el diagnóstico, pero no pudimos mostrar el resultado. Intenta nuevamente.';
 const privacyAreas = [
-  {
-    name: 'Transparencia',
-    controls: [
-      { code: 'PRV-001', name: 'Política de privacidad visible' },
-      { code: 'PRV-002', name: 'Política de privacidad accesible' },
-      { code: 'PRV-003', name: 'Política propia del responsable' },
-      { code: 'PRV-004', name: 'Fecha o versión de la política', informational: true },
-      { code: 'PRV-005', name: 'Identificación del responsable' },
-      { code: 'PRV-006', name: 'Canal para ejercer derechos' },
-      { code: 'PRV-007', name: 'Categorías de datos tratados' },
-      { code: 'PRV-008', name: 'Finalidades del tratamiento' },
-      { code: 'PRV-009', name: 'Base declarada del tratamiento', informational: true },
-      { code: 'PRV-010', name: 'Destinatarios o terceros' },
-      { code: 'PRV-011', name: 'Derechos del titular' },
-      { code: 'PRV-012', name: 'Conservación de datos' },
-      { code: 'PRV-013', name: 'Reclamo ante la Agencia' },
-      { code: 'PRV-014', name: 'Retiro del consentimiento' },
-    ],
-  },
-  {
-    name: 'Formularios',
-    controls: [
-      { code: 'PRV-101', name: 'Formularios que recopilan datos personales' },
-      { code: 'PRV-104', name: 'Información de privacidad asociada al formulario' },
-    ],
-  },
-  { name: 'Cookies', controls: [{ code: 'PRV-201', name: 'Cookies observadas' }] },
-  { name: 'Contacto', controls: [{ code: 'PRV-301', name: 'Canal de contacto visible' }] },
-  { name: 'Seguridad', controls: [{ code: 'PRV-501', name: 'Uso de HTTPS' }] },
+  { name: 'Transparencia', controls: [
+    { code: 'PRV-001' }, { code: 'PRV-002' }, { code: 'PRV-003' },
+    { code: 'PRV-004', informational: true }, { code: 'PRV-005' },
+    { code: 'PRV-006' }, { code: 'PRV-007' }, { code: 'PRV-008' },
+    { code: 'PRV-009', informational: true }, { code: 'PRV-010' },
+    { code: 'PRV-011' }, { code: 'PRV-012' }, { code: 'PRV-013' },
+    { code: 'PRV-014' },
+  ] },
+  { name: 'Formularios', controls: [
+    { code: 'PRV-101', informational: true },
+    { code: 'PRV-102' },
+    { code: 'PRV-103', informational: true },
+    { code: 'PRV-104', informational: true },
+  ] },
+  { name: 'Cookies', controls: [{ code: 'PRV-201', informational: true }] },
+  { name: 'Contacto', controls: [{ code: 'PRV-301' }] },
+  { name: 'Seguridad', controls: [{ code: 'PRV-501' }] },
 ];
 
 const AREA_INFO = {
@@ -125,6 +114,22 @@ const resultLabels = {
   not_detected: { label: 'Necesita atención', className: 'attention' },
   not_evaluable: { label: 'No pudimos revisarlo', className: 'neutral' },
   not_applicable: { label: 'No aplica', className: 'neutral' },
+  informational: { label: 'Informativo', className: 'neutral' },
+};
+
+const informationalLabels = {
+  detected: 'Detectado',
+  partial: 'Parcialmente detectado',
+  not_detected: 'No detectado',
+  not_evaluable: 'No pudimos revisarlo',
+  not_applicable: 'No aplica',
+};
+const renderControlState = (control, value) => {
+  if (!control.informational) return resultLabels[value] || resultLabels.not_evaluable;
+  // Earlier cookie snapshots used not_applicable before PRV-201 was observational.
+  const label = control.code === 'PRV-201' && value === 'not_applicable'
+    ? 'No detectado' : (informationalLabels[value] || informationalLabels.not_evaluable);
+  return { label, className: 'neutral' };
 };
 
 const normalizeUrl = (value) => {
@@ -188,28 +193,27 @@ const appendTextElement = (parent, tagName, text, className) => {
 };
 
 const getAreaResult = (area, controlsByCode) => {
-  const results = area.controls
-    .filter((control) => !control.informational)
+  const scored = area.controls.filter((control) => !control.informational);
+  if (scored.length === 0) return 'informational';
+  const results = scored
     .map((control) => controlsByCode.get(control.code)?.result)
     .filter(Boolean);
-
   if (results.length === 0 || results.every((result) => result === 'not_evaluable')) {
     return 'not_evaluable';
   }
-  if (results.every((result) => result === 'not_applicable')) {
-    return 'not_applicable';
-  }
-  if (results.includes('not_detected')) {
-    return 'not_detected';
-  }
-  if (results.includes('partial')) {
-    return 'partial';
-  }
-
+  if (results.every((result) => result === 'not_applicable') ) return 'not_applicable';
+  if (results.includes('not_detected')) return 'not_detected';
+  if (results.includes('partial')) return 'partial';
   const evaluable = results.filter((result) => result !== 'not_evaluable' && result !== 'not_applicable');
   return evaluable.length > 0 && evaluable.every((result) => result === 'detected')
-    ? 'detected'
-    : 'not_evaluable';
+    ? 'detected' : 'not_evaluable';
+};
+
+const isAreaPartial = (area, controlsByCode) => {
+  const results = area.controls.filter((control) => !control.informational)
+    .map((control) => controlsByCode.get(control.code)?.result);
+  return results.some((result) => !result || result === 'not_evaluable')
+    && results.some((result) => ['detected', 'partial', 'not_detected'].includes(result));
 };
 
 const renderAreasAndControls = (controls) => {
@@ -222,7 +226,10 @@ const renderAreasAndControls = (controls) => {
   );
 
   privacyAreas.forEach((area) => {
-    const areaResult = resultLabels[getAreaResult(area, controlsByCode)];
+    const partialArea = isAreaPartial(area, controlsByCode);
+    const calculatedAreaResult = resultLabels[getAreaResult(area, controlsByCode)] || resultLabels.not_evaluable;
+    const areaResult = partialArea && calculatedAreaResult === resultLabels.detected
+      ? { label: 'Evaluación parcial', className: 'neutral' } : calculatedAreaResult;
     const areaSummary = appendTextElement(diagnosticAreas, 'article', '', 'privacy-area');
     const areaInfoButton = appendTextElement(areaSummary, 'button', '', 'privacy-area__info');
     areaInfoButton.type = 'button';
@@ -231,19 +238,24 @@ const renderAreasAndControls = (controls) => {
     appendTextElement(areaInfoButton, 'span', 'ⓘ', 'privacy-area__info-icon').setAttribute('aria-hidden', 'true');
     areaInfoButton.addEventListener('click', () => openAreaInfo(area.name, areaInfoButton));
     appendTextElement(areaSummary, 'p', areaResult.label, `privacy-state privacy-state--${areaResult.className}`);
+    if (partialArea && areaResult.label !== 'Evaluación parcial') {
+      appendTextElement(areaSummary, 'small', 'Evaluación parcial', 'privacy-area__partial');
+    }
 
     const areaDetail = appendTextElement(diagnosticControls, 'section', '', 'privacy-control-area');
-    appendTextElement(areaDetail, 'h4', `${area.name} · ${area.controls.length} ${area.controls.length === 1 ? 'punto' : 'puntos'}`);
+    const informationalOnly = area.controls.every((control) => control.informational);
+    appendTextElement(areaDetail, 'h4', informationalOnly
+      ? area.name : `${area.name} · ${area.controls.length} ${area.controls.length === 1 ? 'punto' : 'puntos'}`);
     const list = appendTextElement(areaDetail, 'ul', '', 'privacy-control-list');
 
     area.controls.forEach((control) => {
       const item = appendTextElement(list, 'li', '', 'privacy-control');
       const nameBlock = appendTextElement(item, 'span', '', 'privacy-control__name');
       const ux = window.MininodePrivacyControlUX;
-      appendTextElement(nameBlock, 'span', ux?.name(control.code, control.name) ?? control.name, 'privacy-control__label');
-      const description = ux?.description(control.code);
+      appendTextElement(nameBlock, 'span', ux?.name?.(control.code, 'Punto de privacidad') || 'Punto de privacidad', 'privacy-control__label');
+      const description = ux?.description?.(control.code);
       if (description) appendTextElement(nameBlock, 'small', description, 'privacy-control__description');
-      const result = resultLabels[controlsByCode.get(control.code)?.result] || resultLabels.not_evaluable;
+      const result = renderControlState(control, controlsByCode.get(control.code)?.result);
       const badges = appendTextElement(item, 'span', '', 'privacy-control__badges');
       appendTextElement(badges, 'span', result.label, `privacy-state privacy-state--${result.className}`);
       if (control.informational) {
@@ -341,10 +353,48 @@ const renderCommercialOffer = (priorities) => {
   correctionUnavailable.hidden = !hasPriorities || planAvailable;
 };
 
-const renderDiagnostic = (diagnostic, websiteUrl) => {
+const renderScoreCoverage = (diagnostic) => {
   const score = diagnostic.score;
-  const pagesAnalyzed = diagnostic.scope?.pages_analyzed;
   const humanStatus = getHumanStatus(score);
+  const evaluated = diagnostic.evaluated_controls;
+  const applicable = diagnostic.applicable_controls;
+  const hasCounts = Number.isInteger(evaluated) && Number.isInteger(applicable)
+    && applicable >= 0 && evaluated >= 0 && evaluated <= applicable;
+  const hasCoverage = Number.isFinite(diagnostic.coverage)
+    && diagnostic.coverage >= 0 && diagnostic.coverage <= 100;
+  const noEvidence = hasCounts && evaluated === 0;
+  const partial = hasCounts ? evaluated < applicable : (hasCoverage && diagnostic.coverage < 100);
+
+  if (noEvidence) {
+    scoreValue.textContent = '—';
+    scoreStatus.textContent = 'Sin evidencia suficiente';
+    diagnosticCoverage.textContent = applicable === 0
+      ? 'No hubo controles puntuables aplicables para presentar un resultado.'
+      : 'No pudimos evaluar los controles aplicables. No es una calificación negativa del sitio.';
+    diagnosticCoverage.hidden = false;
+    privacyScore.setAttribute('aria-label', 'Privacy Score no disponible por falta de evidencia evaluable.');
+    return;
+  }
+
+  scoreValue.textContent = score;
+  scoreStatus.textContent = partial ? 'Evaluación parcial' : humanStatus;
+  if (partial) {
+    const detail = hasCounts
+      ? `Pudimos evaluar ${evaluated} de ${applicable} controles aplicables. ` : '';
+    diagnosticCoverage.textContent = detail
+      + 'El puntaje refleja solo lo que pudimos comprobar; otros aspectos quedaron sin verificar.';
+  } else if (!hasCounts && !hasCoverage) {
+    diagnosticCoverage.textContent = 'No hay información de cobertura disponible para este diagnóstico.';
+  } else {
+    diagnosticCoverage.textContent = '';
+  }
+  diagnosticCoverage.hidden = !diagnosticCoverage.textContent;
+  privacyScore.setAttribute('aria-label',
+    `Privacy Score estimado: ${score} de 100. ${partial ? 'Evaluación parcial' : `Estado: ${humanStatus}`}.`);
+};
+
+const renderDiagnostic = (diagnostic, websiteUrl) => {
+  const pagesAnalyzed = diagnostic.scope?.pages_analyzed;
 
   analyzedUrl.textContent = websiteUrl;
   currentDiagnosticId = typeof diagnostic.diagnostic_id === 'string' ? diagnostic.diagnostic_id.trim() : '';
@@ -377,12 +427,10 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
   orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
-  scoreValue.textContent = score;
-  scoreStatus.textContent = humanStatus;
+  renderScoreCoverage(diagnostic);
   diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
     ? `${pagesAnalyzed} ${pagesAnalyzed === 1 ? 'página pública relevante analizada' : 'páginas públicas relevantes analizadas'}`
     : 'Muestra acotada de páginas públicas relevantes';
-  privacyScore.setAttribute('aria-label', `Privacy Score estimado: ${score} de 100. Estado: ${humanStatus}.`);
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   latestRenderedPriorities = diagnostic.priorities;
