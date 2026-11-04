@@ -483,6 +483,7 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
             "policy_attribution": "own",
             "attribution_signals": ["same_site_hostname"],
             "source_urls": [safe_url] if safe_url else [],
+            "_selected_policy_url": selected.url,
             "confidence": "high",
         }
     ambiguous = False
@@ -490,12 +491,16 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
     third_party_urls: list[str] = []
     ambiguous_urls: list[str] = []
     uninspected_urls: list[str] = []
+    third_party_raw: list[str] = []
+    ambiguous_raw: list[str] = []
+    uninspected_raw: list[str] = []
     for link, _ in candidates:
         hostname = (urlsplit(link.url).hostname or "").lower()
         safe_url = _public_source_url(link.url)
         if _known_general_provider_policy(link.url):
             if safe_url:
                 third_party_urls.append(safe_url)
+                third_party_raw.append(link.url)
             continue
 
         page = pages.get(_normalized_url(link.url))
@@ -503,6 +508,7 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
             uninspected = True
             if safe_url:
                 uninspected_urls.append(safe_url)
+                uninspected_raw.append(link.url)
             continue
         document = _normalize(f"{page.title or ''} {page.visible_text or ''}")
         attributed = any(
@@ -515,17 +521,28 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
                 "policy_attribution": "own",
                 "attribution_signals": ["external_document_names_organization", "privacy_document"],
                 "source_urls": [safe_url] if safe_url else [],
+                "_selected_policy_url": link.url,
                 "confidence": "high",
             }
         ambiguous = True
         if safe_url:
             ambiguous_urls.append(safe_url)
+            ambiguous_raw.append(link.url)
+
+    # Keep exact candidate identity private even when several URLs share the
+    # same sanitized public source. Match full functional query internally.
+    def selected_raw(raw_urls: list[str]) -> str | None:
+        return (
+            min(raw_urls, key=lambda url: (_public_source_url(url) or "", _normalized_url(url)))
+            if raw_urls else None
+        )
 
     if third_party_urls and not ambiguous and not uninspected:
         return {
             "policy_attribution": "third_party",
             "attribution_signals": ["known_provider_general_policy"],
             "source_urls": sorted(set(third_party_urls)),
+            "_selected_policy_url": selected_raw(third_party_raw),
             "confidence": "high",
         }
     if ambiguous:
@@ -533,41 +550,47 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
             "policy_attribution": "ambiguous",
             "attribution_signals": ["external_document_without_clear_attribution"],
             "source_urls": sorted(set(ambiguous_urls)),
+            "_selected_policy_url": selected_raw(ambiguous_raw),
             "confidence": "medium",
         }
     return {
         "policy_attribution": "unknown",
         "attribution_signals": ["external_policy_not_inspected"],
         "source_urls": sorted(set(uninspected_urls)),
+        "_selected_policy_url": selected_raw(uninspected_raw),
         "technical_error": True,
         "confidence": "low",
     }
 
 
-def _selected_policy_page(contract: EvidenceContract, selected_url: str) -> PageEvidence | None:
-    """Match selected policy to inspected final/requested URLs, including slash aliases.
-
-    Source URLs omit query strings, fragments and credentials. This helper
-    only reads pages already present in the Evidence Contract.
-    """
-    selected_safe = _public_source_url(selected_url)
-    if selected_safe is None:
-        return None
-    observations = [
-        (page, safe)
-        for page in contract.pages
-        for observed in (page.url, page.requested_url)
-        if observed
-        for safe in (_public_source_url(observed),)
-        if safe is not None
+def selected_policy_candidate_url(contract: EvidenceContract) -> str | None:
+    """Return the selected candidate URL for internal inspection only."""
+    candidates = [
+        (link, confidence)
+        for link in contract.links
+        for matched, confidence in [_privacy_match(link)]
+        if matched
     ]
-    # Prefer exact public references before accepting trailing-slash aliases.
-    exact = next((page for page, safe in observations if safe == selected_safe), None)
-    if exact is not None:
-        return exact
-    identity = _normalized_url(selected_safe)
+    return _policy_attribution(contract, candidates).get("_selected_policy_url")
+
+
+def _selected_policy_page(contract: EvidenceContract, selected_url: str | None) -> PageEvidence | None:
+    """Resolve the exact functional URL, including query and requested redirects.
+
+    A different query may contain a different document even on the same path.
+    Public source_urls omit queries and must never be used to match pages.
+    """
+    if not selected_url:
+        return None
+    identity = _normalized_url(selected_url)
     return next(
-        (page for page, safe in observations if _normalized_url(safe) == identity),
+        (
+            page for page in contract.pages
+            if any(
+                observed and _normalized_url(observed) == identity
+                for observed in (page.url, page.requested_url)
+            )
+        ),
         None,
     )
 
@@ -590,7 +613,7 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
         return {"responsible_identification": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -639,7 +662,7 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
         return {"policy_document_reference": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -688,7 +711,7 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         return {"rights_channel": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -740,7 +763,7 @@ def _data_categories(contract: EvidenceContract, attribution: dict) -> dict:
         return {"data_categories": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -770,7 +793,7 @@ def _processing_purposes(contract: EvidenceContract, attribution: dict) -> dict:
         return {"processing_purposes": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -800,7 +823,7 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
         return {"declared_processing_basis": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -847,7 +870,7 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         return {"data_recipients": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -897,7 +920,7 @@ def _data_subject_rights(contract: EvidenceContract, attribution: dict) -> dict:
         return {"data_subject_rights": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -937,7 +960,7 @@ def _data_retention(contract: EvidenceContract, attribution: dict) -> dict:
         return {"data_retention": "none", "confidence": "high"}
 
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -978,7 +1001,7 @@ def _selected_policy_segments(
     if not source_urls:
         return {evidence_key: "none", "confidence": "high"}, []
     selected_url = source_urls[0]
-    selected_page = _selected_policy_page(contract, selected_url)
+    selected_page = _selected_policy_page(contract, attribution.get("_selected_policy_url"))
     evidence = {"source_urls": [selected_url]}
     if selected_page is None:
         return {
@@ -1347,11 +1370,8 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
         "confidence": policy_confidence if candidates else ("high" if sufficient else "low"),
     }
     if candidates:
-        selected_urls = prv003.get("source_urls") or []
-        selected_url = selected_urls[0] if selected_urls else None
-        selected_page = (
-            _selected_policy_page(contract, selected_url) if selected_url else None
-        )
+        selected_url = prv003.get("_selected_policy_url")
+        selected_page = _selected_policy_page(contract, selected_url)
         if selected_page is not None:
             prv002["policy_accessible"] = True
             # Preserve the established PRV-002 evidence rule: an accessible
@@ -1360,8 +1380,7 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
                 selected_page.title or "", _PRIVACY_TERMS
             )
         elif selected_url and any(
-            _normalized_url(_public_source_url(error["url"])) ==
-            _normalized_url(selected_url)
+            _normalized_url(error["url"]) == _normalized_url(selected_url)
             for error in contract.inspection.errors
             if error.get("url") and _public_source_url(error["url"])
         ):
@@ -1386,6 +1405,9 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     prv012 = _data_retention(contract, prv003)
     prv013 = _agency_complaint(contract, prv003)
     prv014 = _consent_withdrawal(contract, prv003)
+    # Raw query-bearing selection is strictly internal; never return it in
+    # evaluated controls, evidence, API responses, snapshots or logs.
+    prv003.pop("_selected_policy_url", None)
 
     personal_forms = [(form, confidence) for form in contract.forms for matched, confidence in [_personal_form(form)] if matched]
     personal_form_source_urls = _inspected_source_urls(

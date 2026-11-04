@@ -9,6 +9,7 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 from mininode_api.domain_packs.privacy.diagnostic import run_privacy_diagnostic
+from mininode_api.domain_packs.privacy.evidence_adapter import selected_policy_candidate_url
 from mininode_api.domain_packs.privacy.prv103_shadow import enqueue_prv103_shadow
 from mininode_api.web_inspector import (
     PageCandidate,
@@ -20,6 +21,7 @@ from mininode_api.web_inspector import (
 )
 from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
 from mininode_api.web_inspector.models import EvidenceContract, InspectionFetchResult
+from mininode_api.web_inspector.selector import candidate_identity
 
 logger = logging.getLogger(__name__)
 
@@ -232,15 +234,9 @@ def _needed_categories(diagnostic: dict) -> set[str]:
     }
 
 
-def _same_public_policy_url(candidate_url: str, selected_url: str) -> bool:
-    """Match a selected public source to an existing candidate without query data."""
-    candidate = urlsplit(candidate_url)
-    selected = urlsplit(selected_url)
-    return (
-        candidate.scheme.lower() == selected.scheme.lower()
-        and candidate.hostname == selected.hostname
-        and (candidate.path.rstrip("/") or "/") == (selected.path.rstrip("/") or "/")
-    )
+def _same_policy_candidate(candidate_url: str, selected_url: str) -> bool:
+    """Match functional URL identity, retaining query but ignoring trailing slash."""
+    return candidate_identity(candidate_url) == candidate_identity(selected_url)
 
 
 def _next_candidate(
@@ -261,7 +257,7 @@ def _next_candidate(
             if category == "privacy" and selected_policy_url:
                 selected = [
                     item for item in available
-                    if _same_public_policy_url(item.url, selected_policy_url)
+                    if _same_policy_candidate(item.url, selected_policy_url)
                 ]
                 if selected:
                     return min(selected, key=lambda candidate: candidate.rank)
@@ -333,13 +329,11 @@ def diagnose_privacy_url(
                 stop_reason = "deadline"
                 combined.limited = True
                 break
-            selected_policy_url = next(
-                (
-                    control.get("source_url")
-                    for control in diagnostic.get("controls", [])
-                    if control.get("control_code") == "PRV-003"
-                ),
-                None,
+            # Diagnostic source_url is public and intentionally query-free.
+            # Match the candidate using the selected raw URL held only in memory.
+            selected_policy_url = (
+                selected_policy_candidate_url(latest_contract)
+                if latest_contract is not None else None
             )
             candidate = _next_candidate(
                 candidates, attempted_urls, needed,

@@ -476,6 +476,69 @@ def test_policy_document_resolution_accepts_trailing_slash_alias():
     assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "detected"
 
 
+def test_policy_query_identity_keeps_commercial_and_legal_documents_distinct():
+    """B3: sanitized URLs collide, but only the selected query is inspected."""
+    commercial = "https://example.com/privacy/?view=a&token=private-a"
+    legal = "https://example.com/privacy/?view=z&token=private-z"
+    links = [
+        LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+        LinkEvidence(legal, "Política de privacidad", "https://example.com/"),
+    ]
+    pages = [
+        PageEvidence(commercial, 200, "Privacy Web", "text/html",
+                     visible_text="Compra un diagnóstico de Privacy Web."),
+        PageEvidence(legal, 200, "Política de privacidad", "text/html",
+                     visible_text="Versión 2.1. Example SpA es responsable del tratamiento."),
+    ]
+    adapted = adapt_evidence(contract(links=links, pages=pages))
+    # The user-visible source is scrubbed, not used for matching.
+    for code in ("PRV-003", "PRV-004", "PRV-005"):
+        assert adapted[code]["source_urls"] == ["https://example.com/privacy/"]
+    assert adapted["PRV-002"]["policy_accessible"] is True
+    assert adapted["PRV-002"]["policy_content_relevant"] is True
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "detected"
+    assert evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": "detected"})["result"] == "detected"
+    # Raw query strings must never leak into result evidence or public URLs.
+    serialized = repr(adapted)
+    assert "token=private-a" not in serialized
+    assert "token=private-z" not in serialized
+    assert "_selected_policy_url" not in serialized
+
+
+def test_policy_query_identity_does_not_accept_commercial_page_if_legal_uninspected():
+    commercial = "https://example.com/privacy/?view=a"
+    legal = "https://example.com/privacy/?view=z"
+    links = [
+        LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+        LinkEvidence(legal, "Política de privacidad", "https://example.com/"),
+    ]
+    adapted = adapt_evidence(contract(
+        links=links,
+        pages=[PageEvidence(commercial, 200, "Privacy Web", "text/html")],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == ["https://example.com/privacy/"]
+    assert adapted["PRV-002"]["technical_error"] is True
+    assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "not_evaluable"
+    for number in range(4, 15):
+        code = f"PRV-{number:03d}"
+        assert evaluate_control(code, adapted[code], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+def test_policy_query_identity_blocked_legal_does_not_borrow_commercial_success():
+    commercial = "https://example.com/privacy/?view=a"
+    legal = "https://example.com/privacy/?view=z"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+            LinkEvidence(legal, "Política de privacidad", "https://example.com/"),
+        ],
+        pages=[PageEvidence(commercial, 200, "Privacy Web", "text/html")],
+        errors=[{"code": "robots_disallowed", "url": legal}],
+    ))
+    assert adapted["PRV-002"]["policy_accessible"] is False
+    assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "partial"
+
+
 def test_document_controls_ignore_emol_style_chrome_and_form_noise():
     """Clean policy evidence wins over login/header/footer text."""
     url = "https://example.com/privacy"

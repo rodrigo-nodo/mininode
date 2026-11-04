@@ -57,6 +57,11 @@ seleccionado por PRV-003 dentro del presupuesto disponible, y PRV-002 evalúa
 accesibilidad y pertinencia **solo de ese documento**, nunca de una página
 comercial alternativa. Ante una política bloqueada se conserva el resultado
 prudente y no se atribuye la respuesta HTTP de un documento distinto.
+La selección y la inspección comparan internamente la identidad completa de
+la URL, incluidos parámetros de consulta funcionales (ej. `?view=a` frente a
+`?view=z`); la referencia pública de evidencia permanece sanitizada, sin
+query ni credenciales. La URL interna no se serializa en diagnósticos,
+snapshots ni logs. Esto evita asociar la respuesta de otra variante de ruta.
 Este ajuste puede alterar los resultados
 observables de PRV-003 a PRV-014 para un mismo sitio; por eso `0.11/0.3` y
 `0.12/0.3` no son comparables. No cambian los pesos ni la fórmula del Score.

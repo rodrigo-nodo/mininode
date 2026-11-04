@@ -469,6 +469,61 @@ def test_blocked_selected_legal_policy_is_not_rescued_by_commercial_privacy_page
     assert response.json()["scope"]["pages_requested"] == 3
 
 
+def test_query_variant_policy_is_prioritized_and_evaluated_over_commercial_page(monkeypatch):
+    """B3: two same-path URLs with distinct functional query are different pages."""
+    commercial = f"{HOME}privacy/?view=a&token=private-a"
+    legal = f"{HOME}privacy/?view=z&token=private-z"
+    html = (
+        f'<a href="{commercial}">Privacy Web</a>'
+        f'<a href="{legal}">Política de privacidad</a>'
+    )
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, html),
+        commercial: page(commercial, "<title>Privacy Web</title><p>Servicio comercial</p>"),
+        legal: page(legal, "<title>Política de privacidad</title>"
+                           "<main><h1>Política de privacidad</h1>"
+                           "<p>Versión 2.1. Example SpA es responsable.</p></main>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-002"]["result"] == "detected"
+    assert controls["PRV-003"]["source_url"] == f"{HOME}privacy/"
+    assert controls["PRV-004"]["result"] == "detected"
+    assert controls["PRV-005"]["result"] == "detected"
+    assert response.json()["scope"]["pages_requested"] == 2
+    for secret in ("token=private-a", "token=private-z", "_selected_policy_url"):
+        assert secret not in response.text
+
+
+def test_query_variant_blocked_policy_is_not_rescued_by_commercial_page(monkeypatch):
+    """B3: failure of query Z must not be overwritten by 200 for query A."""
+    commercial = f"{HOME}privacy/?view=a"
+    legal = f"{HOME}privacy/?view=z"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(
+            HOME,
+            f'<a href="{commercial}">Privacy Web</a>'
+            f'<a href="{legal}">Política de privacidad</a>',
+        ),
+        legal: failed_page(legal, "robots_disallowed"),
+        commercial: page(commercial, "<title>Privacy Web</title>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal], [commercial]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-002"]["result"] == "partial"
+    assert controls["PRV-004"]["result"] == "not_evaluable"
+    assert controls["PRV-003"]["source_url"] == f"{HOME}privacy/"
+    assert response.json()["scope"]["pages_requested"] == 3
+
+
 def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     privacy = "https://example.com/privacidad"
     home_html = f'<a href="{privacy}">Política de privacidad</a>'
