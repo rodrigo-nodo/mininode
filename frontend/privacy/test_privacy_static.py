@@ -53,8 +53,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         plan = (PRIVACY_DIR / "plan-assets/app.js").read_text(encoding="utf-8")
         self.assertIn("description(item.control_code)", plan)
         self.assertIn("name(item.control_code, item.name)", plan)
-        self.assertIn("control.code, control.name", APP)
-        self.assertIn("description(control.code)", APP)
+        self.assertIn("control.code, 'Punto de privacidad'", APP)
+        self.assertIn("description?.(control.code)", APP)
 
 
     def test_free_priority_renderer_regression(self):
@@ -86,7 +86,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=ux21-1"', HTML)
+        self.assertIn('href="styles.css?v=ux21-coverage-1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
