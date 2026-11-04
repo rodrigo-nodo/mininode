@@ -778,13 +778,12 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
         for segment in channel_segments
     )
-    # A policy heading and rights-request email can be split into adjacent
-    # HTML nodes; examine a short window around an email on that same page.
-    # The context must explicitly refer to rights/privacy requests.
-    if not explicit and selected_page.visible_text:
-        visible = selected_page.visible_text
-        for email in _EMAIL_PATTERN.finditer(visible):
-            context = visible[max(0, email.start() - 220): email.end()]
+    # The rights heading can be separated from its contact email by several
+    # sentences. Use only a short window of the selected policy's CLEANED
+    # content, never the wider visible page (header, navigation or footer).
+    if not explicit:
+        for email in _EMAIL_PATTERN.finditer(raw_document):
+            context = raw_document[max(0, email.start() - 240): email.end()]
             if _contains_phrase(context, (
                 "ejercicio de derechos", "ejercer derechos",
                 "solicitudes de privacidad", "privacy requests",

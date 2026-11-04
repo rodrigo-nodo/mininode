@@ -327,8 +327,9 @@ realizar solicitudes adicionales ni usar referencias de políticas de terceros.
 
 PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
 seleccionado por PRV-003. Reconoce referencias explícitas a ejercicio de
-derechos cercanas al correo en el propio documento, aunque un encabezado o
-nodo HTML separe la señal; una dirección genérica no basta. No toma contactos
+derechos próximas al correo en el texto documental limpio, aun cuando haya
+frases intermedias; no usa texto visible de cabeceras ni pies de página, ni
+una dirección genérica como prueba de canal de derechos. No toma contactos
 de otras páginas y sigue separado del contacto general de PRV-301.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el

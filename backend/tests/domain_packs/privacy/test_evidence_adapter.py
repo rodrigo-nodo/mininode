@@ -613,8 +613,10 @@ def test_prv006_detects_rights_request_heading_without_using_generic_contact():
         links=[link],
         pages=[PageEvidence(
             url, 200, "Política de privacidad", "text/html",
-            visible_text="Ejercicio de derechos. Las solicitudes pueden enviarse a privacy@example.com.",
-            content_text="Consultas al correo privacy@example.com.",
+            visible_text="Ejercicio de derechos. Nuestro equipo recibe solicitudes de las personas. "
+                         "Puede escribir a contacto@example.com.",
+            content_text="Ejercicio de derechos. Nuestro equipo recibe solicitudes de las personas. "
+                         "Puede escribir a contacto@example.com.",
         )],
     ))
     assert evaluate_control("PRV-006", positive["PRV-006"], {"PRV-003": "detected"})["result"] == "detected"
