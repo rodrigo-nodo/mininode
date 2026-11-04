@@ -19,7 +19,7 @@ from mininode_api.web_inspector import (
     discover_include_links,
     extract_page,
 )
-from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS
+from mininode_api.web_inspector.fetcher import INSPECTION_BUDGET_SECONDS, normalize_url
 from mininode_api.web_inspector.models import EvidenceContract, InspectionFetchResult
 from mininode_api.web_inspector.selector import candidate_identity
 
@@ -235,8 +235,8 @@ def _needed_categories(diagnostic: dict) -> set[str]:
 
 
 def _same_policy_candidate(candidate_url: str, selected_url: str) -> bool:
-    """Match functional URL identity, retaining query but ignoring trailing slash."""
-    return candidate_identity(candidate_url) == candidate_identity(selected_url)
+    """Match selector/fetcher URL identity, removing tracking but retaining functional query."""
+    return candidate_identity(normalize_url(candidate_url)) == candidate_identity(normalize_url(selected_url))
 
 
 def _next_candidate(

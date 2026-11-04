@@ -524,6 +524,62 @@ def test_query_variant_blocked_policy_is_not_rescued_by_commercial_page(monkeypa
     assert response.json()["scope"]["pages_requested"] == 3
 
 
+def test_selected_policy_with_tracking_parameter_is_inspected_and_evaluated(monkeypatch):
+    """End-to-end offline: selected view=z&utm_source is fetched as view=z."""
+    commercial = f"{HOME}privacy/?view=a"
+    legal_link = f"{HOME}privacy/?view=z&utm_source=footer"
+    legal_fetched = f"{HOME}privacy/?view=z"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(
+            HOME,
+            f'<a href="{commercial}">Privacy Web</a>'
+            f'<a href="{legal_link}">Política de privacidad</a>',
+        ),
+        commercial: page(commercial, "<title>Privacy Web</title>"),
+        legal_fetched: page(
+            legal_fetched,
+            "<title>Política de privacidad</title><main><h1>Política de privacidad</h1>"
+            "<p>Versión 2.1. Example SpA es responsable del tratamiento.</p></main>",
+        ),
+    })
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal_fetched]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-002"]["result"] == "detected"
+    assert controls["PRV-004"]["result"] == "detected"
+    assert controls["PRV-005"]["result"] == "detected"
+    assert controls["PRV-003"]["source_url"] == f"{HOME}privacy/"
+    assert response.json()["scope"]["pages_requested"] == 2
+    assert "utm_source" not in response.text
+    assert "view=z" not in response.text
+    assert "_selected_policy_url" not in response.text
+
+
+def test_tracking_query_on_blocked_selected_policy_does_not_promote_commercial(monkeypatch):
+    """Failed selected view=z cannot borrow commercial view=a even with utm_*."""
+    commercial = f"{HOME}privacy/?view=a"
+    legal_link = f"{HOME}privacy/?view=z&utm_source=footer"
+    legal_fetched = f"{HOME}privacy/?view=z"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(
+            HOME,
+            f'<a href="{commercial}">Privacy Web</a>'
+            f'<a href="{legal_link}">Política de privacidad</a>',
+        ),
+        legal_fetched: failed_page(legal_fetched, "robots_disallowed"),
+        commercial: page(commercial, "<title>Privacy Web</title>"),
+    })
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal_fetched], [commercial]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-002"]["result"] == "partial"
+    assert controls["PRV-004"]["result"] == "not_evaluable"
+    assert "utm_source" not in response.text
+    assert "view=z" not in response.text
+
+
 def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     privacy = "https://example.com/privacidad"
     home_html = f'<a href="{privacy}">Política de privacidad</a>'

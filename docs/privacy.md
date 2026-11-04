@@ -59,7 +59,9 @@ comercial alternativa. Ante una política bloqueada se conserva el resultado
 prudente y no se atribuye la respuesta HTTP de un documento distinto.
 La selección y la inspección comparan internamente la identidad completa de
 la URL, incluidos parámetros de consulta funcionales (ej. `?view=a` frente a
-`?view=z`); la referencia pública de evidencia permanece sanitizada, sin
+`?view=z`); la identidad interna aplica la **misma normalización** de
+selector y fetcher: elimina `utm_*` sin eliminar `view` u otros parámetros
+funcionales. La referencia pública de evidencia permanece sanitizada, sin
 query ni credenciales. La URL interna no se serializa en diagnósticos,
 snapshots ni logs. Esto evita asociar la respuesta de otra variante de ruta.
 Este ajuste puede alterar los resultados

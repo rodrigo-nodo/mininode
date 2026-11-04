@@ -7,6 +7,7 @@ import unicodedata
 from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
+from mininode_api.web_inspector.fetcher import normalize_url
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
 )
@@ -303,7 +304,12 @@ def _contains_phrase(value: str, terms: tuple[str, ...] | set[str]) -> bool:
 
 
 def _normalized_url(value: str) -> str:
-    parts = urlsplit(value)
+    """Use fetcher/selector identity, then ignore non-root trailing slashes.
+
+    Functional query stays; tracking-only utm_* fields are removed exactly
+    as they are by Web Inspector before the request is sent.
+    """
+    parts = urlsplit(normalize_url(value))
     hostname = (parts.hostname or "").lower()
     port = parts.port
     default_port = (parts.scheme.lower() == "http" and port == 80) or (

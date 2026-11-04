@@ -539,6 +539,49 @@ def test_policy_query_identity_blocked_legal_does_not_borrow_commercial_success(
     assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "partial"
 
 
+def test_policy_tracking_parameters_match_normalized_inspected_document():
+    """B3 follow-up: selector strips utm_source before inspecting /privacy/?view=z."""
+    commercial = "https://example.com/privacy/?view=a"
+    legal_link = "https://example.com/privacy/?view=z&utm_source=footer"
+    legal_fetched = "https://example.com/privacy/?view=z"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+            LinkEvidence(legal_link, "Política de privacidad", "https://example.com/"),
+        ],
+        pages=[
+            PageEvidence(commercial, 200, "Privacy Web", "text/html",
+                         visible_text="Servicio comercial"),
+            PageEvidence(legal_fetched, 200, "Política de privacidad", "text/html",
+                         requested_url=legal_fetched,
+                         visible_text="Versión 2.1. Example SpA es responsable del tratamiento."),
+        ],
+    ))
+    assert adapted["PRV-002"]["policy_accessible"] is True
+    assert adapted["PRV-002"]["policy_content_relevant"] is True
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "detected"
+    assert evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": "detected"})["result"] == "detected"
+    assert adapted["PRV-003"]["source_urls"] == ["https://example.com/privacy/"]
+    assert "utm_source" not in repr(adapted)
+    assert "_selected_policy_url" not in repr(adapted)
+
+
+def test_policy_tracking_parameters_do_not_allow_other_functional_query():
+    """An inspected view=a cannot replace selected view=z, even with utm_* stripped."""
+    commercial = "https://example.com/privacy/?view=a&utm_source=ads"
+    legal_link = "https://example.com/privacy/?view=z&utm_source=footer"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Privacy Web", "https://example.com/"),
+            LinkEvidence(legal_link, "Política de privacidad", "https://example.com/"),
+        ],
+        pages=[PageEvidence("https://example.com/privacy/?view=a", 200, "Privacy Web", "text/html")],
+    ))
+    assert adapted["PRV-002"].get("technical_error") is True
+    assert "policy_accessible" not in adapted["PRV-002"]
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
 def test_document_controls_ignore_emol_style_chrome_and_form_noise():
     """Clean policy evidence wins over login/header/footer text."""
     url = "https://example.com/privacy"
