@@ -59,6 +59,72 @@ Framework `0.10` mantiene PRV-104 como señal contextual e informativa con peso 
 Framework `0.9` mantiene la captura estática de contexto asociado a formularios y el descubrimiento de páginas de acción de `0.8`, y hace que PRV-103 combine acciones explícitas con objetos o resultados acotados dentro del mismo formulario. El clasificador sigue siendo determinístico, sin LLM, y no ejecuta JavaScript del sitio.
 En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes) se clasifica como finalidad genérica; solo se considera concreta cuando el mismo formulario expresa un resultado o servicio específico observable.
 
+## Privacy Score — suficiencia y representatividad de la evidencia
+
+**Decisión de diseño (04-11-2026; pendiente de implementación y QA):** el
+`score` de backend y la **suficiencia de evidencia para publicar visualmente
+una calificación general** son conceptos diferentes. El Score numérico actual
+se calcula sobre los controles puntuables efectivamente evaluados, usando
+sus pesos y factores; la cobertura informada es
+`evaluated_controls / applicable_controls`, por cantidad. Los controles
+contextuales y los no aplicables no integran ese denominador. Por ello,
+un `100/100` puede coexistir con una cobertura limitada y **no demuestra**
+que los controles no evaluados estén bien.
+
+Para determinar si el Score es representativo, no basta un porcentaje mínimo
+fijo. Deben considerarse conjuntamente:
+
+- Cuántos controles puntuables aplicables se pudieron evaluar.
+- **Peso e importancia de los controles que faltan**, según el scoring
+  vigente, y cuánto pueden afectar la interpretación del resultado.
+- **Motivos de la evidencia faltante** (`not_evaluable`, cobertura técnica,
+  limitaciones de inspección u otras causas verificables): no confundir
+  ausencia de evidencia con resultado adverso.
+- Riesgo de sesgo y comparabilidad entre diagnósticos cuando la cobertura
+  o la composición de los controles evaluados cambian.
+
+**Referencia metodológica, no equivalencia de dominio:**
+[Environmental Performance Index 2026 de Yale — metodología](https://epi.yale.edu/2026/methodology),
+secciones *Data Selection*, *Weighting and Aggregation* y *Missing Data*.
+El EPI decide si dispone de datos suficientes valorando el peso de indicadores
+faltantes, la posibilidad de imputación, el sesgo potencial y las razones de
+ausencia, en vez de usar solo una cantidad fija de indicadores. Esto inspira
+nuestro criterio de representatividad; **no implica adoptar su fórmula,
+imputaciones, pesos ni umbrales en Privacy Web**.
+
+### Contrato de presentación propuesto
+
+| Estado visual | Condición conceptual | Qué mostrar |
+| --- | --- | --- |
+| **Evaluación limitada** | Evidencia insuficiente según cantidad, importancia o causas de controles pendientes | Cobertura y explicación; **no destacar el Score** aunque el backend calcule `100/100`; conservar hallazgos y acciones útiles |
+| **Evaluación parcial** | Evidencia suficiente para mostrar un Score orientativo, pero faltan controles puntuables aplicables | Score visible, **identificado como parcial**, junto con cobertura, evaluados/aplicables y advertencia |
+| **Evaluación completa** | Todos los controles puntuables aplicables fueron evaluados | Score destacado y cobertura 100%, con estado humano según resultado; mantener advertencia de alcance |
+
+Los cuatro casos ilustrativos aprobados para **diseño visual** son:
+`6/15 (40%), score calculado 100/100` → **limitada, sin nota destacada**;
+`12/15 (80%), 86/100` → **parcial, 86/100 contextualizado**;
+`15/15 (100%), 86/100` → **completa, 86/100**;
+`15/15 (100%), 100/100` → **completa, 100/100** y mensaje
+«Bien», nunca «Perfecto» ni «Cumplimiento legal 100%».
+«Completa» se refiere **solo al alcance puntuable aplicable de Privacy Web**,
+no a revisar el 100% de las obligaciones legales, páginas o procesos de una
+organización. Los 21 controles del catálogo incluyen controles informativos.
+
+**Pendiente de decisión y validación:** el 70% considerado inicialmente es
+solo una hipótesis de umbral cuantitativo, **no una regla aprobada**.
+Definir suficiencia combinando cobertura y relevancia de controles faltantes
+sobre casos representativos y QA independiente. No ocultar ni publicar la nota
+en producción mediante umbrales implícitos. Las comparaciones antes/después
+deben indicar cuándo cambió la cobertura para evitar interpretar diferencias
+como mejoras o deterioros comprobados.
+
+Esta sección **documenta el diseño acordado; no afirma que ya esté
+implementado**. La futura ejecución necesita DEV → QA → promoción selectiva
+a MAIN, tests de presentación y validación del PO. No modifica el cálculo
+de Score, pesos, resultados de controles, API, versiones, snapshots ni
+entitlements actuales; evaluar versión/documentación si posteriormente se
+cambia el comportamiento público.
+
 ## Arquitectura de interpretación semántica
 
 Privacy Web adopta como arquitectura objetivo el flujo:
