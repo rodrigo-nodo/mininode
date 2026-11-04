@@ -328,6 +328,17 @@
   margin: 7px 0 0;
 }
 
+.privacy-result__coverage {
+  background: var(--color-primary-soft);
+  border-left: 3px solid var(--privacy-primary);
+  border-radius: 0 8px 8px 0;
+  color: var(--fg);
+  font-size: .9rem;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+}
+
 .privacy-areas-section,
 .privacy-actions {
   margin-top: 30px;
@@ -389,6 +400,13 @@
 
 .privacy-area .privacy-state {
   margin-top: 9px;
+}
+
+.privacy-area__partial {
+  color: var(--muted);
+  display: block;
+  font-size: .78rem;
+  margin-top: 6px;
 }
 
 .privacy-state {

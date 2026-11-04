@@ -39,7 +39,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
-            ("index.html", 'src="app.js?v=ux21-priorities-2"'),
+            ("index.html", 'src="app.js?v=ux21-coverage-1"'),
             ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=pw03-history-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
@@ -53,8 +53,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         plan = (PRIVACY_DIR / "plan-assets/app.js").read_text(encoding="utf-8")
         self.assertIn("description(item.control_code)", plan)
         self.assertIn("name(item.control_code, item.name)", plan)
-        self.assertIn("control.code, control.name", APP)
-        self.assertIn("description(control.code)", APP)
+        self.assertIn("control.code, 'Punto de privacidad'", APP)
+        self.assertIn("description?.(control.code)", APP)
 
 
     def test_free_priority_renderer_regression(self):
@@ -82,11 +82,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=ux21-priorities-2"', HTML)
+        self.assertIn('src="app.js?v=ux21-coverage-1"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=ux21-1"', HTML)
+        self.assertIn('href="styles.css?v=ux21-coverage-1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -98,7 +98,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=ux21-priorities-2', HTML)
+        self.assertIn('app.js?v=ux21-coverage-1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -320,16 +320,16 @@ class PrivacyResultStaticTests(unittest.TestCase):
         config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
         codes = re.findall(r"code: '(PRV-\d+)'", config)
 
-        self.assertEqual(len(codes), 19)
-        self.assertEqual(len(set(codes)), 19)
+        self.assertEqual(len(codes), 21)
+        self.assertEqual(len(set(codes)), 21)
         self.assertEqual(config.count("name: 'Transparencia'"), 1)
         self.assertEqual(config.count("name: 'Formularios'"), 1)
         self.assertEqual(config.count("name: 'Cookies'"), 1)
         self.assertEqual(config.count("name: 'Contacto'"), 1)
         self.assertEqual(config.count("name: 'Seguridad'"), 1)
-        self.assertEqual(config.count("name: '") - 19, 5)
+        self.assertEqual(config.count("name: '"), 5)
         self.assertEqual(len(re.findall(r"PRV-0\d\d", config)), 14)
-        self.assertEqual(len(re.findall(r"PRV-10[14]", config)), 2)
+        self.assertEqual(len(re.findall(r"PRV-10[1-4]", config)), 4)
         self.assertEqual(config.count("PRV-201"), 1)
         self.assertEqual(config.count("PRV-301"), 1)
         self.assertEqual(config.count("PRV-501"), 1)
@@ -377,11 +377,16 @@ class PrivacyResultStaticTests(unittest.TestCase):
         for result, label in expected.items():
             self.assertRegex(APP, rf"{result}: {{ label: '{label}'")
 
-    def test_result_ui_hides_codes_and_technical_coverage(self):
+    def test_result_ui_explains_coverage_and_hides_control_codes(self):
         self.assertNotIn("PRV-", HTML)
-        self.assertNotIn("diagnostic-coverage", HTML)
+        self.assertIn('id="diagnostic-coverage"', HTML)
         self.assertIn("Ver qué revisamos", HTML)
-        self.assertIn("19 puntos en 5 áreas", HTML)
+        self.assertIn("21 puntos en 5 áreas", HTML)
+        self.assertNotIn("19 puntos en 5 áreas", HTML)
+        self.assertIn("renderScoreCoverage(diagnostic)", APP)
+        self.assertIn("Sin evidencia suficiente", APP)
+        self.assertIn("Evaluación parcial", APP)
+        self.assertNotIn("MutationObserver", APP)
 
     def test_priorities_and_commercial_paths_are_preserved(self):
         self.assertIn(".slice(0, 3)", APP)

@@ -224,6 +224,24 @@ PRV-101 y PRV-104 sin cambios, prioriza un control determinista de transporte de
 formulario y posterga conclusiones sobre minimización, consentimiento, menores o datos
 de riesgo elevado cuando la evidencia pública no permite evitar falsos positivos.
 
+## Privacy Web: presentación de Score y cobertura en DEV
+
+El diagnóstico público presenta 21 controles en cinco áreas con un único
+renderizador en `frontend/privacy/app.js`. Los nombres y descripciones visibles
+proceden del catálogo compartido `frontend/privacy/control-ux.js`. Los seis
+controles contextuales mantienen un estado neutral informativo: no modifican
+el Privacy Score ni el estado puntuable del área.
+
+El `score` del backend no cambia. Si `evaluated_controls < applicable_controls`,
+el resultado identifica una evaluación parcial y cuántos controles se evaluaron.
+Si no hay controles evaluables, no se muestra el 0/100 técnico como nota negativa.
+Los diagnósticos históricos sin metadatos de cobertura muestran su score con
+una aclaración. Las áreas parcialmente evaluadas no presentan «Bien» sin matiz.
+
+DEV mantiene las descripciones y el recorrido de preparación de activación
+propios de esta rama. No se modifican pesos, reglas, APIs, contratos, versiones,
+Plan autenticado, Billing, esquemas ni datos.
+
 ## Privacy Web activo: frontera comercial
 
 El diagnóstico Privacy Web es gratuito. En modo autenticado, un sitio ya guardado usa `workspace_site_id`: Access autoriza al miembro del workspace y el backend obtiene desde allí la URL a inspeccionar. Para una URL nueva, Privacy Web recibe el workspace autorizado, ejecuta primero el diagnóstico y, solo si éste resulta exitoso, crea o reutiliza automáticamente el `workspace_site` y vincula el snapshot. Los usuarios no crean sitios manualmente desde la cuenta. El endpoint público existente continúa disponible para diagnósticos anónimos. Privacy Web activo cuesta CLP $9.900 por un
