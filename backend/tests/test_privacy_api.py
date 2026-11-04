@@ -123,6 +123,7 @@ def sequenced_diagnostic(monkeypatch, *results):
         ("PRV-002", "not_evaluable", {"privacy"}),
         ("PRV-003", "partial", {"privacy"}),
         ("PRV-003", "not_evaluable", {"privacy"}),
+        ("PRV-005", "not_evaluable", {"privacy"}),
         ("PRV-003", "not_detected", set()),
         ("PRV-301", "not_evaluable", {"contact"}),
         ("PRV-101", "not_evaluable", {"contact", "action"}),
@@ -433,6 +434,45 @@ def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     }
     controls = {item["control_code"]: item for item in response.json()["controls"]}
     assert controls["PRV-002"]["result"] == "detected"
+
+
+def test_mininode_public_policy_content_is_used_for_document_controls(monkeypatch):
+    """Offline regression using the committed Mininode legal policy.
+
+    A commercial /privacy/ link precedes the footer policy. No site inspection.
+    """
+    site = "https://mininode.io/"
+    product = f"{site}privacy/"
+    legal = f"{site}legal/privacy/"
+    footer = f"{site}partials/footer.html"
+    policy_html = (
+        Path(__file__).resolve().parents[2]
+        / "frontend" / "legal" / "privacy" / "index.html"
+    ).read_text(encoding="utf-8")
+    client, fake = client_with(monkeypatch, {
+        site: page(site, '<a href="/privacy/">Privacy Web</a>'
+                         '<div data-include="partials/footer.html"></div>'),
+        footer: page(footer, '<a href="/legal/privacy/">Política de privacidad</a>'),
+        legal: page(legal, policy_html),
+        product: page(product, '<title>Privacy Web</title><p>Diagnóstico web</p>'),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": site})
+
+    assert response.status_code == 200
+    assert fake.calls == [[site], [footer], [legal]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    for code in ("PRV-001", "PRV-002", "PRV-003"):
+        assert controls[code]["result"] == "detected"
+    # Real legal content cannot collapse into "No pudimos revisarlo" solely
+    # because the product link appeared earlier in the home page.
+    for number in range(4, 15):
+        code = f"PRV-{number:03d}"
+        assert controls[code]["result"] != "not_evaluable", code
+    assert controls["PRV-004"]["result"] == "detected"
+    assert controls["PRV-005"]["result"] == "detected"
+    assert controls["PRV-008"]["source_url"] == legal
+    assert response.json()["coverage"] == 100
 
 
 def test_static_include_data_rel_links_are_selected_but_fragment_is_not_a_page(monkeypatch):

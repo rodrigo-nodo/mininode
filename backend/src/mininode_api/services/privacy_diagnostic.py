@@ -28,6 +28,8 @@ _CATEGORY_ORDER = ("privacy", "contact", "action")
 _EXPANDABLE_RESULTS_BY_CONTROL = {
     "PRV-002": frozenset({"partial", "not_evaluable"}),
     "PRV-003": frozenset({"partial", "not_evaluable"}),
+    # A policy link may be known before its document has been inspected.
+    "PRV-005": frozenset({"not_evaluable"}),
     "PRV-301": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-101": frozenset({"not_detected", "partial", "not_evaluable"}),
     "PRV-104": frozenset({"not_detected", "partial", "not_evaluable"}),
@@ -35,6 +37,7 @@ _EXPANDABLE_RESULTS_BY_CONTROL = {
 _CATEGORIES_BY_EXPANDABLE_CONTROL = {
     "PRV-002": frozenset({"privacy"}),
     "PRV-003": frozenset({"privacy"}),
+    "PRV-005": frozenset({"privacy"}),
     "PRV-101": frozenset({"contact", "action"}),
     "PRV-104": frozenset({"contact", "action"}),
     "PRV-301": frozenset({"contact"}),

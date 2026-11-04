@@ -47,7 +47,14 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework es `0.11`; el scoring vigente es `0.3`.
+La versión vigente del framework en DEV es `0.12`; el scoring continúa en `0.3`.
+Framework `0.12` prioriza enlaces explícitos de política legal frente a páginas
+comerciales de Privacy Web, resuelve el documento seleccionado entre URLs
+solicitadas/finales equivalentes y permite inspeccionar candidatos adicionales
+cuando faltó el contenido de la política. Mantiene la inspección pública pasiva,
+los límites del fetcher, robots y SSRF. Este ajuste puede alterar los resultados
+observables de PRV-003 a PRV-014 para un mismo sitio; por eso `0.11/0.3` y
+`0.12/0.3` no son comparables. No cambian los pesos ni la fórmula del Score.
 Framework `0.11` redefine PRV-201 como observación técnica contextual de cookies
 vistas mediante encabezados `Set-Cookie` en las respuestas HTTP inspeccionadas. La
 ausencia de un banner o texto de cookies no produce por sí misma un resultado adverso;

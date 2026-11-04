@@ -404,6 +404,42 @@ def test_prv003_same_site_policy_is_own():
     assert evaluate_control("PRV-003", evidence)["result"] == "detected"
 
 
+def test_prv003_prefers_legal_policy_over_previous_privacy_product_link():
+    """A Privacy Web product card precedes the legal link in Mininode's home."""
+    product_url = "https://example.com/privacy/"
+    policy_url = "https://example.com/legal/privacy/"
+    links = [
+        LinkEvidence(product_url, "Privacy Web", "https://example.com/"),
+        LinkEvidence(policy_url, "Política de privacidad", "https://example.com/"),
+    ]
+    page = PageEvidence(
+        policy_url, 200, "Política de privacidad", "text/html",
+        visible_text="Versión 1.2. Example SpA es responsable. Para ejercer sus "
+                     "derechos sobre datos personales escriba a privacidad@example.com.",
+    )
+    adapted = adapt_evidence(contract(links=links, pages=[page]))
+    assert adapted["PRV-003"]["source_urls"] == [policy_url]
+    assert adapted["PRV-004"]["source_urls"] == [policy_url]
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "detected"
+    assert evaluate_control("PRV-005", adapted["PRV-005"], {"PRV-003": "detected"})["result"] == "detected"
+    assert evaluate_control("PRV-006", adapted["PRV-006"], {"PRV-003": "detected"})["result"] == "detected"
+
+
+def test_policy_document_resolution_accepts_trailing_slash_alias():
+    link = LinkEvidence(
+        "https://example.com/legal/privacy/", "Política de privacidad",
+        "https://example.com/",
+    )
+    # PageEvidence uses the equivalent URL without a trailing slash.
+    page = PageEvidence(
+        "https://example.com/legal/privacy", 200, "Política de privacidad",
+        "text/html", visible_text="Versión 2.1",
+    )
+    adapted = adapt_evidence(contract(links=[link], pages=[page]))
+    assert adapted["PRV-003"]["source_urls"] == [link.url]
+    assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "detected"
+
+
 def test_document_controls_ignore_emol_style_chrome_and_form_noise():
     """Clean policy evidence wins over login/header/footer text."""
     url = "https://example.com/privacy"

@@ -20,7 +20,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         block = APP.split("const privacyAreas = [", 1)[1].split("const AREA_INFO", 1)[0]
         app_codes = re.findall(r"code: '(PRV-\d+)'", block)
         ux_codes = re.findall(r"'(PRV-\d+)': Object.freeze", UX)
-        self.assertEqual(CONTROLS["version"], "0.11")
+        self.assertEqual(CONTROLS["version"], "0.12")
         self.assertEqual(len(backend_codes), 21)
         self.assertEqual(len(app_codes), len(set(app_codes)))
         self.assertEqual(set(app_codes), backend_codes)
