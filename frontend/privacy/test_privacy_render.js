@@ -51,6 +51,7 @@ const document = {
 };
 
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
+const catalog = fs.readFileSync(`${__dirname}/control-ux.js`, 'utf8');
 const context = {
   document,
   URL,
@@ -67,7 +68,8 @@ const context = {
   FormData: class {},
   fetch: async () => { throw new Error('not used'); },
 };
-vm.runInNewContext(`${source}
+vm.runInNewContext(`${catalog}
+${source}
 globalThis.renderDiagnosticForTest = renderDiagnostic;
 globalThis.resetCommercialStateForTest = resetCommercialState;
 globalThis.currentDiagnosticIdForTest = () => currentDiagnosticId;
@@ -77,7 +79,7 @@ const codes = [
   'PRV-001', 'PRV-002', 'PRV-003', 'PRV-004', 'PRV-005', 'PRV-006',
   'PRV-007', 'PRV-008', 'PRV-009', 'PRV-010', 'PRV-011', 'PRV-012',
   'PRV-013', 'PRV-014',
-  'PRV-101', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
+  'PRV-101', 'PRV-102', 'PRV-103', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
 ];
 const controls = codes.map((control_code, index) => ({
   control_code,
@@ -90,7 +92,9 @@ const baseDiagnostic = {
   diagnostic_id: 'DIAG-A',
   claim_token: 'test-claim-proof-kept-out-of-urls',
   score: 82,
-  coverage: 94,
+  coverage: 79,
+  evaluated_controls: 11,
+  applicable_controls: 14,
   status: 'Preparación avanzada',
   controls,
   priorities: [{
@@ -108,6 +112,9 @@ const baseDiagnostic = {
 assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
+assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles aplicables/);
+assert.equal(elements.get('diagnostic-coverage').hidden, false);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
 const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
 assert.equal(areaButtons.every((button) => button.tagName === 'BUTTON' && button.type === 'button'), true);
@@ -135,7 +142,7 @@ assert.match(html, /Ver qué revisamos/);
 assert.equal(elements.get('diagnostic-controls').children.length, 5);
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  19,
+  21,
 );
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
@@ -157,11 +164,16 @@ assert.doesNotThrow(() => context.renderDiagnosticForTest({
 }, 'https://example.com'));
 assert.equal(
   elements.get('diagnostic-controls').children.reduce((total, area) => total + area.children[1].children.length, 0),
-  19,
+  21,
 );
 const transparencyItems = elements.get('diagnostic-controls').children[0].children[1].children;
 assert.equal(transparencyItems[1].children[1].children[0].textContent, 'No pudimos revisarlo');
 assert.equal(transparencyItems[2].children[1].children[0].textContent, 'No pudimos revisarlo');
+const formItems = elements.get('diagnostic-controls').children[1].children[1].children;
+assert.equal(formItems.length, 4);
+assert.equal(formItems[0].children[1].children[0].textContent, 'Detectado');
+assert.equal(formItems[1].children[1].children[0].textContent, 'Bien');
+assert.equal(elements.get('diagnostic-areas').children[2].children[1].textContent, 'Informativo');
 
 assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, priorities: [] }, 'https://example.com'));
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
@@ -203,6 +215,45 @@ for (const score of [26, 100]) {
 assert.equal(context.isValidDiagnosticResponseForTest({ score: 50, controls: null, priorities: null }), true);
 assert.equal(context.isValidDiagnosticResponseForTest({ score: null }), false);
 
+// Full coverage keeps the score and existing human-friendly status.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, coverage: 100, evaluated_controls: 14, applicable_controls: 14,
+}, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-status').textContent, 'Bien');
+assert.equal(elements.get('diagnostic-coverage').hidden, true);
+
+// No evaluable controls must not look like a failure with score 0.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 0, coverage: 0, evaluated_controls: 0, applicable_controls: 12,
+}, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, '—');
+assert.equal(elements.get('score-status').textContent, 'Sin evidencia suficiente');
+assert.match(elements.get('diagnostic-coverage').textContent, /No es una calificación negativa/);
+
+// Historical snapshots without coverage still render their score, with an explanation.
+const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls: _applicable,
+  ...historical } = baseDiagnostic;
+context.renderDiagnosticForTest(historical, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, 82);
+assert.match(elements.get('diagnostic-coverage').textContent, /No hay información de cobertura/);
+
+// A partially checked area may not show "Bien" without qualifications.
+const partialAreaControls = controls.map((item) => item.control_code === 'PRV-005'
+  ? { ...item, result: 'not_evaluable' } : item);
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, controls: partialAreaControls,
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-areas').children[0].children[1].textContent, 'Evaluación parcial');
+
+// Historical not_applicable for observational Cookies is neutral.
+const oldCookies = controls.map((item) => item.control_code === 'PRV-201'
+  ? { ...item, result: 'not_applicable' } : item);
+context.renderDiagnosticForTest({ ...baseDiagnostic, controls: oldCookies }, 'https://example.com');
+assert.equal(elements.get('diagnostic-areas').children[2].children[1].textContent, 'Informativo');
+assert.equal(elements.get('diagnostic-controls').children[2].children[1].children[0]
+  .children[1].children[0].textContent, 'No detectado');
+
 
 // B1: simulate the actual Access handoff to a saved site, without contacting APIs.
 const savedSite = 'SITE-TEST-1';
@@ -233,7 +284,8 @@ const makeSavedReviewHarness = (search, review) => {
       throw new Error(`Unexpected request: ${url}`);
     },
   };
-  vm.runInNewContext(`${source}\nglobalThis.runSavedReviewForTest = initializeAuthenticatedSite;`, sandbox);
+  vm.runInNewContext(`${catalog}
+${source}\nglobalThis.runSavedReviewForTest = initializeAuthenticatedSite;`, sandbox);
   return { nodes, sandbox, responses };
 };
 
