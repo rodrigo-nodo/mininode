@@ -1,7 +1,7 @@
 # Mininode — Roadmap estratégico transversal
 
-**Actualizado:** 30-10-2026  
-**Referencia oficial:** este archivo en `main` (`docs/roadmap.md`). La versión de `dev` debe ser una réplica textual, sin decisiones estratégicas propias.  
+**Actualizado:** 04-11-2026  
+**Referencia oficial:** únicamente este archivo en `main` (`docs/roadmap.md`). DEV enlaza esta referencia y mantiene separados sus documentos de ejecución.  
 **Estado:** iniciativas registradas; no equivalen a implementaciones aprobadas.
 
 Este roadmap contiene prioridades **independientes de la rama y el ambiente**. El seguimiento técnico DEV/PROD y las evidencias de cada producto permanecen en sus documentos específicos, por ejemplo [Privacy Web](privacy-web/roadmap.md).
@@ -10,7 +10,7 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 
 | ID | Ámbito | Iniciativa | Estado | Momento |
 |---|---|---|---|---|
-| MIN-01 | Plataforma / calidad | Evaluar preproducción estable `qa.mininode.io` para validar el SHA candidato a PROD | **Por definir** | Tras estabilizar PW-03; priorizar según frecuencia de releases |
+| MIN-01 | Plataforma / calidad | Evaluar preproducción integrada `preview.mininode.io` para validar el SHA candidato a PROD | **Por definir** | Al terminar desarrollos pendientes de Privacy Web, antes de pilotos o ventas |
 | MIN-02 | Gobierno / propiedad intelectual | Modelo híbrido: producto comercial privado y presencia pública selectiva | **Política aprobada; transición pendiente** | Antes de escalar pilotos, partners y distribución |
 | PW-22 | Privacy Web / negocio | Definir tarifas según la superficie web efectivamente evaluada, con entrada simple y volumen multisitio | **Por definir** | Medir en pilotos antes de aprobar nuevas tarifas |
 
@@ -18,9 +18,9 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 
 **Problema:** `dev.mininode.io` valida integración de cambios en `dev`, pero no necesariamente el SHA exacto del PR construido sobre `main`. Un preview `*.pages.dev` por sí solo tampoco valida Clerk ni el backend PROD.
 
-**Evaluar:** dominio estable `qa.mininode.io`, despliegue de un candidato congelado en SHA, Clerk y orígenes autorizados explícitamente, backend/BD compatibles, aislamiento de datos de prueba, costos, criterios PASS, trazabilidad y rollback. Comparar QA completo frente a QA liviano. No conectar escrituras a PostgreSQL PROD sin autorización expresa.
+**Evaluar:** dominio estable `preview.mininode.io`, despliegue de un candidato congelado en SHA, Clerk y orígenes autorizados explícitamente, backend/BD compatibles, aislamiento de datos de prueba, costos, criterios PASS, trazabilidad y rollback. Comparar QA completo frente a QA liviano. No conectar escrituras a PostgreSQL PROD sin autorización expresa.
 
-**Pendiente decidir:** arquitectura, identidad, infraestructura exclusiva o compartida, presupuesto y prioridad. No se crea el dominio ni se cambian configuraciones por añadirlo al roadmap. No bloquear automáticamente PW-03 por esta iniciativa.
+**Secuencia aprobada:** no crear el dominio ni modificar infraestructura mientras queden desarrollos pendientes de Privacy Web. Definir e implementar PREVIEW al cerrar esos desarrollos, **antes de pilotos o ventas**. Arquitectura, identidad, aislamiento, presupuesto y criterios de QA aún requieren aprobación específica.
 
 **Criterio de cierre:** capacidad de probar el SHA candidato, autenticación y recorrido E2E en un entorno configurado y autorizado, documentando diferencias con PROD.
 
@@ -46,7 +46,7 @@ Este roadmap contiene prioridades **independientes de la rama y el ambiente**. E
 
 ## Gobierno MAIN / DEV
 
-- **Estrategia única:** este archivo en `main` es la referencia oficial; `dev` contiene una **copia idéntica**. Primero se aprueban/mergean cambios estratégicos a `main` y luego se sincronizan por PR documental enfocado hacia `dev`, sin merge masivo de ramas.
+- **Estrategia única:** este archivo existe únicamente en `main`. Los documentos de DEV deben enlazarlo sin replicar el roadmap estratégico. Retirar la copia histórica de DEV mediante un PR documental independiente, revisando referencias y tests, sin arrastrar otros cambios entre ramas.
 - **Seguimiento por entorno:** los roadmaps de ejecución y sus estados en DEV/PROD pueden diferir porque describen hechos distintos. No reemplazar `docs/privacy-web/roadmap.md` de una rama por el de otra; conciliar decisiones y conservar evidencias propias.
 - **Página pública:** `frontend/roadmap/index.html` es una pieza editorial diferente, no un espejo automático de este documento ni anuncio de funciones pendientes.
 - **Estados:** `Por definir` (hipótesis registrada), `Planificado` (alcance aprobado), `En curso`, `Validado` y `Publicado`. MIN-01 y PW-22 siguen **Por definir**; MIN-02 tiene política híbrida aprobada y ejecución de transición pendiente.

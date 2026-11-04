@@ -88,7 +88,7 @@ Antes del piloto, fijar criterios de éxito, participantes, modalidad gratuita o
 | PW-15 | QA de lanzamiento con versión/SHA congelado, criterios PASS previos y autorización de publicación | Pendiente |
 | PW-22 | Definir precios por **superficie web efectivamente inspeccionada** (páginas únicas, profundidad, formularios, subdominios y frecuencia de revisión), con plan base y reglas de volumen multisitio; medir cobertura y costos en pilotos | **Por definir** (sin cambiar la tarifa actual) |
 
-**Roadmap transversal:** `qa.mininode.io` (MIN-01), política de visibilidad del repositorio (MIN-02) y el detalle de precios por superficie (PW-22) están en [`docs/roadmap.md`](../roadmap.md). Son iniciativas por definir, no implementación ni precios aprobados.
+**Roadmap transversal:** futuro `preview.mininode.io` (MIN-01), política de visibilidad del repositorio (MIN-02) y el detalle de precios por superficie (PW-22) están en [`docs/roadmap.md`](../roadmap.md). Son iniciativas por definir, no implementación ni precios aprobados.
 
 **Modelo comercial vigente:** Privacy Web activo por **CLP $9.900**, durante **un mes calendario**, sin renovación automática, con revisiones manuales durante la vigencia.
 
@@ -143,7 +143,7 @@ Privacy Data; certificación legal; auditoría integral; modificación automáti
 - **Desarrollo / integración:** cambios enfocados en DEV, CI y validación funcional del Product Owner en **https://dev.mininode.io**, asegurando que el backend desplegado corresponda a la versión que se está validando. Los Branch Previews arbitrarios no sustituyen el entorno integrado de Access/Clerk.
 - **Promoción selectiva:** partir de `main` actualizado, preparar un PR propio hacia `main` con **solo la funcionalidad aprobada** y dependencias necesarias. Conservar componentes exclusivos de MAIN (como Content Reader V1) y excluir trabajos experimentales de DEV. Revisar diff y CI, obtener autorización expresa de merge y confirmar despliegue y validación breve de PROD.
 - **Alineación permanente:** MAIN y DEV comparten la **base funcional aprobada**, mientras DEV puede mantener avances en validación. Las diferencias intencionales de código, datos, credenciales e infraestructura se registran; **no** hacer merge masivo para igualar commits. Ver [`docs/dev-prod-release.md`](../dev-prod-release.md).
-- **Gobierno del roadmap:** mantener **este archivo en `main`** como referencia oficial. Tras aprobar y mergear cambios del roadmap, sincronizar su contenido hacia `dev` mediante un cambio documental enfocado, sin arrastrar código. `frontend/roadmap/index.html` es un resumen público general distinto: actualizarlo solo en un trabajo editorial/UX posterior aprobado.
+- **Gobierno del roadmap:** mantener **este archivo en `main`** como referencia oficial del estado del producto en producción. DEV conserva su documentación propia de ejecución, pero consulta las decisiones estratégicas directamente en el roadmap transversal de MAIN. No copiar roadmaps completos entre ramas. `frontend/roadmap/index.html` sigue siendo un resumen público general distinto.
 
 **Próximo frente priorizado:** conciliación funcional DEV/MAIN/PROD, comunicación de score/cobertura y matriz de controles, y QA funcional posterior al retiro PW-03 para un piloto gratuito controlado. PW-04 se promueve únicamente al preparar venta real. No activar cobros ni modificar registros históricos por actualizar este roadmap. Nunca mergear sin autorización explícita.
 
