@@ -334,8 +334,9 @@ PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
 seleccionado por PRV-003. Requiere asociación explícita entre el canal y el
 ejercicio de derechos en el mismo segmento o la frase inmediatamente
 anterior del texto documental limpio, siempre que esa frase mencione
-concretamente el ejercicio o la solicitud de derechos. En el mismo
-segmento también se exige referencia contextual específica a derechos,
+concretamente el ejercicio o la solicitud de derechos (incluida la
+formulación «ejercer los derechos»). En el mismo segmento también se exige
+referencia contextual específica a derechos,
 solicitudes o consultas de privacidad: el mero título «Política de privacidad»
 no asocia un correo general con ese canal. No se recorre una ventana
 retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
@@ -360,6 +361,7 @@ categorías explícitas en hasta dos frases anteriores al tratamiento observable
 sin aprobar menciones comerciales genéricas a proveedores ni declaraciones
 negadas de tratamiento o uso de proveedores (por ejemplo, «los
 proveedores no tratan datos» o «no utilizamos proveedores que procesan datos»).
+Conectores afirmativos como «sin embargo» no equivalen a una negación.
 Conserva las declaraciones expresas de no compartir datos, no amplía la
 inspección ni evalúa jurídicamente esa comunicación.
 

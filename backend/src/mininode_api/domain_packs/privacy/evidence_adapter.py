@@ -125,7 +125,8 @@ _POLICY_VERSION_PREFIX = re.compile(
 # A negative statement of using processors must not become positive evidence
 # solely because it contains a subordinate affirmative processing verb.
 _NEGATED_PROVIDER_USAGE_PREFIX = re.compile(
-    r"\b(?:no|nunca|jamas|sin|not|never|without)\b.{0,65}"
+    r"\b(?:no|nunca|jamas|not|never|without|"
+    r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b.{0,65}"
     r"\b(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
     r"recurrimos|contamos|tenemos|hay|existen|use|uses|utilize|"
     r"employ|engage|hire|work|have)\b"
@@ -133,7 +134,8 @@ _NEGATED_PROVIDER_USAGE_PREFIX = re.compile(
 # The mere words "privacy" or "personal data" in a policy title do not
 # establish that a nearby generic email is a channel for rights requests.
 _RIGHTS_CONTEXT_TERMS = (
-    "ejercer derechos", "ejercer sus derechos", "ejercicio de derechos",
+    "ejercer derechos", "ejercer sus derechos", "ejercer los derechos",
+    "ejercicio de derechos",
     "ejercicio de sus derechos", "derechos de acceso",
     "derechos arcop", "derechos arco", "solicitud de derechos",
     "solicitudes de privacidad", "consultas relacionadas con privacidad",
@@ -146,7 +148,8 @@ _RIGHTS_CONTEXT_TERMS = (
     "exercise your rights", "exercise privacy rights",
 )
 _PRECEDING_RIGHTS_REQUEST_TERMS = (
-    "ejercicio de derechos", "ejercer derechos", "ejercicio de sus derechos",
+    "ejercicio de derechos", "ejercer derechos", "ejercer los derechos",
+    "ejercicio de sus derechos",
     "solicitudes de privacidad", "solicitud de derechos",
     "solicitudes sobre datos personales", "privacy requests",
     "data subject requests", "data subject rights",
@@ -962,7 +965,10 @@ def _affirmative_processor_handling(segment: str) -> bool:
         prefix = normalized[max(0, match.start() - 100):match.start()]
         if _NEGATED_PROVIDER_USAGE_PREFIX.search(prefix):
             continue
-        if re.search(r"\b(?:no|nunca|jamas|not|never|sin|cannot)\b", matched):
+        if re.search(
+            r"\b(?:no|nunca|jamas|not|never|cannot|"
+            r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b", matched
+        ):
             continue
         return True
     return False
