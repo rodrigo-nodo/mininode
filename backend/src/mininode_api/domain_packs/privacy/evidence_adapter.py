@@ -153,7 +153,7 @@ _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR = re.compile(
 # Never split noun lists such as "proveedores de pago y servicios de hosting".
 _RECIPIENT_INDEPENDENT_SUBJECT_SEPARATOR = re.compile(
     r"\s+\b(?:y|and)\b\s+"
-    r"(?=(?:(?:tambien|ademas|also)\s+)?"
+    r"(?=(?:(?:tambi[eé]n|adem[aá]s|also)\s+)?"
     r"(?:nuestros?|nuestras?|sus|los|las|estos?|estas?|our|their|the|these)\s+"
     r"(?:proveedores?|encargados?|processors?|"
     r"(?:(?:service|technology|authentication|advertising|payment)\s+)?providers?)\b"

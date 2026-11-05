@@ -360,7 +360,8 @@ cláusulas contrastivas («pero», «sin embargo», «but», etc.) y también cl
 aditivas («y», «and») cuando comienza una declaración independiente:
 un predicado explícito («y utilizamos proveedores») o un nuevo sujeto seguido
 de tratamiento de datos («y nuestros proveedores de autenticación procesan
-datos»), si existe un predicado independiente antes de la conjunción.
+datos»), incluyendo «y además/también nuestros proveedores…» con y sin
+acentos, si existe un predicado independiente antes de la conjunción.
 No divide enumeraciones nominales como «proveedores de pago y hosting»,
 «publicidad y marketing» ni sujetos coordinados sin predicado previo.
 Así, «no usamos proveedores publicitarios y utilizamos proveedores de

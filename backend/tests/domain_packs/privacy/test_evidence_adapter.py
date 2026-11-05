@@ -731,6 +731,23 @@ def test_prv010_additive_separator_requires_new_independent_predicate():
         "No usamos proveedores publicitarios",
         "nuestros proveedores de autenticación no procesan datos personales.",
     ]
+    # B9: the structural parser runs on original text, before normalization;
+    # both accent spellings of the adverb must trigger the same split.
+    for adverb in ("además", "ademas", "también", "tambien"):
+        assert _recipient_clauses(
+            "No usamos proveedores publicitarios y " + adverb
+            + " nuestros proveedores de autenticación procesan datos personales."
+        ) == [
+            "No usamos proveedores publicitarios",
+            adverb + " nuestros proveedores de autenticación procesan datos personales.",
+        ]
+        assert _recipient_clauses(
+            "No usamos proveedores publicitarios y " + adverb
+            + " nuestros proveedores de autenticación no procesan datos personales."
+        ) == [
+            "No usamos proveedores publicitarios",
+            adverb + " nuestros proveedores de autenticación no procesan datos personales.",
+        ]
     # Coordinated subjects without an independent preceding predicate are not
     # separated simply because the second subject has a processing verb.
     noun_list = (
@@ -770,6 +787,20 @@ def test_prv010_additive_separator_requires_new_independent_predicate():
         # B8: another independent assertion starts with an explicit subject.
         ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
          "procesan datos personales.", "explicit", "detected"),
+        # B9: adverbs before a new provider-subject declaration must work
+        # with/without Spanish diacritics, positive and negated.
+        ("No usamos proveedores publicitarios y además nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y también nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y ademas nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y tambien nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y además nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
+        ("No usamos proveedores publicitarios y también nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
         ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
          "no procesan datos personales.", "none", "not_detected"),
         ("Nuestros proveedores publicitarios y nuestros proveedores de autenticación "
