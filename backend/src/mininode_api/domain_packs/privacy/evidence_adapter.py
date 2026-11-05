@@ -114,12 +114,100 @@ _POLICY_VERSION_PATTERN = re.compile(
     r"\b(?:politica de privacidad|privacy policy)\s+v\s*\d+(?:\.\d+)*\b",
     re.I,
 )
+_NON_POLICY_VERSION_TERMS = re.compile(
+    r"\b(?:plataforma|platform|software|sistema|system|aplicacion|app|producto)\b"
+)
+_POLICY_VERSION_PREFIX = re.compile(
+    r"^(?:(?:esta|la|this|the)\s+)?"
+    r"(?:politica de privacidad|privacy policy|aviso de privacidad|"
+    r"politica de proteccion de datos)$"
+)
+# PRV-010 scopes negative/affirmative statements to distinct clauses.
+# Negating cookies does not negate the next statement about providers.
+_RECIPIENT_CLAUSE_SEPARATOR = re.compile(
+    r"(?:,\s*)?\b(?:pero|but|however|sin\s+embargo|no\s+obstante|"
+    r"en\s+cambio|whereas|mientras\s+que)\b\s*,?\s*",
+    re.I,
+)
+# Additive "y/and" starts a new clause only before a fresh, explicit
+# predicate about suppliers or data communication. Never split lists like
+# "proveedores de pago y hosting" or "publicidad y marketing".
+_RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR = re.compile(
+    r"\s+\b(?:y|and)\b\s+"
+    r"(?=(?:(?:tambi[eé]n|adem[aá]s|s[ií]|nosotros|we|also|"
+    r"no|nunca|jam[aá]s|do|does|not)\s+){0,4}"
+    r"(?:(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|use|uses|utilize|employ|engage|hire|"
+    r"work|have)\s+(?:(?:a|los|las|nuestros|our|any|the)\s+){0,2}"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+|"
+    r"authentication\s+)?providers?|processors?)\b"
+    r"|(?:compartimos|comunicamos|transferimos|revelamos|proporcionamos|"
+    r"share|shares|disclose|discloses|transfer|transfers|provide|"
+    r"provides)\s+(?:datos|informaci[oó]n|data|information|"
+    r"personal\s+data)\b))",
+    re.I,
+)
+# B8: an additional independent clause can start with an explicit subject
+# rather than an initial verb: "y nuestros proveedores ... procesan datos".
+# Require a determiner + provider subject + an actual processing predicate.
+# Never split noun lists such as "proveedores de pago y servicios de hosting".
+_RECIPIENT_INDEPENDENT_SUBJECT_SEPARATOR = re.compile(
+    r"\s+\b(?:y|and)\b\s+"
+    r"(?=(?:(?:tambi[eé]n|adem[aá]s|also)\s+)?"
+    r"(?:nuestros?|nuestras?|sus|los|las|estos?|estas?|our|their|the|these)\s+"
+    r"(?:proveedores?|encargados?|processors?|"
+    r"(?:(?:service|technology|authentication|advertising|payment)\s+)?providers?)\b"
+    r"(?:(?!\b(?:y|and|pero|but)\b)[^.!?;,]){0,100}?"
+    r"\b(?:tratar|procesar|almacenar|tratan|procesan|almacenan|"
+    r"treat|process|store|handle)\b"
+    r".{0,35}?\b(?:datos|data|informacion|information)\b)",
+    re.I,
+)
+# Only split a coordinated subject when an independent predicate precedes it.
+# A sequence of coordinated noun phrases is not two separate declarations.
+_RECIPIENT_PRECEDING_PREDICATE = re.compile(
+    r"\b(?:usamos|utilizamos|operamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|procesan|tratan|almacenan|compartimos|"
+    r"comunicamos|transferimos|revelamos|proporcionamos|"
+    r"use|uses|utilize|employ|engage|hire|work|have|process|"
+    r"share|disclose|transfer|provide)\b",
+    re.I,
+)
+# These patterns link negation directly to the provider noun phrase. Avoid
+# broad character windows that can borrow a negative from unrelated subjects.
+_NEGATED_PROVIDER_USE = re.compile(
+    r"\b(?:sin|without)\s+(?:(?:ningun|ninguna|ninguno|any)\s+)?"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+)?providers?|processors?)\b"
+    r"|\b(?:no|nunca|jamas|not|never|do\s+not|does\s+not|"
+    r"don\s+t|doesn\s+t)\s+"
+    r"(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|hay|existen|use|uses|utilize|"
+    r"employ|engage|hire|work|have)\s+(?:a\s+)?"
+    r"(?:(?:ningun|ninguna|ninguno|any)\s+)?"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+)?providers?|processors?)\b"
+)
+# The mere words "privacy" or "personal data" in a policy title do not
+# establish that a nearby generic email is a channel for rights requests.
 _RIGHTS_CONTEXT_TERMS = (
-    "ejercer derechos", "ejercicio de derechos", "derechos de acceso",
-    "derechos arcop", "derechos arco", "solicitudes de privacidad",
-    "derechos", "privacidad", "proteccion de datos", "datos personales",
-    "privacy", "privacy request",
-    "data protection", "data subject rights",
+    "ejercer derechos", "ejercer sus derechos", "ejercer los derechos",
+    "ejercicio de derechos",
+    "ejercicio de sus derechos", "derechos de acceso",
+    "derechos arcop", "derechos arco", "solicitud de derechos",
+    "solicitudes de privacidad", "consultas relacionadas con privacidad",
+    "consultas sobre privacidad", "consultas de privacidad",
+    "contacto de privacidad", "responsable de privacidad",
+    "delegado de proteccion de datos",
+    "solicitudes relacionadas con el tratamiento de datos personales",
+    "privacy request", "privacy requests", "privacy inquiries",
+    "data subject rights", "data subject requests",
+    "exercise your rights", "exercise privacy rights",
+)
+_PRECEDING_RIGHTS_REQUEST_TERMS = (
+    "ejercicio de derechos", "ejercer derechos", "ejercer los derechos",
+    "ejercicio de sus derechos",
+    "solicitudes de privacidad", "solicitud de derechos",
+    "solicitudes sobre datos personales", "privacy requests",
+    "data subject requests", "data subject rights",
 )
 _CONCRETE_CHANNEL_WORDS = (
     "formulario de contacto", "direccion postal", "domicilio", "escriba",
@@ -200,11 +288,22 @@ _GENERIC_RECIPIENT_TERMS = (
 _EXPLICIT_RECIPIENT_CATEGORIES = (
     "proveedores de servicios", "service providers", "encargados",
     "encargado del tratamiento", "procesadores", "processors",
-    "proveedores tecnologicos", "technology providers", "servicios de pago",
+    "proveedores tecnologicos", "technology providers",
+    "proveedores de autenticacion", "authentication providers", "servicios de pago",
     "payment services", "proveedores de pago", "payment providers", "hosting",
     "infraestructura", "infrastructure", "analitica", "analytics", "marketing",
     "entidades relacionadas", "related entities", "autoridades", "authorities",
     "socios comerciales", "business partners",
+)
+# Positive processing by identified providers is a recipient disclosure signal,
+# even without the literal verbs "share" or "transfer". A mere supplier
+# mention without data handling remains insufficient.
+_PROCESSOR_HANDLING_PATTERN = re.compile(
+    r"\b(?:proveedores?|encargados?|providers?|processors?)\b.{0,100}"
+    r"\b(?:(?:pueden|podran|podrian|may|can)\s+)?"
+    r"(?:tratar|procesar|almacenar|tratan|procesan|almacenan|treat|process|store|handle)\b"
+    r".{0,35}\b(?:datos|data|informacion|information)\b",
+    re.I,
 )
 _NEGATED_COMMUNICATION_PATTERN = re.compile(
     r"(?:^|\s)(?:(?:no|nunca|jamas)(?:\s+(?:los|las))?|do not|does not|"
@@ -656,6 +755,28 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
     }
 
 
+def _has_policy_version(text: str) -> bool:
+    """Accept a policy's own version declaration, not embedded software versions.
+
+    A standalone "Versión N" in the selected policy is valid; if that version
+    appears inside a sentence, it must be directly attached to the policy's
+    name. Generic mentions like "usamos Clerk versión 4.1" are not sufficient.
+    """
+    for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", text):
+        normalized = _normalize(segment)
+        for match in _POLICY_VERSION_PATTERN.finditer(normalized):
+            prefix = normalized[:match.start()].strip()
+            if prefix and not _POLICY_VERSION_PREFIX.fullmatch(prefix):
+                continue
+            nearby = normalized[
+                max(0, match.start() - 50): min(len(normalized), match.end() + 50)
+            ]
+            if _NON_POLICY_VERSION_TERMS.search(nearby):
+                continue
+            return True
+    return False
+
+
 def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify dating/version signals only in PRV-003's selected policy."""
 
@@ -678,7 +799,22 @@ def _policy_date_or_version(contract: EvidenceContract, attribution: dict) -> di
 
     raw_document = f"{selected_page.title or ''}\n{_policy_document_text(selected_page)}"
     document = _normalize(raw_document)
-    if _POLICY_VERSION_PATTERN.search(document):
+    # The document extractor supplies only explicit metadata from the policy's
+    # own HTML header. Generic platform versions and navigation labels never
+    # contribute a date/version to this selected document.
+    header_reference = _normalize(selected_page.policy_header_reference or "")
+    has_header_version = _has_policy_version(header_reference)
+    has_header_date = bool(
+        _POLICY_DATE_PATTERN.search(header_reference)
+        and _contains_phrase(header_reference, _POLICY_DATE_CONTEXT_TERMS)
+    )
+    if has_header_version or has_header_date:
+        return {
+            **evidence, "policy_document_reference": "dated",
+            "reference_type": "version" if has_header_version else "date",
+            "confidence": "high",
+        }
+    if _has_policy_version(raw_document):
         return {
             **evidence, "policy_document_reference": "dated",
             "reference_type": "version", "confidence": "high",
@@ -740,7 +876,13 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
         )
 
     channel_segments = [
-        f"{segments[index - 1]} {segment}" if index else segment
+        (
+            f"{segments[index - 1]} {segment}"
+            if index and _contains_phrase(
+                segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+            )
+            else segment
+        )
         for index, segment in enumerate(segments)
         if has_channel(segment)
     ]
@@ -864,6 +1006,54 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
     return {**evidence, "declared_processing_basis": basis, "confidence": confidence}
 
 
+def _recipient_clauses(segment: str) -> list[str]:
+    """Keep negation within the relevant independent provider statement.
+
+    The caller splits sentence endings; here contrastive conjunctions always
+    split, while "y/and" splits only if the following words introduce a new
+    provider-use or data-communication predicate. Noun/verb coordination
+    inside one assertion must stay intact.
+    """
+    clauses = []
+    for contrasted in _RECIPIENT_CLAUSE_SEPARATOR.split(segment):
+        for predicate in _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR.split(contrasted):
+            start = 0
+            for match in _RECIPIENT_INDEPENDENT_SUBJECT_SEPARATOR.finditer(predicate):
+                preceding = predicate[start:match.start()]
+                if not _RECIPIENT_PRECEDING_PREDICATE.search(_normalize(preceding)):
+                    continue
+                if preceding.strip():
+                    clauses.append(preceding.strip())
+                start = match.end()
+            if predicate[start:].strip():
+                clauses.append(predicate[start:].strip())
+    return clauses
+
+
+def _affirmative_processor_handling(clause: str) -> bool:
+    """Require a positive provider-data-processing declaration in one clause.
+
+    A supplier must not be considered present when the clause says "sin
+    proveedores" or "no utilizamos proveedores"; a negated processing verb
+    ("proveedores no tratan datos") also fails. A negative about another
+    subject in a different clause cannot suppress an affirmative statement.
+    """
+    normalized = _normalize(clause)
+    for match in _PROCESSOR_HANDLING_PATTERN.finditer(normalized):
+        statement = normalized[:match.end()]
+        if _NEGATED_PROVIDER_USE.search(statement):
+            continue
+        provider_to_processing = match.group(0)
+        if re.search(
+            r"\b(?:no|nunca|jamas|not|never|cannot|"
+            r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b",
+            provider_to_processing,
+        ):
+            continue
+        return True
+    return False
+
+
 def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
     """Classify recipients only in PRV-003's selected inspected policy."""
 
@@ -885,11 +1075,16 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         }
 
     segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page))
+    clauses = [
+        (index, clause)
+        for index, segment in enumerate(segments)
+        for clause in _recipient_clauses(segment)
+    ]
     communication_segments = [
-        segment for segment in segments
-        if _contains_phrase(segment, _RECIPIENT_COMMUNICATION_TERMS)
+        clause for _, clause in clauses
+        if _contains_phrase(clause, _RECIPIENT_COMMUNICATION_TERMS)
         and _contains_phrase(
-            segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
+            clause, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
         )
     ]
     negated_segments = [
@@ -900,6 +1095,21 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         segment for segment in communication_segments
         if segment not in negated_segments
     ]
+    # A named processor may declare processing without saying "share".
+    # Evaluate polarity within the clause; borrow categories from at most two
+    # preceding sentences only after affirmative processing is established.
+    processor_segments = [
+        " ".join(segments[max(0, index - 2):index] + [clause])
+        for index, clause in clauses
+        if _affirmative_processor_handling(clause)
+    ]
+    processor_segments = [
+        segment for segment in processor_segments
+        if _contains_phrase(
+            segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
+        )
+    ]
+    positive_segments.extend(processor_segments)
     if any(
         _contains_phrase(segment, _EXPLICIT_RECIPIENT_CATEGORIES)
         for segment in positive_segments

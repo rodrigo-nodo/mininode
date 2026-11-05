@@ -75,6 +75,7 @@ class PageEvidence:
     requested_url: str | None = None
     visible_text: str | None = None
     content_text: str | None = None
+    policy_header_reference: str | None = None
 
 
 @dataclass(frozen=True)
@@ -155,6 +156,7 @@ class EvidenceContract:
         payload = asdict(self)
         for page in payload["pages"]:
             page.pop("content_text", None)
+            page.pop("policy_header_reference", None)
         for form in payload["forms"]:
             for internal_field in (
                 "heading", "legend", "introductory_text", "submit_text",

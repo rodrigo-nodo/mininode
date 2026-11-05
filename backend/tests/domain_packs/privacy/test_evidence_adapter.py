@@ -7,7 +7,9 @@ BACKEND_SRC = Path(__file__).resolve().parents[3] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.domain_packs.privacy.evaluator import evaluate_control  # noqa: E402
-from mininode_api.domain_packs.privacy.evidence_adapter import adapt_evidence  # noqa: E402
+from mininode_api.domain_packs.privacy.evidence_adapter import (  # noqa: E402
+    _recipient_clauses, adapt_evidence,
+)
 from mininode_api.web_inspector.extractor import extract_page  # noqa: E402
 from mininode_api.web_inspector.models import (  # noqa: E402
     CheckboxEvidence, ContactEvidence, CookieEvidence, EvidenceContract,
@@ -580,6 +582,353 @@ def test_policy_tracking_parameters_do_not_allow_other_functional_query():
     assert adapted["PRV-002"].get("technical_error") is True
     assert "policy_accessible" not in adapted["PRV-002"]
     assert evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})["result"] == "not_evaluable"
+
+
+def test_prv004_recognizes_only_structural_policy_header_metadata():
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    cases = (
+        ("Política de privacidad Versión 1.2.", "Versión 1.2", "detected"),
+        ("Política de privacidad · Plataforma versión 8.2 · Información legal",
+         None, "not_detected"),
+        ("Plataforma versión 8.2 · Política de privacidad", None, "not_detected"),
+        ("Política de privacidad Información de datos personales. Sitio actualizado.",
+         None, "not_detected"),
+        ("Política de privacidad. Para iniciar sesión usamos Clerk versión 4.1.",
+         None, "not_detected"),
+        ("Política de privacidad. Usamos una aplicación versión 2.1.",
+         None, "not_detected"),
+        ("Política de privacidad versión 3.2: actualización del documento.",
+         None, "detected"),
+    )
+    for visible, reference, expected in cases:
+        adapted = adapt_evidence(contract(
+            links=[link],
+            pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                visible_text=visible,
+                content_text=(
+                    "Política de privacidad · Plataforma versión 8.2 · Información legal"
+                    if "Plataforma versión 8.2" in visible
+                    else (
+                        visible if "Política de privacidad versión 3.2" in visible
+                        else "Esta política explica el tratamiento de datos personales."
+                    )
+                ),
+                policy_header_reference=reference,
+            )],
+        ))
+        result = evaluate_control("PRV-004", adapted["PRV-004"], {"PRV-003": "detected"})
+        assert result["result"] == expected, visible
+        if expected == "detected":
+            assert adapted["PRV-004"]["reference_type"] == "version"
+
+
+def test_prv004_header_metadata_is_structural_and_not_platform_version():
+    url = "https://example.com/legal/privacy/"
+    cases = [
+        (
+            '<header><p>Plataforma versión 8.2</p>'
+            '<a href="/legal/privacy/">Política de privacidad</a></header>'
+            '<main><header><h1>Política de privacidad</h1>'
+            '<p>Versión 1.2 · Última actualización: septiembre de 2026.</p>'
+            '</header><article><p>Tratamos datos personales.</p></article></main>',
+            "Versión 1.2 · Última actualización: septiembre de 2026.",
+        ),
+        (
+            '<main><header><h1>Política de privacidad · Plataforma versión 8.2'
+            ' · Información legal</h1></header>'
+            '<article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+        (
+            '<main><header><h1>Política de privacidad</h1>'
+            '<p>Plataforma versión 8.2 · Información legal</p></header>'
+            '<article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+        (
+            '<header><h1>Política de privacidad</h1><p>Versión 2.0</p></header>'
+            '<main><article><p>Tratamos datos personales.</p></article></main>',
+            None,
+        ),
+    ]
+    for html, expected in cases:
+        extracted = extract_page(html, url)
+        assert extracted.policy_header_reference == expected
+        assert "policy_header_reference" not in contract(
+            pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                policy_header_reference=extracted.policy_header_reference,
+            )],
+        ).to_dict()["pages"][0]
+
+
+def test_prv006_rights_channel_association_does_not_cross_commercial_section():
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    cases = (
+        ("Ejercicio de derechos. Para solicitar acceso escriba a contacto@example.com.",
+         "detected"),
+        ("Para ejercer derechos sobre sus datos personales escriba a privacidad@example.com.",
+         "detected"),
+        ("Para ejercer los derechos previstos en la ley, escriba a privacidad@example.com.",
+         "detected"),
+        ("Para ejercer los derechos. Puede escribir a privacidad@example.com.",
+         "detected"),
+        ("Ejercicio de derechos. Se describen los derechos disponibles, sin establecer un canal. "
+         "Contacto comercial. Escríbenos a ventas@example.com.",
+         "partial"),
+        ("Política de privacidad. Contacto general: hola@example.com.", "partial"),
+        ("Política de privacidad Contacto general: hola@example.com", "partial"),
+        ("Privacy policy. General inquiries: hello@example.com.", "partial"),
+        ("Consultas relacionadas con privacidad: contacto@example.com.", "detected"),
+    )
+    for content, expected in cases:
+        adapted = adapt_evidence(contract(
+            links=[link],
+            pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                visible_text=content, content_text=content,
+            )],
+        ))
+        result = evaluate_control("PRV-006", adapted["PRV-006"], {"PRV-003": "detected"})
+        assert result["result"] == expected, content
+
+
+def test_prv010_additive_separator_requires_new_independent_predicate():
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y utilizamos proveedores de autenticación "
+        "que procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "utilizamos proveedores de autenticación que procesan datos personales.",
+    ]
+    for statement in (
+        "No usamos proveedores de publicidad y marketing que procesan datos personales.",
+        "Utilizamos proveedores de pago y servicios de hosting que procesan datos.",
+        "No compartimos datos con terceros y proveedores de pago.",
+    ):
+        assert _recipient_clauses(statement) == [statement]
+    assert _recipient_clauses(
+        "No compartimos datos con terceros y compartimos datos con proveedores de pago."
+    ) == [
+        "No compartimos datos con terceros",
+        "compartimos datos con proveedores de pago.",
+    ]
+    # B8: subject-verb order after an additive conjunction.
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+        "procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "nuestros proveedores de autenticación procesan datos personales.",
+    ]
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+        "no procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "nuestros proveedores de autenticación no procesan datos personales.",
+    ]
+    # B9: the structural parser runs on original text, before normalization;
+    # both accent spellings of the adverb must trigger the same split.
+    for adverb in ("además", "ademas", "también", "tambien"):
+        assert _recipient_clauses(
+            "No usamos proveedores publicitarios y " + adverb
+            + " nuestros proveedores de autenticación procesan datos personales."
+        ) == [
+            "No usamos proveedores publicitarios",
+            adverb + " nuestros proveedores de autenticación procesan datos personales.",
+        ]
+        assert _recipient_clauses(
+            "No usamos proveedores publicitarios y " + adverb
+            + " nuestros proveedores de autenticación no procesan datos personales."
+        ) == [
+            "No usamos proveedores publicitarios",
+            adverb + " nuestros proveedores de autenticación no procesan datos personales.",
+        ]
+    # Coordinated subjects without an independent preceding predicate are not
+    # separated simply because the second subject has a processing verb.
+    noun_list = (
+        "Nuestros proveedores publicitarios y nuestros proveedores de "
+        "autenticación procesan datos personales."
+    )
+    assert _recipient_clauses(noun_list) == [noun_list]
+    generic_list = "No usamos proveedores publicitarios y nuestros proveedores de autenticación."
+    assert _recipient_clauses(generic_list) == [generic_list]
+
+
+@pytest.mark.parametrize(
+    ("policy_text", "expected_evidence", "expected_result"),
+    [
+        # T01–T09: frozen PRV-010 acceptance matrix for clause-local polarity.
+        ("Utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("Operamos sin proveedores tecnológicos que procesan datos personales.",
+         "none", "not_detected"),
+        ("No utilizamos proveedores tecnológicos que procesan datos personales.",
+         "none", "not_detected"),
+        ("No utilizamos cookies, pero utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("Utilizamos proveedores tecnológicos que no tratan datos personales.",
+         "none", "not_detected"),
+        ("Sin embargo, utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("No usamos proveedores publicitarios, pero usamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("Nuestros proveedores ofrecen servicios tecnológicos.",
+         "none", "not_detected"),
+        ("No compartimos datos personales con terceros.",
+         "explicit_none", "detected"),
+        # B7: coordinated, *independent* statements introduced by y / and.
+        ("No usamos proveedores publicitarios y utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        # B8: another independent assertion starts with an explicit subject.
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        # B9: adverbs before a new provider-subject declaration must work
+        # with/without Spanish diacritics, positive and negated.
+        ("No usamos proveedores publicitarios y además nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y también nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y ademas nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y tambien nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y además nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
+        ("No usamos proveedores publicitarios y también nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
+        ("Nuestros proveedores publicitarios y nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "ofrecen servicios.", "none", "not_detected"),
+        ("We do not use advertising providers and our authentication providers "
+         "process personal data.", "explicit", "detected"),
+        ("We do not use advertising providers and our authentication providers "
+         "do not process personal data.", "none", "not_detected"),
+        ("No usamos proveedores publicitarios y también utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y sí utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y no utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "none", "not_detected"),
+        ("No usamos proveedores de publicidad y marketing que procesan datos personales.",
+         "none", "not_detected"),
+        ("Utilizamos proveedores de publicidad y marketing que procesan datos personales.",
+         "explicit", "detected"),
+        ("No compartimos datos con terceros y compartimos datos con proveedores de pago.",
+         "explicit", "detected"),
+        ("No compartimos datos con terceros y no compartimos datos con proveedores de pago.",
+         "explicit_none", "detected"),
+        ("No compartimos datos con terceros y proveedores de pago.",
+         "explicit_none", "detected"),
+        ("Compartimos datos con proveedores de pago y servicios de hosting.",
+         "explicit", "detected"),
+        ("We do not use advertising providers and we use technology providers "
+         "that process personal data.", "explicit", "detected"),
+        # Original approved behavior and the new B6 contrasts.
+        ("No compartimos datos con terceros, pero compartimos datos con proveedores de pago.",
+         "explicit", "detected"),
+        ("We do not use service providers that process personal data.",
+         "none", "not_detected"),
+        ("We do not use cookies, but we use technology providers that process personal data.",
+         "explicit", "detected"),
+        ("No utilizamos cookies; utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("No utilizamos cookies. Utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+    ],
+)
+def test_prv010_clause_polarity_acceptance_matrix(
+    policy_text, expected_evidence, expected_result,
+):
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(
+        links=[link],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            content_text=policy_text,
+        )],
+    ))
+    result = evaluate_control("PRV-010", adapted["PRV-010"], {"PRV-003": "detected"})
+    assert adapted["PRV-010"]["data_recipients"] == expected_evidence, policy_text
+    assert result["result"] == expected_result, policy_text
+    assert adapted["PRV-010"]["source_urls"] == [url]
+
+
+def test_prv010_unrelated_negation_does_not_change_positive_provider_result():
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    positive = "Utilizamos proveedores tecnológicos que procesan datos personales."
+    for statement in (
+        positive,
+        "No utilizamos cookies, pero " + positive.lower(),
+        "No utilizamos cookies y " + positive.lower(),
+        "No utilizamos cookies; " + positive,
+        "No utilizamos cookies. " + positive,
+        positive + " No utilizamos cookies publicitarias.",
+    ):
+        adapted = adapt_evidence(contract(
+            links=[link],
+            pages=[PageEvidence(url, 200, "Política de privacidad", "text/html",
+                                content_text=statement)],
+        ))
+        assert adapted["PRV-010"]["data_recipients"] == "explicit", statement
+        assert evaluate_control(
+            "PRV-010", adapted["PRV-010"], {"PRV-003": "detected"}
+        )["result"] == "detected", statement
+
+
+def test_prv010_recognizes_processors_but_rejects_negated_handling():
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    cases = (
+        (
+            "Podemos utilizar proveedores tecnológicos para la autenticación e infraestructura. "
+            "Entre ellos se encuentran Clerk y Google. "
+            "Estos proveedores pueden tratar datos únicamente para prestar el servicio.",
+            "detected",
+        ),
+        ("Nuestros proveedores tecnológicos no tratan datos personales.", "not_detected"),
+        ("No utilizamos proveedores tecnológicos que procesan datos personales.",
+         "not_detected"),
+        ("Sin embargo, utilizamos proveedores tecnológicos que procesan datos personales.",
+         "detected"),
+        ("Sin duda, utilizamos proveedores tecnológicos que procesan datos personales.",
+         "detected"),
+        ("Sin perjuicio de ello, utilizamos proveedores tecnológicos que procesan datos personales.",
+         "detected"),
+        ("No contratamos proveedores de servicios que tratan información personal.",
+         "not_detected"),
+        ("We do not use service providers that process personal data.",
+         "not_detected"),
+        ("Estos proveedores pueden no tratar datos personales.", "not_detected"),
+        ("Los proveedores tecnológicos nunca almacenan datos personales.", "not_detected"),
+        ("Our service providers do not process personal data.", "not_detected"),
+        (
+            "Nuestros proveedores tecnológicos ofrecen servicios informáticos. "
+            "No vendemos datos personales.",
+            "not_detected",
+        ),
+    )
+    for content, expected in cases:
+        adapted = adapt_evidence(contract(
+            links=[link], pages=[PageEvidence(
+                url, 200, "Política de privacidad", "text/html",
+                visible_text=content,
+            )],
+        ))
+        result = evaluate_control(
+            "PRV-010", adapted["PRV-010"], {"PRV-003": "detected"}
+        )
+        assert result["result"] == expected, content
+
 
 
 def test_document_controls_ignore_emol_style_chrome_and_form_noise():
