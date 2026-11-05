@@ -716,6 +716,30 @@ def test_prv010_additive_separator_requires_new_independent_predicate():
         "No compartimos datos con terceros",
         "compartimos datos con proveedores de pago.",
     ]
+    # B8: subject-verb order after an additive conjunction.
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+        "procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "nuestros proveedores de autenticación procesan datos personales.",
+    ]
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+        "no procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "nuestros proveedores de autenticación no procesan datos personales.",
+    ]
+    # Coordinated subjects without an independent preceding predicate are not
+    # separated simply because the second subject has a processing verb.
+    noun_list = (
+        "Nuestros proveedores publicitarios y nuestros proveedores de "
+        "autenticación procesan datos personales."
+    )
+    assert _recipient_clauses(noun_list) == [noun_list]
+    generic_list = "No usamos proveedores publicitarios y nuestros proveedores de autenticación."
+    assert _recipient_clauses(generic_list) == [generic_list]
 
 
 @pytest.mark.parametrize(
@@ -743,6 +767,19 @@ def test_prv010_additive_separator_requires_new_independent_predicate():
         # B7: coordinated, *independent* statements introduced by y / and.
         ("No usamos proveedores publicitarios y utilizamos proveedores de autenticación "
          "que procesan datos personales.", "explicit", "detected"),
+        # B8: another independent assertion starts with an explicit subject.
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "no procesan datos personales.", "none", "not_detected"),
+        ("Nuestros proveedores publicitarios y nuestros proveedores de autenticación "
+         "procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y nuestros proveedores de autenticación "
+         "ofrecen servicios.", "none", "not_detected"),
+        ("We do not use advertising providers and our authentication providers "
+         "process personal data.", "explicit", "detected"),
+        ("We do not use advertising providers and our authentication providers "
+         "do not process personal data.", "none", "not_detected"),
         ("No usamos proveedores publicitarios y también utilizamos proveedores de autenticación "
          "que procesan datos personales.", "explicit", "detected"),
         ("No usamos proveedores publicitarios y sí utilizamos proveedores de autenticación "

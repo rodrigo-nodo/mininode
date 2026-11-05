@@ -147,6 +147,32 @@ _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR = re.compile(
     r"personal\s+data)\b))",
     re.I,
 )
+# B8: an additional independent clause can start with an explicit subject
+# rather than an initial verb: "y nuestros proveedores ... procesan datos".
+# Require a determiner + provider subject + an actual processing predicate.
+# Never split noun lists such as "proveedores de pago y servicios de hosting".
+_RECIPIENT_INDEPENDENT_SUBJECT_SEPARATOR = re.compile(
+    r"\s+\b(?:y|and)\b\s+"
+    r"(?=(?:(?:tambien|ademas|also)\s+)?"
+    r"(?:nuestros?|nuestras?|sus|los|las|estos?|estas?|our|their|the|these)\s+"
+    r"(?:proveedores?|encargados?|processors?|"
+    r"(?:(?:service|technology|authentication|advertising|payment)\s+)?providers?)\b"
+    r"(?:(?!\b(?:y|and|pero|but)\b)[^.!?;,]){0,100}?"
+    r"\b(?:tratar|procesar|almacenar|tratan|procesan|almacenan|"
+    r"treat|process|store|handle)\b"
+    r".{0,35}?\b(?:datos|data|informacion|information)\b)",
+    re.I,
+)
+# Only split a coordinated subject when an independent predicate precedes it.
+# A sequence of coordinated noun phrases is not two separate declarations.
+_RECIPIENT_PRECEDING_PREDICATE = re.compile(
+    r"\b(?:usamos|utilizamos|operamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|procesan|tratan|almacenan|compartimos|"
+    r"comunicamos|transferimos|revelamos|proporcionamos|"
+    r"use|uses|utilize|employ|engage|hire|work|have|process|"
+    r"share|disclose|transfer|provide)\b",
+    re.I,
+)
 # These patterns link negation directly to the provider noun phrase. Avoid
 # broad character windows that can borrow a negative from unrelated subjects.
 _NEGATED_PROVIDER_USE = re.compile(
@@ -988,12 +1014,20 @@ def _recipient_clauses(segment: str) -> list[str]:
     provider-use or data-communication predicate. Noun/verb coordination
     inside one assertion must stay intact.
     """
-    return [
-        clause.strip()
-        for contrasted in _RECIPIENT_CLAUSE_SEPARATOR.split(segment)
-        for clause in _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR.split(contrasted)
-        if clause.strip()
-    ]
+    clauses = []
+    for contrasted in _RECIPIENT_CLAUSE_SEPARATOR.split(segment):
+        for predicate in _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR.split(contrasted):
+            start = 0
+            for match in _RECIPIENT_INDEPENDENT_SUBJECT_SEPARATOR.finditer(predicate):
+                preceding = predicate[start:match.start()]
+                if not _RECIPIENT_PRECEDING_PREDICATE.search(_normalize(preceding)):
+                    continue
+                if preceding.strip():
+                    clauses.append(preceding.strip())
+                start = match.end()
+            if predicate[start:].strip():
+                clauses.append(predicate[start:].strip())
+    return clauses
 
 
 def _affirmative_processor_handling(clause: str) -> bool:

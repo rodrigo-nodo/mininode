@@ -357,9 +357,12 @@ Privacy Score ni las prioridades sustantivas.
 PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
 únicamente en el documento seleccionado por PRV-003. Separa oraciones y
 cláusulas contrastivas («pero», «sin embargo», «but», etc.) y también cláusulas
-aditivas («y», «and») **solo cuando comienza un nuevo predicado explícito**
-sobre uso de proveedores o comunicación de datos. No divide enumeraciones
-nominales como «proveedores de pago y hosting» o «publicidad y marketing».
+aditivas («y», «and») cuando comienza una declaración independiente:
+un predicado explícito («y utilizamos proveedores») o un nuevo sujeto seguido
+de tratamiento de datos («y nuestros proveedores de autenticación procesan
+datos»), si existe un predicado independiente antes de la conjunción.
+No divide enumeraciones nominales como «proveedores de pago y hosting»,
+«publicidad y marketing» ni sujetos coordinados sin predicado previo.
 Así, «no usamos proveedores publicitarios y utilizamos proveedores de
 autenticación que procesan datos» contiene dos declaraciones independientes,
 mientras «operamos sin proveedores que procesan datos» no es evidencia positiva. La negación de uso o tratamiento
