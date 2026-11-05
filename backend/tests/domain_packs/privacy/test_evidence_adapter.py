@@ -7,7 +7,9 @@ BACKEND_SRC = Path(__file__).resolve().parents[3] / "src"
 sys.path.insert(0, str(BACKEND_SRC))
 
 from mininode_api.domain_packs.privacy.evaluator import evaluate_control  # noqa: E402
-from mininode_api.domain_packs.privacy.evidence_adapter import adapt_evidence  # noqa: E402
+from mininode_api.domain_packs.privacy.evidence_adapter import (  # noqa: E402
+    _recipient_clauses, adapt_evidence,
+)
 from mininode_api.web_inspector.extractor import extract_page  # noqa: E402
 from mininode_api.web_inspector.models import (  # noqa: E402
     CheckboxEvidence, ContactEvidence, CookieEvidence, EvidenceContract,
@@ -694,6 +696,28 @@ def test_prv006_rights_channel_association_does_not_cross_commercial_section():
         assert result["result"] == expected, content
 
 
+def test_prv010_additive_separator_requires_new_independent_predicate():
+    assert _recipient_clauses(
+        "No usamos proveedores publicitarios y utilizamos proveedores de autenticación "
+        "que procesan datos personales."
+    ) == [
+        "No usamos proveedores publicitarios",
+        "utilizamos proveedores de autenticación que procesan datos personales.",
+    ]
+    for statement in (
+        "No usamos proveedores de publicidad y marketing que procesan datos personales.",
+        "Utilizamos proveedores de pago y servicios de hosting que procesan datos.",
+        "No compartimos datos con terceros y proveedores de pago.",
+    ):
+        assert _recipient_clauses(statement) == [statement]
+    assert _recipient_clauses(
+        "No compartimos datos con terceros y compartimos datos con proveedores de pago."
+    ) == [
+        "No compartimos datos con terceros",
+        "compartimos datos con proveedores de pago.",
+    ]
+
+
 @pytest.mark.parametrize(
     ("policy_text", "expected_evidence", "expected_result"),
     [
@@ -716,6 +740,29 @@ def test_prv006_rights_channel_association_does_not_cross_commercial_section():
          "none", "not_detected"),
         ("No compartimos datos personales con terceros.",
          "explicit_none", "detected"),
+        # B7: coordinated, *independent* statements introduced by y / and.
+        ("No usamos proveedores publicitarios y utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y también utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y sí utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("No usamos proveedores publicitarios y no utilizamos proveedores de autenticación "
+         "que procesan datos personales.", "none", "not_detected"),
+        ("No usamos proveedores de publicidad y marketing que procesan datos personales.",
+         "none", "not_detected"),
+        ("Utilizamos proveedores de publicidad y marketing que procesan datos personales.",
+         "explicit", "detected"),
+        ("No compartimos datos con terceros y compartimos datos con proveedores de pago.",
+         "explicit", "detected"),
+        ("No compartimos datos con terceros y no compartimos datos con proveedores de pago.",
+         "explicit_none", "detected"),
+        ("No compartimos datos con terceros y proveedores de pago.",
+         "explicit_none", "detected"),
+        ("Compartimos datos con proveedores de pago y servicios de hosting.",
+         "explicit", "detected"),
+        ("We do not use advertising providers and we use technology providers "
+         "that process personal data.", "explicit", "detected"),
         # Original approved behavior and the new B6 contrasts.
         ("No compartimos datos con terceros, pero compartimos datos con proveedores de pago.",
          "explicit", "detected"),
@@ -754,6 +801,7 @@ def test_prv010_unrelated_negation_does_not_change_positive_provider_result():
     for statement in (
         positive,
         "No utilizamos cookies, pero " + positive.lower(),
+        "No utilizamos cookies y " + positive.lower(),
         "No utilizamos cookies; " + positive,
         "No utilizamos cookies. " + positive,
         positive + " No utilizamos cookies publicitarias.",

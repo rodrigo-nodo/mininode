@@ -129,6 +129,24 @@ _RECIPIENT_CLAUSE_SEPARATOR = re.compile(
     r"en\s+cambio|whereas|mientras\s+que)\b\s*,?\s*",
     re.I,
 )
+# Additive "y/and" starts a new clause only before a fresh, explicit
+# predicate about suppliers or data communication. Never split lists like
+# "proveedores de pago y hosting" or "publicidad y marketing".
+_RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR = re.compile(
+    r"\s+\b(?:y|and)\b\s+"
+    r"(?=(?:(?:tambi[eé]n|adem[aá]s|s[ií]|nosotros|we|also|"
+    r"no|nunca|jam[aá]s|do|does|not)\s+){0,4}"
+    r"(?:(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|use|uses|utilize|employ|engage|hire|"
+    r"work|have)\s+(?:(?:a|los|las|nuestros|our|any|the)\s+){0,2}"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+|"
+    r"authentication\s+)?providers?|processors?)\b"
+    r"|(?:compartimos|comunicamos|transferimos|revelamos|proporcionamos|"
+    r"share|shares|disclose|discloses|transfer|transfers|provide|"
+    r"provides)\s+(?:datos|informaci[oó]n|data|information|"
+    r"personal\s+data)\b))",
+    re.I,
+)
 # These patterns link negation directly to the provider noun phrase. Avoid
 # broad character windows that can borrow a negative from unrelated subjects.
 _NEGATED_PROVIDER_USE = re.compile(
@@ -963,14 +981,17 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
 
 
 def _recipient_clauses(segment: str) -> list[str]:
-    """Bound PRV-010 statements at contrastive conjunctions.
+    """Keep negation within the relevant independent provider statement.
 
-    The parent caller has already split at sentence-ending punctuation.
-    Keep the clauses separate when deciding whether a provider is negated.
+    The caller splits sentence endings; here contrastive conjunctions always
+    split, while "y/and" splits only if the following words introduce a new
+    provider-use or data-communication predicate. Noun/verb coordination
+    inside one assertion must stay intact.
     """
     return [
         clause.strip()
-        for clause in _RECIPIENT_CLAUSE_SEPARATOR.split(segment)
+        for contrasted in _RECIPIENT_CLAUSE_SEPARATOR.split(segment)
+        for clause in _RECIPIENT_INDEPENDENT_ADDITIVE_SEPARATOR.split(contrasted)
         if clause.strip()
     ]
 

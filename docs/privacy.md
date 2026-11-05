@@ -355,11 +355,14 @@ la aplicabilidad de la base declarada, no amplía el crawling y no modifica el
 Privacy Score ni las prioridades sustantivas.
 
 PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
-únicamente en el documento seleccionado por PRV-003. Separa oraciones y cláusulas
-contrastivas («pero», «sin embargo», «but», etc.) antes de evaluar polaridad:
-«no utilizamos cookies, pero utilizamos proveedores que procesan datos» no
-niega la segunda afirmación; «operamos sin proveedores que procesan datos»
-no es evidencia positiva de destinatarios. La negación de uso o tratamiento
+únicamente en el documento seleccionado por PRV-003. Separa oraciones y
+cláusulas contrastivas («pero», «sin embargo», «but», etc.) y también cláusulas
+aditivas («y», «and») **solo cuando comienza un nuevo predicado explícito**
+sobre uso de proveedores o comunicación de datos. No divide enumeraciones
+nominales como «proveedores de pago y hosting» o «publicidad y marketing».
+Así, «no usamos proveedores publicitarios y utilizamos proveedores de
+autenticación que procesan datos» contiene dos declaraciones independientes,
+mientras «operamos sin proveedores que procesan datos» no es evidencia positiva. La negación de uso o tratamiento
 debe vincularse a la expresión relativa a proveedores dentro de su cláusula.
 Admite categorías explícitas en hasta dos frases anteriores a una declaración
 afirmativa de tratamiento, sin aprobar simples menciones comerciales.
