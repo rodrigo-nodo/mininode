@@ -122,14 +122,25 @@ _POLICY_VERSION_PREFIX = re.compile(
     r"(?:politica de privacidad|privacy policy|aviso de privacidad|"
     r"politica de proteccion de datos)$"
 )
-# A negative statement of using processors must not become positive evidence
-# solely because it contains a subordinate affirmative processing verb.
-_NEGATED_PROVIDER_USAGE_PREFIX = re.compile(
-    r"\b(?:no|nunca|jamas|not|never|without|"
-    r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b.{0,65}"
-    r"\b(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
+# PRV-010 scopes negative/affirmative statements to distinct clauses.
+# Negating cookies does not negate the next statement about providers.
+_RECIPIENT_CLAUSE_SEPARATOR = re.compile(
+    r"(?:,\s*)?\b(?:pero|but|however|sin\s+embargo|no\s+obstante|"
+    r"en\s+cambio|whereas|mientras\s+que)\b\s*,?\s*",
+    re.I,
+)
+# These patterns link negation directly to the provider noun phrase. Avoid
+# broad character windows that can borrow a negative from unrelated subjects.
+_NEGATED_PROVIDER_USE = re.compile(
+    r"\b(?:sin|without)\s+(?:(?:ningun|ninguna|ninguno|any)\s+)?"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+)?providers?|processors?)\b"
+    r"|\b(?:no|nunca|jamas|not|never|do\s+not|does\s+not|"
+    r"don\s+t|doesn\s+t)\s+"
+    r"(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
     r"recurrimos|contamos|tenemos|hay|existen|use|uses|utilize|"
-    r"employ|engage|hire|work|have)\b"
+    r"employ|engage|hire|work|have)\s+(?:a\s+)?"
+    r"(?:(?:ningun|ninguna|ninguno|any)\s+)?"
+    r"(?:proveedores?|encargados?|(?:service\s+|technology\s+)?providers?|processors?)\b"
 )
 # The mere words "privacy" or "personal data" in a policy title do not
 # establish that a nearby generic email is a channel for rights requests.
@@ -233,7 +244,8 @@ _GENERIC_RECIPIENT_TERMS = (
 _EXPLICIT_RECIPIENT_CATEGORIES = (
     "proveedores de servicios", "service providers", "encargados",
     "encargado del tratamiento", "procesadores", "processors",
-    "proveedores tecnologicos", "technology providers", "servicios de pago",
+    "proveedores tecnologicos", "technology providers",
+    "proveedores de autenticacion", "authentication providers", "servicios de pago",
     "payment services", "proveedores de pago", "payment providers", "hosting",
     "infraestructura", "infrastructure", "analitica", "analytics", "marketing",
     "entidades relacionadas", "related entities", "autoridades", "authorities",
@@ -950,24 +962,37 @@ def _declared_processing_basis(contract: EvidenceContract, attribution: dict) ->
     return {**evidence, "declared_processing_basis": basis, "confidence": confidence}
 
 
-def _affirmative_processor_handling(segment: str) -> bool:
-    """Require an affirmative supplier-data-processing clause.
+def _recipient_clauses(segment: str) -> list[str]:
+    """Bound PRV-010 statements at contrastive conjunctions.
 
-    A negated claim about suppliers must not turn into positive evidence
-    of data recipients, even if their category is explicitly named.
+    The parent caller has already split at sentence-ending punctuation.
+    Keep the clauses separate when deciding whether a provider is negated.
     """
-    normalized = _normalize(segment)
+    return [
+        clause.strip()
+        for clause in _RECIPIENT_CLAUSE_SEPARATOR.split(segment)
+        if clause.strip()
+    ]
+
+
+def _affirmative_processor_handling(clause: str) -> bool:
+    """Require a positive provider-data-processing declaration in one clause.
+
+    A supplier must not be considered present when the clause says "sin
+    proveedores" or "no utilizamos proveedores"; a negated processing verb
+    ("proveedores no tratan datos") also fails. A negative about another
+    subject in a different clause cannot suppress an affirmative statement.
+    """
+    normalized = _normalize(clause)
     for match in _PROCESSOR_HANDLING_PATTERN.finditer(normalized):
-        matched = match.group(0)
-        # Reject negation both before the provider ("no utilizamos
-        # proveedores que tratan datos") and between provider and action
-        # ("los proveedores no tratan datos").
-        prefix = normalized[max(0, match.start() - 100):match.start()]
-        if _NEGATED_PROVIDER_USAGE_PREFIX.search(prefix):
+        statement = normalized[:match.end()]
+        if _NEGATED_PROVIDER_USE.search(statement):
             continue
+        provider_to_processing = match.group(0)
         if re.search(
             r"\b(?:no|nunca|jamas|not|never|cannot|"
-            r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b", matched
+            r"sin\b(?!\s+(?:embargo|duda|perjuicio)\b))\b",
+            provider_to_processing,
         ):
             continue
         return True
@@ -995,11 +1020,16 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         }
 
     segments = re.split(r"(?<=[.!?;])\s+|[\n\r]+", _policy_document_text(selected_page))
+    clauses = [
+        (index, clause)
+        for index, segment in enumerate(segments)
+        for clause in _recipient_clauses(segment)
+    ]
     communication_segments = [
-        segment for segment in segments
-        if _contains_phrase(segment, _RECIPIENT_COMMUNICATION_TERMS)
+        clause for _, clause in clauses
+        if _contains_phrase(clause, _RECIPIENT_COMMUNICATION_TERMS)
         and _contains_phrase(
-            segment, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
+            clause, _GENERIC_RECIPIENT_TERMS + _EXPLICIT_RECIPIENT_CATEGORIES
         )
     ]
     negated_segments = [
@@ -1011,12 +1041,12 @@ def _data_recipients(contract: EvidenceContract, attribution: dict) -> dict:
         if segment not in negated_segments
     ]
     # A named processor may declare processing without saying "share".
-    # Link the processing sentence to at most two preceding sentences that
-    # identify the provider category, without inferring from bare vendor names.
+    # Evaluate polarity within the clause; borrow categories from at most two
+    # preceding sentences only after affirmative processing is established.
     processor_segments = [
-        " ".join(segments[max(0, i - 2): i + 1])
-        for i, segment in enumerate(segments)
-        if _affirmative_processor_handling(segment)
+        " ".join(segments[max(0, index - 2):index] + [clause])
+        for index, clause in clauses
+        if _affirmative_processor_handling(clause)
     ]
     processor_segments = [
         segment for segment in processor_segments

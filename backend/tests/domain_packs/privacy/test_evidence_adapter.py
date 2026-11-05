@@ -694,6 +694,81 @@ def test_prv006_rights_channel_association_does_not_cross_commercial_section():
         assert result["result"] == expected, content
 
 
+@pytest.mark.parametrize(
+    ("policy_text", "expected_evidence", "expected_result"),
+    [
+        # T01–T09: frozen PRV-010 acceptance matrix for clause-local polarity.
+        ("Utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("Operamos sin proveedores tecnológicos que procesan datos personales.",
+         "none", "not_detected"),
+        ("No utilizamos proveedores tecnológicos que procesan datos personales.",
+         "none", "not_detected"),
+        ("No utilizamos cookies, pero utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("Utilizamos proveedores tecnológicos que no tratan datos personales.",
+         "none", "not_detected"),
+        ("Sin embargo, utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("No usamos proveedores publicitarios, pero usamos proveedores de autenticación "
+         "que procesan datos personales.", "explicit", "detected"),
+        ("Nuestros proveedores ofrecen servicios tecnológicos.",
+         "none", "not_detected"),
+        ("No compartimos datos personales con terceros.",
+         "explicit_none", "detected"),
+        # Original approved behavior and the new B6 contrasts.
+        ("No compartimos datos con terceros, pero compartimos datos con proveedores de pago.",
+         "explicit", "detected"),
+        ("We do not use service providers that process personal data.",
+         "none", "not_detected"),
+        ("We do not use cookies, but we use technology providers that process personal data.",
+         "explicit", "detected"),
+        ("No utilizamos cookies; utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+        ("No utilizamos cookies. Utilizamos proveedores tecnológicos que procesan datos personales.",
+         "explicit", "detected"),
+    ],
+)
+def test_prv010_clause_polarity_acceptance_matrix(
+    policy_text, expected_evidence, expected_result,
+):
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(
+        links=[link],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            content_text=policy_text,
+        )],
+    ))
+    result = evaluate_control("PRV-010", adapted["PRV-010"], {"PRV-003": "detected"})
+    assert adapted["PRV-010"]["data_recipients"] == expected_evidence, policy_text
+    assert result["result"] == expected_result, policy_text
+    assert adapted["PRV-010"]["source_urls"] == [url]
+
+
+def test_prv010_unrelated_negation_does_not_change_positive_provider_result():
+    url = "https://example.com/legal/privacy/"
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    positive = "Utilizamos proveedores tecnológicos que procesan datos personales."
+    for statement in (
+        positive,
+        "No utilizamos cookies, pero " + positive.lower(),
+        "No utilizamos cookies; " + positive,
+        "No utilizamos cookies. " + positive,
+        positive + " No utilizamos cookies publicitarias.",
+    ):
+        adapted = adapt_evidence(contract(
+            links=[link],
+            pages=[PageEvidence(url, 200, "Política de privacidad", "text/html",
+                                content_text=statement)],
+        ))
+        assert adapted["PRV-010"]["data_recipients"] == "explicit", statement
+        assert evaluate_control(
+            "PRV-010", adapted["PRV-010"], {"PRV-003": "detected"}
+        )["result"] == "detected", statement
+
+
 def test_prv010_recognizes_processors_but_rejects_negated_handling():
     url = "https://example.com/legal/privacy/"
     link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
