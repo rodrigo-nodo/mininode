@@ -592,6 +592,12 @@ def test_prv004_recognizes_only_structural_policy_header_metadata():
         ("Plataforma versión 8.2 · Política de privacidad", None, "not_detected"),
         ("Política de privacidad Información de datos personales. Sitio actualizado.",
          None, "not_detected"),
+        ("Política de privacidad. Para iniciar sesión usamos Clerk versión 4.1.",
+         None, "not_detected"),
+        ("Política de privacidad. Usamos una aplicación versión 2.1.",
+         None, "not_detected"),
+        ("Política de privacidad versión 3.2: actualización del documento.",
+         None, "detected"),
     )
     for visible, reference, expected in cases:
         adapted = adapt_evidence(contract(
@@ -602,7 +608,10 @@ def test_prv004_recognizes_only_structural_policy_header_metadata():
                 content_text=(
                     "Política de privacidad · Plataforma versión 8.2 · Información legal"
                     if "Plataforma versión 8.2" in visible
-                    else "Esta política explica el tratamiento de datos personales."
+                    else (
+                        visible if "Política de privacidad versión 3.2" in visible
+                        else "Esta política explica el tratamiento de datos personales."
+                    )
                 ),
                 policy_header_reference=reference,
             )],
@@ -665,6 +674,9 @@ def test_prv006_rights_channel_association_does_not_cross_commercial_section():
          "Contacto comercial. Escríbenos a ventas@example.com.",
          "partial"),
         ("Política de privacidad. Contacto general: hola@example.com.", "partial"),
+        ("Política de privacidad Contacto general: hola@example.com", "partial"),
+        ("Privacy policy. General inquiries: hello@example.com.", "partial"),
+        ("Consultas relacionadas con privacidad: contacto@example.com.", "detected"),
     )
     for content, expected in cases:
         adapted = adapt_evidence(contract(
@@ -689,6 +701,12 @@ def test_prv010_recognizes_processors_but_rejects_negated_handling():
             "detected",
         ),
         ("Nuestros proveedores tecnológicos no tratan datos personales.", "not_detected"),
+        ("No utilizamos proveedores tecnológicos que procesan datos personales.",
+         "not_detected"),
+        ("No contratamos proveedores de servicios que tratan información personal.",
+         "not_detected"),
+        ("We do not use service providers that process personal data.",
+         "not_detected"),
         ("Estos proveedores pueden no tratar datos personales.", "not_detected"),
         ("Los proveedores tecnológicos nunca almacenan datos personales.", "not_detected"),
         ("Our service providers do not process personal data.", "not_detected"),

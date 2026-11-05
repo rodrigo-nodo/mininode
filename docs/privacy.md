@@ -48,7 +48,7 @@ rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
 La versión vigente del framework en DEV es `0.13`; el scoring continúa en `0.3`.
-Framework `0.13` reconoce fechas o versiones declaradas como metadatos en el encabezado HTML de la política seleccionada, canales explícitos de ejercicio de derechos en el mismo segmento o una frase inmediatamente adyacente y proveedores que declaran tratar datos aunque no usen «compartir» o «transferir». Excluye versiones de plataforma, correos comerciales sin relación con derechos y negaciones de tratamiento por proveedores. Los controles conservan PRV-003 como fuente exclusiva; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
+Framework `0.13` reconoce versiones de política declaradas en su encabezado HTML o expresamente identificadas en el contenido, canales de ejercicio de derechos con contexto específico de solicitudes o consultas de privacidad, y proveedores que declaran tratar datos aunque no usen «compartir» o «transferir». No acepta versiones de software incrustadas en el contenido, simples títulos de privacidad como evidencia de canal específico ni declaraciones negadas sobre uso o tratamiento por proveedores. Los controles conservan PRV-003 como fuente exclusiva; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
 
 Framework `0.12` prioriza enlaces explícitos de política legal frente a páginas
 comerciales de Privacy Web, resuelve el documento seleccionado entre URLs
@@ -319,9 +319,12 @@ publicación o vigencia, o un identificador de versión, únicamente en la polí
 seleccionada por PRV-003. Cuando el extractor excluye el encabezado, usa solo
 metadatos explícitos dentro de un elemento `header` del documento principal,
 con un título propio de política. Ignora versiones de plataforma aunque aparezcan
-próximas a la palabra «privacidad» o en el texto documental. El metadato no se
-incluye en el contrato de evidencia publicado; es un control contextual de peso
-cero, sin solicitudes adicionales ni efecto directo sobre el Privacy Score.
+próximas a la palabra «privacidad» o en el texto documental; en el contenido,
+una referencia de versión debe aparecer como declaración propia o asociada
+directamente al nombre de la política, no a otro producto.
+El metadato no se incluye en el contrato de evidencia publicado; es un control
+contextual de peso cero, sin solicitudes adicionales ni efecto directo sobre
+el Privacy Score.
 
 PRV-005 evalúa la identificación observable del responsable únicamente en el
 documento seleccionado por PRV-003 y reutiliza su contenido ya inspeccionado, sin
@@ -331,9 +334,11 @@ PRV-006 evalúa el canal para ejercer derechos únicamente en el documento
 seleccionado por PRV-003. Requiere asociación explícita entre el canal y el
 ejercicio de derechos en el mismo segmento o la frase inmediatamente
 anterior del texto documental limpio, siempre que esa frase mencione
-concretamente el ejercicio o la solicitud de derechos. El mero título
-«Política de privacidad» no asocia un correo general con ese canal; no
-se recorre una ventana retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
+concretamente el ejercicio o la solicitud de derechos. En el mismo
+segmento también se exige referencia contextual específica a derechos,
+solicitudes o consultas de privacidad: el mero título «Política de privacidad»
+no asocia un correo general con ese canal. No se recorre una ventana
+retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
 página ni contactos generales de otras páginas, y sigue separado de PRV-301.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
@@ -353,7 +358,8 @@ PRV-010 evalúa menciones observables de destinatarios o categorías de terceros
 determinísticas de comunicación o de proveedores que tratan datos; admite
 categorías explícitas en hasta dos frases anteriores al tratamiento observable,
 sin aprobar menciones comerciales genéricas a proveedores ni declaraciones
-negadas de tratamiento (por ejemplo, «los proveedores no tratan datos»).
+negadas de tratamiento o uso de proveedores (por ejemplo, «los
+proveedores no tratan datos» o «no utilizamos proveedores que procesan datos»).
 Conserva las declaraciones expresas de no compartir datos, no amplía la
 inspección ni evalúa jurídicamente esa comunicación.
 

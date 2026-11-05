@@ -117,12 +117,33 @@ _POLICY_VERSION_PATTERN = re.compile(
 _NON_POLICY_VERSION_TERMS = re.compile(
     r"\b(?:plataforma|platform|software|sistema|system|aplicacion|app|producto)\b"
 )
+_POLICY_VERSION_PREFIX = re.compile(
+    r"^(?:(?:esta|la|this|the)\s+)?"
+    r"(?:politica de privacidad|privacy policy|aviso de privacidad|"
+    r"politica de proteccion de datos)$"
+)
+# A negative statement of using processors must not become positive evidence
+# solely because it contains a subordinate affirmative processing verb.
+_NEGATED_PROVIDER_USAGE_PREFIX = re.compile(
+    r"\b(?:no|nunca|jamas|sin|not|never|without)\b.{0,65}"
+    r"\b(?:utilizamos|usamos|empleamos|contratamos|trabajamos|"
+    r"recurrimos|contamos|tenemos|hay|existen|use|uses|utilize|"
+    r"employ|engage|hire|work|have)\b"
+)
+# The mere words "privacy" or "personal data" in a policy title do not
+# establish that a nearby generic email is a channel for rights requests.
 _RIGHTS_CONTEXT_TERMS = (
-    "ejercer derechos", "ejercicio de derechos", "derechos de acceso",
-    "derechos arcop", "derechos arco", "solicitudes de privacidad",
-    "derechos", "privacidad", "proteccion de datos", "datos personales",
-    "privacy", "privacy request",
-    "data protection", "data subject rights",
+    "ejercer derechos", "ejercer sus derechos", "ejercicio de derechos",
+    "ejercicio de sus derechos", "derechos de acceso",
+    "derechos arcop", "derechos arco", "solicitud de derechos",
+    "solicitudes de privacidad", "consultas relacionadas con privacidad",
+    "consultas sobre privacidad", "consultas de privacidad",
+    "contacto de privacidad", "responsable de privacidad",
+    "delegado de proteccion de datos",
+    "solicitudes relacionadas con el tratamiento de datos personales",
+    "privacy request", "privacy requests", "privacy inquiries",
+    "data subject rights", "data subject requests",
+    "exercise your rights", "exercise privacy rights",
 )
 _PRECEDING_RIGHTS_REQUEST_TERMS = (
     "ejercicio de derechos", "ejercer derechos", "ejercicio de sus derechos",
@@ -676,15 +697,24 @@ def _responsible_identification(contract: EvidenceContract, attribution: dict) -
 
 
 def _has_policy_version(text: str) -> bool:
-    """Recognize a version without borrowing an adjacent platform's version."""
+    """Accept a policy's own version declaration, not embedded software versions.
+
+    A standalone "Versión N" in the selected policy is valid; if that version
+    appears inside a sentence, it must be directly attached to the policy's
+    name. Generic mentions like "usamos Clerk versión 4.1" are not sufficient.
+    """
     for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", text):
         normalized = _normalize(segment)
         for match in _POLICY_VERSION_PATTERN.finditer(normalized):
+            prefix = normalized[:match.start()].strip()
+            if prefix and not _POLICY_VERSION_PREFIX.fullmatch(prefix):
+                continue
             nearby = normalized[
                 max(0, match.start() - 50): min(len(normalized), match.end() + 50)
             ]
-            if not _NON_POLICY_VERSION_TERMS.search(nearby):
-                return True
+            if _NON_POLICY_VERSION_TERMS.search(nearby):
+                continue
+            return True
     return False
 
 
@@ -926,8 +956,12 @@ def _affirmative_processor_handling(segment: str) -> bool:
     normalized = _normalize(segment)
     for match in _PROCESSOR_HANDLING_PATTERN.finditer(normalized):
         matched = match.group(0)
-        # Conservatively reject a denial between the supplier and the
-        # handling verb, including modal constructions ("pueden no tratar").
+        # Reject negation both before the provider ("no utilizamos
+        # proveedores que tratan datos") and between provider and action
+        # ("los proveedores no tratan datos").
+        prefix = normalized[max(0, match.start() - 100):match.start()]
+        if _NEGATED_PROVIDER_USAGE_PREFIX.search(prefix):
+            continue
         if re.search(r"\b(?:no|nunca|jamas|not|never|sin|cannot)\b", matched):
             continue
         return True
