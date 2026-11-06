@@ -58,7 +58,86 @@ _PLATFORM_VERSION_RE = re.compile(
     re.I,
 )
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
+# Keep Cloudflare email protection as structural, in-memory evidence.
+# Never insert a magic token into untrusted document text.
+_CF_EMAIL_HEX = re.compile(r"(?:[a-fA-F0-9]{2}){4,128}$")
+_CF_EMAIL_PATH = "/cdn-cgi/l/email-protection"
+_RIGHTS_BLOCK_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address", "div", "section")
+_RIGHTS_LEAF_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address"}
 
+
+def _has_cf_protected_email(element: Tag) -> bool:
+    """Recognize Cloudflare's known markup without decoding/storing addresses."""
+    for anchor in element.find_all("a", href=True):
+        parsed = urlsplit(str(anchor.get("href") or ""))
+        if parsed.path == _CF_EMAIL_PATH and _CF_EMAIL_HEX.fullmatch(parsed.fragment or ""):
+            return True
+    return any(
+        "__cf_email__" in node.get("class", [])
+        and _CF_EMAIL_HEX.fullmatch(str(node.get("data-cfemail") or ""))
+        for node in element.find_all(attrs={"data-cfemail": True})
+    )
+
+
+def _document_root(soup: BeautifulSoup) -> Tag:
+    """Use the same substantive root for text and structural evidence."""
+    mains = soup.find_all("main")
+    candidate = mains[0] if len(mains) == 1 else None
+    if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
+        articles = [
+            article for article in soup.find_all("article")
+            if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
+        ]
+        candidate = max(articles, key=lambda tag: len(_text(tag)), default=None)
+    root = candidate if isinstance(candidate, Tag) else (soup.body or soup)
+    # Preserve the legacy clean-content fallback when the selected main or
+    # article consists only of navigation/header material.
+    clean = deepcopy(root)
+    for removable in clean.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    if len(_text(clean)) < _SUBSTANTIVE_TEXT_LENGTH:
+        return soup.body or soup
+    return root
+
+
+def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], ...]:
+    """Document blocks with trusted email-presence flags and section boundaries.
+
+    Strings remain untrusted document text; booleans come only from inspected
+    Cloudflare HTML. Adjacent blocks may share rights context only inside their
+    actual containing <section>, never across sibling sections.
+    """
+    clean_root = deepcopy(_document_root(soup))
+    for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    groups: dict[int, int] = {}
+    result: list[tuple[str, bool, int]] = []
+    total_chars = 0
+    for node in clean_root.find_all(_RIGHTS_BLOCK_TAGS):
+        # Ignore wrappers with meaningful child blocks to avoid merging headings
+        # and commercial paragraphs into one synthetic sentence.
+        if node.name in {"div", "section"} and node.find(_RIGHTS_BLOCK_TAGS):
+            continue
+        if any(parent.name in {"p", "li", "address"} for parent in node.parents):
+            continue
+        value = _text(node)
+        if not value:
+            continue
+        remaining = CONTENT_TEXT_LIMIT - total_chars
+        if remaining <= 0:
+            break
+        value = value[:remaining]
+        total_chars += len(value)
+        section = node if node.name == "section" else node.find_parent("section")
+        identity = id(section) if section is not None else id(clean_root)
+        if identity not in groups:
+            groups[identity] = len(groups)
+        result.append((value, _has_cf_protected_email(node), groups[identity]))
+    if not result:
+        value = _text(clean_root)[:CONTENT_TEXT_LIMIT]
+        if value:
+            result.append((value, _has_cf_protected_email(clean_root), 0))
+    return tuple(result)
 
 @dataclass
 class PageExtraction:
@@ -72,6 +151,7 @@ class PageExtraction:
     mixed_content: bool = False
     content_text: str | None = None
     policy_header_reference: str | None = None
+    rights_channel_blocks: tuple[tuple[str, bool, int], ...] | None = None
 
 
 def _text(tag: Tag) -> str:
@@ -80,26 +160,10 @@ def _text(tag: Tag) -> str:
 
 def _clean_content_text(soup: BeautifulSoup) -> str | None:
     """Return a bounded main-content sample without mutating extraction DOM."""
-
-    mains = soup.find_all("main")
-    candidate = mains[0] if len(mains) == 1 else None
-    if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
-        substantive_articles = [
-            article for article in soup.find_all("article")
-            if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
-        ]
-        candidate = max(substantive_articles, key=lambda article: len(_text(article)), default=None)
-
-    def cleaned_text(root: Tag) -> str:
-        clean_root = deepcopy(root)
-        for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
-            removable.decompose()
-        return _text(clean_root)
-
-    content = cleaned_text(candidate) if isinstance(candidate, Tag) else ""
-    if len(content) < _SUBSTANTIVE_TEXT_LENGTH:
-        fallback = soup.body if isinstance(soup.body, Tag) else soup
-        content = cleaned_text(fallback)
+    clean_root = deepcopy(_document_root(soup))
+    for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    content = _text(clean_root)
     return content[:CONTENT_TEXT_LIMIT] if len(content) >= _SUBSTANTIVE_TEXT_LENGTH else None
 
 
@@ -395,6 +459,7 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
         visible_text=visible_text[:4000],
         content_text=content_text,
         policy_header_reference=policy_header_reference,
+        rights_channel_blocks=_rights_channel_blocks(soup),
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -430,6 +495,7 @@ def build_evidence(
             visible_text=extracted.visible_text,
             content_text=extracted.content_text,
             policy_header_reference=extracted.policy_header_reference,
+            rights_channel_blocks=extracted.rights_channel_blocks,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)

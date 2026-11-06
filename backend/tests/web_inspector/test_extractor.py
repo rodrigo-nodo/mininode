@@ -92,6 +92,72 @@ def test_content_text_prefers_clean_main_without_changing_visible_or_forms():
     )
 
 
+def test_content_text_recognizes_cf_obfuscated_contact_without_decoding():
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    page = extract_page(
+        '<main><h1>Política de privacidad</h1>'
+        '<p>Para ejercer derechos, envíe su solicitud a '
+        f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+        f'<span class="__cf_email__" data-cfemail="{encoded}">'
+        '[email&#160;protected]</span></a>.</p></main>',
+        "https://example.com/legal/privacy/",
+    )
+    assert "Para ejercer derechos" in page.content_text
+    assert "contact@mininode.io" not in page.content_text
+    assert any(
+        has_protected_email and "Para ejercer derechos" in text
+        for text, has_protected_email, _ in page.rights_channel_blocks
+    )
+    # The original DOM and link observations remain unchanged.
+    assert any("/cdn-cgi/l/email-protection#" in link.url for link in page.links)
+
+
+def test_content_text_cf_obfuscated_contact_rejects_unverified_placeholders():
+    for html in (
+        '<span class="__cf_email__" data-cfemail="invalid">[email protected]</span>',
+        '<a href="/cdn-cgi/l/email-protection#not-hex">[email protected]</a>',
+        '<span data-cfemail="42212d2c36232136022f2b2c2b2c2d26276c2b2d">'
+        '[email protected]</span>',
+        '<p>[email protected]</p>',
+    ):
+        extracted = extract_page(
+            "<main><h1>Política de privacidad</h1>"
+            "<p>Para ejercer los derechos relativos a datos personales, escríbanos.</p>"
+            + html + "</main>",
+            "https://example.com/legal/privacy/",
+        )
+        assert not any(protected for _, protected, _ in extracted.rights_channel_blocks)
+
+
+def test_literal_marker_cannot_forge_structural_email_evidence():
+    token = "__MININODE_OBFUSCATED_EMAIL_CHANNEL__"
+    page = extract_page(
+        "<main><section><h2>Ejercicio de derechos</h2>"
+        f"<p>Para ejercer derechos escriba a {token}.</p>"
+        "</section></main>",
+        "https://example.com/legal/privacy/",
+    )
+    assert any(token in text for text, _, _ in page.rights_channel_blocks)
+    assert not any(protected for _, protected, _ in page.rights_channel_blocks)
+
+
+def test_rights_blocks_preserve_sibling_section_identity_without_punctuation():
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    page = extract_page(
+        "<main><section><h2>Ejercicio de derechos</h2></section>"
+        "<section><h2>Contacto comercial</h2>"
+        f'<p>Contacto general: <a href="/cdn-cgi/l/email-protection#{encoded}">'
+        "[email&#160;protected]</a></p></section></main>",
+        "https://example.com/legal/privacy/",
+    )
+    headings = {text: scope for text, _, scope in page.rights_channel_blocks}
+    assert headings["Ejercicio de derechos"] != headings["Contacto comercial"]
+    assert any(
+        protected and scope == headings["Contacto comercial"]
+        for _, protected, scope in page.rights_channel_blocks
+    )
+
+
 def test_content_text_uses_substantive_article_then_clean_div_fallback():
     article = extract_page(
         "<nav>Ruido de navegación</nav><article><h1>Aviso de privacidad</h1>"
@@ -109,6 +175,23 @@ def test_content_text_uses_substantive_article_then_clean_div_fallback():
     )
     assert "Menú extenso" not in legacy.content_text
     assert "tratamiento de datos personales" in legacy.content_text
+
+
+def test_document_root_falls_back_when_main_contains_only_navigation():
+    result = extract_page(
+        "<body><main><nav>Menú de privacidad muy extenso y navegación del "
+        "sitio sin contenido sustantivo sobre la política de datos personales"
+        "</nav></main>"
+        "<p>Política de privacidad. Tratamos datos personales para la gestión "
+        "de solicitudes y el ejercicio de derechos según la normativa.</p></body>",
+        "https://example.com/legal/privacy/",
+    )
+    assert "Tratamos datos personales" in result.content_text
+    assert "navegación del sitio" not in result.content_text
+    assert any(
+        "Tratamos datos personales" in text
+        for text, _, _ in result.rights_channel_blocks
+    )
 
 
 def test_content_text_returns_none_when_clean_fallback_is_not_substantive():

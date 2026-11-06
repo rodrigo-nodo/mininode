@@ -664,6 +664,130 @@ def test_prv004_header_metadata_is_structural_and_not_platform_version():
         ).to_dict()["pages"][0]
 
 
+@pytest.mark.parametrize(
+    ("policy_body", "expected_channel", "expected_result"),
+    [
+        (
+            "<p>Las solicitudes relacionadas con el tratamiento de datos "
+            "personales o el ejercicio de derechos pueden enviarse a {email}.</p>",
+            "explicit", "detected",
+        ),
+        (
+            "<p>Política de privacidad. Contacto general: {email}.</p>",
+            "generic", "partial",
+        ),
+        (
+            "<section><h2>Ejercicio de derechos</h2>"
+            "<p>La persona puede consultar sus derechos y obtener más información.</p>"
+            "</section><section><h2>Contacto comercial</h2>"
+            "<p>Contacto general: {email}.</p></section>",
+            "generic", "partial",
+        ),
+        # Reviewer B1: sibling headings without punctuation must not merge.
+        (
+            "<section><h2>Ejercicio de derechos</h2></section>"
+            "<section><h2>Contacto comercial</h2>"
+            "<p>Contacto general: {email}</p></section>",
+            "generic", "partial",
+        ),
+        (
+            "<section><h2>Ejercicio de derechos</h2></section>"
+            "<section><h2>Contacto comercial</h2>"
+            "<p>{email}</p></section>",
+            "generic", "partial",
+        ),
+        # A channel directly beneath the rights heading in its own section
+        # remains explicit, even without a repeated rights phrase.
+        (
+            "<section><h2>Ejercicio de derechos</h2>"
+            "<p>{email}</p></section>",
+            "explicit", "detected",
+        ),
+    ],
+)
+@pytest.mark.parametrize("protected_markup", [False, True])
+def test_prv006_cloudflare_protected_channel_remains_locally_attributed(
+    policy_body, expected_channel, expected_result, protected_markup,
+):
+    url = "https://example.com/legal/privacy/"
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    protected = (
+        f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+        f'<span class="__cf_email__" data-cfemail="{encoded}">'
+        '[email&#160;protected]</span></a>'
+    )
+    html = (
+        '<html><main><h1>Política de privacidad</h1>'
+        + policy_body.format(email=protected if protected_markup else "contact@example.com")
+        + "</main></html>"
+    )
+    extracted = extract_page(html, url)
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(url, "Política de privacidad", "https://example.com/")],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == expected_channel
+    assert evaluate_control(
+        "PRV-006", adapted["PRV-006"], {"PRV-003": "detected"}
+    )["result"] == expected_result
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        '<p>Para ejercer derechos, escriba a '
+        '__MININODE_OBFUSCATED_EMAIL_CHANNEL__.</p>',
+        '<p>Para ejercer derechos, escriba a '
+        '[email&#160;protected].</p>',
+        '<p>Para ejercer derechos, escriba a '
+        '<span class="__cf_email__" data-cfemail="garbage">'
+        '[email&#160;protected]</span>.</p>',
+    ],
+)
+def test_prv006_rejects_html_without_verified_email_channel(markup):
+    url = "https://example.com/legal/privacy/"
+    content = '<main><section><h2>Ejercicio de derechos</h2>' + markup + "</section></main>"
+    extracted = extract_page(content, url)
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(
+        links=[link],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == "none"
+    assert evaluate_control(
+        "PRV-006", adapted["PRV-006"], {"PRV-003": "detected"}
+    )["result"] == "not_detected"
+    assert "rights_channel_blocks" not in contract(
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ).to_dict()["pages"][0]
+
+
+def test_prv006_legacy_document_cannot_use_literal_internal_marker():
+    url = "https://example.com/legal/privacy/"
+    text = "Para ejercer derechos, escriba a __MININODE_OBFUSCATED_EMAIL_CHANNEL__."
+    link = LinkEvidence(url, "Política de privacidad", "https://example.com/")
+    adapted = adapt_evidence(contract(
+        links=[link], pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=text, content_text=text,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == "none"
+
+
 def test_prv006_rights_channel_association_does_not_cross_commercial_section():
     url = "https://example.com/legal/privacy/"
     link = LinkEvidence(url, "Política de privacidad", "https://example.com/")

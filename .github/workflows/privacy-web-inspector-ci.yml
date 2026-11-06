@@ -13,6 +13,7 @@ on:
       - 'backend/tests/web_inspector/test_selector.py'
       - 'backend/tests/web_inspector/test_form_context_capture.py'
       - 'backend/tests/domain_packs/privacy/**'
+      - 'backend/tests/test_privacy_api.py'
       - 'frontend/privacy/**'
       - 'frontend/privacy/test_privacy_framework_sync.py'
 
@@ -46,6 +47,7 @@ jobs:
             backend/tests/web_inspector/test_selector.py \
             backend/tests/web_inspector/test_form_context_capture.py \
             backend/tests/domain_packs/privacy/ \
+            backend/tests/test_privacy_api.py::test_mininode_public_policy_content_is_used_for_document_controls \
             --ignore=backend/tests/domain_packs/privacy/prv103_semantic_benchmark \
             --ignore=backend/tests/domain_packs/privacy/test_prv103_qa7_capture.py \
             --ignore=backend/tests/domain_packs/privacy/test_prv103_qa8_capture.py \
