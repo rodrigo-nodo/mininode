@@ -341,6 +341,14 @@ solicitudes o consultas de privacidad: el mero título «Política de privacidad
 no asocia un correo general con ese canal. No se recorre una ventana
 retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
 página ni contactos generales de otras páginas, y sigue separado de PRV-301.
+Cuando Cloudflare Email Address Obfuscation sustituye un correo por HTML
+codificado (`data-cfemail` o `/cdn-cgi/l/email-protection#...`), el extractor
+conserva **solo una señal interna de presencia de correo** en el texto limpio
+del documento. No decodifica ni almacena la dirección protegida, no ejecuta
+JavaScript ni trata como canal un marcador sin estructura reconocible. PRV-006
+requiere igualmente asociación local y explícita con el ejercicio de derechos.
+Este comportamiento se cubre con pruebas offline sobre la política HTML de
+Mininode en su forma original y transformada.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
 documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.

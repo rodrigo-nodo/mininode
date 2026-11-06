@@ -58,6 +58,34 @@ _PLATFORM_VERSION_RE = re.compile(
     re.I,
 )
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
+# Internal, non-address sentinel: Cloudflare hides email text in raw HTML,
+# then reveals it in the browser via JavaScript. The passive inspector does
+# not decode protected addresses; it records only an observable channel.
+PROTECTED_EMAIL_CHANNEL_MARKER = "__MININODE_OBFUSCATED_EMAIL_CHANNEL__"
+_CF_EMAIL_HEX = re.compile(r"(?:[a-fA-F0-9]{2}){4,128}$")
+_CF_EMAIL_PATH = "/cdn-cgi/l/email-protection"
+
+
+def _mark_cf_protected_emails(root: Tag) -> None:
+    """Preserve contact-channel presence in inert, Cloudflare-obfuscated HTML.
+
+    Only recognized encoded-email markup qualifies. The address itself is
+    never decoded or retained, and unrelated HTML text is left untouched.
+    """
+    for anchor in root.find_all("a", href=True):
+        href = str(anchor.get("href") or "")
+        parsed = urlsplit(href)
+        if (
+            parsed.path == _CF_EMAIL_PATH
+            and _CF_EMAIL_HEX.fullmatch(parsed.fragment or "")
+        ):
+            anchor.clear()
+            anchor.append(PROTECTED_EMAIL_CHANNEL_MARKER)
+    for element in root.find_all(attrs={"data-cfemail": True}):
+        encoded = str(element.get("data-cfemail") or "")
+        if "__cf_email__" in element.get("class", []) and _CF_EMAIL_HEX.fullmatch(encoded):
+            element.clear()
+            element.append(PROTECTED_EMAIL_CHANNEL_MARKER)
 
 
 @dataclass
@@ -94,6 +122,7 @@ def _clean_content_text(soup: BeautifulSoup) -> str | None:
         clean_root = deepcopy(root)
         for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
             removable.decompose()
+        _mark_cf_protected_emails(clean_root)
         return _text(clean_root)
 
     content = cleaned_text(candidate) if isinstance(candidate, Tag) else ""

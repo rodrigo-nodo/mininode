@@ -604,8 +604,11 @@ def test_home_and_privacy_are_selected_without_refetching_home(monkeypatch):
     assert controls["PRV-002"]["result"] == "detected"
 
 
-def test_mininode_public_policy_content_is_used_for_document_controls(monkeypatch):
-    """Offline regression using the committed Mininode legal policy.
+@pytest.mark.parametrize("cloudflare_protected_emails", [False, True])
+def test_mininode_public_policy_content_is_used_for_document_controls(
+    monkeypatch, cloudflare_protected_emails,
+):
+    """Offline regression with both original and Cloudflare-transformed policy.
 
     A commercial /privacy/ link precedes the footer policy. No site inspection.
     """
@@ -617,6 +620,20 @@ def test_mininode_public_policy_content_is_used_for_document_controls(monkeypatc
         Path(__file__).resolve().parents[2]
         / "frontend" / "legal" / "privacy" / "index.html"
     ).read_text(encoding="utf-8")
+    if cloudflare_protected_emails:
+        # Cloudflare's Email Address Obfuscation rewrites <a href=mailto:>
+        # to an encoded marker visible only after client-side JS decoding.
+        # Diagnose the original bytes without decoding or network requests.
+        plain = '<a href="mailto:contact@mininode.io">contact@mininode.io</a>'
+        assert policy_html.count(plain) == 2
+        encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+        protected = (
+            f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+            f'<span class="__cf_email__" data-cfemail="{encoded}">'
+            '[email&#160;protected]</span></a>'
+        )
+        policy_html = policy_html.replace(plain, protected)
+        assert "mailto:contact@mininode.io" not in policy_html
     client, fake = client_with(monkeypatch, {
         site: page(site, '<a href="/privacy/">Privacy Web</a>'
                          '<div data-include="partials/footer.html"></div>'),

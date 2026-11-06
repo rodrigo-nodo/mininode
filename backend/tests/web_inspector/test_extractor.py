@@ -1,4 +1,6 @@
-from mininode_api.web_inspector.extractor import CONTENT_TEXT_LIMIT, extract_page
+from mininode_api.web_inspector.extractor import (
+    CONTENT_TEXT_LIMIT, PROTECTED_EMAIL_CHANNEL_MARKER, extract_page,
+)
 from mininode_api.web_inspector.models import (
     CookieEvidence, EvidenceContract, FormEvidence, InspectionEvidence,
     TargetEvidence, TransportEvidence,
@@ -90,6 +92,41 @@ def test_content_text_prefers_clean_main_without_changing_visible_or_forms():
     assert result.content_text == (
         "Política de Privacidad Tratamos datos personales para prestar nuestros servicios."
     )
+
+
+def test_content_text_recognizes_cf_obfuscated_contact_without_decoding():
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    page = extract_page(
+        '<main><h1>Política de privacidad</h1>'
+        '<p>Para ejercer derechos, envíe su solicitud a '
+        f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+        f'<span class="__cf_email__" data-cfemail="{encoded}">'
+        '[email&#160;protected]</span></a>.</p></main>',
+        "https://example.com/legal/privacy/",
+    )
+    assert PROTECTED_EMAIL_CHANNEL_MARKER in page.content_text
+    assert "Para ejercer derechos" in page.content_text
+    assert "contact@mininode.io" not in page.content_text
+    assert PROTECTED_EMAIL_CHANNEL_MARKER not in page.visible_text
+    # The original DOM and link observations remain unchanged.
+    assert any("/cdn-cgi/l/email-protection#" in link.url for link in page.links)
+
+
+def test_content_text_cf_obfuscated_contact_rejects_unverified_placeholders():
+    for html in (
+        '<span class="__cf_email__" data-cfemail="invalid">[email protected]</span>',
+        '<a href="/cdn-cgi/l/email-protection#not-hex">[email protected]</a>',
+        '<span data-cfemail="42212d2c36232136022f2b2c2b2c2d26276c2b2d">'
+        '[email protected]</span>',
+        '<p>[email protected]</p>',
+    ):
+        extracted = extract_page(
+            "<main><h1>Política de privacidad</h1>"
+            "<p>Para ejercer los derechos relativos a datos personales, escríbanos.</p>"
+            + html + "</main>",
+            "https://example.com/legal/privacy/",
+        )
+        assert PROTECTED_EMAIL_CHANNEL_MARKER not in (extracted.content_text or "")
 
 
 def test_content_text_uses_substantive_article_then_clean_div_fallback():

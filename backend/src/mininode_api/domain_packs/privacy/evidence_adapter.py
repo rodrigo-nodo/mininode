@@ -7,6 +7,7 @@ import unicodedata
 from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
+from mininode_api.web_inspector.extractor import PROTECTED_EMAIL_CHANNEL_MARKER
 from mininode_api.web_inspector.fetcher import normalize_url
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
@@ -871,6 +872,7 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
     def has_channel(value: str) -> bool:
         return bool(
             _EMAIL_PATTERN.search(value)
+            or PROTECTED_EMAIL_CHANNEL_MARKER in value
             or _PHONE_PATTERN.search(value)
             or _contains_phrase(value, _CONCRETE_CHANNEL_WORDS)
         )
