@@ -216,9 +216,10 @@ _GENERAL_CONTACT_CONTEXT_TERMS = (
     "consultas generales", "general contact", "general inquiries",
     "sales contact", "business inquiries",
 )
+# Generic instructions such as "escriba" or "contáctenos" do not
+# establish an observable channel without an address or concrete medium.
 _CONCRETE_CHANNEL_WORDS = (
-    "formulario de contacto", "direccion postal", "domicilio", "escriba",
-    "contacte", "contactenos",
+    "formulario de contacto", "direccion postal", "domicilio",
 )
 _EMAIL_PATTERN = re.compile(r"\b[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.I)
 _PHONE_PATTERN = re.compile(r"(?:\+?\d[\d ()-]{6,}\d)")

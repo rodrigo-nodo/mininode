@@ -350,7 +350,9 @@ No decodifica ni almacena la dirección protegida ni ejecuta JavaScript.
 PRV-006 mantiene asociación local y explícita con el ejercicio de derechos
 dentro de una misma sección. Los encabezados de secciones hermanas no se
 concatenan como una frase única, y un contacto general o comercial no hereda
-contexto de derechos de un encabezado anterior. Para contratos de evidencia
+contexto de derechos de un encabezado anterior. Instrucciones verbales
+como «escriba» o «contáctenos» no constituyen un canal observable sin un
+medio concreto. Para contratos de evidencia
 legados sin bloques estructurados se conserva la evaluación textual tradicional,
 sin aceptar marcadores de origen no verificable. La estructura interna queda
 excluida de la serialización pública del Evidence Contract.
