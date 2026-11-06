@@ -177,6 +177,23 @@ def test_content_text_uses_substantive_article_then_clean_div_fallback():
     assert "tratamiento de datos personales" in legacy.content_text
 
 
+def test_document_root_falls_back_when_main_contains_only_navigation():
+    result = extract_page(
+        "<body><main><nav>Menú de privacidad muy extenso y navegación del "
+        "sitio sin contenido sustantivo sobre la política de datos personales"
+        "</nav></main>"
+        "<p>Política de privacidad. Tratamos datos personales para la gestión "
+        "de solicitudes y el ejercicio de derechos según la normativa.</p></body>",
+        "https://example.com/legal/privacy/",
+    )
+    assert "Tratamos datos personales" in result.content_text
+    assert "navegación del sitio" not in result.content_text
+    assert any(
+        "Tratamos datos personales" in text
+        for text, _, _ in result.rights_channel_blocks
+    )
+
+
 def test_content_text_returns_none_when_clean_fallback_is_not_substantive():
     result = extract_page(
         "<body><header>Cabecera extensa que se elimina</header><div>Aviso breve</div></body>",

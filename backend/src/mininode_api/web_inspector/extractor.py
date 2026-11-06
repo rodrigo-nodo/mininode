@@ -89,7 +89,15 @@ def _document_root(soup: BeautifulSoup) -> Tag:
             if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
         ]
         candidate = max(articles, key=lambda tag: len(_text(tag)), default=None)
-    return candidate if isinstance(candidate, Tag) else (soup.body or soup)
+    root = candidate if isinstance(candidate, Tag) else (soup.body or soup)
+    # Preserve the legacy clean-content fallback when the selected main or
+    # article consists only of navigation/header material.
+    clean = deepcopy(root)
+    for removable in clean.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    if len(_text(clean)) < _SUBSTANTIVE_TEXT_LENGTH:
+        return soup.body or soup
+    return root
 
 
 def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], ...]:
