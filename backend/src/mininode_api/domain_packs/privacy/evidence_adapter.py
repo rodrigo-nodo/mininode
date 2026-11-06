@@ -7,7 +7,6 @@ import unicodedata
 from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
-from mininode_api.web_inspector.extractor import PROTECTED_EMAIL_CHANNEL_MARKER
 from mininode_api.web_inspector.fetcher import normalize_url
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
@@ -869,43 +868,74 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
             "confidence": "low",
         }
 
-    raw_document = _policy_document_text(selected_page)
-    segments = [
-        segment
-        for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", raw_document)
-        if segment.strip()
-    ]
-
-    def has_channel(value: str) -> bool:
+    def has_channel(value: str, cf_protected_email: bool = False) -> bool:
         return bool(
             _EMAIL_PATTERN.search(value)
-            or PROTECTED_EMAIL_CHANNEL_MARKER in value
+            or cf_protected_email
             or _PHONE_PATTERN.search(value)
             or _contains_phrase(value, _CONCRETE_CHANNEL_WORDS)
         )
 
-    channel_segments = [
-        (
-            f"{segments[index - 1]} {segment}"
-            if (
-                index
+    # For inspected HTML, use extractor-verified email presence and genuine
+    # document block/section boundaries. Raw text cannot manufacture a flag.
+    blocks = selected_page.rights_channel_blocks
+    if blocks is not None:
+        classified: list[str] = []
+        for index, (text, cf_email, group) in enumerate(blocks):
+            if not has_channel(text, cf_email):
+                continue
+            # A declared general/commercial contact cannot inherit rights
+            # context from preceding headings or sentences.
+            if _contains_phrase(text, _GENERAL_CONTACT_CONTEXT_TERMS):
+                classified.append("generic")
+                continue
+            same_section_request = (
+                index > 0
+                and blocks[index - 1][2] == group
                 and _contains_phrase(
-                    segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+                    blocks[index - 1][0], _PRECEDING_RIGHTS_REQUEST_TERMS
                 )
-                and not _contains_phrase(segment, _GENERAL_CONTACT_CONTEXT_TERMS)
             )
-            else segment
+            if _contains_phrase(text, _RIGHTS_CONTEXT_TERMS) or same_section_request:
+                classified.append("explicit")
+            else:
+                classified.append("generic")
+        explicit = "explicit" in classified
+        channel_segments_found = bool(classified)
+    else:
+        # Legacy evidence contracts lacking structured blocks retain their
+        # previous text-only behavior, without accepting an internal marker.
+        raw_document = _policy_document_text(selected_page)
+        segments = [
+            segment
+            for segment in re.split(r"(?<=[.!?;])\s+|[\n\r]+", raw_document)
+            if segment.strip()
+        ]
+        channel_segments = [
+            (
+                f"{segments[index - 1]} {segment}"
+                if (
+                    index
+                    and _contains_phrase(
+                        segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+                    )
+                    and not _contains_phrase(segment, _GENERAL_CONTACT_CONTEXT_TERMS)
+                )
+                else segment
+            )
+            for index, segment in enumerate(segments)
+            if has_channel(segment)
+        ]
+        explicit = any(
+            not _contains_phrase(segment, _GENERAL_CONTACT_CONTEXT_TERMS)
+            and _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
+            for segment in channel_segments
         )
-        for index, segment in enumerate(segments)
-        if has_channel(segment)
-    ]
-    explicit = any(
-        _contains_phrase(segment, _RIGHTS_CONTEXT_TERMS)
-        for segment in channel_segments
-    )
+        channel_segments_found = bool(channel_segments)
+
     if explicit:
         channel, confidence = "explicit", "high"
-    elif channel_segments:
+    elif channel_segments_found:
         channel, confidence = "generic", "medium"
     else:
         channel, confidence = "none", "high"

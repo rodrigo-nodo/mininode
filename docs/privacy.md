@@ -343,14 +343,20 @@ retrospectiva que pueda unir secciones diferentes. No usa cabeceras, pies de
 página ni contactos generales de otras páginas, y sigue separado de PRV-301.
 Cuando Cloudflare Email Address Obfuscation sustituye un correo por HTML
 codificado (`data-cfemail` o `/cdn-cgi/l/email-protection#...`), el extractor
-conserva **solo una señal interna de presencia de correo** en el texto limpio
-del documento. No decodifica ni almacena la dirección protegida, no ejecuta
-JavaScript ni trata como canal un marcador sin estructura reconocible. PRV-006
-requiere igualmente asociación local y explícita con el ejercicio de derechos.
-Un contacto identificado como general o comercial en el mismo segmento no
-hereda el contexto de derechos de una frase o encabezado anterior.
-Este comportamiento se cubre con pruebas offline sobre la política HTML de
-Mininode en su forma original y transformada.
+conserva **solo una señal estructurada, interna, de presencia de correo**
+vinculada a su bloque HTML y sección. No introduce identificadores artificiales
+en el texto extraído: el contenido de una página no puede suplantar esa señal.
+No decodifica ni almacena la dirección protegida ni ejecuta JavaScript.
+PRV-006 mantiene asociación local y explícita con el ejercicio de derechos
+dentro de una misma sección. Los encabezados de secciones hermanas no se
+concatenan como una frase única, y un contacto general o comercial no hereda
+contexto de derechos de un encabezado anterior. Para contratos de evidencia
+legados sin bloques estructurados se conserva la evaluación textual tradicional,
+sin aceptar marcadores de origen no verificable. La estructura interna queda
+excluida de la serialización pública del Evidence Contract.
+Este comportamiento se cubre con pruebas offline positivas y negativas
+(incluidos ambos hallazgos del Reviewer) y con la política HTML de Mininode
+en su forma original y transformada.
 
 PRV-007 evalúa las categorías o tipos de datos tratados únicamente en el
 documento seleccionado por PRV-003, reutilizando su contenido ya inspeccionado.
