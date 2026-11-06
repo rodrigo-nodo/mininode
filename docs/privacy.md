@@ -347,6 +347,8 @@ conserva **solo una señal interna de presencia de correo** en el texto limpio
 del documento. No decodifica ni almacena la dirección protegida, no ejecuta
 JavaScript ni trata como canal un marcador sin estructura reconocible. PRV-006
 requiere igualmente asociación local y explícita con el ejercicio de derechos.
+Un contacto identificado como general o comercial en el mismo segmento no
+hereda el contexto de derechos de una frase o encabezado anterior.
 Este comportamiento se cubre con pruebas offline sobre la política HTML de
 Mininode en su forma original y transformada.
 

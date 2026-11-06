@@ -685,8 +685,9 @@ def test_prv004_header_metadata_is_structural_and_not_platform_version():
         ),
     ],
 )
+@pytest.mark.parametrize("protected_markup", [False, True])
 def test_prv006_cloudflare_protected_channel_remains_locally_attributed(
-    policy_body, expected_channel, expected_result,
+    policy_body, expected_channel, expected_result, protected_markup,
 ):
     url = "https://example.com/legal/privacy/"
     encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
@@ -697,7 +698,8 @@ def test_prv006_cloudflare_protected_channel_remains_locally_attributed(
     )
     html = (
         '<html><main><h1>Política de privacidad</h1>'
-        + policy_body.format(email=protected) + "</main></html>"
+        + policy_body.format(email=protected if protected_markup else "contact@example.com")
+        + "</main></html>"
     )
     extracted = extract_page(html, url)
     adapted = adapt_evidence(contract(

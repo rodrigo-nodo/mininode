@@ -210,6 +210,13 @@ _PRECEDING_RIGHTS_REQUEST_TERMS = (
     "solicitudes sobre datos personales", "privacy requests",
     "data subject requests", "data subject rights",
 )
+# An explicitly general or commercial contact must not borrow rights-request
+# context from a previous sentence or HTML section heading.
+_GENERAL_CONTACT_CONTEXT_TERMS = (
+    "contacto general", "contacto comercial", "consultas comerciales",
+    "consultas generales", "general contact", "general inquiries",
+    "sales contact", "business inquiries",
+)
 _CONCRETE_CHANNEL_WORDS = (
     "formulario de contacto", "direccion postal", "domicilio", "escriba",
     "contacte", "contactenos",
@@ -880,8 +887,12 @@ def _rights_channel(contract: EvidenceContract, attribution: dict) -> dict:
     channel_segments = [
         (
             f"{segments[index - 1]} {segment}"
-            if index and _contains_phrase(
-                segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+            if (
+                index
+                and _contains_phrase(
+                    segments[index - 1], _PRECEDING_RIGHTS_REQUEST_TERMS
+                )
+                and not _contains_phrase(segment, _GENERAL_CONTACT_CONTEXT_TERMS)
             )
             else segment
         )
