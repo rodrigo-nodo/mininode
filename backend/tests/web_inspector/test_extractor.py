@@ -1,3 +1,5 @@
+import pytest
+
 from mininode_api.web_inspector.extractor import CONTENT_TEXT_LIMIT, extract_page
 from mininode_api.web_inspector.models import (
     CookieEvidence, EvidenceContract, FormEvidence, InspectionEvidence,
@@ -155,6 +157,51 @@ def test_rights_blocks_preserve_sibling_section_identity_without_punctuation():
     assert any(
         protected and scope == headings["Contacto comercial"]
         for _, protected, scope in page.rights_channel_blocks
+    )
+
+
+
+@pytest.mark.parametrize(
+    ("channel", "protected"),
+    [
+        ('<a href="mailto:privacy@example.com">Escribir para ejercer derechos</a>', True),
+        ('<a href="/cdn-cgi/l/email-protection#42212d2c36232136022f2b2c2b2c2d26276c2b2d">'
+         '[email&#160;protected]</a>', True),
+        ('<span class="__cf_email__" data-cfemail="42212d2c36232136022f2b2c2b2c2d26276c2b2d">'
+         '[email&#160;protected]</span>', True),
+        ('<a href="https://example.com/contact">Escribir</a>', False),
+        ('<a href="mailto:not-an-address">Escribir</a>', False),
+    ],
+)
+@pytest.mark.parametrize("wrapper", ["{channel}", "<table><tr><td>{channel}</td></tr></table>"])
+def test_rights_blocks_keep_standalone_channels_in_sections_and_cells(
+    channel, protected, wrapper,
+):
+    page = extract_page(
+        "<main><section><h2>Ejercicio de derechos</h2>"
+        + wrapper.format(channel=channel)
+        + "</section></main>",
+        "https://example.com/legal/privacy/",
+    )
+    blocks = page.rights_channel_blocks
+    assert blocks[0][0] == "Ejercicio de derechos"
+    assert len(blocks) >= 2
+    assert blocks[0][2] == blocks[1][2]
+    assert blocks[1][1] is protected
+
+
+def test_rights_blocks_keep_commercial_mailto_separate_from_rights_heading():
+    page = extract_page(
+        "<main><section><h2>Ejercicio de derechos</h2></section>"
+        '<section><h2>Contacto comercial</h2>'
+        '<a href="mailto:sales@example.com">ventas@example.com</a></section></main>',
+        "https://example.com/legal/privacy/",
+    )
+    headings = {text: scope for text, _, scope in page.rights_channel_blocks}
+    assert headings["Ejercicio de derechos"] != headings["Contacto comercial"]
+    assert any(
+        verified and scope == headings["Contacto comercial"]
+        for _, verified, scope in page.rights_channel_blocks
     )
 
 
