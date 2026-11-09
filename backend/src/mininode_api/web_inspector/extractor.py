@@ -58,7 +58,112 @@ _PLATFORM_VERSION_RE = re.compile(
     re.I,
 )
 _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "footer", "aside", "form")
+# Keep Cloudflare email protection as structural, in-memory evidence.
+# Never insert a magic token into untrusted document text.
+_CF_EMAIL_HEX = re.compile(r"(?:[a-fA-F0-9]{2}){4,128}$")
+_CF_EMAIL_PATH = "/cdn-cgi/l/email-protection"
+_RIGHTS_BLOCK_TAGS = (
+    "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address",
+    "div", "section", "td", "th", "a", "span",
+)
+_RIGHTS_STRUCTURAL_TAGS = (
+    "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address",
+    "div", "section", "td", "th",
+)
 
+
+def _has_verified_email_markup(element: Tag) -> bool:
+    """Recognize real mailto/Cloudflare markup, never a token in page text.
+
+    Cloudflare addresses remain encoded. A standalone <a> or <span> must be
+    inspected itself, not only through its descendants.
+    """
+    anchors = ([element] if element.name == "a" else []) + element.find_all("a", href=True)
+    for anchor in anchors:
+        parsed = urlsplit(str(anchor.get("href") or ""))
+        if parsed.scheme == "mailto" and EMAIL_RE.fullmatch(parsed.path or ""):
+            return True
+        if parsed.path == _CF_EMAIL_PATH and _CF_EMAIL_HEX.fullmatch(parsed.fragment or ""):
+            return True
+    marked = ([element] if element.has_attr("data-cfemail") else []) + element.find_all(
+        attrs={"data-cfemail": True}
+    )
+    return any(
+        "__cf_email__" in node.get("class", [])
+        and _CF_EMAIL_HEX.fullmatch(str(node.get("data-cfemail") or ""))
+        for node in marked
+    )
+
+
+def _document_root(soup: BeautifulSoup) -> Tag:
+    """Use the same substantive root for text and structural evidence."""
+    mains = soup.find_all("main")
+    candidate = mains[0] if len(mains) == 1 else None
+    if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
+        articles = [
+            article for article in soup.find_all("article")
+            if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
+        ]
+        candidate = max(articles, key=lambda tag: len(_text(tag)), default=None)
+    root = candidate if isinstance(candidate, Tag) else (soup.body or soup)
+    # Preserve the legacy clean-content fallback when the selected main or
+    # article consists only of navigation/header material.
+    clean = deepcopy(root)
+    for removable in clean.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    if len(_text(clean)) < _SUBSTANTIVE_TEXT_LENGTH:
+        return soup.body or soup
+    return root
+
+
+def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], ...]:
+    """Document blocks with trusted email-presence flags and section boundaries.
+
+    Strings remain untrusted document text; booleans come only from inspected
+    mailto/Cloudflare HTML. Adjacent blocks may share rights context only inside
+    their actual containing <section>, never across sibling sections.
+    """
+    clean_root = deepcopy(_document_root(soup))
+    for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    groups: dict[int, int] = {}
+    result: list[tuple[str, bool, int]] = []
+    total_chars = 0
+    emitted: set[int] = set()
+    for node in clean_root.find_all(_RIGHTS_BLOCK_TAGS):
+        # Split structural descendants, but keep inline <a>/<span> together
+        # with their containing paragraph, cell or wrapper when appropriate.
+        if node.name in {"div", "section", "td", "th"} and node.find(
+            _RIGHTS_STRUCTURAL_TAGS
+        ):
+            continue
+        if any(id(parent) in emitted for parent in node.parents):
+            continue
+        # Only standalone spans carrying an actual channel are relevant.
+        # Ordinary styling spans must not consume the extraction text budget.
+        if node.name == "span" and not (
+            EMAIL_RE.search(_text(node)) or _has_verified_email_markup(node)
+        ):
+            continue
+        value = _text(node)
+        if not value:
+            continue
+        remaining = CONTENT_TEXT_LIMIT - total_chars
+        if remaining <= 0:
+            break
+        value = value[:remaining]
+        total_chars += len(value)
+        section = node if node.name == "section" else node.find_parent("section")
+        identity = id(section) if section is not None else id(clean_root)
+        if identity not in groups:
+            groups[identity] = len(groups)
+        result.append((value, _has_verified_email_markup(node), groups[identity]))
+        emitted.add(id(node))
+    if not result:
+        value = _text(clean_root)[:CONTENT_TEXT_LIMIT]
+        if value:
+            result.append((value, _has_verified_email_markup(clean_root), 0))
+    return tuple(result)
 
 @dataclass
 class PageExtraction:
@@ -72,6 +177,7 @@ class PageExtraction:
     mixed_content: bool = False
     content_text: str | None = None
     policy_header_reference: str | None = None
+    rights_channel_blocks: tuple[tuple[str, bool, int], ...] | None = None
 
 
 def _text(tag: Tag) -> str:
@@ -80,26 +186,10 @@ def _text(tag: Tag) -> str:
 
 def _clean_content_text(soup: BeautifulSoup) -> str | None:
     """Return a bounded main-content sample without mutating extraction DOM."""
-
-    mains = soup.find_all("main")
-    candidate = mains[0] if len(mains) == 1 else None
-    if not isinstance(candidate, Tag) or len(_text(candidate)) < _SUBSTANTIVE_TEXT_LENGTH:
-        substantive_articles = [
-            article for article in soup.find_all("article")
-            if isinstance(article, Tag) and len(_text(article)) >= _SUBSTANTIVE_TEXT_LENGTH
-        ]
-        candidate = max(substantive_articles, key=lambda article: len(_text(article)), default=None)
-
-    def cleaned_text(root: Tag) -> str:
-        clean_root = deepcopy(root)
-        for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
-            removable.decompose()
-        return _text(clean_root)
-
-    content = cleaned_text(candidate) if isinstance(candidate, Tag) else ""
-    if len(content) < _SUBSTANTIVE_TEXT_LENGTH:
-        fallback = soup.body if isinstance(soup.body, Tag) else soup
-        content = cleaned_text(fallback)
+    clean_root = deepcopy(_document_root(soup))
+    for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
+        removable.decompose()
+    content = _text(clean_root)
     return content[:CONTENT_TEXT_LIMIT] if len(content) >= _SUBSTANTIVE_TEXT_LENGTH else None
 
 
@@ -395,6 +485,7 @@ def extract_page(html: str, source_url: str) -> PageExtraction:
         visible_text=visible_text[:4000],
         content_text=content_text,
         policy_header_reference=policy_header_reference,
+        rights_channel_blocks=_rights_channel_blocks(soup),
         links=_links(soup, source_url),
         forms=_forms(soup, source_url),
         contacts=_contacts(soup, source_url),
@@ -430,6 +521,7 @@ def build_evidence(
             visible_text=extracted.visible_text,
             content_text=extracted.content_text,
             policy_header_reference=extracted.policy_header_reference,
+            rights_channel_blocks=extracted.rights_channel_blocks,
         ))
         links.extend(extracted.links)
         forms.extend(extracted.forms)
