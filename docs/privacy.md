@@ -347,6 +347,9 @@ conserva **solo una señal estructurada, interna, de presencia de correo**
 vinculada a su bloque HTML y sección. No introduce identificadores artificiales
 en el texto extraído: el contenido de una página no puede suplantar esa señal.
 No decodifica ni almacena la dirección protegida ni ejecuta JavaScript.
+Los enlaces `mailto:` válidos, los enlaces Cloudflare y los canales en
+celdas de tabla o elementos independientes se conservan como evidencia
+estructurada del bloque correspondiente, incluso sin párrafo envolvente.
 PRV-006 mantiene asociación local y explícita con el ejercicio de derechos
 dentro de una misma sección. Los encabezados de secciones hermanas no se
 concatenan como una frase única, y un contacto general o comercial no hereda
