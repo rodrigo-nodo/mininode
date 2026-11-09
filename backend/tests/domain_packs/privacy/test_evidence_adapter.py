@@ -775,6 +775,111 @@ def test_prv006_rejects_html_without_verified_email_channel(markup):
     ).to_dict()["pages"][0]
 
 
+
+@pytest.mark.parametrize("protected_markup", [False, True])
+@pytest.mark.parametrize(
+    "layout",
+    [
+        "<section><h2>Ejercicio de derechos</h2>{email}</section>",
+        "<section><h2>Ejercicio de derechos</h2>"
+        "<table><tr><td>{email}</td></tr></table></section>",
+    ],
+)
+def test_prv006_standalone_mailto_and_cloudflare_channels_are_explicit(
+    protected_markup, layout,
+):
+    url = "https://example.com/legal/privacy/"
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    email = (
+        f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+        '[email&#160;protected]</a>'
+        if protected_markup else
+        '<a href="mailto:privacy@example.com">Contactar</a>'
+    )
+    extracted = extract_page(
+        '<main><h1>Política de privacidad</h1>'
+        + layout.format(email=email) + "</main>",
+        url,
+    )
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(url, "Política de privacidad", "https://example.com/")],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == "explicit"
+    assert evaluate_control(
+        "PRV-006", adapted["PRV-006"], {"PRV-003": "detected"}
+    )["result"] == "detected"
+
+
+@pytest.mark.parametrize("protected_markup", [False, True])
+@pytest.mark.parametrize("in_table", [False, True])
+def test_prv006_standalone_commercial_channel_does_not_inherit_rights_heading(
+    protected_markup, in_table,
+):
+    url = "https://example.com/legal/privacy/"
+    encoded = "42212d2c36232136022f2b2c2b2c2d26276c2b2d"
+    email = (
+        f'<a href="/cdn-cgi/l/email-protection#{encoded}">'
+        '[email&#160;protected]</a>'
+        if protected_markup else
+        '<a href="mailto:sales@example.com">ventas@example.com</a>'
+    )
+    if in_table:
+        email = "<table><tr><td>" + email + "</td></tr></table>"
+    extracted = extract_page(
+        "<main><h1>Política de privacidad</h1>"
+        "<section><h2>Ejercicio de derechos</h2></section>"
+        "<section><h2>Contacto comercial</h2>"
+        + email + "</section></main>",
+        url,
+    )
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(url, "Política de privacidad", "https://example.com/")],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == "generic"
+    assert evaluate_control(
+        "PRV-006", adapted["PRV-006"], {"PRV-003": "detected"}
+    )["result"] == "partial"
+
+
+@pytest.mark.parametrize("html_channel", [
+    '<a href="mailto:not-an-address">[email&#160;protected]</a>',
+    '<a href="/cdn-cgi/l/email-protection#not-hex">[email&#160;protected]</a>',
+    '<a>__MININODE_OBFUSCATED_EMAIL_CHANNEL__</a>',
+])
+def test_prv006_rejects_standalone_unverified_channels(html_channel):
+    url = "https://example.com/legal/privacy/"
+    extracted = extract_page(
+        "<main><section><h2>Ejercicio de derechos</h2>"
+        + html_channel + "</section></main>",
+        url,
+    )
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(url, "Política de privacidad", "https://example.com/")],
+        pages=[PageEvidence(
+            url, 200, "Política de privacidad", "text/html",
+            visible_text=extracted.visible_text,
+            content_text=extracted.content_text,
+            rights_channel_blocks=extracted.rights_channel_blocks,
+        )],
+    ))
+    assert adapted["PRV-006"]["rights_channel"] == "none"
+    assert evaluate_control(
+        "PRV-006", adapted["PRV-006"], {"PRV-003": "detected"}
+    )["result"] == "not_detected"
+
+
 def test_prv006_legacy_document_cannot_use_literal_internal_marker():
     url = "https://example.com/legal/privacy/"
     text = "Para ejercer derechos, escriba a __MININODE_OBFUSCATED_EMAIL_CHANNEL__."
