@@ -62,20 +62,36 @@ _CONTENT_NOISE_ELEMENTS = ("script", "style", "template", "header", "nav", "foot
 # Never insert a magic token into untrusted document text.
 _CF_EMAIL_HEX = re.compile(r"(?:[a-fA-F0-9]{2}){4,128}$")
 _CF_EMAIL_PATH = "/cdn-cgi/l/email-protection"
-_RIGHTS_BLOCK_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address", "div", "section")
-_RIGHTS_LEAF_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address"}
+_RIGHTS_BLOCK_TAGS = (
+    "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address",
+    "div", "section", "td", "th", "a", "span",
+)
+_RIGHTS_STRUCTURAL_TAGS = (
+    "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "address",
+    "div", "section", "td", "th",
+)
 
 
-def _has_cf_protected_email(element: Tag) -> bool:
-    """Recognize Cloudflare's known markup without decoding/storing addresses."""
-    for anchor in element.find_all("a", href=True):
+def _has_verified_email_markup(element: Tag) -> bool:
+    """Recognize real mailto/Cloudflare markup, never a token in page text.
+
+    Cloudflare addresses remain encoded. A standalone <a> or <span> must be
+    inspected itself, not only through its descendants.
+    """
+    anchors = ([element] if element.name == "a" else []) + element.find_all("a", href=True)
+    for anchor in anchors:
         parsed = urlsplit(str(anchor.get("href") or ""))
+        if parsed.scheme == "mailto" and EMAIL_RE.fullmatch(parsed.path or ""):
+            return True
         if parsed.path == _CF_EMAIL_PATH and _CF_EMAIL_HEX.fullmatch(parsed.fragment or ""):
             return True
+    marked = ([element] if element.has_attr("data-cfemail") else []) + element.find_all(
+        attrs={"data-cfemail": True}
+    )
     return any(
         "__cf_email__" in node.get("class", [])
         and _CF_EMAIL_HEX.fullmatch(str(node.get("data-cfemail") or ""))
-        for node in element.find_all(attrs={"data-cfemail": True})
+        for node in marked
     )
 
 
@@ -104,8 +120,8 @@ def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], 
     """Document blocks with trusted email-presence flags and section boundaries.
 
     Strings remain untrusted document text; booleans come only from inspected
-    Cloudflare HTML. Adjacent blocks may share rights context only inside their
-    actual containing <section>, never across sibling sections.
+    mailto/Cloudflare HTML. Adjacent blocks may share rights context only inside
+    their actual containing <section>, never across sibling sections.
     """
     clean_root = deepcopy(_document_root(soup))
     for removable in clean_root.find_all(_CONTENT_NOISE_ELEMENTS):
@@ -113,12 +129,21 @@ def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], 
     groups: dict[int, int] = {}
     result: list[tuple[str, bool, int]] = []
     total_chars = 0
+    emitted: set[int] = set()
     for node in clean_root.find_all(_RIGHTS_BLOCK_TAGS):
-        # Ignore wrappers with meaningful child blocks to avoid merging headings
-        # and commercial paragraphs into one synthetic sentence.
-        if node.name in {"div", "section"} and node.find(_RIGHTS_BLOCK_TAGS):
+        # Split structural descendants, but keep inline <a>/<span> together
+        # with their containing paragraph, cell or wrapper when appropriate.
+        if node.name in {"div", "section", "td", "th"} and node.find(
+            _RIGHTS_STRUCTURAL_TAGS
+        ):
             continue
-        if any(parent.name in {"p", "li", "address"} for parent in node.parents):
+        if any(id(parent) in emitted for parent in node.parents):
+            continue
+        # Only standalone spans carrying an actual channel are relevant.
+        # Ordinary styling spans must not consume the extraction text budget.
+        if node.name == "span" and not (
+            EMAIL_RE.search(_text(node)) or _has_verified_email_markup(node)
+        ):
             continue
         value = _text(node)
         if not value:
@@ -132,11 +157,12 @@ def _rights_channel_blocks(soup: BeautifulSoup) -> tuple[tuple[str, bool, int], 
         identity = id(section) if section is not None else id(clean_root)
         if identity not in groups:
             groups[identity] = len(groups)
-        result.append((value, _has_cf_protected_email(node), groups[identity]))
+        result.append((value, _has_verified_email_markup(node), groups[identity]))
+        emitted.add(id(node))
     if not result:
         value = _text(clean_root)[:CONTENT_TEXT_LIMIT]
         if value:
-            result.append((value, _has_cf_protected_email(clean_root), 0))
+            result.append((value, _has_verified_email_markup(clean_root), 0))
     return tuple(result)
 
 @dataclass
