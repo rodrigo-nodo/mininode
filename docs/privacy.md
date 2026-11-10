@@ -245,23 +245,62 @@ PRV-101 y PRV-104 sin cambios, prioriza un control determinista de transporte de
 formulario y posterga conclusiones sobre minimización, consentimiento, menores o datos
 de riesgo elevado cuando la evidencia pública no permite evitar falsos positivos.
 
-## Privacy Web: presentación de Score y cobertura en DEV
+## Privacy Web: presentación de Score y cobertura en DEV — PW-QA-01
 
-El diagnóstico público presenta 21 controles en cinco áreas con un único
-renderizador en `frontend/privacy/app.js`. Los nombres y descripciones visibles
-proceden del catálogo compartido `frontend/privacy/control-ux.js`. Los seis
-controles contextuales mantienen un estado neutral informativo: no modifican
-el Privacy Score ni el estado puntuable del área.
+**Implementación candidata DEV (pendiente de CI, revisión independiente y QA funcional).**
+El frontend presenta los resultados del backend sin recalcular ni modificar
+el Privacy Score `0.3`, sus pesos, `status`, controles, API o snapshots.
+El catálogo `controls.json` framework `0.13` sigue siendo la fuente de
+verdad para peso/aplicabilidad; `frontend/privacy/score-presentation.js`
+contiene una proyección de sus pesos validada por test de consistencia en CI.
+Los seis controles contextuales no afectan el Score.
 
-El `score` del backend no cambia. Si `evaluated_controls < applicable_controls`,
-el resultado identifica una evaluación parcial y cuántos controles se evaluaron.
-Si no hay controles evaluables, no se muestra el 0/100 técnico como nota negativa.
-Los diagnósticos históricos sin metadatos de cobertura muestran su score con
-una aclaración. Las áreas parcialmente evaluadas no presentan «Bien» sin matiz.
+**Clasificación de suficiencia** (solo presentación):
+- `Wa` = suma de pesos puntuables aplicables (excluir `not_applicable`).
+  `Wm` = suma de pesos de los aplicables `not_evaluable`.
+- **Completa de controles aplicables:** `Wa > 0`, hay evaluables y
+  `Wm = 0`. «Cobertura completa» **no** significa cumplimiento legal ni
+  que todas las páginas del sitio se hayan inspeccionado.
+- **Parcial:** hay evaluables, `Wm > 0`, `5 * Wm <= Wa`, y
+  `PRV-001` y `PRV-003` no son `not_evaluable`. El Score se muestra
+  como orientativo, junto con evaluados/aplicables.
+- **Limitada:** si faltan todos los evaluables, no hay puntuables
+  aplicables, `5 * Wm > Wa` o `PRV-001`/`PRV-003` no son
+  evaluables. **No se destaca** el Score técnico aunque sea 100.
+- `not_applicable` legítimo **no suma ni resta**; los problemas
+  comprobados (`not_detected`) no deben convertirse en `not_evaluable`.
 
-DEV mantiene las descripciones y el recorrido de preparación de activación
-propios de esta rama. No se modifican pesos, reglas, APIs, contratos, versiones,
-Plan autenticado, Billing, esquemas ni datos.
+La incertidumbre matemática `[100 * Eo/Wa, 100 * (Eo+Wm)/Wa]`
+solo se usa internamente como escenario extremo condicional, **no** como
+confianza estadística. Si una evaluación parcial podría cruzar un
+límite de texto visible (`40/70/85`), se informa que la interpretación
+podría cambiar, sin forzar por eso «Limitada».
+
+**Escala de presentación pública** (sin cambiar los rangos del backend):
+0–39 «Preparación inicial»; 40–69 «Preparación en desarrollo»;
+70–84 «Preparación avanzada»; 85–100 «Preparación destacada».
+Con evidencia **completa**, cualquier control puntuable de impacto muy alto
+con `not_detected` sustituye un mensaje de preparación potencialmente
+positivo por «Hay aspectos importantes por corregir» y se identifica el
+hallazgo. Con evidencia parcial, «Evaluación parcial» sigue siendo el
+encabezado y los hallazgos confirmados se muestran por separado.
+El resultado `partial` de impacto muy alto conserva su recomendación,
+pero no activa la sustitución del encabezado.
+
+Los diagnósticos anteriores con framework/versiones incompatibles, detalle
+ausente, o conteos inconsistentes conservan su Score almacenado y muestran
+«No contamos con información suficiente para verificar la cobertura de
+este diagnóstico anterior». No se afirma «Completa», no se reclasifican
+sus resultados ni se altera el registro histórico. `scope.limited`
+se muestra como advertencia del rastreo **independiente** de la
+suficiencia de controles.
+
+QA y gobierno: casos predefinidos PW-QA-01 / UX, comprobación de bordes y
+consistencia frontend/backend en CI, y **QA independiente posterior con
+SHA congelado y casos nuevos no usados para desarrollo**. Solo tras PASS
+y validación del PO corresponde evaluar promoción selectiva. El
+trabajo acotado a DEV no modifica MAIN, Plan autenticado, Billing,
+persistencia, controles, pesos ni contratos.
 
 ## Privacy Web activo: frontera comercial
 
