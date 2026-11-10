@@ -9,6 +9,10 @@ REPO_ROOT = PRIVACY_DIR.parents[1]
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
 UX = (PRIVACY_DIR / "control-ux.js").read_text(encoding="utf-8")
+PRESENTATION = (PRIVACY_DIR / "score-presentation.js").read_text(encoding="utf-8")
+SCORING = json.loads(
+    (REPO_ROOT / "backend" / "src" / "mininode_api" / "domain_packs" / "privacy" / "scoring.json").read_text(encoding="utf-8")
+)
 CONTROLS = json.loads(
     (REPO_ROOT / "backend" / "src" / "mininode_api" / "domain_packs" / "privacy" / "controls.json").read_text(encoding="utf-8")
 )
@@ -45,12 +49,38 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         app_tag = re.search(r'<script src="app\.js\?v=[^"]+" defer></script>', HTML)
         self.assertIsNotNone(ux_tag)
         self.assertIsNotNone(app_tag)
-        self.assertLess(ux_tag.start(), app_tag.start())
+        score_tag = re.search(r'<script src="score-presentation\.js\?v=[^"]+" defer></script>', HTML)
+        self.assertIsNotNone(score_tag)
+        self.assertLess(ux_tag.start(), score_tag.start())
+        self.assertLess(score_tag.start(), app_tag.start())
         self.assertNotIn("framework-v0.6.js", HTML)
         self.assertFalse((PRIVACY_DIR / "framework-v0.6.js").exists())
         self.assertNotIn("MutationObserver", APP)
         self.assertIn("Revisamos 21 puntos de tu sitio en 5 áreas.", HTML)
         self.assertIn("21 puntos en 5 áreas", HTML)
+
+
+    def test_privacy_score_presentation_weights_match_backend_scoring(self):
+        self.assertEqual(SCORING["version"], "0.3")
+        self.assertIn("const FRAMEWORK_VERSION = '0.13';", PRESENTATION)
+        self.assertIn("const SCORING_VERSION = '0.3';", PRESENTATION)
+        source = PRESENTATION.split("const SCORING_WEIGHTS = Object.freeze({", 1)[1].split("});", 1)[0]
+        weights = dict((code, int(weight)) for code, weight in
+                       re.findall(r"'(PRV-\\d+)': (\\d+)", source))
+        expected = {
+            control["code"]: SCORING["impact_weights"][control["impact"]]
+            * control.get("score_weight", 1)
+            for control in CONTROLS["controls"] if control["type"] != "context"
+        }
+        self.assertEqual(weights, expected)
+        context = PRESENTATION.split("const CONTEXT_CODES = Object.freeze([", 1)[1].split("]);", 1)[0]
+        self.assertEqual(
+            set(re.findall(r"'(PRV-\\d+)'", context)),
+            {control["code"] for control in CONTROLS["controls"] if control["type"] == "context"},
+        )
+        self.assertIn("[40, 70, 85]", PRESENTATION)
+        self.assertIn("'Preparación en desarrollo'", PRESENTATION)
+        self.assertIn("'Preparación destacada'", PRESENTATION)
 
 
 if __name__ == "__main__":
