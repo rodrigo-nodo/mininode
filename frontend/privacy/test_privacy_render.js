@@ -110,7 +110,7 @@ const baseDiagnostic = {
 
 assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
-assert.equal(elements.get('score-value').textContent, '82');
+assert.equal(elements.get('score-value').textContent, 82);
 assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
 assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles puntuables aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
@@ -187,7 +187,7 @@ const fullCoverageControls = controls.map((control) =>
 context.renderDiagnosticForTest({ ...baseDiagnostic, score: 84,
   controls: fullCoverageControls, coverage: 100,
   evaluated_controls: 14, applicable_controls: 14 }, 'https://example.com');
-assert.equal(elements.get('score-value').textContent, '84');
+assert.equal(elements.get('score-value').textContent, 84);
 assert.equal(elements.get('score-status').textContent, 'Preparación avanzada');
 assert.match(elements.get('diagnostic-coverage').textContent, /14 de 14/);
 assert.equal(elements.get('diagnostic-score-alert').hidden, true);
@@ -207,7 +207,7 @@ assert.match(elements.get('diagnostic-coverage').textContent, /no significa que 
 const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls: _applicable,
   ...historical } = baseDiagnostic;
 context.renderDiagnosticForTest(historical, 'https://example.com');
-assert.equal(elements.get('score-value').textContent, '82');
+assert.equal(elements.get('score-value').textContent, 82);
 assert.match(elements.get('diagnostic-coverage').textContent, /No contamos con información suficiente/);
 
 // Some checks were evaluated, while others within the same area could not be.
@@ -257,7 +257,7 @@ context.renderDiagnosticForTest({
   ...baseDiagnostic, score: 73, controls: absentPolicyControls,
   applicable_controls: 5, evaluated_controls: 5, coverage: 100,
 }, 'https://example.com');
-assert.equal(elements.get('score-value').textContent, '73');
+assert.equal(elements.get('score-value').textContent, 73);
 assert.equal(elements.get('score-status').textContent, 'Hay aspectos importantes por corregir');
 assert.match(elements.get('diagnostic-score-alert').textContent, /privacidad/i);
 assert.equal(elements.get('diagnostic-score-alert').hidden, false);
