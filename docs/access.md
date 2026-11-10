@@ -478,7 +478,7 @@ Mininode mantiene separados los recursos de validación y producción:
 ```text
 DEV
 dev.mininode.io
-  → rama dev / Cloudflare Preview
+  → rama dev / Cloudflare DEV (dominio integrado; no Branch Preview arbitrario)
   → mininode-backend-dev
   → mininode-db-dev
   → Clerk Development
@@ -490,6 +490,8 @@ app.mininode.io
   → PostgreSQL producción
   → Clerk Production
 ```
+
+En Mininode, la validación funcional que necesita sesión Clerk se realiza en los dominios configurados de cada entorno (DEV: `https://dev.mininode.io`), no en Branch Previews `*.pages.dev` de ramas arbitrarias. El Branch Preview es útil para inspección visual de frontend, pero no acredita autenticación ni integración con Render/BD. Ver [`docs/dev-prod-release.md`](dev-prod-release.md) y [`docs/privacy-web/roadmap.md`](privacy-web/roadmap.md).
 
 Las migraciones SQL son explícitas y controladas. Producción usa el environment de
 GitHub `production` y el secret `PRODUCTION_DATABASE_URL`; DEV usa el environment
