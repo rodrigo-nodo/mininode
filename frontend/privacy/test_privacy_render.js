@@ -192,12 +192,16 @@ assert.equal(elements.get('score-status').textContent, 'Preparación avanzada');
 assert.match(elements.get('diagnostic-coverage').textContent, /14 de 14/);
 assert.equal(elements.get('diagnostic-score-alert').hidden, true);
 
-// Zero evaluated controls are not presented as 0/100 failure.
+// Zero evaluated controls are not presented as a negative 0/100.
+const noEvaluableControls = controls.map((control) => ({
+  ...control,
+  result: control.control_code === 'PRV-014' ? 'not_applicable' : 'not_evaluable',
+}));
 context.renderDiagnosticForTest({ ...baseDiagnostic, score: 0, coverage: 0,
-  evaluated_controls: 0, applicable_controls: 12 }, 'https://example.com');
+  controls: noEvaluableControls, evaluated_controls: 0, applicable_controls: 14 }, 'https://example.com');
 assert.equal(elements.get('score-value').textContent, '—');
-assert.equal(elements.get('score-status').textContent, 'Diagnóstico anterior');
-assert.match(elements.get('diagnostic-coverage').textContent, /No es una calificación negativa/);
+assert.equal(elements.get('score-status').textContent, 'Evaluación limitada');
+assert.match(elements.get('diagnostic-coverage').textContent, /no significa que el sitio incumpla/i);
 
 // Historical snapshots with missing metadata remain readable.
 const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls: _applicable,
