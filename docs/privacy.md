@@ -61,69 +61,165 @@ En PRV-103, el contacto general (`Escríbenos`, `Enviar mensaje` o equivalentes)
 
 ## Privacy Score — suficiencia y representatividad de la evidencia
 
-**Decisión de diseño (04-11-2026; pendiente de implementación y QA):** el
-`score` de backend y la **suficiencia de evidencia para publicar visualmente
-una calificación general** son conceptos diferentes. El Score numérico actual
-se calcula sobre los controles puntuables efectivamente evaluados, usando
-sus pesos y factores; la cobertura informada es
-`evaluated_controls / applicable_controls`, por cantidad. Los controles
-contextuales y los no aplicables no integran ese denominador. Por ello,
-un `100/100` puede coexistir con una cobertura limitada y **no demuestra**
-que los controles no evaluados estén bien.
+**Decisión de producto (04-11-2026, refinada el 10-11-2026; pendiente de implementación y QA):**
+el Score calculado por el backend y la **suficiencia de evidencia para destacarlo en
+la interfaz** son asuntos diferentes. Se mantiene íntegro el scoring `0.3`:
+fórmula, pesos, resultados, contratos y snapshots existentes. Privacy Score es
+orientativo respecto de señales públicas observables; **no** representa un
+porcentaje de cumplimiento legal ni una auditoría integral.
 
-Para determinar si el Score es representativo, no basta un porcentaje mínimo
-fijo. Deben considerarse conjuntamente:
+### Resultados y principio de aplicabilidad
 
-- Cuántos controles puntuables aplicables se pudieron evaluar.
-- **Peso e importancia de los controles que faltan**, según el scoring
-  vigente, y cuánto pueden afectar la interpretación del resultado.
-- **Motivos de la evidencia faltante** (`not_evaluable`, cobertura técnica,
-  limitaciones de inspección u otras causas verificables): no confundir
-  ausencia de evidencia con resultado adverso.
-- Riesgo de sesgo y comparabilidad entre diagnósticos cuando la cobertura
-  o la composición de los controles evaluados cambian.
+Los 21 controles actuales incluyen controles puntuables y contextuales
+(informativos, sin peso). Para los puntuables:
 
-**Referencia metodológica, no equivalencia de dominio:**
-[Environmental Performance Index 2026 de Yale — metodología](https://epi.yale.edu/2026/methodology),
-secciones *Data Selection*, *Weighting and Aggregation* y *Missing Data*.
-El EPI decide si dispone de datos suficientes valorando el peso de indicadores
-faltantes, la posibilidad de imputación, el sesgo potencial y las razones de
-ausencia, en vez de usar solo una cantidad fija de indicadores. Esto inspira
-nuestro criterio de representatividad; **no implica adoptar su fórmula,
-imputaciones, pesos ni umbrales en Privacy Web**.
-
-### Contrato de presentación propuesto
-
-| Estado visual | Condición conceptual | Qué mostrar |
+| Resultado técnico | Significado | Tratamiento actual del Score |
 | --- | --- | --- |
-| **Evaluación limitada** | Evidencia insuficiente según cantidad, importancia o causas de controles pendientes | Cobertura y explicación; **no destacar el Score** aunque el backend calcule `100/100`; conservar hallazgos y acciones útiles |
-| **Evaluación parcial** | Evidencia suficiente para mostrar un Score orientativo, pero faltan controles puntuables aplicables | Score visible, **identificado como parcial**, junto con cobertura, evaluados/aplicables y advertencia |
-| **Evaluación completa** | Todos los controles puntuables aplicables fueron evaluados | Score destacado y cobertura 100%, con estado humano según resultado; mantener advertencia de alcance |
+| `detected`, `partial`, `not_detected` | Se pudo evaluar y el resultado es positivo, intermedio o adverso | Se incluye con el factor y peso vigente |
+| `not_applicable` | El control no corresponde según su condición de aplicabilidad/dependencia | **No suma ni resta; se excluye del denominador** |
+| `not_evaluable` | No se pudo determinar el resultado por falta de evidencia o limitación técnica | No se penaliza directamente ni se considera aprobado; reduce la cobertura y puede limitar la presentación |
 
-Los cuatro casos ilustrativos aprobados para **diseño visual** son:
-`6/15 (40%), score calculado 100/100` → **limitada, sin nota destacada**;
-`12/15 (80%), 86/100` → **parcial, 86/100 contextualizado**;
-`15/15 (100%), 86/100` → **completa, 86/100**;
-`15/15 (100%), 100/100` → **completa, 100/100** y mensaje
+**No aplica legítimamente no es un incumplimiento ni una ventaja.** Por
+ejemplo, si no se identifican formularios que soliciten datos personales
+(`PRV-101=not_detected`, control contextual), el envío seguro de esos
+formularios (`PRV-102`) queda `not_applicable`: no hay motivo para obligar al
+sitio a incorporar un formulario. Si falta una política propia y se constata
+`PRV-003=not_detected`, ese control sí expresa un hallazgo adverso; los
+controles de contenido dependientes que resulten `not_applicable` no deben
+descontar puntos repetidamente por la misma ausencia. **La aplicabilidad debe
+estar justificada por el contrato y la evidencia; ausencia de evidencia no
+equivale automáticamente a no aplicabilidad.**
+
+La cobertura actual por cantidad es
+`evaluated_controls / applicable_controls`, excluidos los controles
+contextuales y `not_applicable`. La nota actual se calcula sobre los
+puntuables *evaluados*, con los pesos y factores existentes. Por tanto,
+`100/100` puede coexistir con muy poca evidencia. `4/4` o `14/14`
+significa **100% de los controles puntuables aplicables evaluados**, no que
+se revisaron todos los controles posibles, todas las páginas ni todas las
+obligaciones legales. Cuando no hay controles puntuables aplicables o
+evaluables, no interpretar el `coverage=100` técnico ni un `score=0`
+como evidencia de cumplimiento o incumplimiento.
+
+### Tres dimensiones distintas de calidad
+
+1. **Suficiencia:** cuántos controles puntuables aplicables se evaluaron,
+   su importancia/peso y las causas verificables de `not_evaluable`.
+2. **Sensibilidad de interpretación:** cuánto podrían variar la nota y la
+   etiqueta humana si se conocieran los controles pendientes.
+3. **Representatividad del rastreo:** qué páginas, categorías y señales
+   públicas fueron efectivamente inspeccionadas y cuáles son las
+   limitaciones conocidas. `scope.limited=false` o haber examinado tres
+   páginas no acredita cobertura exhaustiva del sitio. Sin un universo
+   verificable, no inventar un porcentaje de URLs cubiertas.
+
+No usar un porcentaje fijo de controles como único criterio. Diferenciar
+una ausencia constatada (`not_detected`) de un dato no observado
+(`not_evaluable`); no castigar este último como si fuera un fallo del sitio.
+
+### Tres estados de presentación propuestos
+
+| Estado visual | Condición conceptual | Presentación |
+| --- | --- | --- |
+| **Evaluación limitada** | Evidencia puntuable insuficiente por cantidad, peso o causas de faltantes; regla cuantitativa aún por validar | No destacar la nota; mostrar hallazgos comprobados, cobertura y explicación, sin implicar que el sitio está mal |
+| **Evaluación parcial** | Evidencia suficiente para una nota orientativa, pero existen controles puntuables aplicables sin evaluar | Mostrar el Score contextualizado, cobertura y advertencias; distinguir lo confirmado de lo pendiente |
+| **Evaluación completa de aplicables** | Todos los controles puntuables aplicables evaluados y al menos uno aplicable | Score destacado y leyenda «Cobertura completa de los controles aplicables» con el conteo real; no afirmar «sitio completamente evaluado» |
+
+La etiqueta «Bien» depende hoy de los rangos visibles existentes. Si una
+evaluación **parcial** tiene una interpretación sensible a controles
+pendientes, **no** convertirla automáticamente en «Limitada» solo porque
+el rango teórico pueda cruzar un límite de etiqueta. Evaluar una
+advertencia de «interpretación sensible a evidencia pendiente» y evitar
+una etiqueta categórica injustificadamente positiva. Su texto y
+comportamiento siguen pendientes de decisión y tests de UX.
+
+Se conservan los cuatro **ejemplos ilustrativos de diseño** del
+04-11-2026: `6/15, Score calculado 100` → **limitada, sin nota
+destacada**; `12/15, Score 86` → presentación **parcial
+ilustrativa**, su clasificación definitiva depende del peso y causa de
+los faltantes; `15/15, Score 86` y `15/15, Score 100` →
+**completa respecto de aplicables**. En este último caso comunicar
 «Bien», nunca «Perfecto» ni «Cumplimiento legal 100%».
-«Completa» se refiere **solo al alcance puntuable aplicable de Privacy Web**,
-no a revisar el 100% de las obligaciones legales, páginas o procesos de una
-organización. Los 21 controles del catálogo incluyen controles informativos.
 
-**Pendiente de decisión y validación:** el 70% considerado inicialmente es
-solo una hipótesis de umbral cuantitativo, **no una regla aprobada**.
-Definir suficiencia combinando cobertura y relevancia de controles faltantes
-sobre casos representativos y QA independiente. No ocultar ni publicar la nota
-en producción mediante umbrales implícitos. Las comparaciones antes/después
-deben indicar cuándo cambió la cobertura para evitar interpretar diferencias
-como mejoras o deterioros comprobados.
+### Cobertura ponderada y sensibilidad: herramientas de calibración
 
-Esta sección **documenta el diseño acordado; no afirma que ya esté
-implementado**. La futura ejecución necesita DEV → QA → promoción selectiva
-a MAIN, tests de presentación y validación del PO. No modifica el cálculo
-de Score, pesos, resultados de controles, API, versiones, snapshots ni
-entitlements actuales; evaluar versión/documentación si posteriormente se
-cambia el comportamiento público.
+Como análisis interno **candidato**, con aplicabilidad y pesos fijos:
+
+- `W_a`: suma de pesos de controles puntuables aplicables;
+  `W_o`: suma de pesos de los evaluados;
+  `W_m = W_a - W_o`: suma de pesos de `not_evaluable`.
+- `E_o`: puntos ponderados obtenidos en los evaluados
+  (`detected=1`, `partial=0.5`, `not_detected=0`).
+- Cobertura ponderada: `W_o / W_a`.
+- Límite inferior hipotético: `S_min = 100 × E_o / W_a`.
+  Límite superior: `S_max = 100 × (E_o + W_m) / W_a`.
+- Amplitud sin redondear: `Δ = 100 × W_m / W_a` puntos de Score.
+
+Solo calcular estas expresiones cuando `W_a > 0`. La banda
+`[S_min, S_max]` representa **escenarios extremos condicionales**,
+no un intervalo estadístico de confianza, probabilidad o predicción.
+No considera cambios de aplicabilidad por dependencias, errores de
+extracción, correlación entre controles ni páginas nunca descubiertas.
+No mostrarla al cliente como «precisión» ni usarla para recalcular o
+reescribir el Score histórico.
+
+**20 puntos de amplitud es una hipótesis no aprobada**, a comparar con
+15 y 25; el cruce de una categoría verbal (`40`/`70` en la UX)
+no es por sí solo condición suficiente para «Limitada». Esos rangos son
+decisiones de presentación, no límites científicos de confianza.
+
+### Evidencia exploratoria y límites del análisis
+
+Consultas `SELECT` a snapshots históricos de PROD, sin ejecutar nuevos
+diagnósticos ni modificar datos: 37 revisiones framework `0.11` /
+scoring `0.3` de 25 sitios. Diez revisiones (ocho sitios) tenían
+`100/100` con cobertura de apenas 27%–40% e importantes controles
+`not_evaluable`; las otras 27 tenían cobertura 100% de aplicables.
+Entre estas últimas, 21 registraron `PRV-003=not_detected` y
+solo cuatro o cinco controles aplicables: es cobertura completa de
+**su denominador**, no ausencia de brechas. Se probaron además
+**ocho simulaciones lógicas** sobre resultados existentes, sin alterar
+los registros originales.
+
+**Esto no es QA independiente ni calibración estadística:** hay
+revisiones repetidas por sitio, faltan observaciones reales con
+cobertura intermedia y los históricos de PROD `0.11` pueden reflejar
+limitaciones del extractor corregidas después en DEV, incluida PRV-006.
+No usar su distribución para escoger umbrales ni extrapolar incidencia
+actual. Antes de implementar, definir criterios esperados *antes* del
+QA, probar escenarios intermedios independientes, dependencias, casos
+`not_applicable`, snapshots sin metadatos y cambios de versión,
+y validar comprensibilidad de la interfaz.
+
+Si versiones, pesos, controles, aplicabilidad, alcance o cobertura
+cambian entre revisiones, indicar esa diferencia al comparar resultados
+históricos: una variación de Score no equivale por sí sola a una mejora
+o deterioro del sitio. Las ampliaciones de rastreo requieren respetar
+la inspección pública pasiva y sus autorizaciones.
+
+### Referencias metodológicas (analogías; no reglas adoptadas)
+
+- [OECD/JRC — Handbook on Constructing Composite Indicators](https://www.oecd.org/en/publications/handbook-on-constructing-composite-indicators-methodology-and-user-guide_9789264043466-en.html):
+  datos faltantes, pesos, robustez y análisis de sensibilidad.
+- [Environmental Performance Index 2026 — Methodology](https://epi.yale.edu/2026/methodology):
+  considera importancia, causas y posible sesgo de indicadores faltantes,
+  además de advertir cambios de comparabilidad entre versiones.
+- [Google Lighthouse — puntuación de accesibilidad](https://developer.chrome.com/docs/lighthouse/accessibility/scoring):
+  delimita qué cubre una nota calculada con auditorías automáticas.
+- [W3C — Website Accessibility Conformance Evaluation Methodology](https://www.w3.org/WAI/test-evaluate/conformance/wcag-em/):
+  alcance definido y selección representativa de páginas.
+
+Estas referencias **no** prescriben ni validan los tres estados de
+Privacy Web ni sus umbrales: la regla es una propuesta propia.
+
+**Pendiente de aprobación antes de implementar:** criterios operativos
+para «Limitada»/«Parcial», tratamiento exacto de etiquetas sensibles,
+excepciones por fallos de rastreo y validación con casos intermedios
+independientes. Solo después realizar un PR enfocado en DEV, tests de
+presentación y QA; cualquier promoción a MAIN/PROD exige autorización.
+Este cambio es **únicamente documental**: no modifica frontend,
+backend, scoring `0.3`, API, BD, snapshots, versiones ni
+entitlements.
 
 ## Arquitectura de interpretación semántica
 
