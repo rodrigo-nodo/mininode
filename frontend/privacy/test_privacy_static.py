@@ -8,6 +8,7 @@ from pathlib import Path
 PRIVACY_DIR = Path(__file__).parent
 FRONTEND_DIR = PRIVACY_DIR.parent
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
+SCORE_PRESENTATION = (PRIVACY_DIR / "score-presentation.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
 CSS = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8")
 DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
@@ -284,37 +285,32 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertTrue((FRONTEND_DIR / "functions" / "api" / "[[path]].js").is_file())
 
     def test_human_status_uses_backend_score_boundaries(self):
-        function = re.search(
-            r"const getHumanStatus = \(score\) => \{.*?\n\};",
-            APP,
-            re.DOTALL,
-        ).group()
         boundaries = [0, 39, 40, 69, 70, 84, 85, 100]
-        script = f"{function}\nconsole.log(JSON.stringify({boundaries}.map(getHumanStatus)));"
+        source = ("globalThis.window = {};\n" + SCORE_PRESENTATION +
+                  "\nconsole.log(JSON.stringify(" +
+                  f"{boundaries}.map(window.MininodePrivacyScorePresentation.labelForScore)));" )
         result = subprocess.run(
-            ["node", "-e", script],
+            ["node", "-e", source],
             check=True,
             capture_output=True,
             text=True,
         )
-
         self.assertEqual(json.loads(result.stdout), [
-            "Hay aspectos importantes por mejorar",
-            "Hay aspectos importantes por mejorar",
-            "Hay aspectos que puedes mejorar",
-            "Hay aspectos que puedes mejorar",
-            "Bien",
-            "Bien",
-            "Bien",
-            "Bien",
+            "Preparación inicial",
+            "Preparación inicial",
+            "Preparación en desarrollo",
+            "Preparación en desarrollo",
+            "Preparación avanzada",
+            "Preparación avanzada",
+            "Preparación destacada",
+            "Preparación destacada",
         ])
 
     def test_human_status_does_not_interpret_backend_status_text(self):
-        function = APP.split("const getHumanStatus", 1)[1].split("const renderPriorities", 1)[0]
-
-        self.assertNotIn("status", function)
-        self.assertNotIn("includes", function)
-        self.assertIn("getHumanStatus(score)", APP)
+        self.assertNotIn("diagnostic.status", APP)
+        self.assertNotIn("diagnostic.status", SCORE_PRESENTATION)
+        self.assertIn("scoreStatus.textContent = assessment.label;", APP)
+        self.assertIn("labelForScore(score)", SCORE_PRESENTATION)
 
     def test_configures_the_complete_matrix_in_five_areas(self):
         config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
@@ -384,7 +380,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("21 puntos en 5 áreas", HTML)
         self.assertNotIn("19 puntos en 5 áreas", HTML)
         self.assertIn("renderScoreCoverage(diagnostic)", APP)
-        self.assertIn("Sin evidencia suficiente", APP)
+        self.assertIn("Evaluación limitada", APP)
         self.assertIn("Evaluación parcial", APP)
         self.assertNotIn("MutationObserver", APP)
 
