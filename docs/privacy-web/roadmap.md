@@ -67,7 +67,7 @@ Antes del piloto, fijar criterios de éxito, participantes, modalidad gratuita o
 
 ### Puerta de QA para piloto gratuito controlado (pendiente de PASS)
 
-| Control | Evidencia requerida | Estado al 04-11-2026 |
+| Control | Evidencia requerida | Estado / seguimiento |
 |---|---|---|
 | **PW-QA-01: comunicación de score y cobertura** | Separar **aplicabilidad** (`not_applicable` no suma ni resta), **suficiencia ponderada**, **sensibilidad de interpretación** y **alcance de páginas inspeccionadas**. Validar estados limitada/parcial/completa solo de controles aplicables, sin alterar el scoring `0.3`; explicar casos 4/4 con política ausente y evitar presentar cobertura 100% como cumplimiento total. Ver [metodología, hipótesis y escenarios](../privacy.md#privacy-score--suficiencia-y-representatividad-de-la-evidencia). | **Diseño refinado 10-11-2026; regla y umbral no aprobados; implementación/QA pendientes.** Exploración: 37 snapshots scoring `0.3` (25 sitios), 10 notas `100/100` con cobertura 27%–40%, 27 con cobertura completa de aplicables; 8 simulaciones. Sin casos reales intermedios para calibrar el umbral 20 (alternativas 15/25). No es QA independiente. |
 | **PW-QA-02: contrato visible de controles** | Conciliar los 21 controles del backend con el texto «19 puntos» y la enumeración del frontend; incluir tests que eviten divergencia y verificar PROD | **Por resolver**; [issue #204](https://github.com/rodrigo-nodo/mininode/issues/204) |
