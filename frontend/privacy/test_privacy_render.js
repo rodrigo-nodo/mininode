@@ -110,7 +110,7 @@ const baseDiagnostic = {
 
 assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
-assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-value').textContent, '82');
 assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
 assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
@@ -207,7 +207,7 @@ assert.match(elements.get('diagnostic-coverage').textContent, /no significa que 
 const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls: _applicable,
   ...historical } = baseDiagnostic;
 context.renderDiagnosticForTest(historical, 'https://example.com');
-assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-value').textContent, '82');
 assert.match(elements.get('diagnostic-coverage').textContent, /No contamos con información suficiente/);
 
 // Some checks were evaluated, while others within the same area could not be.
