@@ -52,6 +52,7 @@ const document = {
 
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8');
 const catalogSource = fs.readFileSync(`${__dirname}/control-ux.js`, 'utf8');
+const presentationSource = fs.readFileSync(`${__dirname}/score-presentation.js`, 'utf8');
 const context = {
   window: { location: { search: '' }, addEventListener() {} },
   document,
@@ -61,6 +62,7 @@ const context = {
   fetch: async () => { throw new Error('not used'); },
 };
 vm.runInNewContext(catalogSource, context);
+vm.runInNewContext(presentationSource, context);
 vm.runInNewContext(`${source}
 globalThis.renderDiagnosticForTest = renderDiagnostic;
 globalThis.resetCommercialStateForTest = resetCommercialState;
@@ -73,14 +75,19 @@ const codes = [
   'PRV-013', 'PRV-014',
   'PRV-101', 'PRV-102', 'PRV-103', 'PRV-104', 'PRV-201', 'PRV-301', 'PRV-501',
 ];
-const controls = codes.map((control_code, index) => ({
+const controls = codes.map((control_code) => ({
   control_code,
-  result: index === 3 ? 'not_evaluable' : index === 8 ? 'not_applicable' : 'detected',
+  result: ['PRV-004', 'PRV-301', 'PRV-102', 'PRV-012'].includes(control_code)
+    ? 'not_evaluable' : ['PRV-009', 'PRV-014'].includes(control_code)
+      ? 'not_applicable' : ['PRV-008', 'PRV-011'].includes(control_code)
+        ? 'partial' : control_code === 'PRV-005' ? 'not_detected' : 'detected',
   confidence: 'high',
   evidence: [],
   reason: 'Resultado determinístico del control.',
 }));
 const baseDiagnostic = {
+  framework_version: '0.13',
+  scoring_version: '0.3',
   diagnostic_id: 'DIAG-A',
   claim_token: 'test-pending-claim',
   score: 82,
@@ -173,18 +180,23 @@ assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No 
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-no-priorities').hidden, false);
 
-// Complete coverage retains the familiar score label.
-context.renderDiagnosticForTest({ ...baseDiagnostic, coverage: 100,
+// Complete coverage uses the approved four-tier scale and explains applicability.
+const fullCoverageControls = controls.map((control) =>
+  ['PRV-301', 'PRV-102', 'PRV-012'].includes(control.control_code)
+    ? { ...control, result: 'detected' } : control);
+context.renderDiagnosticForTest({ ...baseDiagnostic, score: 84,
+  controls: fullCoverageControls, coverage: 100,
   evaluated_controls: 14, applicable_controls: 14 }, 'https://example.com');
-assert.equal(elements.get('score-value').textContent, 82);
-assert.equal(elements.get('score-status').textContent, 'Bien');
-assert.equal(elements.get('diagnostic-coverage').hidden, true);
+assert.equal(elements.get('score-value').textContent, '84');
+assert.equal(elements.get('score-status').textContent, 'Preparación avanzada');
+assert.match(elements.get('diagnostic-coverage').textContent, /14 de 14/);
+assert.equal(elements.get('diagnostic-score-alert').hidden, true);
 
 // Zero evaluated controls are not presented as 0/100 failure.
 context.renderDiagnosticForTest({ ...baseDiagnostic, score: 0, coverage: 0,
   evaluated_controls: 0, applicable_controls: 12 }, 'https://example.com');
 assert.equal(elements.get('score-value').textContent, '—');
-assert.equal(elements.get('score-status').textContent, 'Sin evidencia suficiente');
+assert.equal(elements.get('score-status').textContent, 'Diagnóstico anterior');
 assert.match(elements.get('diagnostic-coverage').textContent, /No es una calificación negativa/);
 
 // Historical snapshots with missing metadata remain readable.
@@ -192,7 +204,7 @@ const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls
   ...historical } = baseDiagnostic;
 context.renderDiagnosticForTest(historical, 'https://example.com');
 assert.equal(elements.get('score-value').textContent, 82);
-assert.match(elements.get('diagnostic-coverage').textContent, /No hay información de cobertura/);
+assert.match(elements.get('diagnostic-coverage').textContent, /No contamos con información suficiente/);
 
 // Some checks were evaluated, while others within the same area could not be.
 const partialAreaControls = controls.map((item) => item.control_code === 'PRV-005'
@@ -209,6 +221,66 @@ assert.equal(elements.get('diagnostic-controls').children[2].children[1].childre
   .children[1].children[0].textContent, 'No detectado');
 assert.match(elements.get('diagnostic-controls').children[1].children[1].children[2]
   .children[0].children[1].textContent, /formulario/i);
+
+// PW-QA-01: validated limited coverage never presents the backend 100 as a pass.
+const limitedControls = fullCoverageControls.map((control) =>
+  ['PRV-006', 'PRV-005', 'PRV-007'].includes(control.control_code)
+    ? { ...control, result: 'not_evaluable' } : control);
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 100, controls: limitedControls,
+  applicable_controls: 14, evaluated_controls: 11, coverage: 79,
+}, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, '—');
+assert.equal(elements.get('score-status').textContent, 'Evaluación limitada');
+assert.doesNotMatch(elements.get('privacy-score')['aria-label'], /100 de 100/);
+assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14/);
+
+// A confirmed missing own privacy policy must not be masked by a high score.
+const policyDependencies = new Set([
+  'PRV-004', 'PRV-005', 'PRV-006', 'PRV-007', 'PRV-008', 'PRV-009',
+  'PRV-010', 'PRV-011', 'PRV-012', 'PRV-013', 'PRV-014',
+]);
+const absentPolicyControls = codes.map((control_code) => ({
+  control_code, result: policyDependencies.has(control_code) || control_code === 'PRV-102'
+    ? 'not_applicable' : control_code === 'PRV-003'
+      ? 'not_detected' : control_code === 'PRV-101'
+        ? 'not_detected' : 'detected',
+}));
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 73, controls: absentPolicyControls,
+  applicable_controls: 5, evaluated_controls: 5, coverage: 100,
+}, 'https://example.com');
+assert.equal(elements.get('score-value').textContent, '73');
+assert.equal(elements.get('score-status').textContent, 'Hay aspectos importantes por corregir');
+assert.match(elements.get('diagnostic-score-alert').textContent, /privacidad/i);
+assert.equal(elements.get('diagnostic-score-alert').hidden, false);
+assert.match(elements.get('diagnostic-coverage').textContent, /5 de 5/);
+
+// Partial very-high findings stay visible through recommendations, without a global override.
+const partialCriticalControls = fullCoverageControls.map((control) =>
+  control.control_code === 'PRV-501' ? { ...control, result: 'partial' } : control);
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 80, controls: partialCriticalControls,
+  applicable_controls: 14, evaluated_controls: 14, coverage: 100,
+}, 'https://example.com');
+assert.equal(elements.get('score-status').textContent, 'Preparación avanzada');
+assert.equal(elements.get('diagnostic-score-alert').hidden, true);
+
+// Tracing limitation must not be confused with evidence insufficiency.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 84, controls: fullCoverageControls, coverage: 100,
+  applicable_controls: 14, evaluated_controls: 14,
+  scope: { pages_analyzed: 5, limited: true },
+}, 'https://example.com');
+assert.match(elements.get('diagnostic-scope').textContent, /Alcance del rastreo limitado/);
+assert.equal(elements.get('score-status').textContent, 'Preparación avanzada');
+
+// Counts inconsistent with the stored controls fall back to a conservative historical view.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, controls: fullCoverageControls, coverage: 100,
+  applicable_controls: 15, evaluated_controls: 15,
+}, 'https://example.com');
+assert.equal(elements.get('score-status').textContent, 'Diagnóstico anterior');
 
 // DEV: saved reviews can still be opened, and old purchase timestamps
 // do not suppress their stored diagnosis or suggest a completed checkout.
