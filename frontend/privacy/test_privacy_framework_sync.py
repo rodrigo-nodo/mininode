@@ -66,7 +66,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertIn("const SCORING_VERSION = '0.3';", PRESENTATION)
         source = PRESENTATION.split("const SCORING_WEIGHTS = Object.freeze({", 1)[1].split("});", 1)[0]
         weights = dict((code, int(weight)) for code, weight in
-                       re.findall(r"'(PRV-\\d+)': (\\d+)", source))
+                       re.findall(r"'(PRV-\d+)': (\d+)", source))
         expected = {
             control["code"]: SCORING["impact_weights"][control["impact"]]
             * control.get("score_weight", 1)
@@ -75,7 +75,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertEqual(weights, expected)
         context = PRESENTATION.split("const CONTEXT_CODES = Object.freeze([", 1)[1].split("]);", 1)[0]
         self.assertEqual(
-            set(re.findall(r"'(PRV-\\d+)'", context)),
+            set(re.findall(r"'(PRV-\d+)'", context)),
             {control["code"] for control in CONTROLS["controls"] if control["type"] == "context"},
         )
         self.assertIn("[40, 70, 85]", PRESENTATION)
