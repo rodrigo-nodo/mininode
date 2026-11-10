@@ -354,7 +354,7 @@ const renderScoreCoverage = (diagnostic) => {
   diagnosticScoreAlert.hidden = true;
 
   if (state === 'unverified') {
-    scoreValue.textContent = String(score);
+    scoreValue.textContent = score;
     scoreStatus.textContent = 'Diagnóstico anterior';
     diagnosticCoverage.textContent =
       'No contamos con información suficiente para verificar la cobertura de este diagnóstico anterior.';
@@ -382,7 +382,7 @@ const renderScoreCoverage = (diagnostic) => {
     privacyScore.setAttribute('aria-label',
       'Privacy Score no destacado: evaluación limitada. ' + countText);
   } else if (state === 'partial') {
-    scoreValue.textContent = String(score);
+    scoreValue.textContent = score;
     scoreStatus.textContent = 'Evaluación parcial';
     diagnosticCoverage.textContent = countText +
       ' El Score es orientativo y refleja solo los controles comprobados.' +
@@ -394,7 +394,7 @@ const renderScoreCoverage = (diagnostic) => {
       ' de 100. Evaluación parcial. ' + countText +
       (assessment.sensitive ? ' Interpretación sensible a la evidencia pendiente.' : ''));
   } else {
-    scoreValue.textContent = String(score);
+    scoreValue.textContent = score;
     scoreStatus.textContent = assessment.label;
     diagnosticCoverage.textContent =
       'Cobertura completa de los controles aplicables: ' + countText +
