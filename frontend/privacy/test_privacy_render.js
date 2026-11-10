@@ -112,7 +112,7 @@ assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, '82');
 assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
-assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles aplicables/);
+assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles puntuables aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
 const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
 assert.equal(areaButtons.every((button) => button.tagName === 'BUTTON' && button.type === 'button'), true);
