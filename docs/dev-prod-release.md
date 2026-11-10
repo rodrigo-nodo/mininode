@@ -13,10 +13,10 @@ Validar cambios en DEV y publicar en PROD únicamente el alcance aprobado, mante
 ## Flujo de un cambio
 
 1. **Definir el alcance.** Acordar objetivo, comportamiento y criterios de validación antes de implementar.
-2. **Desarrollar en DEV.** Crear cambios enfocados y validar pruebas, CI y comportamiento en el entorno DEV. Registrar los archivos y dependencias del alcance aprobado.
+2. **Desarrollar para DEV.** Crear cambios enfocados mediante PR hacia `dev` y verificar pruebas, CI y Reviewer cuando corresponda. No hacer merge sin autorización expresa. Para funciones con Clerk/Render, comprobar el despliegue de la rama permanente `dev` y validar el comportamiento integrado en **https://dev.mininode.io** después del merge autorizado. Registrar los archivos y dependencias del alcance aprobado.
 3. **Preparar la publicación.** Partir de `main` actualizado en una rama nueva. Incorporar únicamente los cambios aprobados desde DEV, incluidas las dependencias, pruebas, documentación y migraciones necesarias. No fusionar automáticamente `dev` ni copiar archivos completos si con ello se arrastran cambios no aprobados.
 4. **Revisar el PR a `main`.** Examinar el diff respecto a `main`; comprobar que no incluya otros trabajos de DEV, que preserve los cambios propios de `main` y que CI del último commit esté correcto. Si el cambio requiere migraciones o configuración, establecer su orden y compatibilidad antes de desplegar.
-5. **Validar antes de merge.** Utilizar preferentemente el Branch Preview estable del PR, confirmado para su último commit. El usuario valida producto, UX, textos y recorrido; una revisión técnica independiente es opcional según el riesgo. No hacer merge sin autorización explícita.
+5. **Validar según el entorno.** Antes del merge, revisar diff, CI del último SHA y Reviewer opcional según riesgo. Un Branch Preview estable puede servir para maquetación pública/estática, **pero no para acreditar la integración Clerk/Access con Render**. En Privacy Web, después de un **merge a `dev` expresamente autorizado**, confirmar el SHA publicado y validar funcionalmente con el PO en **https://dev.mininode.io**. La validación en DEV no autoriza ni acredita por sí sola una promoción a `main`. No hacer merge sin autorización explícita.
 6. **Publicar y verificar.** Tras el merge autorizado, confirmar que Cloudflare y Render (cuando corresponda) desplegaron el commit esperado de `main`. Validar el comportamiento en PROD y sus integraciones, sin suponer que un CI verde demuestra el despliegue.
 7. **Comprobar equivalencia del alcance.** Contrastar los archivos, contratos y comportamiento aprobados en DEV con lo publicado en PROD. Documentar diferencias deliberadas de configuración o de adaptación a `main`. La comparación debe centrarse en el alcance publicado, no en el número de commits divergentes.
 
@@ -24,7 +24,7 @@ Validar cambios en DEV y publicar en PROD únicamente el alcance aprobado, mante
 
 - El PR contiene solo el alcance aprobado y sus dependencias.
 - CI relevante del último commit aprobado está correcto.
-- Preview y validación del usuario completados cuando apliquen.
+- Validación en el entorno correspondiente: para Clerk, **DEV integrado** y SHA desplegado comprobado; Branch Preview solo como apoyo público/estático.
 - Merge expresamente autorizado.
 - Despliegues de producción comprobados contra el commit publicado.
 - Equivalencia del alcance DEV/PROD comprobada; excepciones conocidas documentadas.
@@ -39,7 +39,7 @@ No sincronizar las ramas masivamente para eliminar diferencias de historial. Res
 
 ## Responsabilidades
 
-- **ChatGPT:** revisar `main`, DEV y PR relacionados; preparar el PR enfocado, inspeccionar diff, comprobar CI, preview y equivalencia de publicación.
+- **ChatGPT:** revisar `main`, DEV y PR relacionados; preparar el PR enfocado, inspeccionar diff, comprobar CI, despliegue del entorno correcto y equivalencia de publicación; no presentar un Branch Preview como QA integrado de Clerk.
 - **Usuario (PO):** aprobar alcance, validar el resultado visible y autorizar expresamente el merge.
 - **Reviewer independiente (opcional):** revisar cambios relevantes de backend, seguridad, contratos, base de datos o lógica crítica sin implementar modificaciones.
 
@@ -49,4 +49,4 @@ Este procedimiento complementa la arquitectura de `docs/architecture.md` y no su
 
 Las iniciativas estratégicas son independientes de DEV/PROD y tienen una única referencia en `docs/roadmap.md` de `main`, con réplica textual en `dev`. La evidencia de implementación y los estados por entorno pueden diferir; sincronizar decisiones mediante PR documental sin sobrescribir el trabajo técnico específico de cada rama.
 
-Se evalúa `qa.mininode.io` como preproducción para un SHA candidato congelado. **No existe como entorno habilitado por esta decisión**. Hasta contar con QA autorizado, un Branch Preview `*.pages.dev` puede comprobar build/maquetación, no el E2E autenticado con Clerk/Render PROD. Revalidar solo en DEV tampoco acredita la publicación selectiva sobre `main`. Mantener CI, revisión, autorización de merge, comprobación del destino y rollback cuando aplique.
+Se evalúa `qa.mininode.io` como preproducción para un SHA candidato congelado. **No existe como entorno habilitado por esta decisión**. Hasta contar con QA autorizado, un Branch Preview `*.pages.dev` puede comprobar build/maquetación, no E2E autenticado con Clerk/Render. Para Privacy Web: **PR a `dev` → CI/Reviewer → merge expresamente autorizado a `dev` → comprobar SHA desplegado → validación funcional del PO en `https://dev.mininode.io`**. Revalidar solo en DEV tampoco acredita la publicación selectiva sobre `main`. Mantener CI, revisión, autorización de merge, comprobación del destino y rollback cuando aplique.
