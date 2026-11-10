@@ -211,8 +211,11 @@ assert.equal(elements.get('score-value').textContent, '82');
 assert.match(elements.get('diagnostic-coverage').textContent, /No contamos con información suficiente/);
 
 // Some checks were evaluated, while others within the same area could not be.
-const partialAreaControls = controls.map((item) => item.control_code === 'PRV-005'
-  ? { ...item, result: 'not_evaluable' } : item);
+const partialAreaControls = controls.map((item) =>
+  item.control_code === 'PRV-005'
+    ? { ...item, result: 'not_evaluable' }
+    : ['PRV-008', 'PRV-011'].includes(item.control_code)
+      ? { ...item, result: 'detected' } : item);
 context.renderDiagnosticForTest({ ...baseDiagnostic, controls: partialAreaControls }, 'https://example.com');
 assert.equal(elements.get('diagnostic-areas').children[0].children[1].textContent, 'Evaluación parcial');
 
