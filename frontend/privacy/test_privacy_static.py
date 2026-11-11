@@ -384,6 +384,21 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Evaluación parcial", APP)
         self.assertNotIn("MutationObserver", APP)
 
+    def test_evidence_first_score_display_has_accessible_context(self):
+        self.assertIn('id="score-caption"', HTML)
+        self.assertIn('id="score-context"', HTML)
+        self.assertIn('id="score-scale"', HTML)
+        self.assertIn('Consideramos 21 puntos de privacidad en 5 áreas.', HTML)
+        self.assertIn('Cobertura no verificable', APP)
+        self.assertIn('Referencia histórica', APP)
+        self.assertIn('Puntuación registrada', APP)
+        self.assertIn("scoreScale.textContent = 'Sin nota'", APP)
+        self.assertIn("scoreContext.textContent = 'Orientativo'", APP)
+        self.assertIn("scoreCaption.hidden = true;", APP)
+        self.assertIn(".privacy-score [hidden]", CSS)
+        self.assertIn(".privacy-score--historical strong", CSS)
+        self.assertIn("renderPriorities(diagnostic.priorities, scoreAssessment)", APP)
+
     def test_priorities_and_commercial_paths_are_preserved(self):
         self.assertIn(".slice(0, 3)", APP)
         self.assertIn("Array.isArray(priorities) && priorities.length > 0", APP)
