@@ -99,24 +99,24 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_area_cards_have_consistent_status_and_responsive_layout(self):
-        # Cards use the same two-column interior at every viewport width.
+        # One stable two-column interior at every viewport width.
         self.assertRegex(
-            CSS, r"(?s)\\.privacy-area \\{[^}]*display: grid;[^}]*"
-                 r"grid-template-columns: minmax\\(0, 1fr\\) auto;",
+            CSS, r"(?s)\.privacy-area \{[^}]*display: grid;[^}]*"
+                 r"grid-template-columns: minmax\(0, 1fr\) auto;",
         )
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", CSS)
         self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
-            mobile_css, r"(?s)\\.privacy-areas \\{[^}]*grid-template-columns: 1fr;",
+            mobile_css, r"(?s)\.privacy-areas \{[^}]*grid-template-columns: 1fr;",
         )
         self.assertRegex(
-            CSS, r"(?s)\\.privacy-area \\.privacy-state \\{[^}]*"
+            CSS, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
                  r"justify-self: end;[^}]*margin: 0;",
         )
         self.assertRegex(
-            CSS, r"(?s)\\.privacy-area__partial \\{[^}]*"
+            CSS, r"(?s)\.privacy-area__partial \{[^}]*"
                  r"grid-column: 1 / -1;[^}]*margin-top: 0;",
         )
 
