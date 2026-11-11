@@ -56,7 +56,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         self.assertNotIn("framework-v0.6.js", HTML)
         self.assertFalse((PRIVACY_DIR / "framework-v0.6.js").exists())
         self.assertNotIn("MutationObserver", APP)
-        self.assertIn("Revisamos 21 puntos de tu sitio en 5 áreas.", HTML)
+        self.assertIn("Consideramos 21 puntos de privacidad en 5 áreas.", HTML)
         self.assertIn("21 puntos en 5 áreas", HTML)
 
 

@@ -112,6 +112,8 @@ assert.equal(context.isValidDiagnosticResponseForTest(baseDiagnostic), true);
 assert.doesNotThrow(() => context.renderDiagnosticForTest(baseDiagnostic, 'https://example.com'));
 assert.equal(elements.get('score-value').textContent, 82);
 assert.equal(elements.get('score-status').textContent, 'Evaluación parcial');
+assert.equal(elements.get('score-context').textContent, 'Orientativo');
+assert.equal(elements.get('score-context').hidden, false);
 assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles puntuables aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
 const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
@@ -176,7 +178,8 @@ assert.equal(transparencyItems[2].children[1].children[0].textContent, 'No pudim
 
 assert.doesNotThrow(() => context.renderDiagnosticForTest({ ...baseDiagnostic, priorities: [] }, 'https://example.com'));
 assert.equal(elements.get('diagnostic-priorities').children.length, 1);
-assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No se identificaron acciones prioritarias/);
+assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No identificamos acciones prioritarias entre los puntos comprobados/);
+assert.equal(elements.get('actions-title').textContent, 'Acciones prioritarias');
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
 assert.equal(elements.get('privacy-no-priorities').hidden, false);
 
@@ -201,6 +204,7 @@ context.renderDiagnosticForTest({ ...baseDiagnostic, score: 0, coverage: 0,
   controls: noEvaluableControls, evaluated_controls: 0, applicable_controls: 14 }, 'https://example.com');
 assert.equal(elements.get('score-value').textContent, '—');
 assert.equal(elements.get('score-status').textContent, 'Evaluación limitada');
+assert.equal(elements.get('score-scale').textContent, 'Sin nota');
 assert.match(elements.get('diagnostic-coverage').textContent, /no significa que el sitio incumpla/i);
 
 // Historical snapshots with missing metadata remain readable.
@@ -208,6 +212,10 @@ const { coverage: _coverage, evaluated_controls: _evaluated, applicable_controls
   ...historical } = baseDiagnostic;
 context.renderDiagnosticForTest(historical, 'https://example.com');
 assert.equal(elements.get('score-value').textContent, 82);
+assert.equal(elements.get('score-status').textContent, 'Cobertura no verificable');
+assert.equal(elements.get('score-caption').textContent, 'Puntuación registrada');
+assert.equal(elements.get('score-context').textContent, 'Solo referencia');
+assert.match(elements.get('privacy-score').className, /privacy-score--historical/);
 assert.match(elements.get('diagnostic-coverage').textContent, /No contamos con información suficiente/);
 
 // Some checks were evaluated, while others within the same area could not be.
@@ -287,7 +295,112 @@ context.renderDiagnosticForTest({
   ...baseDiagnostic, controls: fullCoverageControls, coverage: 100,
   applicable_controls: 15, evaluated_controls: 15,
 }, 'https://example.com');
-assert.equal(elements.get('score-status').textContent, 'Diagnóstico anterior');
+assert.equal(elements.get('score-status').textContent, 'Cobertura no verificable');
+
+// PW-QA-01 UX: 4 preparation bands x 4 evidence situations (16 combinations).
+const bands = [
+  [25, 'Preparación inicial'],
+  [55, 'Preparación en desarrollo'],
+  [78, 'Preparación avanzada'],
+  [91, 'Preparación destacada'],
+];
+const stateFixtures = [
+  {
+    state: 'complete', controls: fullCoverageControls,
+    evaluated_controls: 14, applicable_controls: 14, coverage: 100,
+  },
+  {
+    state: 'partial', controls: fullCoverageControls.map((c) =>
+      c.control_code === 'PRV-301' ? { ...c, result: 'not_evaluable' } : c),
+    evaluated_controls: 13, applicable_controls: 14, coverage: 93,
+  },
+  {
+    state: 'limited', controls: limitedControls,
+    evaluated_controls: 11, applicable_controls: 14, coverage: 79,
+  },
+  {
+    state: 'unverified', controls: fullCoverageControls,
+    evaluated_controls: undefined, applicable_controls: undefined, coverage: undefined,
+  },
+];
+for (const state of stateFixtures) {
+  for (const [score, level] of bands) {
+    context.renderDiagnosticForTest({
+      ...baseDiagnostic, ...state, score, priorities: [],
+    }, 'https://ux-matrix.example');
+    const expectedTitle = state.state === 'complete' ? level
+      : state.state === 'partial' ? 'Evaluación parcial'
+      : state.state === 'limited' ? 'Evaluación limitada' : 'Cobertura no verificable';
+    assert.equal(elements.get('score-status').textContent, expectedTitle,
+      'State ' + state.state + ' score ' + score + ' should show correct heading');
+    assert.equal(elements.get('score-value').textContent,
+      state.state === 'limited' ? '—' : score);
+    if (state.state === 'partial') {
+      assert.equal(elements.get('score-context').textContent, 'Orientativo');
+      assert.equal(elements.get('score-context').hidden, false);
+      assert.doesNotMatch(elements.get('score-status').textContent, /Preparación/);
+    } else if (state.state === 'limited') {
+      assert.equal(elements.get('score-scale').textContent, 'Sin nota');
+      assert.equal(elements.get('score-context').hidden, true);
+    } else if (state.state === 'unverified') {
+      assert.match(elements.get('privacy-score').className, /privacy-score--historical/);
+      assert.equal(elements.get('score-caption').textContent, 'Puntuación registrada');
+      assert.equal(elements.get('score-context').textContent, 'Solo referencia');
+    } else {
+      assert.equal(elements.get('score-caption').hidden, true);
+      assert.equal(elements.get('score-context').hidden, true);
+      assert.equal(elements.get('privacy-score').className, 'privacy-score');
+    }
+  }
+}
+
+// Zero priorities must express what can actually be concluded for each evidence state.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, ...stateFixtures[0], score: 90, priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-priorities').children[0].textContent,
+  'No identificamos acciones prioritarias dentro del alcance de esta revisión.');
+
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, ...stateFixtures[1], score: 90, priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-priorities').children[0].textContent,
+  'No identificamos acciones prioritarias entre los puntos comprobados. Hay otros puntos que no pudimos verificar.');
+
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, ...stateFixtures[2], score: 90, priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-priorities').children[0].textContent,
+  'No identificamos acciones prioritarias entre los puntos comprobados. Hay otros puntos que no pudimos verificar.');
+
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, score: 0, coverage: 0,
+  controls: noEvaluableControls, evaluated_controls: 0, applicable_controls: 14, priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-priorities').children[0].textContent,
+  'No pudimos comprobar controles puntuables para identificar acciones prioritarias.');
+
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, ...stateFixtures[3], score: 100, workspace_site_id: 'SITE-SAVED',
+  priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('diagnostic-priorities').children[0].textContent,
+  'Esta revisión no contiene acciones prioritarias identificadas. Su cobertura no puede verificarse con los datos disponibles.');
+assert.equal(elements.get('score-status').textContent, 'Cobertura no verificable');
+assert.equal(elements.get('score-context').textContent, 'Referencia histórica');
+assert.match(elements.get('diagnostic-coverage').textContent, /Esta revisión fue guardada/);
+assert.match(elements.get('privacy-score').className, /privacy-score--historical/);
+assert.doesNotMatch(elements.get('score-status').textContent, /Preparación destacada/);
+assert.match(elements.get('privacy-score')['aria-label'], /No se asigna nivel de preparación/);
+
+// Switching from unverified to complete must remove any historical decorations.
+context.renderDiagnosticForTest({
+  ...baseDiagnostic, ...stateFixtures[0], score: 88, priorities: [],
+}, 'https://example.com');
+assert.equal(elements.get('score-status').textContent, 'Preparación destacada');
+assert.equal(elements.get('score-context').hidden, true);
+assert.equal(elements.get('score-caption').hidden, true);
+assert.equal(elements.get('privacy-score').className, 'privacy-score');
 
 // DEV: saved reviews can still be opened, and old purchase timestamps
 // do not suppress their stored diagnosis or suggest a completed checkout.

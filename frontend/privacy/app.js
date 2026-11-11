@@ -20,6 +20,9 @@ const analyzedUrl = document.querySelector('#analyzed-url');
 const privacyScore = document.querySelector('#privacy-score');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
+const scoreCaption = document.querySelector('#score-caption');
+const scoreScale = document.querySelector('#score-scale');
+const scoreContext = document.querySelector('#score-context');
 const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
 const diagnosticScoreAlert = document.querySelector('#diagnostic-score-alert');
 const diagnosticScope = document.querySelector('#diagnostic-scope');
@@ -266,20 +269,24 @@ const renderAreasAndControls = (controls) => {
   });
 };
 
-const renderPriorities = (priorities) => {
+const renderPriorities = (priorities, evaluation) => {
   diagnosticPriorities.replaceChildren();
   const visiblePriorities = (Array.isArray(priorities) ? priorities : [])
     .filter((priority) => priority && typeof priority === 'object')
     .slice(0, 3);
   const count = visiblePriorities.length;
-  actionsTitle.textContent = count === 0 ? 'Sin acciones prioritarias' : `${count} ${count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'}`;
+  actionsTitle.textContent = count === 0 ? 'Acciones prioritarias' : `${count} ${count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'}`;
 
-  if (visiblePriorities.length === 0) {
-    appendTextElement(
-      diagnosticPriorities,
-      'p',
-      'No se identificaron acciones prioritarias dentro del alcance de este diagnóstico inicial.',
-    );
+  if (count === 0) {
+    const state = evaluation?.state || 'unverified';
+    const description = state === 'unverified'
+      ? 'Esta revisión no contiene acciones prioritarias identificadas. Su cobertura no puede verificarse con los datos disponibles.'
+      : state === 'complete'
+        ? 'No identificamos acciones prioritarias dentro del alcance de esta revisión.'
+        : evaluation?.evaluated === 0
+          ? 'No pudimos comprobar controles puntuables para identificar acciones prioritarias.'
+          : 'No identificamos acciones prioritarias entre los puntos comprobados. Hay otros puntos que no pudimos verificar.';
+    appendTextElement(diagnosticPriorities, 'p', description);
     return;
   }
 
@@ -344,30 +351,45 @@ const renderCommercialOffer = (priorities) => {
   correctionUnavailable.hidden = !hasPriorities || planAvailable;
 };
 
-const renderScoreCoverage = (diagnostic) => {
-  const assessment = window.MininodePrivacyScorePresentation?.assess(diagnostic);
-  // An unavailable or incompatible catalog must never be treated as complete.
-  const state = assessment?.state || 'unverified';
+const renderScoreCoverage = (diagnostic, isSaved) => {
+  const assessment = window.MininodePrivacyScorePresentation?.assess(diagnostic)
+    || { state: 'unverified', score: diagnostic.score };
+  const state = assessment.state;
   const score = diagnostic.score;
-  privacyScore.className = 'privacy-score' + (state === 'limited' ? ' privacy-score--limited' : '');
+
+  // Reset all display attributes before rendering a new or saved snapshot.
+  privacyScore.className = 'privacy-score';
+  scoreCaption.textContent = '';
+  scoreCaption.hidden = true;
+  scoreContext.textContent = '';
+  scoreContext.hidden = true;
+  scoreScale.textContent = 'de 100';
   diagnosticScoreAlert.textContent = '';
   diagnosticScoreAlert.hidden = true;
 
   if (state === 'unverified') {
+    privacyScore.className = 'privacy-score privacy-score--historical';
     scoreValue.textContent = score;
-    scoreStatus.textContent = 'Diagnóstico anterior';
-    diagnosticCoverage.textContent =
-      'No contamos con información suficiente para verificar la cobertura de este diagnóstico anterior.';
+    scoreStatus.textContent = 'Cobertura no verificable';
+    scoreCaption.textContent = 'Puntuación registrada';
+    scoreCaption.hidden = false;
+    scoreContext.textContent = isSaved ? 'Referencia histórica' : 'Solo referencia';
+    scoreContext.hidden = false;
+    diagnosticCoverage.textContent = isSaved
+      ? 'Esta revisión fue guardada, pero no contamos con información suficiente para verificar su cobertura con las reglas actuales.'
+      : 'No contamos con información suficiente para verificar la cobertura de este resultado con las reglas actuales.';
     diagnosticCoverage.hidden = false;
     privacyScore.setAttribute('aria-label',
-      'Privacy Score histórico: ' + score + ' de 100. Cobertura no verificable.');
-    return;
+      'Puntuación registrada: ' + score + ' de 100. Cobertura no verificable. No se asigna nivel de preparación.');
+    return assessment;
   }
 
   const countText = assessment.evaluated + ' de ' + assessment.applicable +
     ' controles puntuables aplicables evaluados.';
   if (state === 'limited') {
+    privacyScore.className = 'privacy-score privacy-score--limited';
     scoreValue.textContent = '—';
+    scoreScale.textContent = 'Sin nota';
     scoreStatus.textContent = 'Evaluación limitada';
     const reason = assessment.applicable === 0
       ? 'No hubo controles puntuables aplicables para presentar una nota.'
@@ -380,10 +402,13 @@ const renderScoreCoverage = (diagnostic) => {
       ' Esto no significa que el sitio incumpla por la evidencia faltante.';
     diagnosticCoverage.hidden = false;
     privacyScore.setAttribute('aria-label',
-      'Privacy Score no destacado: evaluación limitada. ' + countText);
+      'Sin nota: evaluación limitada. ' + countText);
   } else if (state === 'partial') {
+    privacyScore.className = 'privacy-score privacy-score--partial';
     scoreValue.textContent = score;
     scoreStatus.textContent = 'Evaluación parcial';
+    scoreContext.textContent = 'Orientativo';
+    scoreContext.hidden = false;
     diagnosticCoverage.textContent = countText +
       ' El Score es orientativo y refleja solo los controles comprobados.' +
       (assessment.sensitive
@@ -412,6 +437,7 @@ const renderScoreCoverage = (diagnostic) => {
       '. Revisa las acciones prioritarias.';
     diagnosticScoreAlert.hidden = false;
   }
+  return assessment;
 };
 
 const renderDiagnostic = (diagnostic, websiteUrl) => {
@@ -448,7 +474,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderAvailability.hidden = false;
   orderValidity.hidden = false;
   orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
-  renderScoreCoverage(diagnostic);
+  const scoreAssessment = renderScoreCoverage(diagnostic, isSaved);
   diagnosticScope.textContent = (Number.isFinite(pagesAnalyzed)
     ? `${pagesAnalyzed} ${pagesAnalyzed === 1 ? 'página pública relevante analizada' : 'páginas públicas relevantes analizadas'}`
     : 'Muestra acotada de páginas públicas relevantes') +
@@ -456,7 +482,7 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
       ? '. Alcance del rastreo limitado; pueden existir páginas sin revisar.'
       : '');
   renderAreasAndControls(diagnostic.controls);
-  renderPriorities(diagnostic.priorities);
+  renderPriorities(diagnostic.priorities, scoreAssessment);
   latestRenderedPriorities = diagnostic.priorities;
   renderCommercialOffer(diagnostic.priorities);
   const hasOffer = !correctionOffer.hidden;
