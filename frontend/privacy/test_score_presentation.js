@@ -93,6 +93,7 @@ for (const [score, expected] of [
 }
 const previous = fixture();
 assert.equal(presentation.assess({ ...previous, framework_version: '0.11' }).state, 'unverified');
+assert.equal(presentation.assess({ ...previous, framework_version: '0.11' }).label, 'Cobertura no verificable');
 assert.equal(presentation.assess({ ...previous, controls: null }).state, 'unverified');
 assert.equal(presentation.assess({ ...previous, applicable_controls: 14 }).state, 'unverified');
 assert.equal(presentation.assess({ ...previous, coverage: 40 }).state, 'unverified');
