@@ -212,7 +212,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("claimSuccessResult.href = `/privacy/?workspace_site_id=", account)
         self.assertIn("&view=latest`;", account)
         self.assertIn("if (claim.intent === 'activate')", account)
-        self.assertIn("renderPriorities(diagnostic.priorities)", APP)
+        self.assertIn("renderPriorities(diagnostic.priorities, scoreAssessment)", APP)
         self.assertIn("renderCommercialOffer(diagnostic.priorities)", APP)
         self.assertNotIn("payment_confirmed", account)
 
