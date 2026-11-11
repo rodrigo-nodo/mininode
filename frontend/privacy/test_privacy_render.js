@@ -116,6 +116,11 @@ assert.equal(elements.get('score-context').textContent, 'Orientativo');
 assert.equal(elements.get('score-context').hidden, false);
 assert.match(elements.get('diagnostic-coverage').textContent, /11 de 14 controles puntuables aplicables/);
 assert.equal(elements.get('diagnostic-areas').children.length, 5);
+const renderedAreas = elements.get('diagnostic-areas').children;
+assert.deepEqual(renderedAreas.map((area) =>
+  area.children.filter((child) => child.className?.split(' ').includes('privacy-state')).length),
+[1, 1, 1, 1, 1]);
+assert.equal(renderedAreas[0].children[2].className, 'privacy-area__partial');
 const areaButtons = elements.get('diagnostic-areas').children.map((area) => area.children[0]);
 assert.equal(areaButtons.every((button) => button.tagName === 'BUTTON' && button.type === 'button'), true);
 assert.deepEqual(areaButtons.map((button) => button.children[1].textContent), ['ⓘ', 'ⓘ', 'ⓘ', 'ⓘ', 'ⓘ']);
