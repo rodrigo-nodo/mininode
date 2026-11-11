@@ -401,15 +401,22 @@
 .privacy-areas {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 14px;
 }
 
 .privacy-area {
+  align-content: start;
+  align-items: center;
   border: 1px solid var(--border);
   border-radius: 14px;
+  column-gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 92px;
   min-width: 0;
   padding: 13px;
+  row-gap: 6px;
 }
 
 .privacy-area__info,
@@ -428,7 +435,9 @@
   font-size: .92rem;
   gap: 5px;
   margin: -8px;
+  max-width: 100%;
   min-height: 40px;
+  min-width: 0;
   overflow-wrap: anywhere;
   padding: 8px;
   text-align: left;
@@ -453,14 +462,22 @@
 }
 
 .privacy-area .privacy-state {
-  margin-top: 9px;
+  font-size: .72rem;
+  font-weight: 700;
+  justify-self: end;
+  margin: 0;
+  max-width: 132px;
+  padding: 4px 7px;
+  text-align: center;
+  white-space: normal;
 }
 
 .privacy-area__partial {
   color: var(--muted);
   display: block;
   font-size: .78rem;
-  margin-top: 6px;
+  grid-column: 1 / -1;
+  margin-top: 0;
 }
 
 .privacy-state {
@@ -1006,6 +1023,12 @@
 
 body.privacy-modal-open {
   overflow: hidden;
+}
+
+@media (max-width: 900px) and (min-width: 721px) {
+  .privacy-areas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
