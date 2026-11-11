@@ -25,7 +25,7 @@
     RANGES.find((range) => score >= range.min && score <= range.max)?.label || 'Resultado no verificable';
 
   const unverified = (score) => ({
-    state: 'unverified', score, label: 'Diagnóstico anterior', evaluated: null,
+    state: 'unverified', score, label: 'Cobertura no verificable', evaluated: null,
     applicable: null, sensitive: false, critical: [],
   });
 
