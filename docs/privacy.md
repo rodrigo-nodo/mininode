@@ -247,7 +247,10 @@ de riesgo elevado cuando la evidencia pública no permite evitar falsos positivo
 
 ## Privacy Web: presentación de Score y cobertura en DEV — PW-QA-01
 
-**Implementación candidata DEV (pendiente de CI, revisión independiente y QA funcional).**
+**Estado:** reglas de suficiencia integradas en DEV mediante PR #442 (CI y
+Reviewer PASS). La presente revisión de jerarquía UX está acordada como
+contrato de producto; requiere CI, validación visual del PO y merge autorizado
+en su propio PR. No declarar todavía PASS funcional de esta revisión.
 El frontend presenta los resultados del backend sin recalcular ni modificar
 el Privacy Score `0.3`, sus pesos, `status`, controles, API o snapshots.
 El catálogo `controls.json` framework `0.13` sigue siendo la fuente de
@@ -287,13 +290,77 @@ encabezado y los hallazgos confirmados se muestran por separado.
 El resultado `partial` de impacto muy alto conserva su recomendación,
 pero no activa la sustitución del encabezado.
 
-Los diagnósticos anteriores con framework/versiones incompatibles, detalle
-ausente, o conteos inconsistentes conservan su Score almacenado y muestran
-«No contamos con información suficiente para verificar la cobertura de
-este diagnóstico anterior». No se afirma «Completa», no se reclasifican
-sus resultados ni se altera el registro histórico. `scope.limited`
-se muestra como advertencia del rastreo **independiente** de la
-suficiencia de controles.
+Las revisiones con versiones incompatibles, detalle ausente o conteos
+inconsistentes conservan su Score almacenado y muestran **«Cobertura no
+verificable»** como estado principal, no «Diagnóstico anterior» (esa etiqueta
+confundía antigüedad con verificabilidad). La puntuación aparece como
+**«Puntuación registrada»**, de protagonismo visual secundario; en resultados
+guardados se indica **«Referencia histórica»**. No se asigna nivel de
+preparación y no se altera el registro. `scope.limited` se muestra como
+advertencia del rastreo **independiente** de la suficiencia de controles.
+
+### Matriz UX aprobada — preparación × evaluación (11-nov-2026)
+
+**Dimensiones distintas:**
+
+- **Nivel de preparación:** Inicial (0–39), En desarrollo (40–69),
+  Avanzada (70–84), Destacada (85–100). Describe el rango de un Score
+  calculado. Solo se muestra como conclusión visible con evidencia **Completa**
+  y sin hallazgos de impacto muy alto `not_detected` que deban reemplazarla.
+- **Estado de evaluación:** Completa, Parcial y Limitada son estados de
+  suficiencia. **Cobertura no verificable** es una condición especial de
+  compatibilidad/datos, **no** un quinto nivel de preparación ni un cuarto
+  estado metodológico comparable.
+
+| Estado de evaluación | 0–39 · Inicial | 40–69 · En desarrollo | 70–84 · Avanzada | 85–100 · Destacada |
+| --- | --- | --- | --- | --- |
+| **Completa** | Preparación inicial | Preparación en desarrollo | Preparación avanzada | Preparación destacada |
+| **Parcial** | Evaluación parcial + Score orientativo | Evaluación parcial + Score orientativo | Evaluación parcial + Score orientativo | Evaluación parcial + Score orientativo |
+| **Limitada** | Sin nivel ni Score destacado | Sin nivel ni Score destacado | Sin nivel ni Score destacado | Sin nivel ni Score destacado |
+| **Cobertura no verificable** | Sin nivel; Score guardado secundario | Sin nivel; Score guardado secundario | Sin nivel; Score guardado secundario | Sin nivel; Score guardado secundario |
+
+La columna representa el rango **numérico calculado o almacenado**, no
+necesariamente un nivel de preparación que se deba comunicar. Son **16
+combinaciones teóricas**, no 16 encabezados distintos.
+
+**Prioridad visual y copy:**
+
+- **Completa:** nivel aprobado como encabezado y Score destacado; comunicar
+  controles puntuables aplicables evaluados. Un `not_detected` confirmado
+  de impacto muy alto sustituye el encabezado por
+  **«Hay aspectos importantes por corregir»** y muestra el hallazgo.
+- **Parcial:** encabezado **«Evaluación parcial»**; Score visible marcado
+  **«Orientativo»**, **sin** mostrar «Preparación destacada» u otro nivel
+  como conclusión. Explicar cobertura y sensibilidad si corresponde.
+- **Limitada:** encabezado **«Evaluación limitada»**; número técnico no
+  destacado (se muestra «—» y «Sin nota»), manteniendo resultados útiles.
+- **Cobertura no verificable:** encabezado del mismo nombre, sin nivel;
+  puntuación original secundaria («Puntuación registrada» y, para una revisión
+  guardada, «Referencia histórica»). No inventar cobertura ni recalcular.
+- **Sin prioridades, Completa:** «No identificamos acciones prioritarias
+  dentro del alcance de esta revisión.»
+- **Sin prioridades, Parcial o Limitada con evaluables:** «No identificamos
+  acciones prioritarias entre los puntos comprobados. Hay otros puntos que
+  no pudimos verificar.»
+- **Sin evaluables:** «No pudimos comprobar controles puntuables para
+  identificar acciones prioritarias.»
+- **Sin prioridades, Cobertura no verificable:** «Esta revisión no contiene
+  acciones prioritarias identificadas. Su cobertura no puede verificarse
+  con los datos disponibles.»
+- La cabecera del listado se mantiene neutral **«Acciones prioritarias»**
+  cuando está vacío: no se afirma que no hay problemas. El subtítulo de
+  alcance dice **«Consideramos 21 puntos de privacidad en 5 áreas»**, porque
+  considerar un punto no equivale a haberlo evaluado.
+- Todas las pantallas mantienen la estructura diagnóstico → resultado →
+  evidencia → acciones → detalle. En móvil la puntuación histórica no
+  recupera protagonismo. Los hallazgos confirmados siguen visibles aun con
+  evidencia Parcial o Limitada.
+
+**Frontera del cambio UX:** no se modifica `scoring.json` 0.3, la
+clasificación técnica `status`, contratos, controles, `priorities` ni
+snapshots existentes. Las reglas de 20% y los límites 40/70/85 se mantienen;
+la UX de cuatro niveles es una hipótesis de comunicación que se evaluará en
+pilotos, no una escala de cumplimiento legal validada científicamente.
 
 QA y gobierno: casos predefinidos PW-QA-01 / UX, comprobación de bordes y
 consistencia frontend/backend en CI, y **QA independiente posterior con
