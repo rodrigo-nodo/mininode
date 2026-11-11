@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-ux2"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -97,6 +97,28 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", CSS)
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
+
+    def test_area_cards_have_consistent_status_and_responsive_layout(self):
+        # Cards use the same two-column interior at every viewport width.
+        self.assertRegex(
+            CSS, r"(?s)\\.privacy-area \\{[^}]*display: grid;[^}]*"
+                 r"grid-template-columns: minmax\\(0, 1fr\\) auto;",
+        )
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", CSS)
+        self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
+        mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
+        self.assertRegex(
+            mobile_css, r"(?s)\\.privacy-areas \\{[^}]*grid-template-columns: 1fr;",
+        )
+        self.assertRegex(
+            CSS, r"(?s)\\.privacy-area \\.privacy-state \\{[^}]*"
+                 r"justify-self: end;[^}]*margin: 0;",
+        )
+        self.assertRegex(
+            CSS, r"(?s)\\.privacy-area__partial \\{[^}]*"
+                 r"grid-column: 1 / -1;[^}]*margin-top: 0;",
+        )
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
         self.assertIn('app.js?v=pwqa01-ux2', HTML)
