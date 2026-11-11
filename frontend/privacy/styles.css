@@ -339,6 +339,22 @@
   padding: 10px 12px;
 }
 
+.privacy-result__alert {
+  border-left: 3px solid var(--color-warning, #a8691d);
+  color: var(--fg);
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+}
+
+.privacy-score--limited {
+  background: var(--color-primary-soft);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
 .privacy-areas-section,
 .privacy-actions {
   margin-top: 30px;

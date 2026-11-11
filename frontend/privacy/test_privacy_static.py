@@ -8,6 +8,7 @@ from pathlib import Path
 PRIVACY_DIR = Path(__file__).parent
 FRONTEND_DIR = PRIVACY_DIR.parent
 APP = (PRIVACY_DIR / "app.js").read_text(encoding="utf-8")
+SCORE_PRESENTATION = (PRIVACY_DIR / "score-presentation.js").read_text(encoding="utf-8")
 HTML = (PRIVACY_DIR / "index.html").read_text(encoding="utf-8")
 CSS = (PRIVACY_DIR / "styles.css").read_text(encoding="utf-8")
 DATA_HTML = (PRIVACY_DIR / "data" / "index.html").read_text(encoding="utf-8")
@@ -39,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
-            ("index.html", 'src="app.js?v=ux21-coverage-1"'),
+            ("index.html", 'src="app.js?v=pwqa01-1"'),
             ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=pw03-history-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
@@ -82,11 +83,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=ux21-coverage-1"', HTML)
+        self.assertIn('src="app.js?v=pwqa01-1"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=ux21-coverage-1"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-1"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -98,7 +99,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=ux21-coverage-1', HTML)
+        self.assertIn('app.js?v=pwqa01-1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -284,37 +285,32 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertTrue((FRONTEND_DIR / "functions" / "api" / "[[path]].js").is_file())
 
     def test_human_status_uses_backend_score_boundaries(self):
-        function = re.search(
-            r"const getHumanStatus = \(score\) => \{.*?\n\};",
-            APP,
-            re.DOTALL,
-        ).group()
         boundaries = [0, 39, 40, 69, 70, 84, 85, 100]
-        script = f"{function}\nconsole.log(JSON.stringify({boundaries}.map(getHumanStatus)));"
+        source = ("globalThis.window = {};\n" + SCORE_PRESENTATION +
+                  "\nconsole.log(JSON.stringify(" +
+                  f"{boundaries}.map(window.MininodePrivacyScorePresentation.labelForScore)));" )
         result = subprocess.run(
-            ["node", "-e", script],
+            ["node", "-e", source],
             check=True,
             capture_output=True,
             text=True,
         )
-
         self.assertEqual(json.loads(result.stdout), [
-            "Hay aspectos importantes por mejorar",
-            "Hay aspectos importantes por mejorar",
-            "Hay aspectos que puedes mejorar",
-            "Hay aspectos que puedes mejorar",
-            "Bien",
-            "Bien",
-            "Bien",
-            "Bien",
+            "Preparación inicial",
+            "Preparación inicial",
+            "Preparación en desarrollo",
+            "Preparación en desarrollo",
+            "Preparación avanzada",
+            "Preparación avanzada",
+            "Preparación destacada",
+            "Preparación destacada",
         ])
 
     def test_human_status_does_not_interpret_backend_status_text(self):
-        function = APP.split("const getHumanStatus", 1)[1].split("const renderPriorities", 1)[0]
-
-        self.assertNotIn("status", function)
-        self.assertNotIn("includes", function)
-        self.assertIn("getHumanStatus(score)", APP)
+        self.assertNotIn("diagnostic.status", APP)
+        self.assertNotIn("diagnostic.status", SCORE_PRESENTATION)
+        self.assertIn("scoreStatus.textContent = assessment.label;", APP)
+        self.assertIn("labelForScore(score)", SCORE_PRESENTATION)
 
     def test_configures_the_complete_matrix_in_five_areas(self):
         config = APP.split("const privacyAreas = [", 1)[1].split("const resultLabels", 1)[0]
@@ -384,7 +380,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("21 puntos en 5 áreas", HTML)
         self.assertNotIn("19 puntos en 5 áreas", HTML)
         self.assertIn("renderScoreCoverage(diagnostic)", APP)
-        self.assertIn("Sin evidencia suficiente", APP)
+        self.assertIn("Evaluación limitada", APP)
         self.assertIn("Evaluación parcial", APP)
         self.assertNotIn("MutationObserver", APP)
 

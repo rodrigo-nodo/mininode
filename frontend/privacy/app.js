@@ -21,6 +21,7 @@ const privacyScore = document.querySelector('#privacy-score');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
 const diagnosticCoverage = document.querySelector('#diagnostic-coverage');
+const diagnosticScoreAlert = document.querySelector('#diagnostic-score-alert');
 const diagnosticScope = document.querySelector('#diagnostic-scope');
 const diagnosticAreas = document.querySelector('#diagnostic-areas');
 const diagnosticControls = document.querySelector('#diagnostic-controls');
@@ -265,16 +266,6 @@ const renderAreasAndControls = (controls) => {
   });
 };
 
-const getHumanStatus = (score) => {
-  if (score >= 70) {
-    return 'Bien';
-  }
-  if (score >= 40) {
-    return 'Hay aspectos que puedes mejorar';
-  }
-  return 'Hay aspectos importantes por mejorar';
-};
-
 const renderPriorities = (priorities) => {
   diagnosticPriorities.replaceChildren();
   const visiblePriorities = (Array.isArray(priorities) ? priorities : [])
@@ -354,43 +345,73 @@ const renderCommercialOffer = (priorities) => {
 };
 
 const renderScoreCoverage = (diagnostic) => {
+  const assessment = window.MininodePrivacyScorePresentation?.assess(diagnostic);
+  // An unavailable or incompatible catalog must never be treated as complete.
+  const state = assessment?.state || 'unverified';
   const score = diagnostic.score;
-  const humanStatus = getHumanStatus(score);
-  const evaluated = diagnostic.evaluated_controls;
-  const applicable = diagnostic.applicable_controls;
-  const hasCounts = Number.isInteger(evaluated) && Number.isInteger(applicable)
-    && applicable >= 0 && evaluated >= 0 && evaluated <= applicable;
-  const hasCoverage = Number.isFinite(diagnostic.coverage)
-    && diagnostic.coverage >= 0 && diagnostic.coverage <= 100;
-  const noEvidence = hasCounts && evaluated === 0;
-  const partial = hasCounts ? evaluated < applicable : (hasCoverage && diagnostic.coverage < 100);
+  privacyScore.className = 'privacy-score' + (state === 'limited' ? ' privacy-score--limited' : '');
+  diagnosticScoreAlert.textContent = '';
+  diagnosticScoreAlert.hidden = true;
 
-  if (noEvidence) {
-    scoreValue.textContent = '—';
-    scoreStatus.textContent = 'Sin evidencia suficiente';
-    diagnosticCoverage.textContent = applicable === 0
-      ? 'No hubo controles puntuables aplicables para presentar un resultado.'
-      : 'No pudimos evaluar los controles aplicables. No es una calificación negativa del sitio.';
+  if (state === 'unverified') {
+    scoreValue.textContent = score;
+    scoreStatus.textContent = 'Diagnóstico anterior';
+    diagnosticCoverage.textContent =
+      'No contamos con información suficiente para verificar la cobertura de este diagnóstico anterior.';
     diagnosticCoverage.hidden = false;
-    privacyScore.setAttribute('aria-label', 'Privacy Score no disponible por falta de evidencia evaluable.');
+    privacyScore.setAttribute('aria-label',
+      'Privacy Score histórico: ' + score + ' de 100. Cobertura no verificable.');
     return;
   }
 
-  scoreValue.textContent = score;
-  scoreStatus.textContent = partial ? 'Evaluación parcial' : humanStatus;
-  if (partial) {
-    const detail = hasCounts
-      ? `Pudimos evaluar ${evaluated} de ${applicable} controles aplicables. ` : '';
-    diagnosticCoverage.textContent = detail
-      + 'El puntaje refleja solo lo que pudimos comprobar; otros aspectos quedaron sin verificar.';
-  } else if (!hasCounts && !hasCoverage) {
-    diagnosticCoverage.textContent = 'No hay información de cobertura disponible para este diagnóstico.';
+  const countText = assessment.evaluated + ' de ' + assessment.applicable +
+    ' controles puntuables aplicables evaluados.';
+  if (state === 'limited') {
+    scoreValue.textContent = '—';
+    scoreStatus.textContent = 'Evaluación limitada';
+    const reason = assessment.applicable === 0
+      ? 'No hubo controles puntuables aplicables para presentar una nota.'
+      : assessment.evaluated === 0
+        ? 'No pudimos evaluar controles puntuables aplicables.'
+        : assessment.essentialMissing
+          ? 'No pudimos comprobar suficientemente la política de privacidad.'
+          : 'Falta evidencia relevante para destacar una nota general.';
+    diagnosticCoverage.textContent = countText + ' ' + reason +
+      ' Esto no significa que el sitio incumpla por la evidencia faltante.';
+    diagnosticCoverage.hidden = false;
+    privacyScore.setAttribute('aria-label',
+      'Privacy Score no destacado: evaluación limitada. ' + countText);
+  } else if (state === 'partial') {
+    scoreValue.textContent = score;
+    scoreStatus.textContent = 'Evaluación parcial';
+    diagnosticCoverage.textContent = countText +
+      ' El Score es orientativo y refleja solo los controles comprobados.' +
+      (assessment.sensitive
+        ? ' El nivel de preparación podría cambiar al evaluar los controles pendientes.'
+        : '');
+    diagnosticCoverage.hidden = false;
+    privacyScore.setAttribute('aria-label', 'Privacy Score orientativo: ' + score +
+      ' de 100. Evaluación parcial. ' + countText +
+      (assessment.sensitive ? ' Interpretación sensible a la evidencia pendiente.' : ''));
   } else {
-    diagnosticCoverage.textContent = '';
+    scoreValue.textContent = score;
+    scoreStatus.textContent = assessment.label;
+    diagnosticCoverage.textContent =
+      'Cobertura completa de los controles aplicables: ' + countText +
+      ' No equivale a una evaluación de todo el sitio ni a cumplimiento legal.';
+    diagnosticCoverage.hidden = false;
+    privacyScore.setAttribute('aria-label', 'Privacy Score estimado: ' + score +
+      ' de 100. ' + assessment.label + '. ' + countText);
   }
-  diagnosticCoverage.hidden = !diagnosticCoverage.textContent;
-  privacyScore.setAttribute('aria-label',
-    `Privacy Score estimado: ${score} de 100. ${partial ? 'Evaluación parcial' : `Estado: ${humanStatus}`}.`);
+
+  if (assessment.critical.length > 0) {
+    const names = assessment.critical.map((code) =>
+      window.MininodePrivacyControlUX?.name?.(code, code) || code);
+    diagnosticScoreAlert.textContent =
+      'Hallazgo importante confirmado: ' + names.join('; ') +
+      '. Revisa las acciones prioritarias.';
+    diagnosticScoreAlert.hidden = false;
+  }
 };
 
 const renderDiagnostic = (diagnostic, websiteUrl) => {
@@ -428,9 +449,12 @@ const renderDiagnostic = (diagnostic, websiteUrl) => {
   orderValidity.hidden = false;
   orderAvailability.textContent = 'Si es necesario, actualizaremos el diagnóstico antes de continuar.';
   renderScoreCoverage(diagnostic);
-  diagnosticScope.textContent = Number.isFinite(pagesAnalyzed)
+  diagnosticScope.textContent = (Number.isFinite(pagesAnalyzed)
     ? `${pagesAnalyzed} ${pagesAnalyzed === 1 ? 'página pública relevante analizada' : 'páginas públicas relevantes analizadas'}`
-    : 'Muestra acotada de páginas públicas relevantes';
+    : 'Muestra acotada de páginas públicas relevantes') +
+    (diagnostic.scope?.limited === true
+      ? '. Alcance del rastreo limitado; pueden existir páginas sin revisar.'
+      : '');
   renderAreasAndControls(diagnostic.controls);
   renderPriorities(diagnostic.priorities);
   latestRenderedPriorities = diagnostic.priorities;

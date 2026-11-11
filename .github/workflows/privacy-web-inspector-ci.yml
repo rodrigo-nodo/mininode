@@ -57,5 +57,6 @@ jobs:
       - name: Run frontend runtime regressions
         run: |
           node frontend/privacy/test_privacy_render.js
+          node frontend/privacy/test_score_presentation.js
           node frontend/privacy/test_activation_preparation.mjs
           node frontend/privacy/test_priority_ux.mjs
