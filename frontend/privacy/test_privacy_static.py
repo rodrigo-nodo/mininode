@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-areas1"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas2"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -99,18 +99,22 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_area_cards_have_consistent_status_and_responsive_layout(self):
-        # One stable two-column interior at every viewport width.
+        # Five cards fill both desktop rows, without an empty third slot.
+        self.assertIn("grid-template-columns: repeat(6, minmax(0, 1fr));", CSS)
         self.assertRegex(
-            CSS, r"(?s)\.privacy-area \{[^}]*display: grid;[^}]*"
-                 r"grid-template-columns: minmax\(0, 1fr\) auto;",
+            CSS, r"(?s)\.privacy-area \{[^}]*align-content: center;[^}]*"
+                 r"grid-column: span 2;[^}]*min-height: 72px;",
         )
-        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", CSS)
+        self.assertIn(".privacy-area:nth-child(n+4) {", CSS)
+        self.assertIn("grid-column: span 3;", CSS)
         self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
+        self.assertIn(".privacy-area:last-child:nth-child(odd)", CSS)
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
             mobile_css, r"(?s)\.privacy-areas \{[^}]*grid-template-columns: 1fr;",
         )
+        self.assertIn("align-items: stretch;", mobile_css)
         self.assertRegex(
             CSS, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
                  r"justify-self: end;[^}]*margin: 0;",
