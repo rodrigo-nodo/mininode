@@ -259,6 +259,10 @@
   margin: 7px 0;
 }
 
+.privacy-score [hidden] {
+  display: none;
+}
+
 .privacy-score__caption {
   font-size: .8rem;
   line-height: 1.3;
