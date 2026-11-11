@@ -352,6 +352,7 @@
 
 .privacy-result__intro {
   flex: 1;
+  min-width: 0;
 }
 
 .privacy-result__status {
@@ -401,22 +402,27 @@
 .privacy-areas {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 14px;
 }
 
 .privacy-area {
-  align-content: start;
+  align-content: center;
   align-items: center;
   border: 1px solid var(--border);
   border-radius: 14px;
   column-gap: 8px;
   display: grid;
+  grid-column: span 2;
   grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 92px;
+  min-height: 72px;
   min-width: 0;
   padding: 13px;
   row-gap: 6px;
+}
+
+.privacy-area:nth-child(n+4) {
+  grid-column: span 3;
 }
 
 .privacy-area__info,
@@ -1029,6 +1035,15 @@ body.privacy-modal-open {
   .privacy-areas {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+  }
+
+  .privacy-area:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1058,8 +1073,18 @@ body.privacy-modal-open {
     grid-template-columns: 1fr;
   }
 
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+  }
+
   .privacy-result__top {
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .privacy-result__intro {
+    width: 100%;
   }
 
   .privacy-score,
