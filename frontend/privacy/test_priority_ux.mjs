@@ -7,7 +7,7 @@ import vm from 'node:vm';
 // of unrelated commercial/auth flows on the diagnosis page.
 const app = readFileSync(new URL('./app.js', import.meta.url), 'utf8');
 const catalog = readFileSync(new URL('./control-ux.js', import.meta.url), 'utf8');
-const startMarker = 'const renderPriorities = (priorities) => {';
+const startMarker = 'const renderPriorities = (priorities, evaluation) => {';
 const endMarker = '\nconst resetCommercialState = () => {';
 const start = app.indexOf(startMarker);
 const end = app.indexOf(endMarker, start);
