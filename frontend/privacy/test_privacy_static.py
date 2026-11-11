@@ -40,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
-            ("index.html", 'src="app.js?v=pwqa01-1"'),
+            ("index.html", 'src="app.js?v=pwqa01-ux2"'),
             ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=pw03-history-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
@@ -80,14 +80,14 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('id="actions-title">Acciones prioritarias</h3>', HTML)
         self.assertIn("const actionsTitle = document.querySelector('#actions-title');", APP)
         self.assertIn("const count = visiblePriorities.length;", APP)
-        self.assertIn("count === 0 ? 'Sin acciones prioritarias'", APP)
+        self.assertIn("count === 0 ? 'Acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=pwqa01-1"', HTML)
+        self.assertIn('src="app.js?v=pwqa01-ux2"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-1"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-ux2"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -99,7 +99,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn('class="privacy-offer-details"', summary)
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=pwqa01-1', HTML)
+        self.assertIn('app.js?v=pwqa01-ux2', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -379,7 +379,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("Ver qué revisamos", HTML)
         self.assertIn("21 puntos en 5 áreas", HTML)
         self.assertNotIn("19 puntos en 5 áreas", HTML)
-        self.assertIn("renderScoreCoverage(diagnostic)", APP)
+        self.assertIn("renderScoreCoverage(diagnostic, isSaved)", APP)
         self.assertIn("Evaluación limitada", APP)
         self.assertIn("Evaluación parcial", APP)
         self.assertNotIn("MutationObserver", APP)
