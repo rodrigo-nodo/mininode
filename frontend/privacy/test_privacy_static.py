@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-areas2"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas3"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -97,6 +97,18 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", CSS)
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
+
+    def test_score_box_aligns_with_heading_not_coverage_height(self):
+        # Long coverage summaries must not vertically push the score box down.
+        self.assertRegex(
+            CSS, r"(?s)\\.privacy-result__top \\{[^}]*"
+                 r"align-items: flex-start;[^}]*display: flex;",
+        )
+        mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
+        self.assertRegex(
+            mobile_css, r"(?s)\\.privacy-result__top \\{[^}]*"
+                        r"align-items: stretch;[^}]*flex-direction: column;",
+        )
 
     def test_area_cards_have_consistent_status_and_responsive_layout(self):
         # Five cards fill both desktop rows, without an empty third slot.
