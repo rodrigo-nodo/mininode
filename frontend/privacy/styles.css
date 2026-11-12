@@ -1100,6 +1100,26 @@ body.privacy-modal-open {
     grid-column: auto;
   }
 
+  /* Wrap only if name and badge genuinely cannot share the card width. */
+  .privacy-area {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .privacy-area__info {
+    flex: 0 1 auto;
+  }
+
+  .privacy-area .privacy-state {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .privacy-area__partial {
+    flex-basis: 100%;
+  }
+
   .privacy-result__top {
     align-items: stretch;
     flex-direction: column;
@@ -1144,20 +1164,6 @@ body.privacy-modal-open {
   }
 }
 
-
-/* Very narrow phones: keep the label readable instead of squeezing it
-   next to a long status badge. */
-@media (max-width: 400px) {
-  .privacy-area {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: start;
-    row-gap: 1px;
-  }
-
-  .privacy-area .privacy-state {
-    justify-self: start;
-  }
-}
 
 /* One decision area: paid activation first, free account save second. */
 .privacy-next-steps { margin-top: 1.75rem; }
