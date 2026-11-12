@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-areas5"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas6"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -147,16 +147,22 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
         self.assertIn(".privacy-area:last-child:nth-child(odd)", CSS)
-        # Mobile: one column; stack long status labels on very narrow phones.
+        # Mobile: one card per row; keep name left and status right while they fit.
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
             mobile_css, r"(?s)\.privacy-areas \{[^}]*grid-template-columns: 1fr;",
         )
-        narrow_css = CSS.split("@media (max-width: 400px)", 1)[1]
         self.assertRegex(
-            narrow_css, r"(?s)\.privacy-area \{[^}]*"
-                        r"grid-template-columns: minmax\(0, 1fr\);",
+            mobile_css, r"(?s)\.privacy-area \{[^}]*display: flex;[^}]*"
+                        r"flex-wrap: wrap;[^}]*justify-content: space-between;",
         )
+        self.assertRegex(
+            mobile_css, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
+                        r"flex: 0 0 auto;[^}]*margin-left: auto;",
+        )
+        self.assertIn("flex-basis: 100%;", mobile_css)
+        # Do not force vertical badge stacking based on viewport width alone.
+        self.assertNotIn("@media (max-width: 400px)", CSS)
         # One badge, right-aligned within the medium/tablet cards; neutral note below.
         self.assertRegex(
             CSS, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
