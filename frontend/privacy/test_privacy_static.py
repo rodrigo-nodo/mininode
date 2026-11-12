@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-ux2"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas6"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -97,6 +97,81 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", CSS)
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
+
+    def test_score_and_coverage_form_clear_full_width_sections(self):
+        # Place the score alongside the diagnosis, not beside a long coverage disclaimer.
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-result__top \{[^}]*"
+                 r"align-items: center;[^}]*display: flex;",
+        )
+        self.assertIn("min-width: 136px;", CSS)
+        intro = HTML.split('<div class="privacy-result__intro">', 1)[1].split('</div>', 1)[0]
+        self.assertNotIn('id="diagnostic-coverage"', intro)
+        self.assertNotIn('id="diagnostic-score-alert"', intro)
+        score_pos = HTML.index('id="privacy-score"')
+        coverage_pos = HTML.index('id="diagnostic-coverage"')
+        alert_pos = HTML.index('id="diagnostic-score-alert"')
+        meta_pos = HTML.index('class="privacy-meta"')
+        self.assertLess(score_pos, coverage_pos)
+        self.assertLess(coverage_pos, alert_pos)
+        self.assertLess(alert_pos, meta_pos)
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-result__coverage \{[^}]*margin: 16px 0 0;",
+        )
+        mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
+        self.assertRegex(
+            mobile_css, r"(?s)\.privacy-result__top \{[^}]*"
+                        r"align-items: stretch;[^}]*flex-direction: column;",
+        )
+
+    def test_area_cards_have_consistent_status_and_responsive_layout(self):
+        # Medium desktop: compact 3 + 2 with no empty bottom slot.
+        self.assertIn("grid-template-columns: repeat(6, minmax(0, 1fr));", CSS)
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-areas \{[^}]*gap: 8px;[^}]*margin-top: 12px;",
+        )
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-area \{[^}]*grid-column: span 2;[^}]*"
+                 r"min-height: 58px;[^}]*padding: 9px 12px;",
+        )
+        self.assertIn(".privacy-area:nth-child(n+4) {", CSS)
+        self.assertIn("grid-column: span 3;", CSS)
+        # Wide desktop: all five visible in one row, each badge on the second line.
+        wide_css = CSS.split("@media (min-width: 1200px)", 1)[1].split(
+            "@media (max-width: 900px)", 1
+        )[0]
+        self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", wide_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", wide_css)
+        self.assertIn("justify-self: start;", wide_css)
+        # Tablet: 2 columns and a full-width fifth card.
+        self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
+        self.assertIn(".privacy-area:last-child:nth-child(odd)", CSS)
+        # Mobile: one card per row; keep name left and status right while they fit.
+        mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
+        self.assertRegex(
+            mobile_css, r"(?s)\.privacy-areas \{[^}]*grid-template-columns: 1fr;",
+        )
+        self.assertRegex(
+            mobile_css, r"(?s)\.privacy-area \{[^}]*display: flex;[^}]*"
+                        r"flex-wrap: wrap;[^}]*justify-content: space-between;",
+        )
+        self.assertRegex(
+            mobile_css, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
+                        r"flex: 0 0 auto;[^}]*margin-left: auto;",
+        )
+        self.assertIn("flex-basis: 100%;", mobile_css)
+        # Do not force vertical badge stacking based on viewport width alone.
+        self.assertNotIn("@media (max-width: 400px)", CSS)
+        # One badge, right-aligned within the medium/tablet cards; neutral note below.
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
+                 r"justify-self: end;[^}]*margin: 0;",
+        )
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-area__partial \{[^}]*"
+                 r"grid-column: 1 / -1;[^}]*margin-top: 0;",
+        )
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
         self.assertIn('app.js?v=pwqa01-ux2', HTML)

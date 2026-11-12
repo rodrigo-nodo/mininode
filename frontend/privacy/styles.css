@@ -236,10 +236,10 @@
 .privacy-score {
   background: var(--privacy-primary-light);
   border: 1px solid #b9dadd;
-  border-radius: 18px;
+  border-radius: 16px;
   color: var(--privacy-primary-dark);
-  min-width: 148px;
-  padding: 14px 16px;
+  min-width: 136px;
+  padding: 12px 16px;
   text-align: center;
 }
 
@@ -254,9 +254,9 @@
 
 .privacy-score strong {
   display: block;
-  font-size: clamp(2.8rem, 8vw, 4rem);
+  font-size: clamp(2.8rem, 7vw, 3.5rem);
   line-height: 1;
-  margin: 7px 0;
+  margin: 5px 0;
 }
 
 .privacy-score [hidden] {
@@ -352,6 +352,7 @@
 
 .privacy-result__intro {
   flex: 1;
+  min-width: 0;
 }
 
 .privacy-result__status {
@@ -373,7 +374,7 @@
   color: var(--fg);
   font-size: .9rem;
   line-height: 1.5;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   padding: 10px 12px;
 }
 
@@ -400,16 +401,28 @@
 
 .privacy-areas {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin-top: 14px;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 12px;
 }
 
 .privacy-area {
+  align-content: center;
+  align-items: center;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
+  column-gap: 8px;
+  display: grid;
+  grid-column: span 2;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 58px;
   min-width: 0;
-  padding: 13px;
+  padding: 9px 12px;
+  row-gap: 3px;
+}
+
+.privacy-area:nth-child(n+4) {
+  grid-column: span 3;
 }
 
 .privacy-area__info,
@@ -425,12 +438,14 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: .92rem;
-  gap: 5px;
-  margin: -8px;
+  font-size: .9rem;
+  gap: 4px;
+  margin: -6px;
+  max-width: 100%;
   min-height: 40px;
+  min-width: 0;
   overflow-wrap: anywhere;
-  padding: 8px;
+  padding: 6px;
   text-align: left;
 }
 
@@ -453,14 +468,23 @@
 }
 
 .privacy-area .privacy-state {
-  margin-top: 9px;
+  font-size: .7rem;
+  font-weight: 700;
+  justify-self: end;
+  line-height: 1.2;
+  margin: 0;
+  max-width: 132px;
+  padding: 4px 7px;
+  text-align: center;
+  white-space: normal;
 }
 
 .privacy-area__partial {
   color: var(--muted);
   display: block;
-  font-size: .78rem;
-  margin-top: 6px;
+  font-size: .76rem;
+  grid-column: 1 / -1;
+  margin-top: 0;
 }
 
 .privacy-state {
@@ -1008,6 +1032,42 @@ body.privacy-modal-open {
   overflow: hidden;
 }
 
+/* Wide desktop: five equal cards with status on a consistent second line.
+   Medium screens retain the 3 + 2 arrangement to keep names legible. */
+@media (min-width: 1200px) {
+  .privacy-areas {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    min-height: 74px;
+    row-gap: 1px;
+  }
+
+  .privacy-area .privacy-state {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 900px) and (min-width: 721px) {
+  .privacy-areas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+  }
+
+  .privacy-area:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 720px) {
   .privacy-shell {
     padding-top: 12px;
@@ -1035,8 +1095,38 @@ body.privacy-modal-open {
     grid-template-columns: 1fr;
   }
 
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+  }
+
+  /* Wrap only if name and badge genuinely cannot share the card width. */
+  .privacy-area {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .privacy-area__info {
+    flex: 0 1 auto;
+  }
+
+  .privacy-area .privacy-state {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .privacy-area__partial {
+    flex-basis: 100%;
+  }
+
   .privacy-result__top {
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .privacy-result__intro {
+    width: 100%;
   }
 
   .privacy-score,
