@@ -101,12 +101,12 @@ class PrivacyResultStaticTests(unittest.TestCase):
     def test_score_box_aligns_with_heading_not_coverage_height(self):
         # Long coverage summaries must not vertically push the score box down.
         self.assertRegex(
-            CSS, r"(?s)\\.privacy-result__top \\{[^}]*"
+            CSS, r"(?s)\.privacy-result__top \{[^}]*"
                  r"align-items: flex-start;[^}]*display: flex;",
         )
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
-            mobile_css, r"(?s)\\.privacy-result__top \\{[^}]*"
+            mobile_css, r"(?s)\.privacy-result__top \{[^}]*"
                         r"align-items: stretch;[^}]*flex-direction: column;",
         )
 
