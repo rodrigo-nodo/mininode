@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-areas3"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-score4"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -98,11 +98,25 @@ class PrivacyResultStaticTests(unittest.TestCase):
         summary = HTML.split('class="privacy-next__summary"', 1)[1].split('class="privacy-next__action"', 1)[0]
         self.assertIn('class="privacy-offer-details"', summary)
 
-    def test_score_box_aligns_with_heading_not_coverage_height(self):
-        # Long coverage summaries must not vertically push the score box down.
+    def test_score_and_coverage_form_clear_full_width_sections(self):
+        # Place the score alongside the diagnosis, not beside a long coverage disclaimer.
         self.assertRegex(
             CSS, r"(?s)\.privacy-result__top \{[^}]*"
-                 r"align-items: flex-start;[^}]*display: flex;",
+                 r"align-items: center;[^}]*display: flex;",
+        )
+        self.assertIn("min-width: 136px;", CSS)
+        intro = HTML.split('<div class="privacy-result__intro">', 1)[1].split('</div>', 1)[0]
+        self.assertNotIn('id="diagnostic-coverage"', intro)
+        self.assertNotIn('id="diagnostic-score-alert"', intro)
+        score_pos = HTML.index('id="privacy-score"')
+        coverage_pos = HTML.index('id="diagnostic-coverage"')
+        alert_pos = HTML.index('id="diagnostic-score-alert"')
+        meta_pos = HTML.index('class="privacy-meta"')
+        self.assertLess(score_pos, coverage_pos)
+        self.assertLess(coverage_pos, alert_pos)
+        self.assertLess(alert_pos, meta_pos)
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-result__coverage \{[^}]*margin: 16px 0 0;",
         )
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
