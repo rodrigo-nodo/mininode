@@ -87,7 +87,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
-        self.assertIn('href="styles.css?v=pwqa01-score4"', HTML)
+        self.assertIn('href="styles.css?v=pwqa01-areas5"', HTML)
         self.assertIn('class="btn privacy-secondary privacy-choice-button"', HTML)
         self.assertEqual(HTML.count('class="btn privacy-secondary privacy-choice-button"'), 4)
         self.assertIn("#privacy-correction-offer .privacy-next", CSS)
@@ -125,22 +125,39 @@ class PrivacyResultStaticTests(unittest.TestCase):
         )
 
     def test_area_cards_have_consistent_status_and_responsive_layout(self):
-        # Five cards fill both desktop rows, without an empty third slot.
+        # Medium desktop: compact 3 + 2 with no empty bottom slot.
         self.assertIn("grid-template-columns: repeat(6, minmax(0, 1fr));", CSS)
         self.assertRegex(
-            CSS, r"(?s)\.privacy-area \{[^}]*align-content: center;[^}]*"
-                 r"grid-column: span 2;[^}]*min-height: 72px;",
+            CSS, r"(?s)\.privacy-areas \{[^}]*gap: 8px;[^}]*margin-top: 12px;",
+        )
+        self.assertRegex(
+            CSS, r"(?s)\.privacy-area \{[^}]*grid-column: span 2;[^}]*"
+                 r"min-height: 58px;[^}]*padding: 9px 12px;",
         )
         self.assertIn(".privacy-area:nth-child(n+4) {", CSS)
         self.assertIn("grid-column: span 3;", CSS)
+        # Wide desktop: all five visible in one row, each badge on the second line.
+        wide_css = CSS.split("@media (min-width: 1200px)", 1)[1].split(
+            "@media (max-width: 900px)", 1
+        )[0]
+        self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", wide_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", wide_css)
+        self.assertIn("justify-self: start;", wide_css)
+        # Tablet: 2 columns and a full-width fifth card.
         self.assertIn("@media (max-width: 900px) and (min-width: 721px)", CSS)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", CSS)
         self.assertIn(".privacy-area:last-child:nth-child(odd)", CSS)
+        # Mobile: one column; stack long status labels on very narrow phones.
         mobile_css = CSS.split("@media (max-width: 720px)", 1)[1]
         self.assertRegex(
             mobile_css, r"(?s)\.privacy-areas \{[^}]*grid-template-columns: 1fr;",
         )
-        self.assertIn("align-items: stretch;", mobile_css)
+        narrow_css = CSS.split("@media (max-width: 400px)", 1)[1]
+        self.assertRegex(
+            narrow_css, r"(?s)\.privacy-area \{[^}]*"
+                        r"grid-template-columns: minmax\(0, 1fr\);",
+        )
+        # One badge, right-aligned within the medium/tablet cards; neutral note below.
         self.assertRegex(
             CSS, r"(?s)\.privacy-area \.privacy-state \{[^}]*"
                  r"justify-self: end;[^}]*margin: 0;",
