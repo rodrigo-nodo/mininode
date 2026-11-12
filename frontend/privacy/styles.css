@@ -401,24 +401,24 @@
 
 .privacy-areas {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .privacy-area {
   align-content: center;
   align-items: center;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   column-gap: 8px;
   display: grid;
   grid-column: span 2;
   grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 72px;
+  min-height: 58px;
   min-width: 0;
-  padding: 13px;
-  row-gap: 6px;
+  padding: 9px 12px;
+  row-gap: 3px;
 }
 
 .privacy-area:nth-child(n+4) {
@@ -438,14 +438,14 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: .92rem;
-  gap: 5px;
-  margin: -8px;
+  font-size: .9rem;
+  gap: 4px;
+  margin: -6px;
   max-width: 100%;
   min-height: 40px;
   min-width: 0;
   overflow-wrap: anywhere;
-  padding: 8px;
+  padding: 6px;
   text-align: left;
 }
 
@@ -468,9 +468,10 @@
 }
 
 .privacy-area .privacy-state {
-  font-size: .72rem;
+  font-size: .7rem;
   font-weight: 700;
   justify-self: end;
+  line-height: 1.2;
   margin: 0;
   max-width: 132px;
   padding: 4px 7px;
@@ -481,7 +482,7 @@
 .privacy-area__partial {
   color: var(--muted);
   display: block;
-  font-size: .78rem;
+  font-size: .76rem;
   grid-column: 1 / -1;
   margin-top: 0;
 }
@@ -1031,6 +1032,27 @@ body.privacy-modal-open {
   overflow: hidden;
 }
 
+/* Wide desktop: five equal cards with status on a consistent second line.
+   Medium screens retain the 3 + 2 arrangement to keep names legible. */
+@media (min-width: 1200px) {
+  .privacy-areas {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .privacy-area,
+  .privacy-area:nth-child(n+4) {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    min-height: 74px;
+    row-gap: 1px;
+  }
+
+  .privacy-area .privacy-state {
+    justify-self: start;
+  }
+}
+
 @media (max-width: 900px) and (min-width: 721px) {
   .privacy-areas {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1122,6 +1144,20 @@ body.privacy-modal-open {
   }
 }
 
+
+/* Very narrow phones: keep the label readable instead of squeezing it
+   next to a long status badge. */
+@media (max-width: 400px) {
+  .privacy-area {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    row-gap: 1px;
+  }
+
+  .privacy-area .privacy-state {
+    justify-self: start;
+  }
+}
 
 /* One decision area: paid activation first, free account save second. */
 .privacy-next-steps { margin-top: 1.75rem; }
