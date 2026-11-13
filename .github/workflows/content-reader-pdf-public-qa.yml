@@ -1,0 +1,30 @@
+name: Content Reader PDF Public QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/content-reader-pdf-public-qa.yml'
+      - 'automation/content_reader_pdf/**'
+      - 'backend/src/mininode_api/content_reader_pdf/**'
+      - 'backend/src/mininode_api/web_inspector/**'
+      - 'backend/requirements.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pdf-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: backend/src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r backend/requirements.txt
+      - name: Verify a public three-page digital PDF with the guarded fetcher
+        run: python automation/content_reader_pdf/qa_public_pdf.py

@@ -22,6 +22,7 @@ class FetchPageResult:
     status_code: int | None = None
     content_type: str | None = None
     html: str | None = None
+    binary_content: bytes | None = None
     elapsed_ms: int = 0
     redirect_count: int = 0
     set_cookie_names: list[str] = field(default_factory=list)
