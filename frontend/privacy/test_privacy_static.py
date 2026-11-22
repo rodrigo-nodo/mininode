@@ -40,7 +40,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
 
     def test_all_control_views_load_the_shared_catalog_before_renderers(self):
         pages = (
-            ("index.html", 'src="app.js?v=pwqa01-ux2"'),
+            ("index.html", 'src="app.js?v=pwqa01-zero-priorities1"'),
             ("plan/index.html", 'src="/privacy/plan-assets/app.js?v=pw03-history-1"'),
             ("plan-demo/index.html", 'src="app.js?v=ux21-1"'),
         )
@@ -76,6 +76,11 @@ class PrivacyResultStaticTests(unittest.TestCase):
             APP,
         )
 
+    def test_no_duplicate_positive_copy_for_empty_priority_results(self):
+        self.assertIn('id="diagnostic-priorities"', HTML)
+        self.assertNotIn('id="privacy-no-priorities"', HTML)
+        self.assertNotIn('noPrioritiesOffer', APP)
+
     def test_priorities_heading_tracks_visible_count(self):
         self.assertIn('id="actions-title">Acciones prioritarias</h3>', HTML)
         self.assertIn("const actionsTitle = document.querySelector('#actions-title');", APP)
@@ -83,7 +88,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("count === 0 ? 'Acciones prioritarias'", APP)
         self.assertIn("count === 1 ? 'cosa que haría primero' : 'cosas que haría primero'", APP)
         self.assertIn(".slice(0, 3)", APP)
-        self.assertIn('src="app.js?v=pwqa01-ux2"', HTML)
+        self.assertIn('src="app.js?v=pwqa01-zero-priorities1"', HTML)
 
 
     def test_continuation_layout_uses_current_local_styles_and_equal_actions(self):
@@ -174,7 +179,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         )
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=pwqa01-ux2', HTML)
+        self.assertIn('app.js?v=pwqa01-zero-priorities1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
@@ -525,7 +530,8 @@ class PrivacyResultStaticTests(unittest.TestCase):
         self.assertIn("¿Necesita ayuda para realizar los cambios?", HTML)
         self.assertIn("ese servicio se evalúa por separado", HTML)
         self.assertIn("Consultar apoyo técnico", HTML)
-        self.assertIn('id="privacy-no-priorities"', HTML)
+        self.assertNotIn('id="privacy-no-priorities"', HTML)
+        self.assertNotIn("Su sitio está bien preparado en los puntos revisados", HTML)
 
     def test_privacy_data_is_an_unconditional_next_step(self):
         self.assertIn('href="/privacy/data/">Conocer Privacy Data</a>', HTML)
