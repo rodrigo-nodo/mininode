@@ -179,7 +179,7 @@ class PrivacyResultStaticTests(unittest.TestCase):
         )
 
     def test_saved_review_copy_identifies_exact_analyzed_hostname(self):
-        self.assertIn('app.js?v=pwqa01-ux2', HTML)
+        self.assertIn('app.js?v=pwqa01-zero-priorities1', HTML)
         self.assertIn('id="privacy-saved-note-description"', HTML)
         self.assertIn('id="privacy-saved-standalone-description"', HTML)
         self.assertNotIn('Este resultado ya está en tu espacio Mininode.', HTML)
