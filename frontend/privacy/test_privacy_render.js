@@ -158,7 +158,8 @@ assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.equal(elements.get('privacy-correction-offer').hidden, false);
 assert.equal(elements.get('correction-order-open').disabled, false);
 assert.equal(context.currentDiagnosticIdForTest(), 'DIAG-A');
-assert.equal(elements.get('privacy-no-priorities').hidden, true);
+assert.equal(elements.has('privacy-no-priorities'), false,
+  'the diagnosis must not render a second positive no-priorities card');
 assert.doesNotMatch(html, /Plan de corrección/);
 assert.match(html, /Activar Privacy Web/);
 assert.match(html, /Conocer Privacy Data/);
@@ -186,7 +187,7 @@ assert.equal(elements.get('diagnostic-priorities').children.length, 1);
 assert.match(elements.get('diagnostic-priorities').children[0].textContent, /No identificamos acciones prioritarias entre los puntos comprobados/);
 assert.equal(elements.get('actions-title').textContent, 'Acciones prioritarias');
 assert.equal(elements.get('privacy-correction-offer').hidden, true);
-assert.equal(elements.get('privacy-no-priorities').hidden, false);
+assert.equal(elements.get('privacy-correction-unavailable').hidden, true);
 
 // Complete coverage uses the approved four-tier scale and explains applicability.
 const fullCoverageControls = controls.map((control) =>
@@ -340,6 +341,14 @@ for (const state of stateFixtures) {
       'State ' + state.state + ' score ' + score + ' should show correct heading');
     assert.equal(elements.get('score-value').textContent,
       state.state === 'limited' ? '—' : score);
+    const expectedNoPriorities = state.state === 'complete'
+      ? 'No identificamos acciones prioritarias dentro del alcance de esta revisión.'
+      : state.state === 'unverified'
+        ? 'Esta revisión no contiene acciones prioritarias identificadas. Su cobertura no puede verificarse con los datos disponibles.'
+        : 'No identificamos acciones prioritarias entre los puntos comprobados. Hay otros puntos que no pudimos verificar.';
+    assert.equal(elements.get('diagnostic-priorities').children.length, 1);
+    assert.equal(elements.get('diagnostic-priorities').children[0].textContent, expectedNoPriorities);
+    assert.equal(elements.get('privacy-correction-offer').hidden, true);
     if (state.state === 'partial') {
       assert.equal(elements.get('score-context').textContent, 'Orientativo');
       assert.equal(elements.get('score-context').hidden, false);

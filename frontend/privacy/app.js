@@ -31,7 +31,6 @@ const diagnosticControls = document.querySelector('#diagnostic-controls');
 const diagnosticPriorities = document.querySelector('#diagnostic-priorities');
 const actionsTitle = document.querySelector('#actions-title');
 const correctionOffer = document.querySelector('#privacy-correction-offer');
-const noPrioritiesOffer = document.querySelector('#privacy-no-priorities');
 const correctionUnavailable = document.querySelector('#privacy-correction-unavailable');
 const correctionUnavailableRetry = document.querySelector('#correction-unavailable-retry');
 const orderOpenButton = document.querySelector('#correction-order-open');
@@ -334,7 +333,6 @@ const resetCommercialState = () => {
   saveDiagnosticNote.hidden = true;
   saveStandalone.hidden = true;
   correctionOffer.hidden = true;
-  noPrioritiesOffer.hidden = true;
   correctionUnavailable.hidden = true;
   orderOpenButton.hidden = false;
   orderOpenButton.disabled = true;
@@ -347,7 +345,6 @@ const renderCommercialOffer = (priorities) => {
   const hasPriorities = Array.isArray(priorities) && priorities.length > 0;
   const planAvailable = hasPriorities && Boolean(currentDiagnosticId);
   correctionOffer.hidden = !planAvailable;
-  noPrioritiesOffer.hidden = hasPriorities;
   correctionUnavailable.hidden = !hasPriorities || planAvailable;
 };
 
@@ -743,7 +740,6 @@ saveStandaloneButton?.addEventListener('click', () => continueWithDiagnostic('sa
 const showEntitledPrivacyWeb = () => {
   activePrivacyEntitlement = true;
   correctionOffer.hidden = false;
-  noPrioritiesOffer.hidden = true;
   nextSteps.hidden = false;
   orderOpenButton.hidden = false;
   orderOpenButton.disabled = false;
