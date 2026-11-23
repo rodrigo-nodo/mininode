@@ -52,34 +52,54 @@ def policy_candidate_priority(url: str, text: str = "") -> int:
     Only public link text and URL paths are used; no host-specific exemptions.
     A long, topic-qualified policy label is not an exact general-policy label.
     """
-    path = urlsplit(url).path.lower().rstrip("/")
+    path = urlsplit(url).path.lower().strip("/")
     label = _plain(text)
-    # A commercial anchor disqualifies even an otherwise generic-looking path.
-    # Do not infer that /data-protection is a legal declaration by URL alone.
+    segments = path.split("/") if path else []
+
+    # Generic names are meaningful only at the root (or after a language
+    # locale). A nested /california/privacy-policy is not a general policy.
+    document_names = {
+        "privacy-policy", "privacy-notice", "politica-de-privacidad",
+        "politica-de-proteccion-de-datos", "aviso-de-privacidad",
+    }
+    general_names = {
+        "privacy", "privacidad", "proteccion-de-datos", "data-protection",
+    }
+    languages = {
+        "en", "es", "pt", "fr", "de", "it", "nl", "ca",
+        "ja", "ko", "zh", "pl", "sv",
+    }
+    is_locale = bool(segments and (
+        segments[0] in languages or
+        any(segments[0].startswith(f"{language}-") for language in languages)
+    ))
+    relative = segments[1:] if is_locale else segments
+    locale_offset = 1 if is_locale else 0
+
+    # The label is a weak signal: an ambiguous "Data Protection" anchor
+    # cannot prove that a service page is a legal privacy declaration.
     commercial_signals = (
         "privacy web", "servicios", "services", "consultoria", "consulting",
         "soluciones", "solutions", "software", "productos", "products",
         "diagnostico", "assessment", "compliance",
     )
     if any(_has_signal(label, term) for term in commercial_signals):
-        return 2
+        return 6
 
-    # Only *complete* generic document path segments get first priority.
-    # /us-privacy, /privacy-policy-us and regional/topic-specific URLs do not.
-    generic_paths = (
-        "/privacy", "/privacidad", "/privacy-policy", "/privacy-notice",
-        "/politica-de-privacidad", "/politica-de-proteccion-de-datos",
-        "/proteccion-de-datos", "/data-protection", "/legal/privacy",
-    )
-    if any(path.endswith(value) for value in generic_paths):
-        return 0
+    if relative in (["legal", "privacy"], ["legal", "privacidad"]):
+        return 0 + locale_offset
+    if len(relative) == 1 and relative[0] in document_names:
+        return 0 + locale_offset
+    if len(relative) == 1 and relative[0] in general_names:
+        return 2 + locale_offset
 
-    # Exact link text alone must not promote /us-privacy or a thematic article.
+    # Regional, thematic and nested pages never outrank a general document,
+    # even when their anchor happens to say "Privacy policy".
     if any(_has_signal(_plain(path), term) for term in PRIVACY):
-        return 1
+        return 4
     if any(_has_signal(label, term) for term in PRIVACY):
-        return 1
-    return 2
+        return 5
+    return 7
 
 
 def candidate_identity(url: str) -> str:
