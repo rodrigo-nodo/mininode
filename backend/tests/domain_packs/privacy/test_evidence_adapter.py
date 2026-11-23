@@ -2406,3 +2406,26 @@ def test_prv102_technical_error_is_not_evaluable():
     evidence = {"form_transport": "insecure", "technical_error": True}
     result = evaluate_control("PRV-102", evidence, {"PRV-101": "detected"})
     assert result["result"] == "not_evaluable"
+
+
+def test_policy_selection_prioritizes_general_data_protection_over_long_us_topic_policy():
+    """PW-QA-01: same-host candidate ranking must agree with crawler planning."""
+    generic = "https://example.com/es/proteccion-de-datos/"
+    qualified = "https://example.com/es/politica-de-privacidad-y-consentimiento-de-exclusion-voluntaria-de-los-estados-unidos/"
+    policy = LinkEvidence(generic, "Protección de datos", "https://example.com/es/")
+    topic = LinkEvidence(
+        qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos",
+        "https://example.com/es/",
+    )
+    c = contract(links=[topic, policy], pages=[
+        PageEvidence(qualified, 200, "Política de privacidad de los Estados Unidos",
+                     "text/html", visible_text="Tratamiento de datos de USA."),
+        PageEvidence(generic, 200, "Protección de datos", "text/html",
+                     visible_text="Example SpA. Para ejercer derechos de privacidad contactar al responsable."),
+    ])
+    adapted = adapt_evidence(c)
+    assert adapted["PRV-003"]["source_urls"] == [generic]
+    assert adapted["PRV-002"]["policy_accessible"] is True
+    assert adapted["PRV-002"]["policy_content_relevant"] is True
+    for code in ["PRV-004", "PRV-005", "PRV-006", "PRV-011", "PRV-013"]:
+        assert adapted[code]["source_urls"] == [generic]
