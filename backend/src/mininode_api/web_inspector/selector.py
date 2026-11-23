@@ -46,6 +46,34 @@ def _has_signal(text: str, signal: str) -> bool:
     return f" {_plain(signal)} " in f" {text} "
 
 
+def policy_candidate_priority(url: str, text: str = "") -> int:
+    """Prefer canonical general privacy documents over thematic or commercial pages.
+
+    Only public link text and URL paths are used; no host-specific exemptions.
+    A long, topic-qualified policy label is not an exact general-policy label.
+    """
+    path = urlsplit(url).path.lower().rstrip("/")
+    label = _plain(text)
+    canonical_paths = (
+        "/proteccion-de-datos", "/politica-de-privacidad",
+        "/politica-de-proteccion-de-datos", "/privacy-policy",
+        "/data-protection", "/legal/privacy",
+    )
+    if any(path.endswith(value) for value in canonical_paths):
+        return 0
+    if label in {
+        "politica de privacidad", "aviso de privacidad",
+        "politica de proteccion de datos", "proteccion de datos",
+        "privacy policy", "data protection", "privacy notice",
+    }:
+        return 0
+    if any(_has_signal(_plain(path), term) for term in PRIVACY):
+        return 1
+    if any(_has_signal(label, term) for term in PRIVACY):
+        return 1
+    return 2
+
+
 def candidate_identity(url: str) -> str:
     """Return selector-only identity, treating a non-root trailing slash as optional.
 
@@ -66,7 +94,7 @@ def classify_page_candidates(
 
     home = normalize_url(home_url)
     hostname = urlsplit(home).hostname
-    by_identity: dict[str, tuple[str, str]] = {}
+    by_identity: dict[str, tuple[str, str, str]] = {}
     home_identity = candidate_identity(home)
     for link in links:
         if isinstance(link, str):
@@ -94,14 +122,14 @@ def classify_page_candidates(
         # lexicographically smallest normalized URL and its associated signal.
         previous = by_identity.get(identity)
         if previous is None or url < previous[0]:
-            by_identity[identity] = (url, signal)
+            by_identity[identity] = (url, signal, text)
 
     candidates: list[PageCandidate] = []
     categories = (("privacy", PRIVACY), ("contact", CONTACT), ("action", ADDITIONAL))
-    for url, signal in sorted(by_identity.values()):
+    for url, signal, text in sorted(by_identity.values()):
         for category, terms in categories:
             if any(_has_signal(signal, term) for term in terms):
-                candidates.append(PageCandidate(url, category, (url,)))
+                candidates.append(PageCandidate(url, category, (str(policy_candidate_priority(url, text)), url) if category == "privacy" else (url,)))
                 break
     return candidates
 
@@ -117,10 +145,11 @@ def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | 
     selected = [home]
     used = {home}
     for category in ("privacy", "contact"):
-        match = next((item.url for item in candidates if item.category == category), None)
+        match = min((item for item in candidates if item.category == category),
+                    key=lambda item: item.rank, default=None)
         if match and len(selected) < limit:
-            selected.append(match)
-            used.add(match)
+            selected.append(match.url)
+            used.add(match.url)
     additional = [item.url for item in candidates if item.category == "action" and item.url not in used]
     selected.extend(additional[: min(2, max(0, limit - len(selected)))])
     return selected[:limit]
