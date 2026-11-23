@@ -59,7 +59,7 @@ def test_classification_returns_all_relevant_candidates_without_final_limit():
     assert classified == [
         PageCandidate("https://example.com/contact", "contact", ("https://example.com/contact",)),
         PageCandidate("https://example.com/newsletter", "action", ("https://example.com/newsletter",)),
-        PageCandidate("https://example.com/privacy", "privacy", ("0", "https://example.com/privacy")),
+        PageCandidate("https://example.com/privacy", "privacy", ("2", "https://example.com/privacy")),
         PageCandidate("https://example.com/quote", "action", ("https://example.com/quote",)),
         PageCandidate("https://example.com/register", "action", ("https://example.com/register",)),
     ]
@@ -131,9 +131,9 @@ def test_privacy_policy_candidate_prioritizes_general_document_over_topic_specif
         (qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos"),
         (general, "Protección de datos"),
     )
-    assert policy_candidate_priority(general, "Protección de datos") == 0
-    assert policy_candidate_priority(qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos") == 1
-    assert policy_candidate_priority(qualified, "Política de privacidad") == 1
+    assert policy_candidate_priority(general, "Protección de datos") == 3
+    assert policy_candidate_priority(qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos") == 4
+    assert policy_candidate_priority(qualified, "Política de privacidad") == 4
     assert select_pages("https://example.com/es/", candidates, limit=2) == [
         "https://example.com/es/", general,
     ]
@@ -157,7 +157,7 @@ def test_general_policy_beats_commercial_data_protection_even_when_url_sorts_lat
         (general, "Privacy policy"),
     )
     assert policy_candidate_priority(general, "Privacy policy") == 0
-    assert policy_candidate_priority(commercial, "Privacy compliance services") == 2
+    assert policy_candidate_priority(commercial, "Privacy compliance services") == 6
     assert select_pages(homepage, candidates, limit=2) == [homepage, general]
     assert select_pages(homepage, reversed(candidates), limit=2) == [homepage, general]
 
@@ -189,3 +189,33 @@ def test_privacy_news_and_blog_are_ineligible_despite_policy_titles():
         item.url for item in classify_page_candidates(homepage, candidates)
         if item.category == "privacy"
     ] == [general]
+
+
+def test_root_policy_beats_ambiguous_commercial_label_and_regional_policy():
+    home = "https://example.com/"
+    legal = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    regional = "https://example.com/california/privacy-policy"
+    candidates = links(
+        (commercial, "Data Protection"),
+        (regional, "Privacy policy"),
+        (legal, "Privacy policy"),
+    )
+    assert policy_candidate_priority(legal, "Privacy policy") == 0
+    assert policy_candidate_priority(commercial, "Data Protection") == 3
+    assert policy_candidate_priority(regional, "Privacy policy") == 4
+    assert select_pages(home, candidates, limit=2) == [home, legal]
+    assert select_pages(home, reversed(candidates), limit=2) == [home, legal]
+
+
+def test_locale_policy_beats_long_region_specific_policy_but_not_root_policy():
+    home = "https://example.com/es/"
+    local = "https://example.com/es/proteccion-de-datos/"
+    thematic = "https://example.com/es/politica-de-privacidad-y-consentimiento-estados-unidos/"
+    assert select_pages(home, links(
+        (thematic, "Política de privacidad"),
+        (local, "Protección de datos"),
+    ), limit=2) == [home, local]
+    assert policy_candidate_priority(
+        "https://example.com/california/privacy-policy", "Privacy policy"
+    ) > policy_candidate_priority("https://example.com/privacy-policy", "Privacy policy")
