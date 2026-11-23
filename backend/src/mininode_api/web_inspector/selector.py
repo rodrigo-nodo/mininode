@@ -71,7 +71,7 @@ def policy_candidate_priority(url: str, text: str = "") -> int:
     }
     is_locale = bool(segments and (
         segments[0] in languages or
-        any(segments[0].startswith(f"{language}-") for language in languages)
+        any(re.fullmatch(fr"{language}-[a-z]{{2}}", segments[0]) for language in languages)
     ))
     relative = segments[1:] if is_locale else segments
     locale_offset = 1 if is_locale else 0
