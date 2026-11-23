@@ -2454,15 +2454,40 @@ def test_prv003_ignores_news_policy_that_crawler_is_not_allowed_to_select():
         assert adapted[code]["source_urls"] == [legal]
 
 
-def test_prv003_does_not_claim_a_policy_from_only_excluded_news_link():
-    news = "https://example.com/news/privacy-policy"
+@pytest.mark.parametrize("section", ["news", "blog"])
+def test_excluded_but_visible_policy_is_not_mistaken_for_absent_policy(section):
+    url = f"https://example.com/{section}/privacy-policy"
     adapted = adapt_evidence(contract(
-        links=[LinkEvidence(news, "Privacy policy", "https://example.com/")],
+        links=[LinkEvidence(url, "Privacy policy", "https://example.com/")],
         pages=[PageEvidence("https://example.com/", 200, "Home", "text/html")],
     ))
-    assert adapted["PRV-003"]["policy_attribution"] == "none"
-    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_detected"
-    assert adapted["PRV-002"]["policy_link_found"] is False
+    assert adapted["PRV-001"]["policy_visible"] is True
+    assert evaluate_control("PRV-001", adapted["PRV-001"])["result"] == "detected"
+    assert adapted["PRV-002"]["policy_link_found"] is True
+    assert adapted["PRV-002"]["technical_error"] is True
+    assert evaluate_control("PRV-002", adapted["PRV-002"], {"PRV-001": "detected"})["result"] == "not_evaluable"
+    assert adapted["PRV-003"]["policy_attribution"] == "unknown"
+    assert adapted["PRV-003"]["technical_error"] is True
+    assert adapted["PRV-003"]["source_urls"] == [url]
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_evaluable"
+    for code in ("PRV-004", "PRV-005", "PRV-006", "PRV-011", "PRV-013"):
+        result = evaluate_control(code, adapted[code], {"PRV-003": "not_evaluable"})
+        assert result["result"] == "not_evaluable", code
+
+
+def test_excluded_own_policy_prevents_false_absence_with_provider_policy():
+    own = "https://example.com/blog/privacy-policy"
+    provider = "https://policies.google.com/privacy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(provider, "Privacy policy", "https://example.com/"),
+            LinkEvidence(own, "Privacy policy", "https://example.com/"),
+        ],
+        pages=[PageEvidence("https://example.com/", 200, "Home", "text/html")],
+    ))
+    assert adapted["PRV-001"]["policy_visible"] is True
+    assert adapted["PRV-003"]["policy_attribution"] == "unknown"
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_evaluable"
 
 
 def test_prv003_prefers_general_privacy_policy_over_commercial_data_protection():
@@ -2499,3 +2524,24 @@ def test_prv003_prefers_general_privacy_over_us_privacy_with_generic_anchor():
         ],
     ))
     assert adapted["PRV-003"]["source_urls"] == [legal]
+
+
+def test_prv003_prefers_root_policy_over_nested_regional_and_ambiguous_commercial():
+    home = "https://example.com/"
+    legal = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    regional = "https://example.com/california/privacy-policy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Data Protection", home),
+            LinkEvidence(regional, "Privacy policy", home),
+            LinkEvidence(legal, "Privacy policy", home),
+        ],
+        pages=[
+            PageEvidence(commercial, 200, "Data Protection", "text/html"),
+            PageEvidence(regional, 200, "California Privacy Policy", "text/html"),
+            PageEvidence(legal, 200, "Privacy policy", "text/html"),
+        ],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [legal]
+    assert adapted["PRV-002"]["policy_accessible"] is True
