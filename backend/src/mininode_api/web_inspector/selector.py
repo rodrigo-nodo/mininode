@@ -46,6 +46,70 @@ def _has_signal(text: str, signal: str) -> bool:
     return f" {_plain(signal)} " in f" {text} "
 
 
+def policy_candidate_priority(url: str, text: str = "") -> int:
+    """Prefer canonical general privacy documents over thematic or commercial pages.
+
+    Only public link text and URL paths are used; no host-specific exemptions.
+    A long, topic-qualified policy label is not an exact general-policy label.
+    """
+    path = urlsplit(url).path.lower().strip("/")
+    label = _plain(text)
+    segments = path.split("/") if path else []
+
+    # Generic names are meaningful only at the root (or after a language
+    # locale). A nested /california/privacy-policy is not a general policy.
+    document_names = {
+        "privacy-policy", "privacy-notice", "politica-de-privacidad",
+        "politica-de-proteccion-de-datos", "aviso-de-privacidad",
+    }
+    general_names = {
+        "privacy", "privacidad", "proteccion-de-datos", "data-protection",
+    }
+    languages = {
+        "en", "es", "pt", "fr", "de", "it", "nl", "ca",
+        "ja", "ko", "zh", "pl", "sv",
+    }
+    is_locale = bool(segments and (
+        segments[0] in languages or
+        any(re.fullmatch(fr"{language}-[a-z]{{2}}", segments[0]) for language in languages)
+    ))
+    relative = segments[1:] if is_locale else segments
+    locale_offset = 1 if is_locale else 0
+
+    # The label is a weak signal: an ambiguous "Data Protection" anchor
+    # cannot prove that a service page is a legal privacy declaration.
+    commercial_signals = (
+        "privacy web", "servicios", "services", "consultoria", "consulting",
+        "soluciones", "solutions", "software", "productos", "products",
+        "diagnostico", "assessment", "compliance",
+    )
+    if any(_has_signal(label, term) for term in commercial_signals):
+        return 6
+
+    # Explicit legal-document directories carry more weight than ambiguous
+    # generic paths (e.g. commercial /privacy). Limit this to the root or
+    # one language prefix: /california/legal/privacy-policy stays thematic.
+    legal_directories = {"legal", "policies", "politicas"}
+    if (
+        len(relative) == 2
+        and relative[0] in legal_directories
+        and relative[1] in (document_names | general_names)
+    ):
+        return 0 + locale_offset
+    if len(relative) == 1 and relative[0] in document_names:
+        return 0 + locale_offset
+    if len(relative) == 1 and relative[0] in general_names:
+        return 2 + locale_offset
+
+    # Regional, thematic and nested pages never outrank a general document,
+    # even when their anchor happens to say "Privacy policy".
+    if any(_has_signal(_plain(path), term) for term in PRIVACY):
+        return 4
+    if any(_has_signal(label, term) for term in PRIVACY):
+        return 5
+    return 7
+
+
 def candidate_identity(url: str) -> str:
     """Return selector-only identity, treating a non-root trailing slash as optional.
 
@@ -66,7 +130,7 @@ def classify_page_candidates(
 
     home = normalize_url(home_url)
     hostname = urlsplit(home).hostname
-    by_identity: dict[str, tuple[str, str]] = {}
+    by_identity: dict[str, tuple[str, str, str]] = {}
     home_identity = candidate_identity(home)
     for link in links:
         if isinstance(link, str):
@@ -94,14 +158,14 @@ def classify_page_candidates(
         # lexicographically smallest normalized URL and its associated signal.
         previous = by_identity.get(identity)
         if previous is None or url < previous[0]:
-            by_identity[identity] = (url, signal)
+            by_identity[identity] = (url, signal, text)
 
     candidates: list[PageCandidate] = []
     categories = (("privacy", PRIVACY), ("contact", CONTACT), ("action", ADDITIONAL))
-    for url, signal in sorted(by_identity.values()):
+    for url, signal, text in sorted(by_identity.values()):
         for category, terms in categories:
             if any(_has_signal(signal, term) for term in terms):
-                candidates.append(PageCandidate(url, category, (url,)))
+                candidates.append(PageCandidate(url, category, (str(policy_candidate_priority(url, text)), url) if category == "privacy" else (url,)))
                 break
     return candidates
 
@@ -117,10 +181,11 @@ def select_pages(home_url: str, links: Iterable[LinkEvidence | dict[str, str] | 
     selected = [home]
     used = {home}
     for category in ("privacy", "contact"):
-        match = next((item.url for item in candidates if item.category == category), None)
+        match = min((item for item in candidates if item.category == category),
+                    key=lambda item: item.rank, default=None)
         if match and len(selected) < limit:
-            selected.append(match)
-            used.add(match)
+            selected.append(match.url)
+            used.add(match.url)
     additional = [item.url for item in candidates if item.category == "action" and item.url not in used]
     selected.extend(additional[: min(2, max(0, limit - len(selected)))])
     return selected[:limit]

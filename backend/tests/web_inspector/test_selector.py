@@ -2,6 +2,7 @@ from mininode_api.web_inspector.models import LinkEvidence
 from mininode_api.web_inspector.selector import (
     PageCandidate,
     candidate_identity,
+    policy_candidate_priority,
     classify_page_candidates,
     select_pages,
 )
@@ -58,7 +59,7 @@ def test_classification_returns_all_relevant_candidates_without_final_limit():
     assert classified == [
         PageCandidate("https://example.com/contact", "contact", ("https://example.com/contact",)),
         PageCandidate("https://example.com/newsletter", "action", ("https://example.com/newsletter",)),
-        PageCandidate("https://example.com/privacy", "privacy", ("https://example.com/privacy",)),
+        PageCandidate("https://example.com/privacy", "privacy", ("2", "https://example.com/privacy")),
         PageCandidate("https://example.com/quote", "action", ("https://example.com/quote",)),
         PageCandidate("https://example.com/register", "action", ("https://example.com/register",)),
     ]
@@ -121,3 +122,148 @@ def test_legacy_selection_remains_home_privacy_contact_and_two_actions():
         "https://example.com/cotizar",
         "https://example.com/registro",
     ]
+
+
+def test_privacy_policy_candidate_prioritizes_general_document_over_topic_specific_us_page():
+    general = "https://example.com/es/proteccion-de-datos/"
+    qualified = "https://example.com/es/politica-de-privacidad-y-consentimiento-de-exclusion-voluntaria-de-los-estados-unidos/"
+    candidates = links(
+        (qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos"),
+        (general, "Protección de datos"),
+    )
+    assert policy_candidate_priority(general, "Protección de datos") == 3
+    assert policy_candidate_priority(qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos") == 4
+    assert policy_candidate_priority(qualified, "Política de privacidad") == 4
+    assert select_pages("https://example.com/es/", candidates, limit=2) == [
+        "https://example.com/es/", general,
+    ]
+    classified = classify_page_candidates("https://example.com/es/", candidates)
+    assert min((p for p in classified if p.category == "privacy"), key=lambda p: p.rank).url == general
+
+
+def test_explicit_legal_policy_beats_commercial_privacy_link():
+    assert select_pages("https://example.com/", links(
+        ("https://example.com/privacy/", "Privacy Web"),
+        ("https://example.com/legal/privacy/", "Política de privacidad"),
+    ), limit=2) == ["https://example.com/", "https://example.com/legal/privacy/"]
+
+
+def test_general_policy_beats_commercial_data_protection_even_when_url_sorts_later():
+    general = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    homepage = "https://example.com/"
+    candidates = links(
+        (commercial, "Privacy compliance services"),
+        (general, "Privacy policy"),
+    )
+    assert policy_candidate_priority(general, "Privacy policy") == 0
+    assert policy_candidate_priority(commercial, "Privacy compliance services") == 6
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+    assert select_pages(homepage, reversed(candidates), limit=2) == [homepage, general]
+
+
+def test_general_privacy_beats_regional_us_privacy_with_generic_anchor():
+    homepage = "https://example.com/"
+    general = "https://example.com/privacy"
+    regional = "https://example.com/us-privacy"
+    candidates = links(
+        (regional, "Privacy policy"),
+        (general, "Privacy"),
+    )
+    assert policy_candidate_priority(regional, "Privacy policy") > policy_candidate_priority(
+        general, "Privacy"
+    )
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+
+
+def test_privacy_news_and_blog_are_ineligible_despite_policy_titles():
+    homepage = "https://example.com/"
+    general = "https://example.com/privacy"
+    candidates = links(
+        ("https://example.com/news/privacy-policy", "Privacy policy"),
+        ("https://example.com/blog/privacy-policy", "Privacy policy"),
+        (general, "Privacy"),
+    )
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+    assert [
+        item.url for item in classify_page_candidates(homepage, candidates)
+        if item.category == "privacy"
+    ] == [general]
+
+
+def test_root_policy_beats_ambiguous_commercial_label_and_regional_policy():
+    home = "https://example.com/"
+    legal = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    regional = "https://example.com/california/privacy-policy"
+    candidates = links(
+        (commercial, "Data Protection"),
+        (regional, "Privacy policy"),
+        (legal, "Privacy policy"),
+    )
+    assert policy_candidate_priority(legal, "Privacy policy") == 0
+    assert policy_candidate_priority(commercial, "Data Protection") == 3
+    assert policy_candidate_priority(regional, "Privacy policy") == 4
+    assert select_pages(home, candidates, limit=2) == [home, legal]
+    assert select_pages(home, reversed(candidates), limit=2) == [home, legal]
+
+
+def test_locale_policy_beats_long_region_specific_policy_but_not_root_policy():
+    home = "https://example.com/es/"
+    local = "https://example.com/es/proteccion-de-datos/"
+    thematic = "https://example.com/es/politica-de-privacidad-y-consentimiento-estados-unidos/"
+    assert select_pages(home, links(
+        (thematic, "Política de privacidad"),
+        (local, "Protección de datos"),
+    ), limit=2) == [home, local]
+    assert policy_candidate_priority(
+        "https://example.com/california/privacy-policy", "Privacy policy"
+    ) > policy_candidate_priority("https://example.com/privacy-policy", "Privacy policy")
+
+
+def test_nested_legal_policy_beats_root_privacy_commercial_page():
+    """V3 B1: /legal/privacy-policy is a legal document, not a regional slug."""
+    home = "https://example.com/"
+    legal = "https://example.com/legal/privacy-policy"
+    product = "https://example.com/privacy"
+    candidates = links((product, "Privacy"), (legal, "Privacy policy"))
+    assert policy_candidate_priority(legal, "Privacy policy") == 0
+    assert policy_candidate_priority(product, "Privacy") == 2
+    assert select_pages(home, candidates, limit=2) == [home, legal]
+    assert select_pages(home, reversed(candidates), limit=2) == [home, legal]
+
+
+def test_document_path_ranking_matrix_without_host_exceptions():
+    """Exact legal directories win; regional nesting does not become canonical."""
+    cases = (
+        ("/legal/privacy-policy", "Privacy policy", 0),
+        ("/legal/privacy", "Privacy", 0),
+        ("/policies/privacy-policy", "Privacy policy", 0),
+        ("/politicas/politica-de-privacidad", "Política de privacidad", 0),
+        ("/es/legal/privacy-policy", "Privacy policy", 1),
+        ("/es/privacy-policy", "Privacy policy", 1),
+        ("/privacy-policy", "Privacy policy", 0),
+        ("/privacy", "Privacy", 2),
+        ("/en/data-protection", "Data Protection", 3),
+        ("/california/privacy-policy", "Privacy policy", 4),
+        ("/california/legal/privacy-policy", "Privacy policy", 4),
+        ("/es/politica-de-privacidad-y-consentimiento-eeuu", "Política de privacidad", 4),
+        ("/privacy", "Privacy Web", 6),
+    )
+    for path, label, expected in cases:
+        assert policy_candidate_priority(f"https://example.com{path}", label) == expected, path
+
+
+def test_malformed_port_does_not_break_candidate_classification():
+    homepage = "https://example.com/"
+    good = "https://example.com/legal/privacy-policy"
+    candidates = links(
+        ("https://example.com:bad/privacy", "Privacy policy"),
+        ("https://example.com:65536/privacy", "Privacy policy"),
+        ("https://example.com:0/privacy", "Privacy policy"),
+        (good, "Privacy policy"),
+    )
+    # Port 0 is syntactically normalizable, but must not beat a legal policy;
+    # the fetcher's target validation still governs whether it can be fetched.
+    selected = select_pages(homepage, candidates, limit=2)
+    assert selected == [homepage, good]

@@ -1,7 +1,7 @@
 // PW-QA-01: frontend presentation only. Backend scoring 0.3 is authoritative.
 // Keep this static table in sync with backend controls.json + scoring.json (CI verifies it).
 (() => {
-  const FRAMEWORK_VERSION = '0.13';
+  const FRAMEWORK_VERSION = '0.14';
   const SCORING_VERSION = '0.3';
   const SCORING_WEIGHTS = Object.freeze({
     'PRV-001': 4, 'PRV-002': 2, 'PRV-003': 4, 'PRV-005': 3,

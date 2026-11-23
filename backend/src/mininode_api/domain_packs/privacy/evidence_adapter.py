@@ -8,6 +8,9 @@ from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
 from mininode_api.web_inspector.fetcher import normalize_url
+from mininode_api.web_inspector.selector import (
+    candidate_identity, classify_page_candidates, policy_candidate_priority,
+)
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
 )
@@ -526,6 +529,64 @@ def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
     return False, "low"
 
 
+def _safe_policy_identity(url: str) -> str | None:
+    """Normalize an untrusted link safely, preserving its functional query."""
+    try:
+        return candidate_identity(normalize_url(url))
+    except (TypeError, ValueError):
+        return None
+
+
+def _observed_policy_links(contract: EvidenceContract) -> list[tuple[LinkEvidence, str]]:
+    """Well-formed public policy links, independent of crawler eligibility.
+
+    A malformed href is not usable evidence of a reachable privacy policy.
+    In particular, a malformed port must never abort the whole diagnostic.
+    """
+    observed = []
+    for link in contract.links:
+        if _public_source_url(link.url) is None:
+            continue
+        try:
+            matched, confidence = _privacy_match(link)
+        except (TypeError, ValueError):
+            continue
+        if matched:
+            observed.append((link, confidence))
+    return observed
+
+
+def _policy_candidates(contract: EvidenceContract) -> list[tuple[LinkEvidence, str]]:
+    """Use the crawler's same-host policy eligibility; keep external links.
+
+    News/blog pages and excluded formats must not be selected by PRV-003 when
+    the adaptive crawler would deliberately refuse to inspect them.
+    """
+    raw = _observed_policy_links(contract)
+    home = contract.target.final_url or contract.target.requested_url
+    home_host = (urlsplit(home).hostname or "").lower()
+    same_host = [
+        link for link, _ in raw
+        if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
+    ]
+    eligible = {
+        candidate_identity(candidate.url)
+        for candidate in classify_page_candidates(home, same_host)
+        if candidate.category == "privacy"
+    }
+    selected = []
+    for link, confidence in raw:
+        if not _same_site((urlsplit(link.url).hostname or "").lower(), home_host):
+            # External policies retain PRV-003's attribution checks, even
+            # though the same-host crawler cannot add them to its page set.
+            selected.append((link, confidence))
+            continue
+        identity = _safe_policy_identity(link.url)
+        if identity is not None and identity in eligible:
+            selected.append((link, confidence))
+    return selected
+
+
 def _inspection_sufficient(contract: EvidenceContract) -> bool:
     return contract.target.final_url is not None and contract.inspection.pages_analyzed > 0
 
@@ -576,19 +637,13 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
         if _same_site((urlsplit(link.url).hostname or "").lower(), target_host)
     ]
     if same_site_links:
-        def candidate_rank(link: LinkEvidence) -> tuple[bool, bool]:
-            path = urlsplit(link.url).path.lower().rstrip("/")
-            explicit_policy = (
-                _contains_phrase(link.text, (
-                    "politica de privacidad", "privacy policy",
-                    "aviso de privacidad", "politica de proteccion de datos",
-                ))
-                or path.startswith("/legal/privacy")
-                or path.endswith("/privacy-policy")
-                or path.endswith("/politica-de-privacidad")
-            )
+        def candidate_rank(link: LinkEvidence) -> tuple[int, bool, str]:
             inspected = _normalized_url(link.url) in pages
-            return (not explicit_policy, not inspected)
+            return (
+                policy_candidate_priority(link.url, link.text),
+                not inspected,
+                _normalized_url(link.url),
+            )
 
         selected = min(same_site_links, key=candidate_rank)
         safe_url = _public_source_url(selected.url)
@@ -678,13 +733,9 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
 
 def selected_policy_candidate_url(contract: EvidenceContract) -> str | None:
     """Return the selected candidate URL for internal inspection only."""
-    candidates = [
-        (link, confidence)
-        for link in contract.links
-        for matched, confidence in [_privacy_match(link)]
-        if matched
-    ]
-    return _policy_attribution(contract, candidates).get("_selected_policy_url")
+    return _policy_attribution(
+        contract, _policy_candidates(contract)
+    ).get("_selected_policy_url")
 
 
 def _selected_policy_page(contract: EvidenceContract, selected_url: str | None) -> PageEvidence | None:
@@ -1608,12 +1659,15 @@ def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
 def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     """Return deterministic, minimized evidence for the active controls."""
     sufficient = _inspection_sufficient(contract)
-    candidates = [(link, confidence) for link in contract.links for matched, confidence in [_privacy_match(link)] if matched]
-    policy_confidence = "high" if any(confidence == "high" for _, confidence in candidates) else "medium"
+    observed = _observed_policy_links(contract)
+    candidates = _policy_candidates(contract)
+    policy_confidence = "high" if any(confidence == "high" for _, confidence in observed) else "medium"
 
-    prv001 = {"confidence": policy_confidence if candidates else ("high" if sufficient else "low")}
+    prv001 = {"confidence": policy_confidence if observed else ("high" if sufficient else "low")}
     if sufficient:
-        prv001["policy_visible"] = bool(candidates)
+        # The crawler may exclude /blog/ or /news/, but the visible link
+        # still exists; non-inspection must not become a false absence.
+        prv001["policy_visible"] = bool(observed)
     else:
         prv001["technical_error"] = True
 
@@ -1621,15 +1675,47 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     # selected by PRV-003. A commercial /privacy/ page is not proof that
     # a separately selected /legal/privacy/ document is accessible.
     prv003 = _policy_attribution(contract, candidates)
+
+    # Keep observed-but-ineligible policies separate from selected documents.
+    # They cannot be fetched under current crawler rules, so they can neither
+    # prove attribution nor prove absence. Existing external policy attribution
+    # remains authoritative when it is genuinely supported by inspected text.
+    home = contract.target.final_url or contract.target.requested_url
+    home_host = (urlsplit(home).hostname or "").lower()
+    selectable = {
+        identity
+        for link, _ in candidates
+        if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
+        for identity in [_safe_policy_identity(link.url)]
+        if identity is not None
+    }
+    excluded = [
+        link for link, _ in observed
+        if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
+        for identity in [_safe_policy_identity(link.url)]
+        if identity is not None and identity not in selectable
+    ]
+    if excluded and prv003.get("policy_attribution") in {"none", "third_party"}:
+        public_sources = sorted({
+            source for link in excluded
+            if (source := _public_source_url(link.url))
+        })
+        prv003 = {
+            "policy_attribution": "unknown",
+            "attribution_signals": ["observed_policy_not_inspectable"],
+            "source_urls": public_sources,
+            "technical_error": True,
+            "confidence": "low",
+        }
     if not sufficient:
         prv003["technical_error"] = True
         prv003["confidence"] = "low"
 
     prv002: dict = {
-        "policy_link_found": bool(candidates),
-        "confidence": policy_confidence if candidates else ("high" if sufficient else "low"),
+        "policy_link_found": bool(observed),
+        "confidence": policy_confidence if observed else ("high" if sufficient else "low"),
     }
-    if candidates:
+    if observed:
         selected_url = prv003.get("_selected_policy_url")
         selected_page = _selected_policy_page(contract, selected_url)
         if selected_page is not None:

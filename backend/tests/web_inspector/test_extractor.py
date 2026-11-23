@@ -420,3 +420,39 @@ def test_public_serialization_excludes_internal_form_evidence():
         "source_url", "action", "method", "fields", "checkboxes", "nearby_text",
         "privacy_links",
     }
+
+
+@pytest.mark.parametrize("href", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_privacy_anchor_does_not_block_page_extraction(href):
+    html = (
+        '<main><h1>Inicio</h1><p>Información general del sitio.</p>'
+        f'<a href="{href}">Privacy policy</a>'
+        '<a href="/legal/privacy-policy">Privacy policy</a></main>'
+    )
+    page = extract_page(html, "https://example.com/")
+    assert any(link.url == "https://example.com/legal/privacy-policy" for link in page.links)
+    assert href not in [link.url for link in page.links]
+
+
+@pytest.mark.parametrize("bad_href", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_form_privacy_link_does_not_abort_extraction(bad_href):
+    html = (
+        '<main><section><form action="/send">'
+        '<input name="email" type="email">'
+        f'<a href="{bad_href}">Privacy policy</a>'
+        '<a href="/privacy-policy">Privacy policy</a>'
+        '</form></section></main>'
+    )
+    page = extract_page(html, "https://example.com/")
+    assert len(page.forms) == 1
+    assert [link.url for link in page.forms[0].privacy_links] == [
+        "https://example.com/privacy-policy"
+    ]

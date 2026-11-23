@@ -47,7 +47,29 @@ de inspección cuando puedan alterar el resultado producido para un mismo sitio.
 rangos o la fórmula del score.
 Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivamente;
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
-La versión vigente del framework en DEV es `0.13`; el scoring continúa en `0.3`.
+La versión candidata en el PR de corrección PW-QA-01 es framework `0.14`;
+el scoring continúa en `0.3`. Hasta el merge y despliegue del PR, DEV sigue
+en framework `0.13`. `0.14` prioriza documentos bajo rutas legales
+explícitas (como `/legal/privacy-policy` y `/legal/privacy`) frente
+a páginas comerciales ambiguas `/privacy`, y reconoce políticas
+generales en la raíz o con prefijo de idioma. Una ruta regional o
+temática anidada no adquiere prioridad general por su sufijo o título.
+Es una heurística conservadora, no una prueba del contenido documental.
+Para un mismo hostname el rastreador y PRV-003 comparten elegibilidad y
+ranking. **Un enlace de política visible pero excluido de inspección**
+(por ejemplo, bajo /news o /blog) se conserva como evidencia de
+existencia para PRV-001; PRV-002 y PRV-003 quedan `not_evaluable` si
+no existe otra política evaluable, y los controles documentales
+dependientes no atribuyen contenido que no fue inspeccionado. Las
+políticas externas mantienen su atribución conservadora.
+La extracción pasiva descarta enlaces HTML con sintaxis de URL
+malformada y la adaptación rechaza puertos inválidos o fuera de
+rango sin interrumpir el diagnóstico ni atribuir política inexistente.
+No amplía el presupuesto de páginas,
+no cambia límites SSRF/robots ni añade solicitudes de otra naturaleza.
+Puede modificar las evidencias, controles y resultados; por eso los
+snapshots `0.13/0.3` y `0.14/0.3` no son comparables.
+
 Framework `0.13` reconoce versiones de política declaradas en su encabezado HTML o expresamente identificadas en el contenido, canales de ejercicio de derechos con contexto específico de solicitudes o consultas de privacidad, y proveedores que declaran tratar datos aunque no usen «compartir» o «transferir». No acepta versiones de software incrustadas en el contenido, simples títulos de privacidad como evidencia de canal específico ni declaraciones negadas sobre uso o tratamiento por proveedores. Los controles conservan PRV-003 como fuente exclusiva; no cambian pesos, fórmula, rutas ni BD. Los diagnósticos `0.12/0.3` y `0.13/0.3` no son comparables.
 
 Framework `0.12` prioriza enlaces explícitos de política legal frente a páginas
