@@ -529,14 +529,31 @@ def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
     return False, "low"
 
 
+def _safe_policy_identity(url: str) -> str | None:
+    """Normalize an untrusted link safely, preserving its functional query."""
+    try:
+        return candidate_identity(normalize_url(url))
+    except (TypeError, ValueError):
+        return None
+
+
 def _observed_policy_links(contract: EvidenceContract) -> list[tuple[LinkEvidence, str]]:
-    """Privacy links seen in public HTML, independently of crawler eligibility."""
-    return [
-        (link, confidence)
-        for link in contract.links
-        for matched, confidence in [_privacy_match(link)]
-        if matched
-    ]
+    """Well-formed public policy links, independent of crawler eligibility.
+
+    A malformed href is not usable evidence of a reachable privacy policy.
+    In particular, a malformed port must never abort the whole diagnostic.
+    """
+    observed = []
+    for link in contract.links:
+        if _public_source_url(link.url) is None:
+            continue
+        try:
+            matched, confidence = _privacy_match(link)
+        except (TypeError, ValueError):
+            continue
+        if matched:
+            observed.append((link, confidence))
+    return observed
 
 
 def _policy_candidates(contract: EvidenceContract) -> list[tuple[LinkEvidence, str]]:
@@ -564,11 +581,8 @@ def _policy_candidates(contract: EvidenceContract) -> list[tuple[LinkEvidence, s
             # though the same-host crawler cannot add them to its page set.
             selected.append((link, confidence))
             continue
-        try:
-            identity = candidate_identity(normalize_url(link.url))
-        except (TypeError, ValueError):
-            continue
-        if identity in eligible:
+        identity = _safe_policy_identity(link.url)
+        if identity is not None and identity in eligible:
             selected.append((link, confidence))
     return selected
 
@@ -1669,14 +1683,17 @@ def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     home = contract.target.final_url or contract.target.requested_url
     home_host = (urlsplit(home).hostname or "").lower()
     selectable = {
-        candidate_identity(normalize_url(link.url))
+        identity
         for link, _ in candidates
         if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
+        for identity in [_safe_policy_identity(link.url)]
+        if identity is not None
     }
     excluded = [
         link for link, _ in observed
         if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
-        and candidate_identity(normalize_url(link.url)) not in selectable
+        for identity in [_safe_policy_identity(link.url)]
+        if identity is not None and identity not in selectable
     ]
     if excluded and prv003.get("policy_attribution") in {"none", "third_party"}:
         public_sources = sorted({
