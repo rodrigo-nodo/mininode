@@ -435,15 +435,19 @@ def test_malformed_privacy_anchor_does_not_block_page_extraction(href):
     )
     page = extract_page(html, "https://example.com/")
     assert any(link.url == "https://example.com/legal/privacy-policy" for link in page.links)
-    # Invalid bracket syntax may be filtered in extraction; malformed ports
-    # remain raw link data and are rejected safely by the evidence adapter.
+    assert href not in [link.url for link in page.links]
 
 
-def test_malformed_form_privacy_link_does_not_abort_extraction():
+@pytest.mark.parametrize("bad_href", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_form_privacy_link_does_not_abort_extraction(bad_href):
     html = (
         '<main><section><form action="/send">'
         '<input name="email" type="email">'
-        '<a href="https://[::1/privacy">Privacy policy</a>'
+        f'<a href="{bad_href}">Privacy policy</a>'
         '<a href="/privacy-policy">Privacy policy</a>'
         '</form></section></main>'
     )
