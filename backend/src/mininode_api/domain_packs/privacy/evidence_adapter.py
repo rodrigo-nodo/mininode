@@ -8,7 +8,9 @@ from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
 from mininode_api.web_inspector.fetcher import normalize_url
-from mininode_api.web_inspector.selector import policy_candidate_priority
+from mininode_api.web_inspector.selector import (
+    candidate_identity, classify_page_candidates, policy_candidate_priority,
+)
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
 )
@@ -527,6 +529,45 @@ def _privacy_match(link: LinkEvidence) -> tuple[bool, str]:
     return False, "low"
 
 
+def _policy_candidates(contract: EvidenceContract) -> list[tuple[LinkEvidence, str]]:
+    """Use the crawler's same-host policy eligibility; keep external links.
+
+    News/blog pages and excluded formats must not be selected by PRV-003 when
+    the adaptive crawler would deliberately refuse to inspect them.
+    """
+    raw = [
+        (link, confidence)
+        for link in contract.links
+        for matched, confidence in [_privacy_match(link)]
+        if matched
+    ]
+    home = contract.target.final_url or contract.target.requested_url
+    home_host = (urlsplit(home).hostname or "").lower()
+    same_host = [
+        link for link, _ in raw
+        if _same_site((urlsplit(link.url).hostname or "").lower(), home_host)
+    ]
+    eligible = {
+        candidate_identity(candidate.url)
+        for candidate in classify_page_candidates(home, same_host)
+        if candidate.category == "privacy"
+    }
+    selected = []
+    for link, confidence in raw:
+        if not _same_site((urlsplit(link.url).hostname or "").lower(), home_host):
+            # External policies retain PRV-003's attribution checks, even
+            # though the same-host crawler cannot add them to its page set.
+            selected.append((link, confidence))
+            continue
+        try:
+            identity = candidate_identity(normalize_url(link.url))
+        except (TypeError, ValueError):
+            continue
+        if identity in eligible:
+            selected.append((link, confidence))
+    return selected
+
+
 def _inspection_sufficient(contract: EvidenceContract) -> bool:
     return contract.target.final_url is not None and contract.inspection.pages_analyzed > 0
 
@@ -673,13 +714,9 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
 
 def selected_policy_candidate_url(contract: EvidenceContract) -> str | None:
     """Return the selected candidate URL for internal inspection only."""
-    candidates = [
-        (link, confidence)
-        for link in contract.links
-        for matched, confidence in [_privacy_match(link)]
-        if matched
-    ]
-    return _policy_attribution(contract, candidates).get("_selected_policy_url")
+    return _policy_attribution(
+        contract, _policy_candidates(contract)
+    ).get("_selected_policy_url")
 
 
 def _selected_policy_page(contract: EvidenceContract, selected_url: str | None) -> PageEvidence | None:
@@ -1603,7 +1640,7 @@ def _contact_form(form: FormEvidence, contract: EvidenceContract) -> bool:
 def adapt_evidence(contract: EvidenceContract) -> dict[str, dict]:
     """Return deterministic, minimized evidence for the active controls."""
     sufficient = _inspection_sufficient(contract)
-    candidates = [(link, confidence) for link in contract.links for matched, confidence in [_privacy_match(link)] if matched]
+    candidates = _policy_candidates(contract)
     policy_confidence = "high" if any(confidence == "high" for _, confidence in candidates) else "medium"
 
     prv001 = {"confidence": policy_confidence if candidates else ("high" if sufficient else "low")}
