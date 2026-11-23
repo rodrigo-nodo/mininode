@@ -24,7 +24,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
         block = APP.split("const privacyAreas = [", 1)[1].split("const AREA_INFO", 1)[0]
         app_codes = re.findall(r"code: '(PRV-\d+)'", block)
         ux_codes = re.findall(r"'(PRV-\d+)': Object.freeze", UX)
-        self.assertEqual(CONTROLS["version"], "0.13")
+        self.assertEqual(CONTROLS["version"], "0.14")
         self.assertEqual(len(backend_codes), 21)
         self.assertEqual(len(app_codes), len(set(app_codes)))
         self.assertEqual(set(app_codes), backend_codes)
@@ -62,7 +62,7 @@ class PrivacyFrameworkSyncTests(unittest.TestCase):
 
     def test_privacy_score_presentation_weights_match_backend_scoring(self):
         self.assertEqual(SCORING["version"], "0.3")
-        self.assertIn("const FRAMEWORK_VERSION = '0.13';", PRESENTATION)
+        self.assertIn("const FRAMEWORK_VERSION = '0.14';", PRESENTATION)
         self.assertIn("const SCORING_VERSION = '0.3';", PRESENTATION)
         source = PRESENTATION.split("const SCORING_WEIGHTS = Object.freeze({", 1)[1].split("});", 1)[0]
         weights = dict((code, int(weight)) for code, weight in
