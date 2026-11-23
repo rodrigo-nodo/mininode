@@ -61,6 +61,13 @@ def policy_candidate_priority(url: str, text: str = "") -> int:
     )
     if any(path.endswith(value) for value in canonical_paths):
         return 0
+    # A qualified URL is thematic even if its short anchor says "Privacy policy".
+    filename = path.rsplit("/", 1)[-1]
+    if any(filename.startswith(prefix) for prefix in (
+        "politica-de-privacidad-", "privacy-policy-",
+        "proteccion-de-datos-", "data-protection-",
+    )):
+        return 1
     if label in {
         "politica de privacidad", "aviso de privacidad",
         "politica de proteccion de datos", "proteccion de datos",
