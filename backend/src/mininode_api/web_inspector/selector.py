@@ -54,26 +54,27 @@ def policy_candidate_priority(url: str, text: str = "") -> int:
     """
     path = urlsplit(url).path.lower().rstrip("/")
     label = _plain(text)
-    canonical_paths = (
-        "/proteccion-de-datos", "/politica-de-privacidad",
-        "/politica-de-proteccion-de-datos", "/privacy-policy",
-        "/data-protection", "/legal/privacy",
+    # A commercial anchor disqualifies even an otherwise generic-looking path.
+    # Do not infer that /data-protection is a legal declaration by URL alone.
+    commercial_signals = (
+        "privacy web", "servicios", "services", "consultoria", "consulting",
+        "soluciones", "solutions", "software", "productos", "products",
+        "diagnostico", "assessment", "compliance",
     )
-    if any(path.endswith(value) for value in canonical_paths):
+    if any(_has_signal(label, term) for term in commercial_signals):
+        return 2
+
+    # Only *complete* generic document path segments get first priority.
+    # /us-privacy, /privacy-policy-us and regional/topic-specific URLs do not.
+    generic_paths = (
+        "/privacy", "/privacidad", "/privacy-policy", "/privacy-notice",
+        "/politica-de-privacidad", "/politica-de-proteccion-de-datos",
+        "/proteccion-de-datos", "/data-protection", "/legal/privacy",
+    )
+    if any(path.endswith(value) for value in generic_paths):
         return 0
-    # A qualified URL is thematic even if its short anchor says "Privacy policy".
-    filename = path.rsplit("/", 1)[-1]
-    if any(filename.startswith(prefix) for prefix in (
-        "politica-de-privacidad-", "privacy-policy-",
-        "proteccion-de-datos-", "data-protection-",
-    )):
-        return 1
-    if label in {
-        "politica de privacidad", "aviso de privacidad",
-        "politica de proteccion de datos", "proteccion de datos",
-        "privacy policy", "data protection", "privacy notice",
-    }:
-        return 0
+
+    # Exact link text alone must not promote /us-privacy or a thematic article.
     if any(_has_signal(_plain(path), term) for term in PRIVACY):
         return 1
     if any(_has_signal(label, term) for term in PRIVACY):
