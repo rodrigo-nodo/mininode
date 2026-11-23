@@ -2,6 +2,7 @@ from mininode_api.web_inspector.models import LinkEvidence
 from mininode_api.web_inspector.selector import (
     PageCandidate,
     candidate_identity,
+    policy_candidate_priority,
     classify_page_candidates,
     select_pages,
 )
@@ -58,7 +59,7 @@ def test_classification_returns_all_relevant_candidates_without_final_limit():
     assert classified == [
         PageCandidate("https://example.com/contact", "contact", ("https://example.com/contact",)),
         PageCandidate("https://example.com/newsletter", "action", ("https://example.com/newsletter",)),
-        PageCandidate("https://example.com/privacy", "privacy", ("https://example.com/privacy",)),
+        PageCandidate("https://example.com/privacy", "privacy", ("1", "https://example.com/privacy")),
         PageCandidate("https://example.com/quote", "action", ("https://example.com/quote",)),
         PageCandidate("https://example.com/register", "action", ("https://example.com/register",)),
     ]
@@ -121,3 +122,26 @@ def test_legacy_selection_remains_home_privacy_contact_and_two_actions():
         "https://example.com/cotizar",
         "https://example.com/registro",
     ]
+
+
+def test_privacy_policy_candidate_prioritizes_general_document_over_topic_specific_us_page():
+    general = "https://example.com/es/proteccion-de-datos/"
+    qualified = "https://example.com/es/politica-de-privacidad-y-consentimiento-de-exclusion-voluntaria-de-los-estados-unidos/"
+    candidates = links(
+        (qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos"),
+        (general, "Protección de datos"),
+    )
+    assert policy_candidate_priority(general, "Protección de datos") == 0
+    assert policy_candidate_priority(qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos") == 1
+    assert select_pages("https://example.com/es/", candidates, limit=2) == [
+        "https://example.com/es/", general,
+    ]
+    classified = classify_page_candidates("https://example.com/es/", candidates)
+    assert min((p for p in classified if p.category == "privacy"), key=lambda p: p.rank).url == general
+
+
+def test_explicit_legal_policy_beats_commercial_privacy_link():
+    assert select_pages("https://example.com/", links(
+        ("https://example.com/privacy/", "Privacy Web"),
+        ("https://example.com/legal/privacy/", "Política de privacidad"),
+    ), limit=2) == ["https://example.com/", "https://example.com/legal/privacy/"]
