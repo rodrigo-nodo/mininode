@@ -86,7 +86,7 @@ const controls = codes.map((control_code) => ({
   reason: 'Resultado determinístico del control.',
 }));
 const baseDiagnostic = {
-  framework_version: '0.13',
+  framework_version: '0.14',
   scoring_version: '0.3',
   diagnostic_id: 'DIAG-A',
   claim_token: 'test-pending-claim',
