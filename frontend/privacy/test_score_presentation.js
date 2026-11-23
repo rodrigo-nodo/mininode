@@ -19,7 +19,7 @@ function fixture(overrides = {}, extras = {}) {
   const earned = evaluated.reduce((sum, code) => sum +
     presentation.SCORING_WEIGHTS[code] * ({ detected: 1, partial: 0.5, not_detected: 0 }[states[code]]), 0);
   return {
-    framework_version: '0.13', scoring_version: '0.3', controls,
+    framework_version: '0.14', scoring_version: '0.3', controls,
     score: weightSum ? Math.round(100 * earned / weightSum) : 0,
     evaluated_controls: evaluated.length, applicable_controls: weighted.length,
     coverage: weighted.length ? Math.round(100 * evaluated.length / weighted.length) : 100,
