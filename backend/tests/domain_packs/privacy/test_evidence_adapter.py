@@ -2429,3 +2429,73 @@ def test_policy_selection_prioritizes_general_data_protection_over_long_us_topic
     assert adapted["PRV-002"]["policy_content_relevant"] is True
     for code in ["PRV-004", "PRV-005", "PRV-006", "PRV-011", "PRV-013"]:
         assert adapted[code]["source_urls"] == [generic]
+
+
+def test_prv003_ignores_news_policy_that_crawler_is_not_allowed_to_select():
+    homepage = "https://example.com/"
+    news = "https://example.com/news/privacy-policy"
+    legal = "https://example.com/privacy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(news, "Privacy policy", homepage),
+            LinkEvidence(legal, "Privacy", homepage),
+        ],
+        pages=[
+            PageEvidence(news, 200, "Privacy policy", "text/html",
+                         visible_text="News article about privacy."),
+            PageEvidence(legal, 200, "Privacy policy", "text/html",
+                         visible_text="Example SpA. Para ejercer derechos de privacidad escriba a privacidad@example.com."),
+        ],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [legal]
+    assert adapted["PRV-002"]["policy_accessible"] is True
+    assert adapted["PRV-002"]["policy_content_relevant"] is True
+    for code in ("PRV-005", "PRV-006", "PRV-011", "PRV-013"):
+        assert adapted[code]["source_urls"] == [legal]
+
+
+def test_prv003_does_not_claim_a_policy_from_only_excluded_news_link():
+    news = "https://example.com/news/privacy-policy"
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(news, "Privacy policy", "https://example.com/")],
+        pages=[PageEvidence("https://example.com/", 200, "Home", "text/html")],
+    ))
+    assert adapted["PRV-003"]["policy_attribution"] == "none"
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_detected"
+    assert adapted["PRV-002"]["policy_link_found"] is False
+
+
+def test_prv003_prefers_general_privacy_policy_over_commercial_data_protection():
+    home = "https://example.com/"
+    legal = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(commercial, "Privacy compliance services", home),
+            LinkEvidence(legal, "Privacy policy", home),
+        ],
+        pages=[
+            PageEvidence(commercial, 200, "Privacy compliance services", "text/html"),
+            PageEvidence(legal, 200, "Privacy policy", "text/html",
+                         visible_text="Example SpA. Política de privacidad y derechos del titular."),
+        ],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [legal]
+    assert adapted["PRV-002"]["policy_accessible"] is True
+
+
+def test_prv003_prefers_general_privacy_over_us_privacy_with_generic_anchor():
+    home = "https://example.com/"
+    legal = "https://example.com/privacy"
+    regional = "https://example.com/us-privacy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(regional, "Privacy policy", home),
+            LinkEvidence(legal, "Privacy", home),
+        ],
+        pages=[
+            PageEvidence(regional, 200, "US privacy policy", "text/html"),
+            PageEvidence(legal, 200, "Privacy policy", "text/html"),
+        ],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [legal]
