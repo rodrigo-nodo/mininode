@@ -502,6 +502,54 @@ def test_adaptive_prefers_general_policy_over_commercial_and_regional_candidates
     assert controls["PRV-002"]["result"] == "detected"
 
 
+@pytest.mark.parametrize("section", ["news", "blog"])
+def test_excluded_policy_link_is_observed_but_never_fetched_or_scored_as_absent(monkeypatch, section):
+    """R1: policy observation differs from crawler eligibility and document evidence."""
+    link = f"{HOME}{section}/privacy-policy"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, f'<a href="{link}">Privacy policy</a>'),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME]]
+    assert response.json()["scope"]["pages_requested"] == 1
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-001"]["result"] == "detected"
+    assert controls["PRV-002"]["result"] == "not_evaluable"
+    assert controls["PRV-003"]["result"] == "not_evaluable"
+    assert controls["PRV-003"]["source_url"] == link
+    for code in ("PRV-004", "PRV-005", "PRV-006", "PRV-011", "PRV-013"):
+        assert controls[code]["result"] == "not_evaluable"
+
+
+def test_root_policy_selected_ahead_of_regional_and_ambiguous_commercial_pages(monkeypatch):
+    legal = f"{HOME}privacy-policy"
+    commercial = f"{HOME}en/data-protection"
+    regional = f"{HOME}california/privacy-policy"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, (
+            f'<a href="{commercial}">Data Protection</a>'
+            f'<a href="{regional}">Privacy policy</a>'
+            f'<a href="{legal}">Privacy policy</a>'
+        )),
+        commercial: page(commercial, "<title>Data Protection</title>"),
+        regional: page(regional, "<title>California Privacy Policy</title>"),
+        legal: page(legal, "<title>Privacy policy</title>"
+                    "<main><h1>Privacy policy</h1>"
+                    "<p>Example SpA es responsable del tratamiento.</p></main>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls[:2] == [[HOME], [legal]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-003"]["source_url"] == legal
+    assert controls["PRV-002"]["result"] == "detected"
+
+
 def test_blocked_selected_legal_policy_is_not_rescued_by_commercial_privacy_page(monkeypatch):
     """B2 regression: PRV-002 relates exclusively to PRV-003's selected URL."""
     legal = f"{HOME}legal/privacy/"
