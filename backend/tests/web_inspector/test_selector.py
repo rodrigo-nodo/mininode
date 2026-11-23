@@ -219,3 +219,51 @@ def test_locale_policy_beats_long_region_specific_policy_but_not_root_policy():
     assert policy_candidate_priority(
         "https://example.com/california/privacy-policy", "Privacy policy"
     ) > policy_candidate_priority("https://example.com/privacy-policy", "Privacy policy")
+
+
+def test_nested_legal_policy_beats_root_privacy_commercial_page():
+    """V3 B1: /legal/privacy-policy is a legal document, not a regional slug."""
+    home = "https://example.com/"
+    legal = "https://example.com/legal/privacy-policy"
+    product = "https://example.com/privacy"
+    candidates = links((product, "Privacy"), (legal, "Privacy policy"))
+    assert policy_candidate_priority(legal, "Privacy policy") == 0
+    assert policy_candidate_priority(product, "Privacy") == 2
+    assert select_pages(home, candidates, limit=2) == [home, legal]
+    assert select_pages(home, reversed(candidates), limit=2) == [home, legal]
+
+
+def test_document_path_ranking_matrix_without_host_exceptions():
+    """Exact legal directories win; regional nesting does not become canonical."""
+    cases = (
+        ("/legal/privacy-policy", "Privacy policy", 0),
+        ("/legal/privacy", "Privacy", 0),
+        ("/policies/privacy-policy", "Privacy policy", 0),
+        ("/politicas/politica-de-privacidad", "Política de privacidad", 0),
+        ("/es/legal/privacy-policy", "Privacy policy", 1),
+        ("/es/privacy-policy", "Privacy policy", 1),
+        ("/privacy-policy", "Privacy policy", 0),
+        ("/privacy", "Privacy", 2),
+        ("/en/data-protection", "Data Protection", 3),
+        ("/california/privacy-policy", "Privacy policy", 4),
+        ("/california/legal/privacy-policy", "Privacy policy", 4),
+        ("/es/politica-de-privacidad-y-consentimiento-eeuu", "Política de privacidad", 4),
+        ("/privacy", "Privacy Web", 6),
+    )
+    for path, label, expected in cases:
+        assert policy_candidate_priority(f"https://example.com{path}", label) == expected, path
+
+
+def test_malformed_port_does_not_break_candidate_classification():
+    homepage = "https://example.com/"
+    good = "https://example.com/legal/privacy-policy"
+    candidates = links(
+        ("https://example.com:bad/privacy", "Privacy policy"),
+        ("https://example.com:65536/privacy", "Privacy policy"),
+        ("https://example.com:0/privacy", "Privacy policy"),
+        (good, "Privacy policy"),
+    )
+    # Port 0 is syntactically normalizable, but must not beat a legal policy;
+    # the fetcher's target validation still governs whether it can be fetched.
+    selected = select_pages(homepage, candidates, limit=2)
+    assert selected == [homepage, good]
