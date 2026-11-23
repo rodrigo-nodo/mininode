@@ -49,12 +49,18 @@ Estas versiones se mantienen en `controls.json` y `scoring.json`, respectivament
 no se derivan del Git SHA. Solo se comparan diagnósticos con ambas versiones iguales.
 La versión candidata en el PR de corrección PW-QA-01 es framework `0.14`;
 el scoring continúa en `0.3`. Hasta el merge y despliegue del PR, DEV sigue
-en framework `0.13`. `0.14` prioriza documentos generales de privacidad
-sobre páginas temáticas, regionales o comerciales, sin promover documentos
-solo por su texto de enlace o por un sufijo de ruta cuando hay señales
-comerciales. El rastreador y PRV-003 comparten las exclusiones de candidatos
-del mismo hostname (por ejemplo, /news y /blog) y el mismo ranking,
-manteniendo la atribución conservadora de políticas externas.
+en framework `0.13`. `0.14` prioriza rutas canónicas de política
+general en la raíz, luego variantes por idioma; rutas regionales,
+temáticas o comerciales no adquieren prioridad general por su sufijo
+o por el texto del enlace. Es una heurística conservadora, no una prueba
+del contenido documental.
+Para un mismo hostname el rastreador y PRV-003 comparten elegibilidad y
+ranking. **Un enlace de política visible pero excluido de inspección**
+(por ejemplo, bajo /news o /blog) se conserva como evidencia de
+existencia para PRV-001; PRV-002 y PRV-003 quedan `not_evaluable` si
+no existe otra política evaluable, y los controles documentales
+dependientes no atribuyen contenido que no fue inspeccionado. Las
+políticas externas mantienen su atribución conservadora.
 No amplía el presupuesto de páginas,
 no cambia límites SSRF/robots ni añade solicitudes de otra naturaleza.
 Puede modificar las evidencias, controles y resultados; por eso los
