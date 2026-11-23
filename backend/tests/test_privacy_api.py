@@ -550,6 +550,82 @@ def test_root_policy_selected_ahead_of_regional_and_ambiguous_commercial_pages(m
     assert controls["PRV-002"]["result"] == "detected"
 
 
+def test_v3_legal_policy_beats_commercial_root_privacy_end_to_end(monkeypatch):
+    """B1: the legal directory beats the ambiguous commercial /privacy path."""
+    legal = f"{HOME}legal/privacy-policy"
+    product = f"{HOME}privacy"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, (
+            f'<a href="{product}">Privacy</a>'
+            f'<a href="{legal}">Privacy policy</a>'
+        )),
+        product: page(product, "<title>Privacy</title>"
+                      "<p>Commercial privacy services.</p>"),
+        legal: page(legal, "<title>Privacy policy</title>"
+                    "<main><h1>Privacy policy</h1>"
+                    "<p>Example SpA es responsable del tratamiento.</p>"
+                    "<p>Para ejercer derechos de privacidad escriba a "
+                    "privacidad@example.com.</p></main>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-003"]["source_url"] == legal
+    assert controls["PRV-002"]["result"] == "detected"
+    for code in ("PRV-005", "PRV-006", "PRV-011", "PRV-013"):
+        assert controls[code].get("source_url") == legal
+
+
+@pytest.mark.parametrize("bad_url", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_policy_link_does_not_interrupt_public_diagnostic(monkeypatch, bad_url):
+    """R2: malformed href is ignored, without a 500 or polluted policy evidence."""
+    legal = f"{HOME}legal/privacy-policy"
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, (
+            f'<a href="{bad_url}">Privacy policy</a>'
+            f'<a href="{legal}">Privacy policy</a>'
+        )),
+        legal: page(legal, "<title>Privacy policy</title>"
+                    "<main><h1>Privacy policy</h1>"
+                    "<p>Example SpA es responsable del tratamiento.</p></main>"),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME], [legal]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-003"]["source_url"] == legal
+    assert controls["PRV-002"]["result"] == "detected"
+    assert bad_url not in response.text
+
+
+@pytest.mark.parametrize("bad_url", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_only_malformed_policy_link_never_causes_server_error(monkeypatch, bad_url):
+    client, fake = client_with(monkeypatch, {
+        HOME: page(HOME, f'<a href="{bad_url}">Privacy policy</a>'),
+    })
+
+    response = client.post("/privacy/diagnose", json={"url": HOME})
+
+    assert response.status_code == 200
+    assert fake.calls == [[HOME]]
+    controls = {item["control_code"]: item for item in response.json()["controls"]}
+    assert controls["PRV-001"]["result"] == "not_detected"
+    assert controls["PRV-003"]["result"] == "not_detected"
+
+
 def test_blocked_selected_legal_policy_is_not_rescued_by_commercial_privacy_page(monkeypatch):
     """B2 regression: PRV-002 relates exclusively to PRV-003's selected URL."""
     legal = f"{HOME}legal/privacy/"
