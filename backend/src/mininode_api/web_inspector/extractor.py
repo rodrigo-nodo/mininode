@@ -80,7 +80,11 @@ def _has_verified_email_markup(element: Tag) -> bool:
     """
     anchors = ([element] if element.name == "a" else []) + element.find_all("a", href=True)
     for anchor in anchors:
-        parsed = urlsplit(str(anchor.get("href") or ""))
+        try:
+            parsed = urlsplit(str(anchor.get("href") or ""))
+        except ValueError:
+            # Broken URL syntax in an unrelated anchor is not email evidence.
+            continue
         if parsed.scheme == "mailto" and EMAIL_RE.fullmatch(parsed.path or ""):
             return True
         if parsed.path == _CF_EMAIL_PATH and _CF_EMAIL_HEX.fullmatch(parsed.fragment or ""):
@@ -384,9 +388,16 @@ def _links(soup: BeautifulSoup, source_url: str) -> list[LinkEvidence]:
     seen: set[str] = set()
     for anchor in soup.find_all("a", href=True):
         href = str(anchor["href"]).strip()
-        if not href or href.startswith("#") or urlsplit(href).scheme.lower() in {"javascript", "data", "mailto", "tel"}:
+        if not href or href.startswith("#"):
             continue
-        url = urljoin(source_url, href)
+        try:
+            if urlsplit(href).scheme.lower() in {"javascript", "data", "mailto", "tel"}:
+                continue
+            url = urljoin(source_url, href)
+        except ValueError:
+            # Untrusted HTML can contain malformed IPv6 or invalid URL syntax.
+            # Keep scanning other anchors instead of failing the diagnosis.
+            continue
         if url not in seen:
             seen.add(url)
             result.append(LinkEvidence(url, _text(anchor), source_url))
@@ -416,7 +427,10 @@ def _forms(soup: BeautifulSoup, source_url: str) -> list[FormEvidence]:
         for anchor in context.find_all("a", href=True):
             signal = f"{_text(anchor)} {anchor['href']}".lower()
             if any(term in signal for term in PRIVACY_SIGNALS):
-                url = urljoin(source_url, str(anchor["href"]))
+                try:
+                    url = urljoin(source_url, str(anchor["href"]))
+                except ValueError:
+                    continue
                 if url not in seen_privacy_links:
                     seen_privacy_links.add(url)
                     privacy_links.append(LinkEvidence(url, _text(anchor), source_url))
