@@ -133,6 +133,7 @@ def test_privacy_policy_candidate_prioritizes_general_document_over_topic_specif
     )
     assert policy_candidate_priority(general, "Protección de datos") == 0
     assert policy_candidate_priority(qualified, "Política de privacidad y consentimiento de exclusión voluntaria de los Estados Unidos") == 1
+    assert policy_candidate_priority(qualified, "Política de privacidad") == 1
     assert select_pages("https://example.com/es/", candidates, limit=2) == [
         "https://example.com/es/", general,
     ]
