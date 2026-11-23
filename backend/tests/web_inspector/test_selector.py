@@ -59,7 +59,7 @@ def test_classification_returns_all_relevant_candidates_without_final_limit():
     assert classified == [
         PageCandidate("https://example.com/contact", "contact", ("https://example.com/contact",)),
         PageCandidate("https://example.com/newsletter", "action", ("https://example.com/newsletter",)),
-        PageCandidate("https://example.com/privacy", "privacy", ("1", "https://example.com/privacy")),
+        PageCandidate("https://example.com/privacy", "privacy", ("0", "https://example.com/privacy")),
         PageCandidate("https://example.com/quote", "action", ("https://example.com/quote",)),
         PageCandidate("https://example.com/register", "action", ("https://example.com/register",)),
     ]
@@ -146,3 +146,46 @@ def test_explicit_legal_policy_beats_commercial_privacy_link():
         ("https://example.com/privacy/", "Privacy Web"),
         ("https://example.com/legal/privacy/", "Política de privacidad"),
     ), limit=2) == ["https://example.com/", "https://example.com/legal/privacy/"]
+
+
+def test_general_policy_beats_commercial_data_protection_even_when_url_sorts_later():
+    general = "https://example.com/privacy-policy"
+    commercial = "https://example.com/en/data-protection"
+    homepage = "https://example.com/"
+    candidates = links(
+        (commercial, "Privacy compliance services"),
+        (general, "Privacy policy"),
+    )
+    assert policy_candidate_priority(general, "Privacy policy") == 0
+    assert policy_candidate_priority(commercial, "Privacy compliance services") == 2
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+    assert select_pages(homepage, reversed(candidates), limit=2) == [homepage, general]
+
+
+def test_general_privacy_beats_regional_us_privacy_with_generic_anchor():
+    homepage = "https://example.com/"
+    general = "https://example.com/privacy"
+    regional = "https://example.com/us-privacy"
+    candidates = links(
+        (regional, "Privacy policy"),
+        (general, "Privacy"),
+    )
+    assert policy_candidate_priority(regional, "Privacy policy") > policy_candidate_priority(
+        general, "Privacy"
+    )
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+
+
+def test_privacy_news_and_blog_are_ineligible_despite_policy_titles():
+    homepage = "https://example.com/"
+    general = "https://example.com/privacy"
+    candidates = links(
+        ("https://example.com/news/privacy-policy", "Privacy policy"),
+        ("https://example.com/blog/privacy-policy", "Privacy policy"),
+        (general, "Privacy"),
+    )
+    assert select_pages(homepage, candidates, limit=2) == [homepage, general]
+    assert [
+        item.url for item in classify_page_candidates(homepage, candidates)
+        if item.category == "privacy"
+    ] == [general]
