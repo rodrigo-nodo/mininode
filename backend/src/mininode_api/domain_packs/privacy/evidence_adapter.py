@@ -8,6 +8,7 @@ from ipaddress import ip_address
 from urllib.parse import urlsplit, urlunsplit
 
 from mininode_api.web_inspector.fetcher import normalize_url
+from mininode_api.web_inspector.selector import policy_candidate_priority
 from mininode_api.web_inspector.models import (
     EvidenceContract, FormEvidence, LinkEvidence, PageEvidence,
 )
@@ -576,19 +577,13 @@ def _policy_attribution(contract: EvidenceContract, candidates: list[tuple[LinkE
         if _same_site((urlsplit(link.url).hostname or "").lower(), target_host)
     ]
     if same_site_links:
-        def candidate_rank(link: LinkEvidence) -> tuple[bool, bool]:
-            path = urlsplit(link.url).path.lower().rstrip("/")
-            explicit_policy = (
-                _contains_phrase(link.text, (
-                    "politica de privacidad", "privacy policy",
-                    "aviso de privacidad", "politica de proteccion de datos",
-                ))
-                or path.startswith("/legal/privacy")
-                or path.endswith("/privacy-policy")
-                or path.endswith("/politica-de-privacidad")
-            )
+        def candidate_rank(link: LinkEvidence) -> tuple[int, bool, str]:
             inspected = _normalized_url(link.url) in pages
-            return (not explicit_policy, not inspected)
+            return (
+                policy_candidate_priority(link.url, link.text),
+                not inspected,
+                _normalized_url(link.url),
+            )
 
         selected = min(same_site_links, key=candidate_rank)
         safe_url = _public_source_url(selected.url)
