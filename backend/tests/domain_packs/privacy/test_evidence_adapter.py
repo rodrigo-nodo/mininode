@@ -2545,3 +2545,68 @@ def test_prv003_prefers_root_policy_over_nested_regional_and_ambiguous_commercia
     ))
     assert adapted["PRV-003"]["source_urls"] == [legal]
     assert adapted["PRV-002"]["policy_accessible"] is True
+
+
+def test_nested_legal_policy_selected_over_same_site_commercial_privacy():
+    home = "https://example.com/"
+    product = "https://example.com/privacy"
+    legal = "https://example.com/legal/privacy-policy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(product, "Privacy", home),
+            LinkEvidence(legal, "Privacy policy", home),
+        ],
+        pages=[
+            PageEvidence(product, 200, "Privacy", "text/html",
+                         visible_text="Servicios de diagnóstico de privacidad."),
+            PageEvidence(legal, 200, "Privacy policy", "text/html",
+                         visible_text="Example SpA es responsable de datos personales. "
+                                      "Para ejercer derechos escriba a privacidad@example.com."),
+        ],
+    ))
+    assert adapted["PRV-003"]["source_urls"] == [legal]
+    assert adapted["PRV-002"]["policy_accessible"] is True
+    assert adapted["PRV-002"]["policy_content_relevant"] is True
+    for code in ("PRV-004", "PRV-005", "PRV-006", "PRV-011", "PRV-013"):
+        assert adapted[code]["source_urls"] == [legal]
+
+
+@pytest.mark.parametrize("bad_url", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://example.com:-1/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_policy_href_does_not_crash_or_become_policy_evidence(bad_url):
+    home = "https://example.com/"
+    adapted = adapt_evidence(contract(
+        links=[LinkEvidence(bad_url, "Privacy policy", home)],
+        pages=[PageEvidence(home, 200, "Home", "text/html")],
+    ))
+    assert adapted["PRV-001"]["policy_visible"] is False
+    assert adapted["PRV-002"]["policy_link_found"] is False
+    assert adapted["PRV-003"]["policy_attribution"] == "none"
+    assert evaluate_control("PRV-003", adapted["PRV-003"])["result"] == "not_detected"
+
+
+@pytest.mark.parametrize("bad_url", [
+    "https://example.com:bad/privacy",
+    "https://example.com:65536/privacy",
+    "https://[::1/privacy",
+])
+def test_malformed_policy_href_does_not_hide_valid_own_policy(bad_url):
+    home = "https://example.com/"
+    legal = "https://example.com/legal/privacy-policy"
+    adapted = adapt_evidence(contract(
+        links=[
+            LinkEvidence(bad_url, "Privacy policy", home),
+            LinkEvidence(legal, "Privacy policy", home),
+        ],
+        pages=[
+            PageEvidence(home, 200, "Home", "text/html"),
+            PageEvidence(legal, 200, "Privacy policy", "text/html"),
+        ],
+    ))
+    assert adapted["PRV-001"]["policy_visible"] is True
+    assert adapted["PRV-003"]["source_urls"] == [legal]
+    assert adapted["PRV-002"]["policy_accessible"] is True
