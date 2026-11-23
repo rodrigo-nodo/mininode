@@ -394,8 +394,9 @@ def _links(soup: BeautifulSoup, source_url: str) -> list[LinkEvidence]:
             if urlsplit(href).scheme.lower() in {"javascript", "data", "mailto", "tel"}:
                 continue
             url = urljoin(source_url, href)
-        except ValueError:
-            # Untrusted HTML can contain malformed IPv6 or invalid URL syntax.
+            normalize_url(url)  # Validate syntax/port without altering link identity.
+        except (TypeError, ValueError):
+            # Untrusted HTML can contain malformed IPv6, ports or URL syntax.
             # Keep scanning other anchors instead of failing the diagnosis.
             continue
         if url not in seen:
@@ -429,7 +430,8 @@ def _forms(soup: BeautifulSoup, source_url: str) -> list[FormEvidence]:
             if any(term in signal for term in PRIVACY_SIGNALS):
                 try:
                     url = urljoin(source_url, str(anchor["href"]))
-                except ValueError:
+                    normalize_url(url)
+                except (TypeError, ValueError):
                     continue
                 if url not in seen_privacy_links:
                     seen_privacy_links.add(url)
