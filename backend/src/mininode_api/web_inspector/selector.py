@@ -86,7 +86,15 @@ def policy_candidate_priority(url: str, text: str = "") -> int:
     if any(_has_signal(label, term) for term in commercial_signals):
         return 6
 
-    if relative in (["legal", "privacy"], ["legal", "privacidad"]):
+    # Explicit legal-document directories carry more weight than ambiguous
+    # generic paths (e.g. commercial /privacy). Limit this to the root or
+    # one language prefix: /california/legal/privacy-policy stays thematic.
+    legal_directories = {"legal", "policies", "politicas"}
+    if (
+        len(relative) == 2
+        and relative[0] in legal_directories
+        and relative[1] in (document_names | general_names)
+    ):
         return 0 + locale_offset
     if len(relative) == 1 and relative[0] in document_names:
         return 0 + locale_offset
